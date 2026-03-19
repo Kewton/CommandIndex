@@ -70,15 +70,6 @@ fn status_subcommand_exits_with_not_implemented() {
 }
 
 #[test]
-fn clean_subcommand_exits_with_not_implemented() {
-    common::cmd()
-        .arg("clean")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
-}
-
-#[test]
 fn search_requires_query_argument() {
     common::cmd()
         .arg("search")

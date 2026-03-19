@@ -33,7 +33,11 @@ enum Commands {
     /// Show index status
     Status,
     /// Remove index and prepare for rebuild
-    Clean,
+    Clean {
+        /// Target directory containing .commandindex/
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+    },
 }
 
 fn main() {
@@ -71,10 +75,21 @@ fn main() {
             eprintln!("Error: `status` command is not yet implemented. Coming in Phase 1.");
             1
         }
-        Commands::Clean => {
-            eprintln!("Error: `clean` command is not yet implemented. Coming in Phase 1.");
-            1
-        }
+        Commands::Clean { path } => match commandindex::cli::clean::run(&path) {
+            Ok(commandindex::cli::clean::CleanResult::Removed) => {
+                println!("Removed index at .commandindex/");
+                println!("Run `commandindex index` to rebuild.");
+                0
+            }
+            Ok(commandindex::cli::clean::CleanResult::NotFound) => {
+                println!("No index found. Nothing to clean.");
+                0
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
     };
 
     process::exit(exit_code);

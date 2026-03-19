@@ -110,7 +110,7 @@ tests/
 src/
 ├── main.rs              # エントリポイント
 ├── lib.rs               # モジュール宣言
-├── cli/                 # CLI サブコマンド
+├── cli/                 # CLI サブコマンド（index, clean）
 ├── parser/              # Markdown / ソースコード解析
 ├── indexer/             # tantivy / SQLite インデックス操作
 ├── search/              # 検索ロジック
