@@ -1,5 +1,7 @@
-use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 use std::process;
+
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "commandindex")]
@@ -13,7 +15,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Build search index from repository
-    Index,
+    Index {
+        /// Target directory to index
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+    },
     /// Search the index
     Search {
         /// Search query
@@ -34,10 +40,22 @@ fn main() {
     let cli = Cli::parse();
 
     let exit_code = match cli.command {
-        Commands::Index => {
-            eprintln!("Error: `index` command is not yet implemented. Coming in Phase 1.");
-            1
-        }
+        Commands::Index { path } => match commandindex::cli::index::run(&path) {
+            Ok(summary) => {
+                println!("Indexing {}...", path.display());
+                println!("  Scanned: {} files", summary.scanned);
+                println!("  Indexed: {} sections", summary.indexed_sections);
+                println!("  Skipped: {} files (parse error)", summary.skipped);
+                println!("  Ignored: {} files (.cmindexignore)", summary.ignored);
+                println!("  Duration: {:.1}s", summary.duration.as_secs_f64());
+                println!("Index saved to .commandindex/");
+                0
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Search {
             query: _,
             format: _,

@@ -1,0 +1,41 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "focus": "設計原則（SOLID/KISS/YAGNI/DRY）",
+  "review_items": [
+    {
+      "id": "D1-01",
+      "severity": "Should Fix",
+      "category": "SRP（単一責任原則）",
+      "finding": "IndexError に Io, Parse, Writer, State, Manifest, Ignore の6種を統合しているが、Display/Error トレイトの実装方針が未記載。From トレイト自動変換と記載があるが、Display の実装がないと main.rs での `eprintln!(\"Error: {e}\")` が動作しない。",
+      "recommendation": "IndexError に Display と std::error::Error の実装を設計に含めるべき。"
+    },
+    {
+      "id": "D1-02",
+      "severity": "Nice to Have",
+      "category": "KISS",
+      "finding": "section_to_doc() のシグネチャで frontmatter が `&Option<Frontmatter>` だが、Rust の慣用的な書き方は `Option<&Frontmatter>`。",
+      "recommendation": "シグネチャを `frontmatter: Option<&Frontmatter>` に修正すると良い。"
+    },
+    {
+      "id": "D1-03",
+      "severity": "Should Fix",
+      "category": "DRY",
+      "finding": "walkdir + .md フィルタリングのロジックは parse_directory() にも存在する。index コマンドで独自に同じロジックを再実装することになる。DRY原則の観点から、共通ユーティリティとして抽出するか、parse_directory に IgnoreFilter を渡すオプションを検討すべき。",
+      "recommendation": "設計判断1で「既存APIを壊さない」ことを優先しており、これは妥当な判断。ただし、将来的に update コマンドでも同じ列挙ロジックが必要になるため、共通化の可能性を設計書に注記すべき。"
+    },
+    {
+      "id": "D1-04",
+      "severity": "Nice to Have",
+      "category": "YAGNI",
+      "finding": "セキュリティ設計のパストラバーサル対策で `canonicalize()` を記載しているが、CLIツールで `--path` にユーザー指定のローカルパスを受けるだけなら過度な対策の可能性がある。",
+      "recommendation": "Phase 1 では canonicalize() による正規化のみで十分。ベースディレクトリチェックは不要（ユーザーが明示的に指定したパスであるため）。"
+    }
+  ],
+  "summary": {
+    "must_fix": 0,
+    "should_fix": 2,
+    "nice_to_have": 2,
+    "total": 4
+  }
+}

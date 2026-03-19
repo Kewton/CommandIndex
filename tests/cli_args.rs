@@ -34,12 +34,12 @@ fn no_args_shows_error() {
 }
 
 #[test]
-fn index_subcommand_exits_with_not_implemented() {
+fn index_subcommand_accepts_path_option() {
+    let dir = tempfile::tempdir().expect("create temp dir");
     common::cmd()
-        .arg("index")
+        .args(["index", "--path", dir.path().to_str().unwrap()])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
+        .success();
 }
 
 #[test]

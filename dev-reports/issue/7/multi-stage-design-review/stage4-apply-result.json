@@ -1,0 +1,6 @@
+{
+  "stage": 4,
+  "type": "apply_review",
+  "applied_items": [],
+  "note": "セキュリティレビューで指摘事項なし。設計方針書の変更不要。"
+}

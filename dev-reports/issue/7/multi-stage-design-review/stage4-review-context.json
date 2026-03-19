@@ -1,0 +1,35 @@
+{
+  "stage": 4,
+  "type": "security_review",
+  "focus": "セキュリティ（unsafe使用・パストラバーサル）",
+  "review_items": [
+    {
+      "id": "D4-01",
+      "severity": "Info",
+      "category": "unsafe",
+      "finding": "設計書に unsafe 使用禁止が明記されており、新規コード（cli/index.rs）にも unsafe は不要。問題なし。",
+      "recommendation": "対応不要。"
+    },
+    {
+      "id": "D4-02",
+      "severity": "Info",
+      "category": "パストラバーサル",
+      "finding": "canonicalize() でパス正規化する方針。CLIツールのローカル利用であり、適切な対策レベル。",
+      "recommendation": "対応不要。"
+    },
+    {
+      "id": "D4-03",
+      "severity": "Info",
+      "category": "シンボリックリンク",
+      "finding": "walkdir デフォルト設定でシンボリックリンクを追跡しない方針。適切。",
+      "recommendation": "対応不要。"
+    }
+  ],
+  "summary": {
+    "must_fix": 0,
+    "should_fix": 0,
+    "nice_to_have": 0,
+    "info": 3,
+    "total": 3
+  }
+}

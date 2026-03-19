@@ -1,0 +1,8 @@
+{
+  "stage": 3,
+  "type": "apply_review",
+  "applied_items": [
+    "D3-01: 既存テスト更新セクションにtest_index_not_implemented_yet の具体的な置き換え内容を明記",
+    "D3-02: Phase 1スコープとして妥当。変更なし"
+  ]
+}
