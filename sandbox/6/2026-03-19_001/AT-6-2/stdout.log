@@ -1,0 +1,10 @@
+
+running 5 tests
+test test_manifest_new ... ok
+test test_manifest_add_entry ... ok
+test test_manifest_find_by_path ... ok
+test test_manifest_load_nonexistent ... ok
+test test_manifest_save_and_load ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+

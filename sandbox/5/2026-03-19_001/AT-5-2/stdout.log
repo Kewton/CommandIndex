@@ -1,0 +1,11 @@
+
+running 6 tests
+test test_default_ignores_target ... ok
+test test_default_ignores_git ... ok
+test test_default_ignores_node_modules ... ok
+test test_default_ignores_min_js ... ok
+test test_default_ignores_lock_files ... ok
+test test_default_ignores_commandindex ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+

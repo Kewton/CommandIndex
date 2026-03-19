@@ -1,0 +1,2 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running tests/indexer_tantivy.rs (target/debug/deps/indexer_tantivy-9fb571f84bd19fe1)
