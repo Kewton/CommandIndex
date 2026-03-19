@@ -1,0 +1,1 @@
+{"test_id":"AT-8-6","status":"PASS","detail":"cargo test --all（全105テストパス）、cargo clippy --all-targets -D warnings（警告0件）、cargo fmt --all --check（差分なし）の3チェック全て成功。"}

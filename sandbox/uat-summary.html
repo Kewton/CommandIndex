@@ -27,8 +27,8 @@
 <p class="timestamp">実行日時: 2026-03-19 | プロジェクト: CommandIndex | ブランチ: develop</p>
 
 <div class="summary">
-  <div class="card total"><h3>28</h3><p>テスト項目</p></div>
-  <div class="card pass"><h3>28</h3><p>PASS</p></div>
+  <div class="card total"><h3>42</h3><p>テスト項目</p></div>
+  <div class="card pass"><h3>42</h3><p>PASS</p></div>
   <div class="card"><h3>0</h3><p>FAIL</p></div>
   <div class="card pass"><h3>100%</h3><p>合格率</p></div>
 </div>
@@ -40,6 +40,8 @@
 <tr><td>#4</td><td>tantivy インデックス基盤</td><td>8</td><td>8</td><td>0</td><td><span class="pass-badge">PASS</span></td></tr>
 <tr><td>#5</td><td>.cmindexignore パーサー</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td></tr>
 <tr><td>#6</td><td>インデックス状態管理</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>#7</td><td>インデックス構築</td><td>8</td><td>8</td><td>0</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>#8</td><td>出力フォーマット</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td></tr>
 </table>
 
 <div class="issue-section">
@@ -95,6 +97,34 @@
 <tr><td>AT-6-4</td><td>SHA-256ハッシュ計算</td><td>ファイルハッシュを計算できる</td><td><span class="pass-badge">PASS</span></td></tr>
 <tr><td>AT-6-5</td><td>インデックス未作成判定</td><td>state.json不在で未作成と判定</td><td><span class="pass-badge">PASS</span></td></tr>
 <tr><td>AT-6-6</td><td>品質チェック</td><td>clippy/fmt/test全パス</td><td><span class="pass-badge">PASS</span></td></tr>
+</table>
+</div>
+
+<div class="issue-section">
+<h2>Issue #7: インデックス構築 (8/8 PASS)</h2>
+<table>
+<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
+<tr><td>AT-7-1</td><td>Markdownファイルのインデックス構築</td><td>commandindex index がエラーなく完了</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-2</td><td>.commandindex/tantivy/ にインデックス保存</td><td>tantivy ディレクトリにファイルが生成される</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-3</td><td>manifest.json 生成</td><td>manifest.json が有効なJSONとして存在する</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-4</td><td>state.json 生成</td><td>state.json が有効なJSONとして存在する</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-5</td><td>.cmindexignore ルール適用</td><td>除外対象ファイルがインデックスに含まれない</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-6</td><td>処理結果サマリー表示</td><td>Scanned/Indexed/Skipped/Ignored/Duration が表示される</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-7</td><td>上書き再構築</td><td>再実行でエラーなく上書き完了</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-7-8</td><td>cargo test / clippy / fmt 全パス</td><td>品質チェック全パス</td><td><span class="pass-badge">PASS</span></td></tr>
+</table>
+</div>
+
+<div class="issue-section">
+<h2>Issue #8: 出力フォーマット (6/6 PASS)</h2>
+<table>
+<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
+<tr><td>AT-8-1</td><td>--format human CLIパース確認</td><td>--format human が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-8-2</td><td>--format json CLIパース確認</td><td>--format json が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-8-3</td><td>--format path CLIパース確認</td><td>--format path が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-8-4</td><td>デフォルトフォーマット確認</td><td>--format 未指定で正しく動作する</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-8-5</td><td>フォーマッターユニットテスト全パス</td><td>output_format関連テスト全パス</td><td><span class="pass-badge">PASS</span></td></tr>
+<tr><td>AT-8-6</td><td>cargo test / clippy / fmt 全パス</td><td>品質チェック全パス</td><td><span class="pass-badge">PASS</span></td></tr>
 </table>
 </div>
 

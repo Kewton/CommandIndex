@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAT Report - Issue #8</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f8f9fa; color: #333; }
+  h1 { border-bottom: 3px solid #333; padding-bottom: 10px; }
+  .meta { color: #666; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th { background: #343a40; color: #fff; padding: 12px 15px; text-align: left; }
+  td { padding: 10px 15px; border-bottom: 1px solid #dee2e6; }
+  tr:hover { background: #f1f3f5; }
+  .pass { color: #28a745; font-weight: bold; }
+  .fail { color: #dc3545; font-weight: bold; }
+  .summary { margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; font-size: 1.1em; }
+  .summary.has-fail { background: #f8d7da; border-color: #f5c6cb; }
+</style>
+</head>
+<body>
+<h1>UAT Report - Issue #8</h1>
+<p class="meta">実行日時: 2026-03-19</p>
+
+<table>
+<thead>
+<tr><th>テストID</th><th>テスト内容</th><th>結果</th><th>詳細</th></tr>
+</thead>
+<tbody>
+<tr><td>AT-8-1</td><td>--format human CLIパース確認</td><td class="pass">PASS</td><td>--format human が正しくパースされた。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。</td></tr>
+<tr><td>AT-8-2</td><td>--format json CLIパース確認</td><td class="pass">PASS</td><td>--format json が正しくパースされた。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。</td></tr>
+<tr><td>AT-8-3</td><td>--format path CLIパース確認</td><td class="pass">PASS</td><td>--format path が正しくパースされた。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。</td></tr>
+<tr><td>AT-8-4</td><td>デフォルトフォーマット確認</td><td class="pass">PASS</td><td>--format 未指定でも正しく実行された。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。</td></tr>
+<tr><td>AT-8-5</td><td>フォーマッターユニットテスト全パス</td><td class="pass">PASS</td><td>output_format関連テスト12件が全てパスした（12 passed, 0 failed）。</td></tr>
+<tr><td>AT-8-6</td><td>cargo test / clippy / fmt 全パス</td><td class="pass">PASS</td><td>cargo test --all（全105テストパス）、cargo clippy --all-targets -D warnings（警告0件）、cargo fmt --all --check（差分なし）の3チェック全て成功。</td></tr>
+</tbody>
+</table>
+
+<div class="summary">
+  <strong>結果: 6/6 全PASS</strong>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running unittests src/lib.rs (target/debug/deps/commandindex-e0ea4d3280e32fae)
+     Running unittests src/main.rs (target/debug/deps/commandindex-bc4c82bfee80c9ad)
+     Running tests/cli_args.rs (target/debug/deps/cli_args-4f740cb1d88946be)
+     Running tests/cli_index.rs (target/debug/deps/cli_index-113d67ab0b92ecaa)
+     Running tests/ignore_filter.rs (target/debug/deps/ignore_filter-e9ca5de6f9cfc1f7)
+     Running tests/indexer_state.rs (target/debug/deps/indexer_state-5e52c10fa295d66a)
+     Running tests/indexer_tantivy.rs (target/debug/deps/indexer_tantivy-579b3fba73e03989)
+     Running tests/output_format.rs (target/debug/deps/output_format-de08ba9da44e744b)
+     Running tests/parser_markdown.rs (target/debug/deps/parser_markdown-a3de736eaf5c63ab)
+   Doc-tests commandindex

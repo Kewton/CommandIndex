@@ -1,0 +1,144 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+test status_subcommand_exits_with_not_implemented ... ok
+test search_requires_query_argument ... ok
+test update_subcommand_exits_with_not_implemented ... ok
+test clean_subcommand_exits_with_not_implemented ... ok
+test search_subcommand_exits_with_not_implemented ... ok
+test unknown_subcommand_shows_error ... ok
+test help_flag_shows_usage ... ok
+test no_args_shows_error ... ok
+test version_flag_shows_version ... ok
+test index_subcommand_accepts_path_option ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.06s
+
+
+running 11 tests
+test index_nonexistent_path ... ok
+test index_empty_directory ... ok
+test index_creates_tantivy_index ... ok
+test index_creates_commandindex_dir ... ok
+test index_with_path_option ... ok
+test index_creates_manifest ... ok
+test index_displays_summary ... ok
+test index_applies_cmindexignore ... ok
+test index_creates_state ... ok
+test index_multiple_files_with_subdirectories ... ok
+test index_rebuilds_on_existing ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.58s
+
+
+running 16 tests
+test test_only_comments_and_blanks ... ok
+test test_empty_content ... ok
+test test_comment_lines_ignored ... ok
+test test_invalid_pattern_skipped ... ok
+test test_empty_lines_ignored ... ok
+test test_directory_pattern_with_trailing_slash ... ok
+test test_custom_patterns ... ok
+test test_from_file_exists ... ok
+test test_default_ignores_target ... ok
+test test_default_ignores_git ... ok
+test test_default_ignores_commandindex ... ok
+test test_default_allows_normal_files ... ok
+test test_default_ignores_min_js ... ok
+test test_default_ignores_node_modules ... ok
+test test_default_ignores_lock_files ... ok
+test test_from_file_not_exists_uses_defaults ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 17 tests
+test test_manifest_new ... ok
+test test_manifest_add_entry ... ok
+test test_manifest_find_by_path ... ok
+test test_state_check_schema_version_mismatch ... ok
+test test_state_check_schema_version_ok ... ok
+test test_state_new ... ok
+test test_manifest_load_nonexistent ... ok
+test test_compute_file_hash_nonexistent ... ok
+test test_state_load_nonexistent ... ok
+test test_state_exists_false ... ok
+test test_compute_file_hash ... ok
+test test_compute_file_hash_deterministic ... ok
+test test_state_save_and_load ... ok
+test test_compute_file_hash_different_content ... ok
+test test_manifest_save_and_load ... ok
+test test_state_exists_true ... ok
+test test_state_touch_updates_timestamp ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 11 tests
+test test_schema_creation ... ok
+test test_create_index_in_ram ... ok
+test test_create_index_on_disk ... ok
+test test_add_and_commit_section ... ok
+test test_search_no_results ... ok
+test test_search_result_fields ... ok
+test test_search_japanese ... ok
+test test_search_by_tags ... ok
+test test_search_english ... ok
+test test_disk_index_write_and_read ... ok
+test test_commandindex_tantivy_path ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s
+
+
+running 12 tests
+test test_format_empty_results ... ok
+test test_human_format_basic ... ok
+test test_human_format_long_single_line ... ok
+test test_human_format_no_tags ... ok
+test test_human_format_with_tags ... ok
+test test_human_format_snippet_truncation ... ok
+test test_path_format_basic ... ok
+test test_json_format_empty_tags ... ok
+test test_path_format_dedup ... ok
+test test_json_format_tags_array ... ok
+test test_json_format_score ... ok
+test test_json_format_basic ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 17 tests
+test test_heading_without_space_is_not_heading ... ok
+test test_parse_all_heading_levels ... ok
+test test_mixed_links ... ok
+test test_no_frontmatter ... ok
+test test_no_headings ... ok
+test test_empty_file ... ok
+test test_empty_frontmatter ... ok
+test test_section_multiline_body ... ok
+test test_line_start_without_frontmatter ... ok
+test test_markdown_links ... ok
+test test_parse_heading_levels ... ok
+test test_wiki_links ... ok
+test test_parse_empty_directory ... ok
+test test_line_start_with_frontmatter ... ok
+test test_frontmatter_without_tags ... ok
+test test_frontmatter_with_tags ... ok
+test test_parse_directory ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,17 @@
+
+running 12 tests
+test test_format_empty_results ... ok
+test test_human_format_no_tags ... ok
+test test_human_format_long_single_line ... ok
+test test_human_format_basic ... ok
+test test_human_format_with_tags ... ok
+test test_human_format_snippet_truncation ... ok
+test test_json_format_empty_tags ... ok
+test test_json_format_score ... ok
+test test_json_format_basic ... ok
+test test_json_format_tags_array ... ok
+test test_path_format_basic ... ok
+test test_path_format_dedup ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
