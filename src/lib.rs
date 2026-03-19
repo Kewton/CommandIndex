@@ -6,3 +6,5 @@ pub mod indexer;
 pub mod parser;
 // pub mod search;
 pub mod output;
+
+pub const INDEX_DIR_NAME: &str = ".commandindex";
