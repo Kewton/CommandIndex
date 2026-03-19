@@ -96,7 +96,7 @@ fn section_to_doc(
     file_path: &str,
     frontmatter: Option<&crate::parser::Frontmatter>,
 ) -> SectionDoc {
-    let tags = frontmatter.map(|fm| fm.tags.join(", ")).unwrap_or_default();
+    let tags = frontmatter.map(|fm| fm.tags.join(" ")).unwrap_or_default();
 
     SectionDoc {
         path: file_path.to_string(),
@@ -141,8 +141,8 @@ pub fn run(path: &Path) -> Result<IndexSummary, IndexError> {
     }
 
     // 5. Remove existing tantivy directory if present
-    let commandindex_dir = path.join(".commandindex");
-    let tantivy_dir = commandindex_dir.join("tantivy");
+    let commandindex_dir = crate::indexer::commandindex_dir(path);
+    let tantivy_dir = crate::indexer::index_dir(path);
     if tantivy_dir.exists() {
         std::fs::remove_dir_all(&tantivy_dir)?;
     }
