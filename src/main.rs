@@ -18,6 +18,9 @@ enum Commands {
     Search {
         /// Search query
         query: String,
+        /// Output format (human, json, path)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
     },
     /// Incrementally update the index
     Update,
@@ -35,7 +38,10 @@ fn main() {
             eprintln!("Error: `index` command is not yet implemented. Coming in Phase 1.");
             1
         }
-        Commands::Search { query: _ } => {
+        Commands::Search {
+            query: _,
+            format: _,
+        } => {
             eprintln!("Error: `search` command is not yet implemented. Coming in Phase 1.");
             1
         }

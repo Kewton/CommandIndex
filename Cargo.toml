@@ -18,6 +18,7 @@ lindera = { version = "2.3", features = ["embed-ipadic"] }
 lindera-tantivy = { version = "2.0", features = ["embed-ipadic"] }
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
+colored = "2"
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,0 +1,10 @@
+{
+  "stage": 6,
+  "type": "apply_review",
+  "applied_findings": [
+    "colored crateバージョン2を明記",
+    "スニペット切り詰めルール詳細化（改行なしフォールバック:120文字）",
+    "json形式にscore含む旨を明記"
+  ],
+  "issue_updated": true
+}

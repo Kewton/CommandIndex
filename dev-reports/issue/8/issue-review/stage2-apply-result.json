@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "type": "apply_review",
+  "applied_findings": [
+    "tags 変換ルールの明記（スペース区切り→配列/カンマ区切り）",
+    "影響範囲に既存ファイル変更（main.rs, lib.rs, Cargo.toml）を追加",
+    "色付きクレート（colored）の明記",
+    "エラー型（OutputError）の設計追加",
+    "スニペット切り詰めルールの明確化（2行、省略記号）",
+    "score の human 形式での非表示を明記"
+  ],
+  "issue_updated": true
+}

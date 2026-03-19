@@ -1,0 +1,7 @@
+{
+  "stage": 8,
+  "type": "apply_review",
+  "applied_findings": [],
+  "note": "Must Fix 0件。マルチバイト文字安全な切り詰め（chars().take(n)使用）は実装時に対応。Issue本文への追記は不要。",
+  "issue_updated": false
+}
