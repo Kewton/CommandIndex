@@ -5,4 +5,4 @@ pub mod cli;
 pub mod indexer;
 pub mod parser;
 // pub mod search;
-// pub mod output;
+pub mod output;

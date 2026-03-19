@@ -1,0 +1,12 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "key_findings": [
+    {"severity": "must_fix", "title": "search CLI stub維持/変更時のテスト更新が必要"},
+    {"severity": "must_fix", "title": "pub mod output のアンコメントはモジュールコンパイル後に行う"},
+    {"severity": "must_fix", "title": "SearchResultを変更しないことを明記"},
+    {"severity": "should_fix", "title": "coloredクレートのCI/非TTY環境での挙動（テスト時にset_override(false)）"},
+    {"severity": "should_fix", "title": "空結果時の各フォーマット挙動を明記"}
+  ],
+  "summary": "outputモジュールは十分に分離されている。主要リスク: CLI stub挙動の保持、coloredのテスト環境対応。"
+}
