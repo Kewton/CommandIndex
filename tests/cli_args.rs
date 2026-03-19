@@ -43,12 +43,42 @@ fn index_subcommand_accepts_path_option() {
 }
 
 #[test]
-fn search_subcommand_exits_with_not_implemented() {
+fn search_without_index_shows_error() {
+    // Run search from a temp directory where no index exists
+    let tmp = tempfile::tempdir().expect("create temp dir");
     common::cmd()
+        .current_dir(tmp.path())
         .args(["search", "test query"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_with_all_options_accepted() {
+    // Verify all options are accepted by clap (even if search fails due to no index)
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "test query",
+            "--format",
+            "json",
+            "--tag",
+            "rust",
+            "--path",
+            "docs/",
+            "--type",
+            "markdown",
+            "--heading",
+            "Setup",
+            "--limit",
+            "5",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
 }
 
 #[test]
@@ -59,7 +89,6 @@ fn update_subcommand_exits_with_not_implemented() {
         .failure()
         .stderr(predicate::str::contains("not yet implemented"));
 }
-
 
 #[test]
 fn search_requires_query_argument() {

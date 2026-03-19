@@ -1,11 +1,28 @@
 use std::fmt;
 use std::path::Path;
 use tantivy::collector::TopDocs;
-use tantivy::query::QueryParser;
+use tantivy::query::{BooleanQuery, Occur, QueryParser};
 use tantivy::schema::Value;
 use tantivy::{Index, ReloadPolicy};
 
 use crate::indexer::schema::IndexSchema;
+
+/// Post-filter oversampling factor: fetch N times the limit when post-filters are active
+const OVERSAMPLING_FACTOR: usize = 5;
+
+#[derive(Debug, Clone)]
+pub struct SearchOptions {
+    pub query: String,
+    pub tag: Option<String>,
+    pub heading: Option<String>,
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SearchFilters {
+    pub path_prefix: Option<String>,
+    pub file_type: Option<String>,
+}
 
 #[derive(Debug)]
 pub enum ReaderError {
@@ -77,6 +94,21 @@ impl IndexReaderWrapper {
 
     /// クエリで検索し、上位N件を返す
     pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<SearchResult>, ReaderError> {
+        let options = SearchOptions {
+            query: query_str.to_string(),
+            tag: None,
+            heading: None,
+            limit,
+        };
+        self.search_with_options(&options, &SearchFilters::default())
+    }
+
+    /// オプション付き検索
+    pub fn search_with_options(
+        &self,
+        options: &SearchOptions,
+        filters: &SearchFilters,
+    ) -> Result<Vec<SearchResult>, ReaderError> {
         let reader = self
             .index
             .reader_builder()
@@ -84,58 +116,100 @@ impl IndexReaderWrapper {
             .try_into()?;
         let searcher = reader.searcher();
 
-        let query_parser = QueryParser::for_index(
+        // Build BooleanQuery with sub-queries
+        let mut sub_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+
+        // Main query across heading, body, tags
+        let main_parser = QueryParser::for_index(
             &self.index,
             vec![self.schema.heading, self.schema.body, self.schema.tags],
         );
+        let main_query = main_parser.parse_query(&options.query)?;
+        sub_queries.push((Occur::Must, main_query));
 
-        let query = query_parser.parse_query(query_str)?;
-        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
+        // Tag filter (search only in tags field)
+        if let Some(ref tag) = options.tag {
+            let tag_parser = QueryParser::for_index(&self.index, vec![self.schema.tags]);
+            let tag_query = tag_parser.parse_query(tag)?;
+            sub_queries.push((Occur::Must, tag_query));
+        }
+
+        // Heading filter (search only in heading field)
+        if let Some(ref heading) = options.heading {
+            let heading_parser = QueryParser::for_index(&self.index, vec![self.schema.heading]);
+            let heading_query = heading_parser.parse_query(heading)?;
+            sub_queries.push((Occur::Must, heading_query));
+        }
+
+        // Determine fetch limit with oversampling if post-filters are active
+        let has_post_filter = filters.path_prefix.is_some() || filters.file_type.is_some();
+        let fetch_limit = if has_post_filter {
+            options.limit.saturating_mul(OVERSAMPLING_FACTOR)
+        } else {
+            options.limit
+        };
+
+        let boolean_query = BooleanQuery::new(sub_queries);
+        let top_docs = searcher.search(&boolean_query, &TopDocs::with_limit(fetch_limit))?;
 
         let mut results = Vec::new();
         for (score, doc_address) in top_docs {
             let doc: tantivy::TantivyDocument = searcher.doc(doc_address)?;
+            let result = self.doc_to_search_result(&doc, score);
 
-            let path = doc
-                .get_first(self.schema.path)
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let heading = doc
-                .get_first(self.schema.heading)
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let body = doc
-                .get_first(self.schema.body)
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let tags = doc
-                .get_first(self.schema.tags)
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let heading_level = doc
-                .get_first(self.schema.heading_level)
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            let line_start = doc
-                .get_first(self.schema.line_start)
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
+            // Post-filter: path prefix
+            if let Some(ref prefix) = filters.path_prefix
+                && !result.path.starts_with(prefix.as_str())
+            {
+                continue;
+            }
 
-            results.push(SearchResult {
-                path,
-                heading,
-                body,
-                tags,
-                heading_level,
-                line_start,
-                score,
-            });
+            // Post-filter: file type
+            if let Some(ref file_type) = filters.file_type
+                && !matches_file_type(&result.path, file_type)
+            {
+                continue;
+            }
+
+            results.push(result);
+            if results.len() >= options.limit {
+                break;
+            }
         }
 
         Ok(results)
+    }
+
+    /// TantivyDocument から SearchResult を生成するヘルパー
+    fn doc_to_search_result(&self, doc: &tantivy::TantivyDocument, score: f32) -> SearchResult {
+        SearchResult {
+            path: Self::get_text(doc, self.schema.path),
+            heading: Self::get_text(doc, self.schema.heading),
+            body: Self::get_text(doc, self.schema.body),
+            tags: Self::get_text(doc, self.schema.tags),
+            heading_level: Self::get_u64(doc, self.schema.heading_level),
+            line_start: Self::get_u64(doc, self.schema.line_start),
+            score,
+        }
+    }
+
+    /// ドキュメントからテキストフィールドを取得する
+    fn get_text(doc: &tantivy::TantivyDocument, field: tantivy::schema::Field) -> String {
+        doc.get_first(field)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    }
+
+    /// ドキュメントからu64フィールドを取得する
+    fn get_u64(doc: &tantivy::TantivyDocument, field: tantivy::schema::Field) -> u64 {
+        doc.get_first(field).and_then(|v| v.as_u64()).unwrap_or(0)
+    }
+}
+
+fn matches_file_type(path: &str, file_type: &str) -> bool {
+    match file_type {
+        "markdown" => path.ends_with(".md"),
+        _ => false,
     }
 }

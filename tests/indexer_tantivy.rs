@@ -1,4 +1,4 @@
-use commandindex::indexer::reader::IndexReaderWrapper;
+use commandindex::indexer::reader::{IndexReaderWrapper, SearchFilters, SearchOptions};
 use commandindex::indexer::writer::{IndexWriterWrapper, SectionDoc};
 use tempfile::TempDir;
 
@@ -233,5 +233,180 @@ fn test_commandindex_tantivy_path() {
 
     let reader = IndexReaderWrapper::open(&index_dir).unwrap();
     let results = reader.search("Title", 10).unwrap();
+    assert!(!results.is_empty());
+}
+
+// === search_with_options tests ===
+
+fn build_multi_doc_index() -> (IndexReaderWrapper, tempfile::TempDir) {
+    let tmp = TempDir::new().unwrap();
+    let index_dir = tmp.path().join("tantivy");
+
+    {
+        let mut writer = IndexWriterWrapper::open(&index_dir).unwrap();
+        writer
+            .add_section(&SectionDoc {
+                path: "docs/auth.md".to_string(),
+                heading: "Authentication".to_string(),
+                body: "User authentication and authorization module.".to_string(),
+                tags: "auth security".to_string(),
+                heading_level: 1,
+                line_start: 1,
+            })
+            .unwrap();
+        writer
+            .add_section(&SectionDoc {
+                path: "docs/api.md".to_string(),
+                heading: "API Reference".to_string(),
+                body: "REST API endpoints for the application.".to_string(),
+                tags: "api http".to_string(),
+                heading_level: 1,
+                line_start: 1,
+            })
+            .unwrap();
+        writer
+            .add_section(&SectionDoc {
+                path: "src/main.rs".to_string(),
+                heading: "Main Entry".to_string(),
+                body: "The main entry point for the authentication service.".to_string(),
+                tags: "auth rust".to_string(),
+                heading_level: 1,
+                line_start: 1,
+            })
+            .unwrap();
+        writer
+            .add_section(&SectionDoc {
+                path: "guides/setup.md".to_string(),
+                heading: "Setup Guide".to_string(),
+                body: "How to set up the development environment.".to_string(),
+                tags: "guide setup".to_string(),
+                heading_level: 2,
+                line_start: 5,
+            })
+            .unwrap();
+        writer.commit().unwrap();
+    }
+
+    let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+    (reader, tmp)
+}
+
+#[test]
+fn test_search_with_options_tag_filter() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: Some("security".to_string()),
+        heading: None,
+        limit: 10,
+    };
+    let filters = SearchFilters {
+        path_prefix: None,
+        file_type: None,
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(!results.is_empty());
+    // Only the doc with "security" tag should match
+    assert!(results.iter().all(|r| r.tags.contains("security")));
+}
+
+#[test]
+fn test_search_with_options_heading_filter() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: None,
+        heading: Some("Authentication".to_string()),
+        limit: 10,
+    };
+    let filters = SearchFilters {
+        path_prefix: None,
+        file_type: None,
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(!results.is_empty());
+    assert!(results.iter().all(|r| r.heading.contains("Authentication")));
+}
+
+#[test]
+fn test_search_with_options_path_prefix_filter() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: None,
+        heading: None,
+        limit: 10,
+    };
+    let filters = SearchFilters {
+        path_prefix: Some("docs/".to_string()),
+        file_type: None,
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(!results.is_empty());
+    assert!(results.iter().all(|r| r.path.starts_with("docs/")));
+}
+
+#[test]
+fn test_search_with_options_file_type_filter() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: None,
+        heading: None,
+        limit: 10,
+    };
+    let filters = SearchFilters {
+        path_prefix: None,
+        file_type: Some("markdown".to_string()),
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(!results.is_empty());
+    assert!(results.iter().all(|r| r.path.ends_with(".md")));
+}
+
+#[test]
+fn test_search_with_options_combined_filters() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: Some("auth".to_string()),
+        heading: None,
+        limit: 10,
+    };
+    let filters = SearchFilters {
+        path_prefix: Some("docs/".to_string()),
+        file_type: Some("markdown".to_string()),
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(!results.is_empty());
+    assert!(
+        results
+            .iter()
+            .all(|r| r.path.starts_with("docs/") && r.path.ends_with(".md"))
+    );
+}
+
+#[test]
+fn test_search_with_options_limit() {
+    let (reader, _tmp) = build_multi_doc_index();
+    let options = SearchOptions {
+        query: "authentication".to_string(),
+        tag: None,
+        heading: None,
+        limit: 1,
+    };
+    let filters = SearchFilters {
+        path_prefix: None,
+        file_type: None,
+    };
+    let results = reader.search_with_options(&options, &filters).unwrap();
+    assert!(results.len() <= 1);
+}
+
+#[test]
+fn test_search_with_options_delegates_from_search() {
+    // Verify that search() still works as a wrapper
+    let (reader, _tmp) = build_multi_doc_index();
+    let results = reader.search("authentication", 10).unwrap();
     assert!(!results.is_empty());
 }

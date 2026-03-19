@@ -27,6 +27,21 @@ enum Commands {
         /// Output format (human, json, path)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
+        /// Filter by tag
+        #[arg(long)]
+        tag: Option<String>,
+        /// Filter by path prefix
+        #[arg(long)]
+        path: Option<String>,
+        /// Filter by file type (e.g. "markdown")
+        #[arg(long = "type")]
+        file_type: Option<String>,
+        /// Filter by heading
+        #[arg(long)]
+        heading: Option<String>,
+        /// Maximum number of results (1-1000)
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
     },
     /// Incrementally update the index
     Update,
@@ -68,11 +83,31 @@ fn main() {
             }
         },
         Commands::Search {
-            query: _,
-            format: _,
+            query,
+            format,
+            tag,
+            path,
+            file_type,
+            heading,
+            limit,
         } => {
-            eprintln!("Error: `search` command is not yet implemented. Coming in Phase 1.");
-            1
+            let options = commandindex::indexer::reader::SearchOptions {
+                query,
+                tag,
+                heading,
+                limit: limit.min(1000),
+            };
+            let filters = commandindex::indexer::reader::SearchFilters {
+                path_prefix: path,
+                file_type,
+            };
+            match commandindex::cli::search::run(&options, &filters, format) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
         }
         Commands::Update => {
             eprintln!("Error: `update` command is not yet implemented. Coming in Phase 2.");
