@@ -1,0 +1,16 @@
+# Build artifacts
+/target/
+
+# CommandIndex index (generated, not tracked)
+.commandindex/
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
