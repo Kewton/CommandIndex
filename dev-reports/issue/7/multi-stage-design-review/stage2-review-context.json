@@ -1,0 +1,41 @@
+{
+  "stage": 2,
+  "type": "consistency_review",
+  "focus": "設計書と既存実装の整合性",
+  "review_items": [
+    {
+      "id": "D2-01",
+      "severity": "Must Fix",
+      "category": "API整合性",
+      "finding": "設計書の IndexState::new() は index_root: PathBuf を引数に取るが、実際の state.rs の実装を確認すると total_files と total_sections は初期値0で作成される。設計書の処理フロー Step 12 で「ファイル数・セクション数を記録」とあるが、IndexState に値を設定する方法が未記載。直接フィールドに代入するのか、セッターメソッドを使うのか。",
+      "recommendation": "IndexState のフィールドは pub なので直接代入可能。設計書に `state.total_files = scanned; state.total_sections = indexed_sections;` のように明記すべき。"
+    },
+    {
+      "id": "D2-02",
+      "severity": "Should Fix",
+      "category": "API整合性",
+      "finding": "設計書で IgnoreFilter::from_file() に渡すパスが未明確。from_file() は .cmindexignore ファイル自体のパスを受け取る。設計書の処理フローでは「.cmindexignore を読み込み」とあるが、対象ディレクトリルートの `.cmindexignore` を指すことを明示すべき。",
+      "recommendation": "処理フローに `IgnoreFilter::from_file(path.join(\".cmindexignore\"))` と具体的なパス構築を明記。"
+    },
+    {
+      "id": "D2-03",
+      "severity": "Should Fix",
+      "category": "API整合性",
+      "finding": "Manifest::compute_file_hash() は manifest モジュールのフリー関数であり、Manifest のメソッドではない。設計書のデータフローで FileEntry の hash フィールドについて、compute_file_hash() の呼び出しタイミングが不明確。",
+      "recommendation": "処理フローで parse_file() 成功後に compute_file_hash() を呼び出してハッシュを計算する旨を明記。"
+    },
+    {
+      "id": "D2-04",
+      "severity": "Should Fix",
+      "category": "API整合性",
+      "finding": "FileEntry の last_modified フィールドに設定する値の取得方法が未記載。ファイルのメタデータから modified time を取得して DateTime<Utc> に変換する必要がある。",
+      "recommendation": "std::fs::metadata() から modified() を取得し、chrono の DateTime<Utc> に変換するロジックを設計に含めるべき。"
+    }
+  ],
+  "summary": {
+    "must_fix": 1,
+    "should_fix": 3,
+    "nice_to_have": 0,
+    "total": 4
+  }
+}

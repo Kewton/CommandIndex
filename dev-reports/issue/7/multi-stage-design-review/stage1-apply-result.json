@@ -1,0 +1,10 @@
+{
+  "stage": 1,
+  "type": "apply_review",
+  "applied_items": [
+    "D1-01: IndexError に Display/Error トレイト実装の方針を追記",
+    "D1-02: section_to_doc() のシグネチャを Option<&Frontmatter> に修正",
+    "D1-03: 設計判断1に将来の共通化可能性を注記",
+    "D1-04: パストラバーサル対策をcanonicalize()のみに簡素化、優先度を中に変更"
+  ]
+}

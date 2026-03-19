@@ -1,0 +1,10 @@
+{
+  "stage": 2,
+  "type": "apply_review",
+  "applied_items": [
+    "D2-01: 処理フロー Step 14 に IndexState フィールド直接代入を明記",
+    "D2-02: 処理フロー Step 2 に path.join('.cmindexignore') を明記",
+    "D2-03: 処理フロー Step 9 に compute_file_hash() 呼び出しを追加",
+    "D2-04: 処理フロー Step 10 に metadata().modified() → DateTime<Utc> 変換を追加"
+  ]
+}

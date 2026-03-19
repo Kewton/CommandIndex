@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "apply_review",
+  "applied_items": [
+    "S3-01: 設計方針セクションにファイル列挙・フィルタリング戦略を追加（index側でwalkdir+IgnoreFilter→parse_file個別呼び出し）",
+    "S3-02: 受け入れ基準に既存テスト更新要件を追加",
+    "S3-03: 設計方針にcli/モジュール新設方針を追加。受け入れ基準にも反映",
+    "S3-04: Phase 1ではスコープ外。将来課題として留意"
+  ],
+  "issue_updated": true,
+  "must_fix_remaining_from_stage1_and_3": 0,
+  "skip_stage_5_to_8": true,
+  "reason": "1回目のMust Fix合計2件は全て対応済み。Stage 4完了時点でMust Fix残存0件のため、2回目イテレーション（Stage 5-8）をスキップ"
+}

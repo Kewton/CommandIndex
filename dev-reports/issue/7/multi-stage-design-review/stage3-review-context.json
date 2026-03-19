@@ -1,0 +1,27 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "focus": "変更の波及効果分析",
+  "review_items": [
+    {
+      "id": "D3-01",
+      "severity": "Should Fix",
+      "category": "テスト影響",
+      "finding": "既存テスト tests/cli_args.rs の test_index_not_implemented_yet は `commandindex index` が終了コード1を返すことを検証している。index コマンド実装後はこのテストが失敗する。設計書のテスト戦略では「実装後は成功動作に変更」とあるが、具体的なテスト内容が未記載。",
+      "recommendation": "test_index_not_implemented_yet を削除または test_index_succeeds_with_valid_dir に置き換える具体的な対応を記載すべき。"
+    },
+    {
+      "id": "D3-02",
+      "severity": "Nice to Have",
+      "category": "将来影響",
+      "finding": "Commands::Index に path フィールドを追加すると、将来の search/status/clean コマンドでも同様の --path オプションが必要になる可能性がある。設計の一貫性を考慮すべき。",
+      "recommendation": "Phase 1のスコープとしては index のみで問題ない。他コマンドでの --path 対応は各Issueで個別に検討する。"
+    }
+  ],
+  "summary": {
+    "must_fix": 0,
+    "should_fix": 1,
+    "nice_to_have": 1,
+    "total": 2
+  }
+}
