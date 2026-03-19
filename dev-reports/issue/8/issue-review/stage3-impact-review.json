@@ -1,0 +1,35 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "findings": [
+    {
+      "severity": "must_fix",
+      "category": "既存機能",
+      "title": "SearchResult構造体の重複定義リスク",
+      "description": "既存のindexer::reader::SearchResultをそのまま利用し、outputモジュールで重複定義しない",
+      "recommendation": "既存SearchResultを再利用し、必要に応じてSerialize deriveを追加する"
+    },
+    {
+      "severity": "must_fix",
+      "category": "テスト",
+      "title": "CLIテストがsearchサブコマンドの引数構造に依存",
+      "description": "--formatオプション追加後に既存CLI引数テストがパスすることを確認必須",
+      "recommendation": "実装後にcargo testで既存テスト通過を確認する"
+    },
+    {
+      "severity": "should_fix",
+      "category": "依存関係",
+      "title": "colored crateのTTY検出・NO_COLOR対応",
+      "description": "パイプ出力時にANSIエスケープが混入しないよう制御が必要",
+      "recommendation": "NO_COLOR環境変数対応、パイプ時の色無効化を実装する"
+    },
+    {
+      "severity": "should_fix",
+      "category": "将来拡張性",
+      "title": "SearchResultへのSerialize derive追加",
+      "description": "JSON出力のためSearchResultにSerialize追加が有効",
+      "recommendation": "indexer::reader::SearchResultに derive(Serialize) を追加する"
+    }
+  ],
+  "summary": "影響範囲は限定的。最重要: SearchResult既存型の再利用。colored追加のリスクは低い。"
+}

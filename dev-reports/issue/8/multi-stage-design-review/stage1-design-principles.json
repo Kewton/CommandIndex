@@ -1,0 +1,12 @@
+{
+  "stage": 1,
+  "type": "design_principles_review",
+  "key_findings": [
+    {"severity": "must_fix", "title": "truncate_body()をhuman.rsからmod.rsに移動（SRP）"},
+    {"severity": "should_fix", "title": "parse_tags()共通ヘルパーの追加（DRY）"},
+    {"severity": "should_fix", "title": "JsonSearchResult中間構造体の代わりにserde_json::json!()を検討（KISS）"},
+    {"severity": "should_fix", "title": "OCP trade-offのコメント追加"},
+    {"severity": "should_fix", "title": "エラーboilerplate削減(thiserror検討)"}
+  ],
+  "summary": "関数ベース設計は3フォーマットに対して適切。主要改善: truncate_bodyの配置、parse_tags共通化、中間構造体の簡略化。"
+}

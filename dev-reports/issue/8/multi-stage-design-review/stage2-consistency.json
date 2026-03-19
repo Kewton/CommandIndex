@@ -1,0 +1,11 @@
+{
+  "stage": 2,
+  "type": "consistency_review",
+  "key_findings": [
+    {"severity": "warning", "title": "--formatはSearchサブコマンドに属することを明確化"},
+    {"severity": "warning", "title": "テストはtests/ディレクトリの統合テストパターンに準拠"},
+    {"severity": "warning", "title": "dyn Write vs generic W: Writeの選択を文書化"},
+    {"severity": "info", "title": "tags分割ロジックはsplit_whitespace（スペース区切り）を使用"}
+  ],
+  "summary": "エラーパターン・モジュール構造は既存と一致。CLIフラグ配置とテストパターンの明確化が必要。"
+}
