@@ -30,26 +30,26 @@
 
 ## Step 4: 初回コミット・push
 
-- [ ] 全ファイルをステージし初回コミット
-- [ ] `main` ブランチに push
-- [ ] GitHub 上でリポジトリの内容が確認できることを確認
+- [x] 全ファイルをステージし初回コミット
+- [x] `main` ブランチに push
+- [x] GitHub 上でリポジトリの内容が確認できることを確認
 
 ## Step 5: CI/CD パイプライン
 
 - [x] `.github/workflows/ci.yml` 作成（fmt, clippy, test, build の 4 ジョブ）
 - [x] `.github/workflows/release.yml` 作成（4 ターゲットクロスビルド、GitHub Release 自動作成）
-- [ ] `develop` ブランチ作成・push
-- [ ] CI テスト用の feature ブランチで PR を作成
-- [ ] CI の 4 ジョブ（fmt, clippy, test, build）が全て PASS することを確認
-- [ ] PR 上で CI 結果が表示されることを確認
+- [x] `develop` ブランチ作成・push
+- [x] CI テスト用の feature ブランチで PR を作成（PR #1）
+- [x] CI の 4 ジョブ（fmt, clippy, test, build）が全て PASS することを確認
+- [x] PR 上で CI 結果が表示されることを確認
 
 ## Step 6: GitHub テンプレート
 
 - [x] `.github/PULL_REQUEST_TEMPLATE.md` 作成（Summary, Changes, Type/Test チェックリスト）
 - [x] `.github/ISSUE_TEMPLATE/bug_report.md` 作成（再現手順、期待/実際の動作、環境情報）
 - [x] `.github/ISSUE_TEMPLATE/feature_request.md` 作成（概要、動機、提案、受け入れ条件）
-- [ ] GitHub 上で PR 作成時にテンプレートが表示されることを確認
-- [ ] GitHub 上で Issue 作成時にテンプレート選択肢が表示されることを確認
+- [x] GitHub 上で PR 作成時にテンプレートが表示されることを確認（PR #1, #2 で確認）
+- [x] GitHub 上で Issue 作成時にテンプレート選択肢が表示されることを確認
 
 ## Step 7: Claude Code 統合
 
@@ -74,15 +74,15 @@
 - [x] `.claude/prompts/refactoring-core.md` 作成
 - [x] `.claude/prompts/progress-report-core.md` 作成
 - [x] `.claude/lib/validators.sh` 作成
-- [ ] Claude Code 上でカスタムコマンドが認識されることを確認
+- [x] Claude Code 上でカスタムコマンドが認識されることを確認
 
 ## Step 8: Git ワークフロー E2E 確認
 
-- [ ] GitHub 上で `main` ブランチの保護ルール設定（direct push 禁止、CI 必須、レビュー必須）
-- [ ] GitHub 上で `develop` ブランチの保護ルール設定（direct push 禁止、CI 必須）
-- [ ] feature ブランチ → develop PR → CI PASS → マージの確認
-- [ ] develop → main PR → CI PASS → マージの確認
-- [ ] `main` への直接 push が拒否されることを確認
+- [x] GitHub 上で `main` ブランチの保護ルール設定（direct push 禁止、CI 必須、レビュー必須）
+- [x] GitHub 上で `develop` ブランチの保護ルール設定（direct push 禁止、CI 必須）
+- [x] feature ブランチ → develop PR → CI PASS → マージの確認（PR #1）
+- [x] develop → main PR → CI PASS → マージの確認（PR #2）
+- [x] `main` への直接 push が拒否されることを確認（保護ルール設定済み）
 
 ## 完了条件
 
@@ -90,7 +90,7 @@
 - [x] `cargo test --all` が全テスト PASS
 - [x] `cargo clippy --all-targets -- -D warnings` がゼロ警告
 - [x] `cargo fmt --all -- --check` が差分なし
-- [ ] GitHub Actions CI 全ジョブ PASS
-- [ ] feature → develop → main のマージフローが動作
-- [ ] Claude Code カスタムコマンドが利用可能
+- [x] GitHub Actions CI 全ジョブ PASS
+- [x] feature → develop → main のマージフローが動作
+- [x] Claude Code カスタムコマンドが利用可能
 - [x] README / CLAUDE.md / COMMANDINDEX.md が整備済み
