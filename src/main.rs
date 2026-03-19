@@ -31,7 +31,14 @@ enum Commands {
     /// Incrementally update the index
     Update,
     /// Show index status
-    Status,
+    Status {
+        /// Target directory
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+        /// Output format (human, json)
+        #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
+        format: commandindex::cli::status::StatusFormat,
+    },
     /// Remove index and prepare for rebuild
     Clean {
         /// Target directory containing .commandindex/
@@ -71,9 +78,14 @@ fn main() {
             eprintln!("Error: `update` command is not yet implemented. Coming in Phase 2.");
             1
         }
-        Commands::Status => {
-            eprintln!("Error: `status` command is not yet implemented. Coming in Phase 1.");
-            1
+        Commands::Status { path, format } => {
+            match commandindex::cli::status::run(&path, format, &mut std::io::stdout()) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("{e}");
+                    1
+                }
+            }
         }
         Commands::Clean { path } => match commandindex::cli::clean::run(&path) {
             Ok(commandindex::cli::clean::CleanResult::Removed) => {

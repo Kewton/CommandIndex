@@ -60,14 +60,6 @@ fn update_subcommand_exits_with_not_implemented() {
         .stderr(predicate::str::contains("not yet implemented"));
 }
 
-#[test]
-fn status_subcommand_exits_with_not_implemented() {
-    common::cmd()
-        .arg("status")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
-}
 
 #[test]
 fn search_requires_query_argument() {
