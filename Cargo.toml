@@ -13,6 +13,9 @@ tracing-appender = "0.2"
 serde_yaml = "0.9"
 walkdir = "2"
 globset = "0.4"
+tantivy = "0.25"
+lindera = { version = "2.3", features = ["embed-ipadic"] }
+lindera-tantivy = { version = "2.0", features = ["embed-ipadic"] }
 
 [dev-dependencies]
 tempfile = "3"
