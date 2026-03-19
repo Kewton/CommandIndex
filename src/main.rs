@@ -3,7 +3,7 @@ use std::process;
 
 #[derive(Parser)]
 #[command(name = "commandindex")]
-#[command(about = "Git-native knowledge CLI — search across Markdown, Code, and Git")]
+#[command(about = "Git-native knowledge CLI \u{2014} search across Markdown, Code, and Git")]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
