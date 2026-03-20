@@ -161,6 +161,44 @@ fn update_manifest_updated() {
 }
 
 #[test]
+fn update_state_no_underflow() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::write(dir.path().join("keep.md"), "# Keep\n\nKeep content\n").unwrap();
+    fs::write(dir.path().join("remove.md"), "# Remove\n\nRemove content\n").unwrap();
+    run_index(&dir);
+
+    // Corrupt state.json: set total_files and total_sections to 0
+    let state_path = dir.path().join(".commandindex/state.json");
+    let state_content = fs::read_to_string(&state_path).unwrap();
+    let mut state: serde_json::Value = serde_json::from_str(&state_content).unwrap();
+    state["total_files"] = serde_json::Value::from(0u64);
+    state["total_sections"] = serde_json::Value::from(0u64);
+    fs::write(&state_path, serde_json::to_string_pretty(&state).unwrap()).unwrap();
+
+    // Delete one file — this would cause underflow without saturating_sub
+    fs::remove_file(dir.path().join("remove.md")).unwrap();
+
+    // Should not panic, should succeed
+    run_update(&dir).success();
+
+    // Verify state values are >= 0 (u64 so always true, but not wrapped to huge values)
+    let final_state: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&state_path).unwrap()).unwrap();
+    let total_files = final_state["total_files"].as_u64().unwrap();
+    let total_sections = final_state["total_sections"].as_u64().unwrap();
+
+    // With saturating_sub, values should be 0 (not wrapped to u64::MAX - N)
+    assert!(
+        total_files <= 10,
+        "total_files should not be a huge wrapped value, got {total_files}"
+    );
+    assert!(
+        total_sections <= 10,
+        "total_sections should not be a huge wrapped value, got {total_sections}"
+    );
+}
+
+#[test]
 fn update_state_updated() {
     let dir = setup_single_file();
     run_index(&dir);
