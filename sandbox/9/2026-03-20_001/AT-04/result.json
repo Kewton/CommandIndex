@@ -1,0 +1,1 @@
+{"test_id": "AT-9-04", "title": "--path filter (path prefix)", "status": "PASS", "command": "commandindex search \"test\" --path docs/", "exit_code": 0, "notes": "--path acts as path prefix post-filter. Correctly returned only docs/ files, excluding readme.md at root"}

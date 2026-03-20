@@ -1,0 +1,1 @@
+{"test_id": "AT-10-02", "title": "No index - guidance message", "status": "PASS", "command": "commandindex status --path $EMPTYTMPDIR", "exit_code": 1, "notes": "Expected exit code 1 with guidance message."}

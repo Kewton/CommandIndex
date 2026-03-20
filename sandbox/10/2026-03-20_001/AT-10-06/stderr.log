@@ -1,0 +1,4 @@
+error: invalid value 'path' for '--format <FORMAT>'
+  [possible values: human, json]
+
+For more information, try '--help'.

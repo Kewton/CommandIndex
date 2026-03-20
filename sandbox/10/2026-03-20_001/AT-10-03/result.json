@@ -1,0 +1,1 @@
+{"test_id": "AT-10-03", "title": "--path option works", "status": "PASS", "command": "commandindex status --path $TESTDIR", "exit_code": 0, "notes": "Output references the specified directory path."}

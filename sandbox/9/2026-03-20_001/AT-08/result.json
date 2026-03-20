@@ -1,0 +1,1 @@
+{"test_id": "AT-9-08", "title": "--format path", "status": "PASS", "command": "commandindex search \"test\" --format path", "exit_code": 0, "notes": "Path-only output correctly showed just file path: docs/tutorial.md"}

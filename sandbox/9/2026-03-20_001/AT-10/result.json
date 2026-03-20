@@ -1,0 +1,1 @@
+{"test_id": "AT-9-10", "title": "Multiple flags combined", "status": "PASS", "command": "commandindex search \"test\" --tag tutorial --format json", "exit_code": 0, "notes": "Combined --tag and --format flags work correctly. JSON output with tag-filtered result returned 1 result"}

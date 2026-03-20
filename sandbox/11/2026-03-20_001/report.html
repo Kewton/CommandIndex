@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UAT Report — Issue #11: clean command</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #1a1d23;
+      padding: 32px 16px;
+    }
+    .container { max-width: 860px; margin: 0 auto; }
+
+    .header {
+      background: #1e2330;
+      color: #fff;
+      border-radius: 8px 8px 0 0;
+      padding: 28px 32px;
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 0.01em; }
+    .header .meta {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #9aa3b2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .badge.pass { background: #22c55e; color: #fff; }
+    .badge.fail { background: #ef4444; color: #fff; }
+
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: #e2e8f0;
+      border-left: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+    }
+    .summary-card {
+      background: #fff;
+      padding: 20px 24px;
+      text-align: center;
+    }
+    .summary-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .summary-card .label {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .value.total  { color: #1e2330; }
+    .value.passed { color: #16a34a; }
+    .value.failed { color: #dc2626; }
+
+    .table-wrap {
+      background: #fff;
+      border-left: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+    }
+    .section-title {
+      padding: 16px 24px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead tr { background: #f8fafc; }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: 11px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #fafbfc; }
+
+    .test-id {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+    .status-cell { width: 90px; text-align: center; }
+    .status-pass {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .status-fail {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .log-link {
+      font-size: 0.78rem;
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    .log-link:hover { text-decoration: underline; }
+
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1>UAT Report &mdash; Issue #11: clean command</h1>
+      <div class="meta">
+        <span>Run ID: 2026-03-20_001</span>
+        <span>Date: 2026-03-20</span>
+        <span>Overall: <span class="badge pass">PASS</span></span>
+      </div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="value total">5</div>
+        <div class="label">Total Tests</div>
+      </div>
+      <div class="summary-card">
+        <div class="value passed">5</div>
+        <div class="label">Passed</div>
+      </div>
+      <div class="summary-card">
+        <div class="value failed">0</div>
+        <div class="label">Failed</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="section-title">Test Results</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Test ID</th>
+            <th>Description</th>
+            <th class="status-cell">Status</th>
+            <th>Log</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="test-id">AT-11-01</td>
+            <td>Index directory is deleted</td>
+            <td class="status-cell"><span class="status-pass">PASS</span></td>
+            <td><a class="log-link" href="AT-11-01/">AT-11-01/</a></td>
+          </tr>
+          <tr>
+            <td class="test-id">AT-11-02</td>
+            <td>Confirmation message after deletion</td>
+            <td class="status-cell"><span class="status-pass">PASS</span></td>
+            <td><a class="log-link" href="AT-11-02/">AT-11-02/</a></td>
+          </tr>
+          <tr>
+            <td class="test-id">AT-11-03</td>
+            <td>No index exists - no error</td>
+            <td class="status-cell"><span class="status-pass">PASS</span></td>
+            <td><a class="log-link" href="AT-11-03/">AT-11-03/</a></td>
+          </tr>
+          <tr>
+            <td class="test-id">AT-11-04</td>
+            <td>--path option works</td>
+            <td class="status-cell"><span class="status-pass">PASS</span></td>
+            <td><a class="log-link" href="AT-11-04/">AT-11-04/</a></td>
+          </tr>
+          <tr>
+            <td class="test-id">AT-11-05</td>
+            <td>cargo test/clippy/fmt</td>
+            <td class="status-cell"><span class="status-pass">PASS</span></td>
+            <td><a class="log-link" href="AT-11-05/">AT-11-05/</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Generated 2026-03-20 &bull; CommandIndex UAT
+      <br>
+      <a class="back-link" href="../../uat-summary.html">&larr; Back to Overall Summary</a>
+    </div>
+
+  </div>
+</body>
+</html>

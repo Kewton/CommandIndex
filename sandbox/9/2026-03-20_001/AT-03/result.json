@@ -1,0 +1,1 @@
+{"test_id": "AT-9-03", "title": "--tag filter", "status": "PASS", "command": "commandindex search \"test\" --tag tutorial", "exit_code": 0, "notes": "Tag filter correctly returned only tutorial-tagged result (1 result from Getting Started section)"}

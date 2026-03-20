@@ -1,0 +1,1 @@
+{"test_id": "AT-12-05", "title": "E2E helpers in e2e_integration.rs", "status": "PASS", "command": "code review of e2e_integration.rs and common/mod.rs", "exit_code": 0, "notes": "Helper functions setup_e2e_dir(), run_index(), parse_jsonl() are defined in e2e_integration.rs. common/mod.rs only contains cmd() which is shared across all test files."}

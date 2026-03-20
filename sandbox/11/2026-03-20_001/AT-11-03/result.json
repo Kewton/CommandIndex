@@ -1,0 +1,1 @@
+{"test_id": "AT-11-03", "title": "No index exists - no error", "status": "PASS", "command": "./target/release/commandindex clean --path $EMPTYTMPDIR", "exit_code": 0, "notes": "Exit 0, message: 'No index found. Nothing to clean.'"}

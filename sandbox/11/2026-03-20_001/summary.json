@@ -1,0 +1,17 @@
+{
+  "issue": "#11",
+  "feature": "clean command",
+  "run_date": "2026-03-20",
+  "run_id": "2026-03-20_001",
+  "total": 5,
+  "passed": 5,
+  "failed": 0,
+  "overall": "PASS",
+  "tests": [
+    {"test_id": "AT-11-01", "title": "Index directory is deleted", "status": "PASS"},
+    {"test_id": "AT-11-02", "title": "Confirmation message after deletion", "status": "PASS"},
+    {"test_id": "AT-11-03", "title": "No index exists - no error", "status": "PASS"},
+    {"test_id": "AT-11-04", "title": "--path option works", "status": "PASS"},
+    {"test_id": "AT-11-05", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

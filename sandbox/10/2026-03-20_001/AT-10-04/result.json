@@ -1,0 +1,1 @@
+{"test_id": "AT-10-04", "title": "--path nonexistent directory", "status": "PASS", "command": "commandindex status --path /tmp/nonexistent_dir_uat_test", "exit_code": 1, "notes": "Expected exit code 1 with error about directory not found."}

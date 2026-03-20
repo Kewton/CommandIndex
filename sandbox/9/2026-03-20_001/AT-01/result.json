@@ -1,0 +1,1 @@
+{"test_id": "AT-9-01", "title": "Search Japanese text", "status": "PASS", "command": "commandindex search \"テスト\"", "exit_code": 0, "notes": "Japanese query returned 1 result from docs/tutorial.md 概要 section as expected"}

@@ -1,0 +1,1 @@
+{"test_id": "AT-12-06", "title": "cargo test / clippy / fmt all pass", "status": "PASS", "command": "cargo test --all && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check", "exit_code": 0, "notes": "All 128 tests pass (9+5+11+15+8+16+17+18+12+17=128). Clippy: 0 warnings. Fmt: no diff."}

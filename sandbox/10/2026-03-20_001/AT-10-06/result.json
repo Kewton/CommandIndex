@@ -1,0 +1,1 @@
+{"test_id": "AT-10-06", "title": "--format path error", "status": "PASS", "command": "commandindex status --format path --path $TESTDIR", "exit_code": 2, "notes": "Expected non-zero exit code for unsupported format."}

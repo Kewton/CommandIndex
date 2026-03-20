@@ -1,0 +1,1 @@
+{"test_id": "AT-11-05", "title": "cargo test/clippy/fmt", "status": "PASS", "command": "cargo test --all && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check", "exit_code": 0, "notes": "test=0 (17 passed), clippy=0 (no warnings), fmt=0 (no diff)"}
