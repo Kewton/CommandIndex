@@ -1,0 +1,25 @@
+{
+  "issue": "#9",
+  "feature": "search command",
+  "run_id": "2026-03-20_001",
+  "date": "2026-03-20",
+  "total": 13,
+  "passed": 13,
+  "failed": 0,
+  "status": "ALL PASS",
+  "tests": [
+    {"test_id": "AT-9-01", "title": "Search Japanese text", "status": "PASS"},
+    {"test_id": "AT-9-02", "title": "Search English text", "status": "PASS"},
+    {"test_id": "AT-9-03", "title": "--tag filter", "status": "PASS"},
+    {"test_id": "AT-9-04", "title": "--path filter (path prefix)", "status": "PASS"},
+    {"test_id": "AT-9-05", "title": "--type filter", "status": "PASS"},
+    {"test_id": "AT-9-06", "title": "--heading filter", "status": "PASS"},
+    {"test_id": "AT-9-07", "title": "--format json", "status": "PASS"},
+    {"test_id": "AT-9-08", "title": "--format path", "status": "PASS"},
+    {"test_id": "AT-9-09", "title": "--limit 1", "status": "PASS"},
+    {"test_id": "AT-9-10", "title": "Multiple flags combined", "status": "PASS"},
+    {"test_id": "AT-9-11", "title": "No index (empty dir)", "status": "PASS"},
+    {"test_id": "AT-9-12", "title": "Zero results", "status": "PASS"},
+    {"test_id": "AT-9-13", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

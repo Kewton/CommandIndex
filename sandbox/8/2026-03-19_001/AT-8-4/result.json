@@ -1,0 +1,1 @@
+{"test_id":"AT-8-4","status":"PASS","detail":"--format 未指定でも正しく実行された。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。"}

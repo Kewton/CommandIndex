@@ -1,0 +1,1 @@
+{"test_id": "AT-9-11", "title": "No index (empty dir)", "status": "PASS", "command": "commandindex search \"test\" (in empty tmpdir)", "exit_code": 1, "notes": "Error message: 'Index not found. Run `commandindex index` first.' Exit code 1 as expected"}

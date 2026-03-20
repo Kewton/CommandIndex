@@ -110,7 +110,7 @@ tests/
 src/
 ├── main.rs              # エントリポイント
 ├── lib.rs               # モジュール宣言
-├── cli/                 # CLI サブコマンド
+├── cli/                 # CLI サブコマンド（index, clean）
 ├── parser/              # Markdown / ソースコード解析
 ├── indexer/             # tantivy / SQLite インデックス操作
 ├── search/              # 検索ロジック
@@ -132,19 +132,60 @@ src/
 
 ## スラッシュコマンド（Claude Code用）
 
+### Issue管理
+
+| コマンド | 説明 |
+|---|---|
+| `/issue-create` | GitHub Issue作成（テンプレート準拠） |
+| `/issue-enhance` | Issue内容補完・質問ベース更新 |
+| `/issue-split` | 大規模Issueを実装可能な粒度に分割 |
+| `/issues-exec-plan` | 複数Issueの実行計画策定 |
+
+### 設計・レビュー
+
+| コマンド | 説明 |
+|---|---|
+| `/design-policy` | Issue単位の設計方針書作成 |
+| `/architecture-review` | SOLID/KISS/YAGNI/DRY・セキュリティ・リスク評価 |
+| `/apply-review` | レビュー結果を設計方針書に反映 |
+| `/multi-stage-issue-review` | Issue多段階レビュー（通常→影響範囲）×2回 |
+| `/multi-stage-design-review` | 設計書4段階レビュー（通常→整合性→影響分析→セキュリティ） |
+
+### 計画・開発
+
 | コマンド | 説明 |
 |---|---|
 | `/work-plan` | Issue単位の作業計画立案 |
 | `/tdd-impl` | テスト駆動開発で実装 |
-| `/pm-auto-dev` | Issue開発を完全自動化（TDD→テスト→報告） |
-| `/bug-fix` | バグ調査・修正を自動化 |
-| `/create-pr` | PR自動作成（タイトル・説明自動生成） |
+| `/pm-auto-dev` | Issue開発を完全自動化（TDD→テスト→リファクタリング→報告） |
+| `/pm-auto-design2dev` | 設計→開発完全自動化（設計→レビュー→計画→TDD） |
+| `/pm-auto-issue2dev` | Issue→開発完全自動化（Issueレビュー→設計→レビュー→計画→TDD） |
+
+### テスト・品質
+
+| コマンド | 説明 |
+|---|---|
+| `/acceptance-test` | 受け入れテスト作成・実行 |
+| `/bug-fix` | バグ調査から修正・テストまで自動実行 |
+| `/refactoring` | コード品質改善リファクタリング |
+| `/uat` | ユーザー受入テスト（HTMLレポート生成） |
+| `/uat-fix-loop` | UAT不合格→修正→再PR→再UATのループ |
+
+### PR・マージ・オーケストレーション
+
+| コマンド | 説明 |
+|---|---|
+| `/create-pr` | PR自動作成（CIチェック含む） |
+| `/pr-merge-pipeline` | 複数Issue PR→CI→マージ→統合検証 |
+| `/orchestrate` | 複数Issue並列オーケストレーション（準備→開発→PR→マージ→UAT→完了） |
+
+### Git Worktree・レポート
+
+| コマンド | 説明 |
+|---|---|
 | `/worktree-setup` | Issue用Git Worktree環境構築 |
 | `/worktree-cleanup` | Worktree環境のクリーンアップ |
 | `/progress-report` | 開発進捗レポート作成 |
-| `/refactoring` | コード品質改善 |
-| `/acceptance-test` | 受入テスト検証 |
-| `/issue-enhance` | Issue拡充 |
 
 ---
 

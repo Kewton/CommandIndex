@@ -100,6 +100,23 @@ Context file: dev-reports/issue/{issue_number}/pm-auto-dev/iteration-1/progress-
 Output file: dev-reports/issue/{issue_number}/pm-auto-dev/iteration-1/progress-report.md
 ```
 
+## ファイル構造
+
+```
+dev-reports/issue/{issue_number}/
+├── work-plan.md
+└── pm-auto-dev/
+    └── iteration-1/
+        ├── tdd-context.json
+        ├── tdd-result.json
+        ├── acceptance-context.json
+        ├── acceptance-result.json
+        ├── refactor-context.json
+        ├── refactor-result.json
+        ├── progress-context.json
+        └── progress-report.md
+```
+
 ## 完了条件
 
 - Phase 2: TDD実装成功（全テストパス、clippy警告0件）

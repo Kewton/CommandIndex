@@ -1,0 +1,1 @@
+{"test_id": "AT-9-02", "title": "Search English text", "status": "PASS", "command": "commandindex search \"tutorial\"", "exit_code": 0, "notes": "English query returned 2 results from docs/tutorial.md (both sections) as expected"}

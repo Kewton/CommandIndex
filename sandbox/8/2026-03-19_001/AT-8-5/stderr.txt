@@ -1,0 +1,2 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running tests/output_format.rs (target/debug/deps/output_format-de08ba9da44e744b)

@@ -1,0 +1,1 @@
+{"test_id": "AT-10-05", "title": "--format json output", "status": "PASS", "command": "commandindex status --format json --path $TESTDIR", "exit_code": 0, "notes": "Valid JSON output with expected fields."}

@@ -1,0 +1,25 @@
+total 160
+drwxr-xr-x@ 24 maenokota  wheel   768  3月 19 20:52 .
+drwxr-xr-x@  5 maenokota  wheel   160  3月 19 20:52 ..
+-rw-------@  1 maenokota  wheel   746  3月 19 20:52 .managed.json
+-rw-r--r--@  1 maenokota  wheel     0  3月 19 20:52 .tantivy-meta.lock
+-rw-r--r--@  1 maenokota  wheel     0  3月 19 20:52 .tantivy-writer.lock
+-rw-r--r--@  1 maenokota  wheel   146  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.fast
+-rw-r--r--@  1 maenokota  wheel   134  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.fieldnorm
+-rw-r--r--@  1 maenokota  wheel   175  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.idx
+-rw-r--r--@  1 maenokota  wheel   143  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.pos
+-rw-r--r--@  1 maenokota  wheel   232  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.store
+-rw-r--r--@  1 maenokota  wheel   646  3月 19 20:52 26cc7af6ae2f4e35937fce8bd2ffcf5f.term
+-rw-r--r--@  1 maenokota  wheel   145  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.fast
+-rw-r--r--@  1 maenokota  wheel   148  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.fieldnorm
+-rw-r--r--@  1 maenokota  wheel   269  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.idx
+-rw-r--r--@  1 maenokota  wheel   215  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.pos
+-rw-r--r--@  1 maenokota  wheel   461  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.store
+-rw-r--r--@  1 maenokota  wheel  1077  3月 19 20:52 2e9d96a220e84f2091cdf05a0ccd76bd.term
+-rw-r--r--@  1 maenokota  wheel   146  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.fast
+-rw-r--r--@  1 maenokota  wheel   134  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.fieldnorm
+-rw-r--r--@  1 maenokota  wheel   177  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.idx
+-rw-r--r--@  1 maenokota  wheel   142  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.pos
+-rw-r--r--@  1 maenokota  wheel   249  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.store
+-rw-r--r--@  1 maenokota  wheel   674  3月 19 20:52 319af144f9f542a3a7eb978d3455c57f.term
+-rw-------@  1 maenokota  wheel  1905  3月 19 20:52 meta.json

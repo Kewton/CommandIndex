@@ -1,0 +1,1 @@
+{"test_id": "AT-11-04", "title": "--path option works", "status": "PASS", "command": "./target/release/commandindex clean --path $TESTDIR", "exit_code": 0, "notes": "--path correctly targeted /var/folders/07/jbhw26n10nj_59d4yp7g5lx80000gn/T/tmp.bGpw57Gg2O, .commandindex/ removed"}

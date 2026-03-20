@@ -1,0 +1,2 @@
+{"test_id": "AT-11-02", "title": "Confirmation message after deletion", "status": "PASS", "command": "./target/release/commandindex clean --path $TESTDIR", "exit_code": 0, "notes": "stdout contains confirmation: 'Removed index at .commandindex/
+Run `commandindex index` to rebuild.'"}

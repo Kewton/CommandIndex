@@ -1,0 +1,1 @@
+{"test_id":"AT-8-1","status":"PASS","detail":"--format human が正しくパースされた。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。"}

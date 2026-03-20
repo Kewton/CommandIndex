@@ -1,0 +1,42 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "focus": "影響範囲",
+  "issue_number": 7,
+  "review_items": [
+    {
+      "id": "S3-01",
+      "severity": "Must Fix",
+      "category": "影響範囲: parse_directory",
+      "finding": "現在の parse_directory() は walkdir で .md ファイルを列挙するが、IgnoreFilter を引数に取らない。index コマンドで .cmindexignore フィルタリングを行うには、(A) parse_directory() を拡張してフィルター引数を追加するか、(B) index コマンド側で独自にファイル列挙・フィルタリング→ parse_file() を個別呼び出しするか、の設計判断が必要。",
+      "recommendation": "index コマンド側で walkdir + IgnoreFilter でファイルを列挙し、parse_file() を個別呼び出しする方式を推奨。parse_directory() の既存APIを壊さず、index コマンドの責務として統合できる。"
+    },
+    {
+      "id": "S3-02",
+      "severity": "Should Fix",
+      "category": "影響範囲: CLI定義",
+      "finding": "Commands::Index に --path オプションを追加すると、既存の cli_args テスト（test_index_subcommand, test_index_not_implemented_yet）に影響する。テストの更新が必要。",
+      "recommendation": "既存テストを更新し、--path オプションの有無での動作をカバーすべき。"
+    },
+    {
+      "id": "S3-03",
+      "severity": "Should Fix",
+      "category": "影響範囲: indexerモジュール",
+      "finding": "indexer/mod.rs の公開APIにindex コマンドの統合ロジックを配置するか、新規モジュール（例: cli/index.rs）に配置するかの設計判断が必要。現状 main.rs にスタブがあるため、ここに直接実装するとmain.rsが肥大化する。",
+      "recommendation": "cli/ モジュールを新設し、index コマンドのロジックを分離することを推奨。CLAUDE.md のモジュール構成（Phase 1以降）にも cli/ が記載されている。"
+    },
+    {
+      "id": "S3-04",
+      "severity": "Nice to Have",
+      "category": "影響範囲: パフォーマンス",
+      "finding": "大量ファイル（数千ファイル）のインデックス構築時のメモリ使用量・処理時間について、Issueに記載がない。tantivy の WriterHeapSize は 50MB に設定されている。",
+      "recommendation": "Phase 1 では過度な最適化は不要だが、将来的にバッチ処理やプログレスバー表示を検討する余地がある旨を留意。"
+    }
+  ],
+  "summary": {
+    "must_fix": 1,
+    "should_fix": 2,
+    "nice_to_have": 1,
+    "total": 4
+  }
+}

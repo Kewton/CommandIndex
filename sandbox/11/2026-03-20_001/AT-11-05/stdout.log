@@ -1,0 +1,3 @@
+cargo test: ok. 17 passed; 0 failed
+cargo clippy: no warnings
+cargo fmt: no diff

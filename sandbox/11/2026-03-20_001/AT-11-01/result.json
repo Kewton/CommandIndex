@@ -1,0 +1,1 @@
+{"test_id": "AT-11-01", "title": "Index directory is deleted", "status": "PASS", "command": "./target/release/commandindex clean --path /var/folders/07/jbhw26n10nj_59d4yp7g5lx80000gn/T/tmp.AfbJtyA0zX", "exit_code": 0, "notes": ".commandindex/ successfully deleted"}

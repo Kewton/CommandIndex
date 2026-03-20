@@ -1,0 +1,1 @@
+{"test_id": "AT-9-06", "title": "--heading filter", "status": "PASS", "command": "commandindex search \"test\" --heading \"概要\"", "exit_code": 0, "notes": "No results found (exit 0, stderr 'No results found.'). Expected: the 概要 section body is Japanese テスト not English test, so AND of main query test + heading 概要 yields no match. Heading filter works correctly."}

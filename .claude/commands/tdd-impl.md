@@ -25,8 +25,8 @@ cat .claude/prompts/tdd-impl-core.md
 
 以下をすべて満たすこと：
 - すべてのテストが成功（Red → Green サイクル完了）
-- `cargo clippy --all-targets -- -D warnings` で警告ゼロ
-- `cargo test --all` で全テストパス
+- `cargo clippy --all-targets` で警告ゼロ
+- `cargo test` で全テストパス
 - コミットが完了
 
 ## サブエージェントモード

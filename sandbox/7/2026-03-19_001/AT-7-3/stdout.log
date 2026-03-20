@@ -1,0 +1,22 @@
+{
+    "files": [
+        {
+            "path": "doc1.md",
+            "hash": "sha256:b5f55739dcff170fe3ae1a83e53fd34f22b6d11f8806b7939c7f7f2493b52ac0",
+            "last_modified": "2026-03-19T11:52:26.559075714Z",
+            "sections": 2
+        },
+        {
+            "path": "doc2.md",
+            "hash": "sha256:f9e344309400b98121bc48eaf41c86ac419c434b394e48494860e09ee1ca8f82",
+            "last_modified": "2026-03-19T11:52:26.561603311Z",
+            "sections": 2
+        },
+        {
+            "path": "doc3.md",
+            "hash": "sha256:386858179f968433f466d1098693625b4e5e43a3b4829794af8b52c888e3b30a",
+            "last_modified": "2026-03-19T11:52:26.564634744Z",
+            "sections": 2
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+{
+  "issue": "#10",
+  "feature": "status command",
+  "date": "2026-03-20",
+  "run_dir": "sandbox/10/2026-03-20_001",
+  "total_tests": 7,
+  "passed": 7,
+  "failed": 0,
+  "overall": "PASS",
+  "tests": [
+    {"test_id": "AT-10-01", "title": "Index exists - status shows info", "status": "PASS"},
+    {"test_id": "AT-10-02", "title": "No index - guidance message", "status": "PASS"},
+    {"test_id": "AT-10-03", "title": "--path option works", "status": "PASS"},
+    {"test_id": "AT-10-04", "title": "--path nonexistent directory", "status": "PASS"},
+    {"test_id": "AT-10-05", "title": "--format json output", "status": "PASS"},
+    {"test_id": "AT-10-06", "title": "--format path error", "status": "PASS"},
+    {"test_id": "AT-10-07", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

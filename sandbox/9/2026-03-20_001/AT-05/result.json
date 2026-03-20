@@ -1,0 +1,1 @@
+{"test_id": "AT-9-05", "title": "--type filter", "status": "PASS", "command": "commandindex search \"test\" --type markdown", "exit_code": 0, "notes": "--type markdown filter correctly returned markdown files. All test files are .md so result matches unfiltered for this dataset"}

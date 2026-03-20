@@ -1,0 +1,56 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "focus": "整合性・正確性",
+  "issue_number": 7,
+  "review_items": [
+    {
+      "id": "S1-01",
+      "severity": "Must Fix",
+      "category": "CLI仕様",
+      "finding": "Issue記載のCLIオプション `commandindex index [--path <dir>]` に対し、現在のclap定義では `Commands::Index` にフィールドがない。--path オプションの追加が必要。",
+      "recommendation": "Issue記載通り、Index サブコマンドに `--path` オプション（デフォルト: カレントディレクトリ）を追加する仕様を明記すべき。"
+    },
+    {
+      "id": "S1-02",
+      "severity": "Should Fix",
+      "category": "処理フロー",
+      "finding": "Issue記載の処理フロー Step 1「.cmindexignore を読み込み、除外ルールを構築」は正しいが、IgnoreFilter::from_file は対象ディレクトリのルートから .cmindexignore を読む設計。parse_directory() は既にignoreフィルターを統合していない。フィルタリングの統合ポイントが未記載。",
+      "recommendation": "parse_directory() がignoreフィルターを統合しているか、または index コマンド側でフィルタリングするかを明記すべき。現状 parse_directory() は walkdir で .md ファイルを列挙するのみで、.cmindexignore フィルターは未統合。"
+    },
+    {
+      "id": "S1-03",
+      "severity": "Should Fix",
+      "category": "エラーハンドリング",
+      "finding": "Issueにエラーケースの記載がない。例: 対象ディレクトリ不在、.commandindex/ 作成権限不足、tantivy書き込み失敗、パースエラー時の挙動（スキップ vs 中断）。",
+      "recommendation": "パースエラー時のファイルスキップ戦略、および主要エラーケースの挙動を受け入れ基準に追加すべき。"
+    },
+    {
+      "id": "S1-04",
+      "severity": "Nice to Have",
+      "category": "出力仕様",
+      "finding": "出力例に「Skipped: 3 files (ignored)」とあるが、パースエラーによるスキップと .cmindexignore によるスキップの区別が不明。",
+      "recommendation": "スキップ理由の内訳を出力仕様で明確にすると良い。"
+    },
+    {
+      "id": "S1-05",
+      "severity": "Should Fix",
+      "category": "受け入れ基準",
+      "finding": "受け入れ基準に「既にインデックスが存在する場合、上書き再構築される」とあるが、具体的な挙動が未記載。既存 .commandindex/ を削除して再作成するのか、tantivy の delete_all_documents → 再追加か。",
+      "recommendation": "上書き再構築の具体的な手順を明記すべき。IndexWriterWrapper::open() は既存ディレクトリに対して MMapDirectory::open を使うため、既存インデックスとの共存を考慮する必要がある。"
+    },
+    {
+      "id": "S1-06",
+      "severity": "Nice to Have",
+      "category": "依存Issue",
+      "finding": "依存Issue #3（Markdownパーサー）, #4（tantivy基盤）, #5（.cmindexignore）, #6（状態管理）は全て実装済み。依存関係は解決済み。",
+      "recommendation": "特になし。実装着手可能。"
+    }
+  ],
+  "summary": {
+    "must_fix": 1,
+    "should_fix": 3,
+    "nice_to_have": 2,
+    "total": 6
+  }
+}

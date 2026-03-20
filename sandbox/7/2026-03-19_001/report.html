@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAT Report - Issue #7</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f8f9fa; color: #333; }
+  h1 { border-bottom: 3px solid #333; padding-bottom: 10px; }
+  .meta { color: #666; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th { background: #343a40; color: #fff; padding: 12px 15px; text-align: left; }
+  td { padding: 10px 15px; border-bottom: 1px solid #dee2e6; }
+  tr:hover { background: #f1f3f5; }
+  .pass { color: #28a745; font-weight: bold; }
+  .fail { color: #dc3545; font-weight: bold; }
+  .summary { margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; font-size: 1.1em; }
+  .summary.has-fail { background: #f8d7da; border-color: #f5c6cb; }
+</style>
+</head>
+<body>
+<h1>UAT Report - Issue #7</h1>
+<p class="meta">実行日時: 2026-03-19</p>
+
+<table>
+<thead>
+<tr><th>テストID</th><th>テスト内容</th><th>結果</th><th>詳細</th></tr>
+</thead>
+<tbody>
+<tr><td>AT-7-1</td><td>Markdownファイルのインデックス構築</td><td class="pass">PASS</td><td>commandindex index exited with code 0. Index built successfully.</td></tr>
+<tr><td>AT-7-2</td><td>.commandindex/tantivy/ にインデックス保存</td><td class="pass">PASS</td><td>tantivy directory exists with 19 files.</td></tr>
+<tr><td>AT-7-3</td><td>manifest.json 生成</td><td class="pass">PASS</td><td>manifest.json exists and is valid JSON.</td></tr>
+<tr><td>AT-7-4</td><td>state.json 生成</td><td class="pass">PASS</td><td>state.json exists and is valid JSON.</td></tr>
+<tr><td>AT-7-5</td><td>.cmindexignore ルール適用</td><td class="pass">PASS</td><td>ignored.md not found in manifest.json. .cmindexignore rule applied correctly.</td></tr>
+<tr><td>AT-7-6</td><td>処理結果サマリー表示</td><td class="pass">PASS</td><td>All summary keywords (Scanned, Indexed, Skipped, Ignored, Duration) found in stdout.</td></tr>
+<tr><td>AT-7-7</td><td>上書き再構築</td><td class="pass">PASS</td><td>Re-index (overwrite rebuild) completed with exit code 0.</td></tr>
+<tr><td>AT-7-8</td><td>cargo test / clippy / fmt 全パス</td><td class="pass">PASS</td><td>cargo test, clippy, and fmt all passed.</td></tr>
+</tbody>
+</table>
+
+<div class="summary">
+  <strong>結果: 8/8 全PASS</strong>
+</div>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"test_id":"AT-8-2","status":"PASS","detail":"--format json が正しくパースされた。searchコマンド未実装エラー（not yet implemented）のみ発生し、パースエラーなし。"}

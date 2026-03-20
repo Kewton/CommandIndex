@@ -1,0 +1,1 @@
+{"test_id": "AT-9-07", "title": "--format json", "status": "PASS", "command": "commandindex search \"test\" --format json", "exit_code": 0, "notes": "JSON output produced valid JSON with all expected fields: body, heading, heading_level, line_start, path, score, tags"}

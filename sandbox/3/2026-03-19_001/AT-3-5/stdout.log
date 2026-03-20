@@ -1,0 +1,8 @@
+
+running 3 tests
+test test_markdown_links ... ok
+test test_mixed_links ... ok
+test test_wiki_links ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+

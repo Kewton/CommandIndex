@@ -10,6 +10,15 @@ serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi", "registry"] }
 tracing-appender = "0.2"
+serde_yaml = "0.9"
+walkdir = "2"
+globset = "0.4"
+tantivy = "0.25"
+lindera = { version = "2.3", features = ["embed-ipadic"] }
+lindera-tantivy = { version = "2.0", features = ["embed-ipadic"] }
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+colored = "2"
 
 [dev-dependencies]
 tempfile = "3"

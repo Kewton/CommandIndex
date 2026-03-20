@@ -49,7 +49,7 @@ gh issue view {issue_number} --json number,title,body,labels,assignees
   - 依存: Task 1.1
 
 - [ ] **Task 1.3**: 既存モジュールとの統合
-  - 成果物: `src/cli/mod.rs` 等
+  - 成果物: `src/app/mod.rs` 等
   - 依存: Task 1.2
 
 #### テストタスク（Phase 2）
@@ -69,9 +69,9 @@ gh issue view {issue_number} --json number,title,body,labels,assignees
 | チェック項目 | コマンド | 基準 |
 |-------------|----------|------|
 | ビルド | `cargo build` | エラー0件 |
-| Clippy | `cargo clippy --all-targets -- -D warnings` | 警告0件 |
-| テスト | `cargo test --all` | 全テストパス |
-| フォーマット | `cargo fmt --all -- --check` | 差分なし |
+| Clippy | `cargo clippy --all-targets` | 警告0件 |
+| テスト | `cargo test` | 全テストパス |
+| フォーマット | `cargo fmt --check` | 差分なし |
 
 ### 4. Definition of Done
 

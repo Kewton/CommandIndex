@@ -1,0 +1,1 @@
+{"test_id": "AT-10-01", "title": "Index exists - status shows info", "status": "PASS", "command": "commandindex status --path $TESTDIR", "exit_code": 0, "notes": "Checked Index root, Total files, Total sections fields present."}

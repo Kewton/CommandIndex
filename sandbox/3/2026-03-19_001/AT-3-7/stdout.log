@@ -1,0 +1,7 @@
+
+running 2 tests
+test test_empty_file ... ok
+test test_no_headings ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+

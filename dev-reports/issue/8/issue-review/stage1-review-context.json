@@ -1,0 +1,56 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "findings": [
+    {
+      "severity": "should_fix",
+      "category": "整合性",
+      "title": "tags フィールドはスペース区切り文字列だが、JSON出力例では配列として記載",
+      "description": "SearchResult の tags フィールドは String 型でスペース区切りだが、Issue の json 形式の例では配列で記載。実装時に split 変換が必要だが Issue に言及がない。",
+      "recommendation": "JSON出力時に tags 文字列をスペースで split して配列に変換する仕様を明記。空文字列の場合に空配列を返す挙動も明記する。"
+    },
+    {
+      "severity": "should_fix",
+      "category": "完全性",
+      "title": "CLIの --format フラグ追加に関する具体的な設計が不足",
+      "description": "main.rs の Search サブコマンドへの --format オプション追加が影響範囲に含まれていない。",
+      "recommendation": "影響範囲に既存ファイルの変更（src/main.rs, src/lib.rs）を追加する。"
+    },
+    {
+      "severity": "should_fix",
+      "category": "完全性",
+      "title": "ターミナル色付き出力の依存クレートが未記載",
+      "description": "human 形式で色付き出力が必要だが、Cargo.toml に色付きクレートがない。",
+      "recommendation": "使用するクレート（colored等）を明記し、NO_COLOR 環境変数対応方針も記載する。"
+    },
+    {
+      "severity": "should_fix",
+      "category": "完全性",
+      "title": "エラー型の定義が影響範囲に含まれていない",
+      "description": "output モジュールにもエラー型が必要だが Issue に記載がない。",
+      "recommendation": "OutputError 等のエラー型設計を追加する。"
+    },
+    {
+      "severity": "nice_to_have",
+      "category": "完全性",
+      "title": "human 形式の本文スニペット切り詰めロジックが未定義",
+      "description": "body の2行切り詰めルールが具体的でない。",
+      "recommendation": "切り詰めルール（文字数/行数、省略記号）を明確にする。"
+    },
+    {
+      "severity": "nice_to_have",
+      "category": "完全性",
+      "title": "score フィールドの human 形式での表示有無が未定義",
+      "description": "json には score が含まれるが human 形式での扱いが不明。",
+      "recommendation": "human 形式での score 表示有無を明記する。"
+    },
+    {
+      "severity": "nice_to_have",
+      "category": "実装可能性",
+      "title": "パイプ検出による自動フォーマット切り替えの検討",
+      "description": "stdout がパイプの場合の色無効化などが未考慮。",
+      "recommendation": "将来の拡張として記載を検討する。"
+    }
+  ],
+  "summary": "Issue #8 は既存コードベースと概ね整合。主な改善点: (1) tags 変換ルール明記, (2) 影響範囲に既存ファイル変更を含める, (3) 色付きクレートの明記, (4) エラー型設計。"
+}

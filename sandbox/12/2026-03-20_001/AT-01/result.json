@@ -1,0 +1,1 @@
+{"test_id": "AT-12-01", "title": "All 8 E2E test scenarios pass (sequential)", "status": "PASS", "command": "cargo test --test e2e_integration -- --test-threads=1 2>&1", "exit_code": 0, "notes": "All 8 tests passed in 22.93s with --test-threads=1"}
