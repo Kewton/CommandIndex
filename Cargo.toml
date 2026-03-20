@@ -22,6 +22,7 @@ colored = "2"
 tree-sitter = "0.26"
 tree-sitter-typescript = "0.23"
 tree-sitter-python = "0.25"
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [dev-dependencies]
 tempfile = "3"
