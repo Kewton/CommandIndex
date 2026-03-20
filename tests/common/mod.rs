@@ -82,3 +82,26 @@ pub fn run_symbol_search_jsonl(
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     parse_jsonl(&stdout)
 }
+
+/// Runs `commandindex search <query> --type <type_filter> --format json` and parses JSONL.
+pub fn run_typed_search_jsonl(
+    path: impl AsRef<std::path::Path>,
+    query: &str,
+    type_filter: &str,
+) -> Vec<serde_json::Value> {
+    let output = cmd()
+        .args(["search", query, "--type", type_filter, "--format", "json"])
+        .current_dir(path.as_ref())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    parse_jsonl(&stdout)
+}
+
+/// Runs `commandindex clean --path <path>` and asserts success.
+pub fn run_clean(path: impl AsRef<std::path::Path>) {
+    cmd()
+        .args(["clean", "--path", path.as_ref().to_str().unwrap()])
+        .assert()
+        .success();
+}
