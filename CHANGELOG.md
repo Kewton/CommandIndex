@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.0.2 — Phase 2: 差分更新 (update コマンド)
+
+### Added
+- **差分検知エンジン** (#25): manifest比較による変更/追加/削除の検出
+- **tantivy 差分更新** (#26): ドキュメント単位でのインデックス追加/変更/削除
+- **`update` コマンド改善** (#27): saturating_sub・follow_links・出力メッセージ統一
+- **Phase 2 E2E 統合テスト** (#28): updateコマンド差分更新フロー検証
+- `/release` スラッシュコマンド追加（worktree + commandmatedev）
+
+### Fixed
+- **`update` コマンド**: インデックス未作成時にエラー終了するよう修正
+
+### Chore
+- Phase 2 UAT結果追加（#25 #26 #27 #28）
+
+---
+
 ## v0.0.1 — Phase 1: Markdown Knowledge MVP
 
 ### Added
