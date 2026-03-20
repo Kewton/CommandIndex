@@ -36,6 +36,22 @@ impl FileType {
     pub fn is_code(&self) -> bool {
         !matches!(self, FileType::Markdown)
     }
+
+    /// フィルタ名から FileType を解決する（エイリアス対応）
+    /// "code" は特殊集約フィルタのため None を返す
+    pub fn from_type_filter(name: &str) -> Option<FileType> {
+        match name {
+            "markdown" | "md" => Some(FileType::Markdown),
+            "typescript" | "ts" => Some(FileType::TypeScript),
+            "python" | "py" => Some(FileType::Python),
+            _ => None,
+        }
+    }
+
+    /// CLI用の有効なフィルタ名一覧（正式名 + "code"）
+    pub fn valid_type_filter_names() -> &'static [&'static str] {
+        &["markdown", "typescript", "python", "code"]
+    }
 }
 
 #[derive(Debug)]
@@ -241,6 +257,68 @@ mod tests {
         let json = r#"{"path":"test.ts","hash":"sha256:abc","last_modified":"2024-01-01T00:00:00Z","sections":1,"file_type":"type_script"}"#;
         let entry: FileEntry = serde_json::from_str(json).unwrap();
         assert_eq!(entry.file_type, FileType::TypeScript);
+    }
+
+    // --- from_type_filter tests ---
+
+    #[test]
+    fn from_type_filter_markdown() {
+        assert_eq!(
+            FileType::from_type_filter("markdown"),
+            Some(FileType::Markdown)
+        );
+    }
+
+    #[test]
+    fn from_type_filter_md_alias() {
+        assert_eq!(FileType::from_type_filter("md"), Some(FileType::Markdown));
+    }
+
+    #[test]
+    fn from_type_filter_typescript() {
+        assert_eq!(
+            FileType::from_type_filter("typescript"),
+            Some(FileType::TypeScript)
+        );
+    }
+
+    #[test]
+    fn from_type_filter_ts_alias() {
+        assert_eq!(FileType::from_type_filter("ts"), Some(FileType::TypeScript));
+    }
+
+    #[test]
+    fn from_type_filter_python() {
+        assert_eq!(FileType::from_type_filter("python"), Some(FileType::Python));
+    }
+
+    #[test]
+    fn from_type_filter_py_alias() {
+        assert_eq!(FileType::from_type_filter("py"), Some(FileType::Python));
+    }
+
+    #[test]
+    fn from_type_filter_code_returns_none() {
+        assert_eq!(FileType::from_type_filter("code"), None);
+    }
+
+    #[test]
+    fn from_type_filter_invalid_returns_none() {
+        assert_eq!(FileType::from_type_filter("invalid"), None);
+    }
+
+    #[test]
+    fn from_type_filter_empty_returns_none() {
+        assert_eq!(FileType::from_type_filter(""), None);
+    }
+
+    #[test]
+    fn valid_type_filter_names_contains_expected() {
+        let names = FileType::valid_type_filter_names();
+        assert!(names.contains(&"markdown"));
+        assert!(names.contains(&"typescript"));
+        assert!(names.contains(&"python"));
+        assert!(names.contains(&"code"));
     }
 
     #[test]

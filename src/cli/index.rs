@@ -11,7 +11,7 @@ use crate::indexer::manifest::{
 use crate::indexer::state::{IndexState, StateError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
 use crate::indexer::writer::{IndexWriterWrapper, SectionDoc, WriterError};
-use crate::parser::code::{CodeParseError, parse_code_content};
+use crate::parser::code::{CodeParseError, parse_code_file};
 use crate::parser::ignore::{IgnoreError, IgnoreFilter};
 use crate::parser::markdown::{self, ParseError};
 
