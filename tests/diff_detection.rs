@@ -10,8 +10,7 @@ use commandindex::indexer::manifest::{
 };
 use commandindex::parser::ignore::IgnoreFilter;
 
-// Verify SUPPORTED_EXTENSIONS is accessible
-const _: &[&str] = commandindex::indexer::SUPPORTED_EXTENSIONS;
+// FileType is used in make_entry() via commandindex::indexer::manifest::FileType
 
 fn make_entry(path: &str, hash: &str) -> FileEntry {
     FileEntry {
@@ -19,6 +18,7 @@ fn make_entry(path: &str, hash: &str) -> FileEntry {
         hash: hash.to_string(),
         last_modified: chrono::Utc::now(),
         sections: 1,
+        file_type: commandindex::indexer::manifest::FileType::Markdown,
     }
 }
 

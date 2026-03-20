@@ -6,7 +6,9 @@ use clap::ValueEnum;
 use serde::Serialize;
 use walkdir::WalkDir;
 
+use crate::indexer::manifest::{FileType, Manifest};
 use crate::indexer::state::{IndexState, StateError};
+use crate::indexer::symbol_store::SymbolStore;
 use crate::output::strip_control_chars;
 
 /// status コマンドの出力フォーマット
@@ -53,12 +55,22 @@ impl From<StateError> for StatusError {
     }
 }
 
+/// ファイルタイプ別カウント
+#[derive(Debug, Serialize, Default)]
+pub struct FileTypeCounts {
+    pub markdown: u64,
+    pub typescript: u64,
+    pub python: u64,
+}
+
 /// status コマンドの出力情報
 #[derive(Debug, Serialize)]
 pub struct StatusInfo {
     #[serde(flatten)]
     pub state: IndexState,
     pub index_size_bytes: u64,
+    pub file_type_counts: FileTypeCounts,
+    pub symbol_count: u64,
 }
 
 /// ディレクトリサイズを再帰的に計算する
@@ -92,6 +104,36 @@ pub fn format_size(bytes: u64) -> String {
     }
 }
 
+/// Manifest からファイルタイプ別のカウントを集計する
+fn count_file_types(commandindex_dir: &Path) -> FileTypeCounts {
+    let manifest = match Manifest::load_or_default(commandindex_dir) {
+        Ok(m) => m,
+        Err(_) => return FileTypeCounts::default(),
+    };
+
+    let mut counts = FileTypeCounts::default();
+    for entry in &manifest.files {
+        match entry.file_type {
+            FileType::Markdown => counts.markdown += 1,
+            FileType::TypeScript => counts.typescript += 1,
+            FileType::Python => counts.python += 1,
+        }
+    }
+    counts
+}
+
+/// SymbolStore からシンボル数を取得する（DB が存在しない場合は 0）
+fn get_symbol_count(base_path: &Path) -> u64 {
+    let db_path = crate::indexer::symbol_db_path(base_path);
+    if !db_path.exists() {
+        return 0;
+    }
+    match SymbolStore::open(&db_path) {
+        Ok(store) => store.count_all().unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
 /// status コマンドのメインロジック
 pub fn run(path: &Path, format: StatusFormat, writer: &mut dyn Write) -> Result<(), StatusError> {
     if !path.is_dir() {
@@ -108,10 +150,14 @@ pub fn run(path: &Path, format: StatusFormat, writer: &mut dyn Write) -> Result<
     state.check_schema_version()?;
 
     let index_size_bytes = compute_dir_size(&commandindex_dir);
+    let file_type_counts = count_file_types(&commandindex_dir);
+    let symbol_count = get_symbol_count(path);
 
     let info = StatusInfo {
         state,
         index_size_bytes,
+        file_type_counts,
+        symbol_count,
     };
 
     match format {
@@ -129,6 +175,15 @@ pub fn run(path: &Path, format: StatusFormat, writer: &mut dyn Write) -> Result<
             .ok();
             writeln!(writer, "  Total files:   {}", info.state.total_files).ok();
             writeln!(writer, "  Total sections: {}", info.state.total_sections).ok();
+            writeln!(
+                writer,
+                "  Files by type: Markdown={}, TypeScript={}, Python={}",
+                info.file_type_counts.markdown,
+                info.file_type_counts.typescript,
+                info.file_type_counts.python
+            )
+            .ok();
+            writeln!(writer, "  Symbols:       {}", info.symbol_count).ok();
             writeln!(
                 writer,
                 "  Index size:    {}",
