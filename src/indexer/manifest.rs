@@ -98,6 +98,26 @@ impl Manifest {
     pub fn find_by_path(&self, path: &str) -> Option<&FileEntry> {
         self.files.iter().find(|e| e.path == path)
     }
+
+    /// manifest.json を読み込む。ファイルが存在しない場合は空の Manifest を返す。
+    pub fn load_or_default(commandindex_dir: &Path) -> Result<Self, ManifestError> {
+        match Self::load(commandindex_dir) {
+            Ok(m) => Ok(m),
+            Err(ManifestError::Io(ref e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                Ok(Self::new())
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// 絶対パスを base_path からの相対パス文字列に変換する
+pub fn to_relative_path_string(absolute: &Path, base: &Path) -> String {
+    absolute
+        .strip_prefix(base)
+        .unwrap_or(absolute)
+        .to_string_lossy()
+        .to_string()
 }
 
 /// ファイルのSHA-256ハッシュを計算する
