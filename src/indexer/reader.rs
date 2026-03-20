@@ -208,8 +208,18 @@ impl IndexReaderWrapper {
 }
 
 fn matches_file_type(path: &str, file_type: &str) -> bool {
+    use crate::indexer::manifest::FileType;
+
+    let ext = path.rsplit('.').next().unwrap_or("");
+
     match file_type {
-        "markdown" => path.ends_with(".md"),
+        "markdown" | "md" => ext == "md",
+        "typescript" | "ts" => ext == "ts" || ext == "tsx",
+        "python" | "py" => ext == "py",
+        "code" => {
+            // All code file types (non-Markdown)
+            FileType::from_extension(ext).is_some_and(|ft| ft.is_code())
+        }
         _ => false,
     }
 }

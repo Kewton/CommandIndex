@@ -1,5 +1,5 @@
 use chrono::Utc;
-use commandindex::indexer::manifest::{self, FileEntry, Manifest};
+use commandindex::indexer::manifest::{self, FileEntry, FileType, Manifest};
 use commandindex::indexer::state::IndexState;
 use std::fs;
 use std::path::PathBuf;
@@ -98,6 +98,7 @@ fn test_manifest_add_entry() {
         hash: "sha256:abc123".to_string(),
         last_modified: Utc::now(),
         sections: 5,
+        file_type: FileType::Markdown,
     });
     assert_eq!(manifest.file_count(), 1);
 }
@@ -110,12 +111,14 @@ fn test_manifest_find_by_path() {
         hash: "sha256:abc123".to_string(),
         last_modified: Utc::now(),
         sections: 5,
+        file_type: FileType::Markdown,
     });
     manifest.add_entry(FileEntry {
         path: "docs/api.md".to_string(),
         hash: "sha256:def456".to_string(),
         last_modified: Utc::now(),
         sections: 3,
+        file_type: FileType::Markdown,
     });
 
     let entry = manifest.find_by_path("docs/auth.md");
@@ -136,6 +139,7 @@ fn test_manifest_save_and_load() {
         hash: "sha256:abc123".to_string(),
         last_modified: Utc::now(),
         sections: 5,
+        file_type: FileType::Markdown,
     });
 
     manifest.save(&ci_dir).unwrap();
@@ -208,6 +212,7 @@ fn manifest_remove_by_path_removes_entry() {
         hash: "sha256:aaa".to_string(),
         last_modified: Utc::now(),
         sections: 2,
+        file_type: FileType::Markdown,
     });
     assert_eq!(manifest.file_count(), 1);
 
@@ -224,6 +229,7 @@ fn manifest_remove_by_path_nonexistent_is_noop() {
         hash: "sha256:bbb".to_string(),
         last_modified: Utc::now(),
         sections: 1,
+        file_type: FileType::Markdown,
     });
     let count_before = manifest.file_count();
 
@@ -241,6 +247,7 @@ fn manifest_upsert_entry_adds_new() {
         hash: "sha256:ccc".to_string(),
         last_modified: Utc::now(),
         sections: 3,
+        file_type: FileType::Markdown,
     });
     assert_eq!(manifest.file_count(), 1);
     assert!(manifest.find_by_path("docs/new.md").is_some());
@@ -254,6 +261,7 @@ fn manifest_upsert_entry_updates_existing() {
         hash: "sha256:old".to_string(),
         last_modified: Utc::now(),
         sections: 1,
+        file_type: FileType::Markdown,
     });
 
     manifest.upsert_entry(FileEntry {
@@ -261,6 +269,7 @@ fn manifest_upsert_entry_updates_existing() {
         hash: "sha256:new".to_string(),
         last_modified: Utc::now(),
         sections: 5,
+        file_type: FileType::Markdown,
     });
 
     assert_eq!(manifest.file_count(), 1);

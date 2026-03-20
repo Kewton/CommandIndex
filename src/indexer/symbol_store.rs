@@ -281,6 +281,14 @@ impl SymbolStore {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Count all symbols in the store.
+    pub fn count_all(&self) -> Result<u64, SymbolStoreError> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM symbols", [], |row| row.get(0))?;
+        Ok(count as u64)
+    }
+
     /// Find import records whose target module matches exactly.
     pub fn find_imports_by_target(
         &self,
@@ -493,6 +501,27 @@ mod tests {
             }
             other => panic!("Expected SchemaVersionMismatch, got: {other}"),
         }
+    }
+
+    #[test]
+    fn test_count_all_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert_eq!(store.count_all().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_count_all_after_insert() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let syms = vec![
+            sample_symbol("func_a", "src/lib.rs"),
+            sample_symbol("func_b", "src/lib.rs"),
+            sample_symbol("func_c", "src/other.rs"),
+        ];
+        store.insert_symbols(&syms).unwrap();
+        assert_eq!(store.count_all().unwrap(), 3);
     }
 
     #[test]
