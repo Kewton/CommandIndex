@@ -94,12 +94,32 @@ fn update_without_index_shows_error() {
 }
 
 #[test]
-fn search_requires_query_argument() {
+fn search_requires_query_or_symbol() {
     common::cmd()
         .arg("search")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Usage:"));
+        .stderr(predicate::str::contains("Either"));
+}
+
+#[test]
+fn search_symbol_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--symbol", "my_func"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Symbol database not found"));
+}
+
+#[test]
+fn search_query_and_symbol_conflict() {
+    common::cmd()
+        .args(["search", "query", "--symbol", "name"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 }
 
 #[test]

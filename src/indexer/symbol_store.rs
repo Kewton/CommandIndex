@@ -113,6 +113,24 @@ impl From<std::io::Error> for SymbolStoreError {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Escape LIKE pattern special characters (`%`, `_`, `\`) for safe use in SQL LIKE queries.
+pub fn escape_like_pattern(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '\\' => result.push_str("\\\\"),
+            '%' => result.push_str("\\%"),
+            '_' => result.push_str("\\_"),
+            other => result.push(other),
+        }
+    }
+    result
+}
+
+// ---------------------------------------------------------------------------
 // SymbolStore
 // ---------------------------------------------------------------------------
 
@@ -193,6 +211,7 @@ impl SymbolStore {
             CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
             CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_path);
             CREATE INDEX IF NOT EXISTS idx_symbols_kind ON symbols(kind);
+            CREATE INDEX IF NOT EXISTS idx_symbols_parent ON symbols(parent_symbol_id);
             CREATE INDEX IF NOT EXISTS idx_deps_source ON dependencies(source_file);
             CREATE INDEX IF NOT EXISTS idx_deps_target ON dependencies(target_module);",
         )?;
@@ -287,6 +306,49 @@ impl SymbolStore {
             .conn
             .query_row("SELECT COUNT(*) FROM symbols", [], |row| row.get(0))?;
         Ok(count as u64)
+    }
+
+    /// Find symbols whose name partially matches (LIKE %name%, case-insensitive).
+    pub fn find_by_name_like(
+        &self,
+        name: &str,
+        limit: usize,
+    ) -> Result<Vec<SymbolInfo>, SymbolStoreError> {
+        let escaped = escape_like_pattern(name);
+        let pattern = format!("%{escaped}%");
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, kind, file_path, line_start, line_end, parent_symbol_id, file_hash
+             FROM symbols WHERE name LIKE ?1 ESCAPE '\\' COLLATE NOCASE
+             ORDER BY name LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(params![pattern, limit as i64], symbol_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Find child symbols belonging to a parent symbol.
+    pub fn find_children_by_parent_id(
+        &self,
+        parent_id: i64,
+    ) -> Result<Vec<SymbolInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, kind, file_path, line_start, line_end, parent_symbol_id, file_hash
+             FROM symbols WHERE parent_symbol_id = ?1 ORDER BY line_start LIMIT 100",
+        )?;
+        let rows = stmt.query_map(params![parent_id], symbol_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Update the parent_symbol_id for a given symbol (used by 2-pass parent resolution).
+    pub fn update_parent_symbol_id(
+        &self,
+        symbol_id: i64,
+        parent_id: i64,
+    ) -> Result<(), SymbolStoreError> {
+        self.conn.execute(
+            "UPDATE symbols SET parent_symbol_id = ?1 WHERE id = ?2",
+            params![parent_id, symbol_id],
+        )?;
+        Ok(())
     }
 
     /// Find import records whose target module matches exactly.

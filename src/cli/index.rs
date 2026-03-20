@@ -328,6 +328,34 @@ fn index_markdown_file(
     Ok(section_count)
 }
 
+/// parent_symbol_id を解決する（2パス方式の2パス目）
+fn resolve_parent_symbols(
+    symbol_store: &SymbolStore,
+    rel_path: &str,
+    parser_symbols: &[crate::parser::code::SymbolInfo],
+) -> Result<(), IndexError> {
+    let inserted = symbol_store.find_by_file(rel_path)?;
+    if inserted.len() != parser_symbols.len() {
+        return Ok(());
+    }
+
+    // name → id マッピング構築
+    let name_to_id: std::collections::HashMap<&str, i64> = inserted
+        .iter()
+        .filter(|s| s.parent_symbol_id.is_none()) // 親候補のみ（クラス等）
+        .filter_map(|s| s.id.map(|id| (s.name.as_str(), id)))
+        .collect();
+
+    for (parser_sym, store_sym) in parser_symbols.iter().zip(inserted.iter()) {
+        if let (Some(parent_name), Some(child_id)) = (&parser_sym.parent, store_sym.id)
+            && let Some(&parent_id) = name_to_id.get(parent_name.as_str())
+        {
+            symbol_store.update_parent_symbol_id(child_id, parent_id)?;
+        }
+    }
+    Ok(())
+}
+
 /// コードファイルのインデックス処理（symbols.db + tantivy）
 fn index_code_file(
     file_path: &Path,
@@ -375,6 +403,11 @@ fn index_code_file(
     if let Err(e) = symbol_store.insert_symbols(&symbols) {
         eprintln!("Warning: symbol store insert failed for {rel_path}: {e}");
         return Err(IndexFileResult::Skipped);
+    }
+
+    // 2パス方式: parent_symbol_id を解決
+    if let Err(e) = resolve_parent_symbols(symbol_store, rel_path, &result.symbols) {
+        eprintln!("Warning: parent symbol resolution failed for {rel_path}: {e}");
     }
 
     // tantivy: heading=ファイル名, body=全文
