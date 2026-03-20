@@ -179,6 +179,12 @@ src/
 | `/pr-merge-pipeline` | 複数Issue PR→CI→マージ→統合検証 |
 | `/orchestrate` | 複数Issue並列オーケストレーション（準備→開発→PR→マージ→UAT→完了） |
 
+### リリース
+
+| コマンド | 説明 |
+|---|---|
+| `/release` | git worktree + commandmatedev でリリース自動実行（patch/minor/major） |
+
 ### Git Worktree・レポート
 
 | コマンド | 説明 |
