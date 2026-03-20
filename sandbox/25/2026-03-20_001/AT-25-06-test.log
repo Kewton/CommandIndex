@@ -1,0 +1,259 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running unittests src/lib.rs (target/debug/deps/commandindex-e0ea4d3280e32fae)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/commandindex-bc4c82bfee80c9ad)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli_args.rs (target/debug/deps/cli_args-4f740cb1d88946be)
+
+running 9 tests
+test unknown_subcommand_shows_error ... ok
+test version_flag_shows_version ... ok
+test search_requires_query_argument ... ok
+test search_without_index_shows_error ... ok
+test search_with_all_options_accepted ... ok
+test help_flag_shows_usage ... ok
+test no_args_shows_error ... ok
+test index_subcommand_accepts_path_option ... ok
+test update_subcommand_runs_successfully ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.24s
+
+     Running tests/cli_clean.rs (target/debug/deps/cli_clean-ba0b87d986ccd0c9)
+
+running 5 tests
+test clean_with_no_index_succeeds ... ok
+test clean_default_path_is_current_dir ... ok
+test clean_with_path_option ... ok
+test clean_removes_commandindex_directory ... ok
+test clean_then_reindex_succeeds ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.53s
+
+     Running tests/cli_index.rs (target/debug/deps/cli_index-113d67ab0b92ecaa)
+
+running 11 tests
+test index_nonexistent_path ... ok
+test index_empty_directory ... ok
+test index_applies_cmindexignore ... ok
+test index_creates_state ... ok
+test index_with_path_option ... ok
+test index_creates_manifest ... ok
+test index_creates_commandindex_dir ... ok
+test index_displays_summary ... ok
+test index_creates_tantivy_index ... ok
+test index_multiple_files_with_subdirectories ... ok
+test index_rebuilds_on_existing ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.61s
+
+     Running tests/cli_status.rs (target/debug/deps/cli_status-cf0afd7d4cc9e7fe)
+
+running 15 tests
+test format_size_gigabytes ... ok
+test format_size_bytes ... ok
+test format_size_kilobytes ... ok
+test format_size_megabytes ... ok
+test run_directory_not_found ... ok
+test compute_dir_size_empty_dir ... ok
+test run_not_initialized ... ok
+test compute_dir_size_with_files ... ok
+test compute_dir_size_nested ... ok
+test run_json_format ... ok
+test run_human_format ... ok
+test status_cli_directory_not_found ... ok
+test status_cli_not_initialized ... ok
+test status_cli_human_format ... ok
+test status_cli_json_format ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.18s
+
+     Running tests/diff_detection.rs (target/debug/deps/diff_detection-3df75b9cb172591c)
+
+running 13 tests
+test diff_result_is_empty ... ok
+test to_relative_path_string_works ... ok
+test detect_changes_detects_deleted_files ... ok
+test load_or_default_returns_empty_on_not_found ... ok
+test detect_changes_skips_unchanged_files ... ok
+test detect_changes_detects_added_files ... ok
+test detect_changes_with_empty_manifest ... ok
+test load_or_default_propagates_other_errors ... ok
+test detect_changes_detects_modified_files ... ok
+test scan_files_filters_by_extension ... ok
+test detect_changes_mixed_added_modified_deleted ... ok
+test scan_files_applies_ignore_filter ... ok
+test roundtrip_index_then_detect_changes ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.23s
+
+     Running tests/e2e_integration.rs (target/debug/deps/e2e_integration-c0c4aa9d26c0e2fd)
+
+running 8 tests
+test e2e_search_without_index ... ok
+test e2e_status_after_index ... ok
+test e2e_ignore_excludes_from_search ... ok
+test e2e_search_no_results ... ok
+test e2e_japanese_search ... ok
+test e2e_full_flow ... ok
+test e2e_output_formats ... ok
+test e2e_filter_combination ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.73s
+
+     Running tests/e2e_update.rs (target/debug/deps/e2e_update-fa8aa4e6c31f4ab0)
+
+running 7 tests
+test e2e_update_fallback_full_index ... ok
+test e2e_update_no_changes ... ok
+test e2e_update_status_after_add ... ok
+test e2e_update_delete_file ... ok
+test e2e_update_cmindexignore ... ok
+test e2e_update_add_new_file ... ok
+test e2e_update_modify_file ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.69s
+
+     Running tests/ignore_filter.rs (target/debug/deps/ignore_filter-e9ca5de6f9cfc1f7)
+
+running 16 tests
+test test_empty_content ... ok
+test test_comment_lines_ignored ... ok
+test test_only_comments_and_blanks ... ok
+test test_empty_lines_ignored ... ok
+test test_invalid_pattern_skipped ... ok
+test test_directory_pattern_with_trailing_slash ... ok
+test test_custom_patterns ... ok
+test test_default_allows_normal_files ... ok
+test test_default_ignores_min_js ... ok
+test test_default_ignores_target ... ok
+test test_default_ignores_lock_files ... ok
+test test_default_ignores_node_modules ... ok
+test test_default_ignores_commandindex ... ok
+test test_default_ignores_git ... ok
+test test_from_file_not_exists_uses_defaults ... ok
+test test_from_file_exists ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/incremental_update.rs (target/debug/deps/incremental_update-50e772f8d56c714e)
+
+running 8 tests
+test update_fallback_to_full_index ... ok
+test update_skips_unchanged_files ... ok
+test update_state_no_underflow ... ok
+test update_manifest_updated ... ok
+test update_state_updated ... ok
+test update_removes_deleted_files ... ok
+test update_adds_new_files ... ok
+test update_modifies_existing_files ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.46s
+
+     Running tests/indexer_state.rs (target/debug/deps/indexer_state-5e52c10fa295d66a)
+
+running 21 tests
+test test_manifest_new ... ok
+test test_state_check_schema_version_mismatch ... ok
+test test_manifest_add_entry ... ok
+test test_state_check_schema_version_ok ... ok
+test test_state_new ... ok
+test manifest_remove_by_path_removes_entry ... ok
+test manifest_remove_by_path_nonexistent_is_noop ... ok
+test manifest_upsert_entry_updates_existing ... ok
+test manifest_upsert_entry_adds_new ... ok
+test test_manifest_find_by_path ... ok
+test test_compute_file_hash_nonexistent ... ok
+test test_state_exists_false ... ok
+test test_manifest_load_nonexistent ... ok
+test test_state_load_nonexistent ... ok
+test test_compute_file_hash ... ok
+test test_compute_file_hash_deterministic ... ok
+test test_compute_file_hash_different_content ... ok
+test test_state_save_and_load ... ok
+test test_state_exists_true ... ok
+test test_manifest_save_and_load ... ok
+test test_state_touch_updates_timestamp ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/indexer_tantivy.rs (target/debug/deps/indexer_tantivy-579b3fba73e03989)
+
+running 21 tests
+test test_schema_creation ... ok
+test test_create_index_in_ram ... ok
+test test_create_index_on_disk ... ok
+test test_add_and_commit_section ... ok
+test test_search_by_tags ... ok
+test test_search_english ... ok
+test test_search_result_fields ... ok
+test test_search_no_results ... ok
+test test_search_japanese ... ok
+test test_commandindex_tantivy_path ... ok
+test test_disk_index_write_and_read ... ok
+test test_search_with_options_path_prefix_filter ... ok
+test test_search_with_options_tag_filter ... ok
+test test_search_with_options_delegates_from_search ... ok
+test delete_by_path_removes_single_section ... ok
+test test_search_with_options_combined_filters ... ok
+test test_search_with_options_limit ... ok
+test test_search_with_options_heading_filter ... ok
+test test_search_with_options_file_type_filter ... ok
+test delete_by_path_does_not_affect_other_paths ... ok
+test delete_by_path_removes_multiple_sections ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.12s
+
+     Running tests/output_format.rs (target/debug/deps/output_format-de08ba9da44e744b)
+
+running 12 tests
+test test_format_empty_results ... ok
+test test_human_format_no_tags ... ok
+test test_human_format_basic ... ok
+test test_human_format_long_single_line ... ok
+test test_human_format_snippet_truncation ... ok
+test test_human_format_with_tags ... ok
+test test_json_format_basic ... ok
+test test_json_format_empty_tags ... ok
+test test_json_format_score ... ok
+test test_json_format_tags_array ... ok
+test test_path_format_basic ... ok
+test test_path_format_dedup ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parser_markdown.rs (target/debug/deps/parser_markdown-a3de736eaf5c63ab)
+
+running 17 tests
+test test_empty_file ... ok
+test test_heading_without_space_is_not_heading ... ok
+test test_line_start_without_frontmatter ... ok
+test test_empty_frontmatter ... ok
+test test_mixed_links ... ok
+test test_no_frontmatter ... ok
+test test_markdown_links ... ok
+test test_no_headings ... ok
+test test_line_start_with_frontmatter ... ok
+test test_frontmatter_with_tags ... ok
+test test_frontmatter_without_tags ... ok
+test test_parse_all_heading_levels ... ok
+test test_parse_heading_levels ... ok
+test test_section_multiline_body ... ok
+test test_wiki_links ... ok
+test test_parse_empty_directory ... ok
+test test_parse_directory ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests commandindex
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

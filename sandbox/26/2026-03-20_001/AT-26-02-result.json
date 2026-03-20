@@ -1,0 +1,1 @@
+{"test_id": "AT-26-02", "title": "Modified file reflects new content", "status": "PASS", "command": "search new/old content", "exit_code": 0, "notes": "new_found=1 old_found=0"}

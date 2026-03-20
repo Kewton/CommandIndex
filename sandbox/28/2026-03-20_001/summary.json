@@ -1,0 +1,13 @@
+{
+  "issue": 28,
+  "title": "E2E統合テスト",
+  "date": "2026-03-20",
+  "total_tests": 3,
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {"test_id": "AT-28-01", "title": "E2E update tests pass (sequential)", "status": "PASS"},
+    {"test_id": "AT-28-02", "title": "E2E update tests pass (parallel)", "status": "PASS"},
+    {"test_id": "AT-28-03", "title": "All project tests pass", "status": "PASS"}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "doc1.md",
+      "hash": "sha256:0e8b6068a4d9dbe4291b56d4bebddff12e1d8f5f9a86dca2f2abcf213e587dd7",
+      "last_modified": "2026-03-20T06:34:57.783535113Z",
+      "sections": 1
+    },
+    {
+      "path": "doc2.md",
+      "hash": "sha256:fed7101478831cf29e304d5c95bdb64eb81c4b58b5c2ad144e99aa29fc12f779",
+      "last_modified": "2026-03-20T06:34:57.999715056Z",
+      "sections": 1
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+Search: pipeline.md:1 [# Pipeline Test]
+  pipeline_modified_unique_content Status: CommandIndex Status
+  Index root:    /var/folders/07/jbhw26n10nj_59d4yp7g5lx80000gn/T/tmp.xqTXq1k9rU
+  Version:       0.0.0
+  Created:       2026-03-20 06:35:50.715728 UTC UTC
+  Last updated:  2026-03-20 06:35:50.920772 UTC UTC
+  Total files:   1
+  Total sections: 1
+  Index size:    3.8 KB Clean: Removed index at .commandindex/
+Run `commandindex index` to rebuild.

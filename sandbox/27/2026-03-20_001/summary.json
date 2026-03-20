@@ -1,0 +1,14 @@
+{
+  "issue": 27,
+  "title": "update コマンド",
+  "date": "2026-03-20",
+  "total_tests": 4,
+  "passed": 3,
+  "failed": 1,
+  "results": [
+    {"test_id": "AT-27-01", "title": "update with --path option", "status": "PASS"},
+    {"test_id": "AT-27-02", "title": "update without index shows error", "status": "FAIL", "notes": "Implementation falls back to full index (exit 0) instead of returning error (exit != 0). Design choice: graceful fallback vs strict error."},
+    {"test_id": "AT-27-03", "title": "Update summary output format", "status": "PASS"},
+    {"test_id": "AT-27-04", "title": "Full pipeline e2e", "status": "PASS"}
+  ]
+}

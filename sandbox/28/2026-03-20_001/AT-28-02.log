@@ -1,0 +1,13 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s
+     Running tests/e2e_update.rs (target/debug/deps/e2e_update-fa8aa4e6c31f4ab0)
+
+running 7 tests
+test e2e_update_fallback_full_index ... ok
+test e2e_update_no_changes ... ok
+test e2e_update_status_after_add ... ok
+test e2e_update_cmindexignore ... ok
+test e2e_update_delete_file ... ok
+test e2e_update_add_new_file ... ok
+test e2e_update_modify_file ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.54s

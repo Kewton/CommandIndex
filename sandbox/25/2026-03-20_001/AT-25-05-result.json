@@ -1,0 +1,1 @@
+{"test_id": "AT-25-05", "title": ".cmindexignore applied", "status": "PASS", "command": "commandindex update --path TESTDIR", "exit_code": 0, "notes": "Ignored file not counted as added"}

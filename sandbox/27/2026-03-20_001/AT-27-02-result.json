@@ -1,0 +1,1 @@
+{"test_id": "AT-27-02", "title": "update without index shows error", "status": "FAIL", "command": "commandindex update --path EMPTYDIR", "exit_code": 0, "notes": "Implementation falls back to full index with stderr note instead of returning error. Exit code is 0, spec expected != 0."}

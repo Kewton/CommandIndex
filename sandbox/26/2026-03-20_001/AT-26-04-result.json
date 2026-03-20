@@ -1,0 +1,1 @@
+{"test_id": "AT-26-04", "title": "manifest.json updated correctly", "status": "PASS", "command": "check manifest.json", "exit_code": 0, "notes": "doc2.md found in manifest"}
