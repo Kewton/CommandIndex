@@ -99,6 +99,20 @@ impl Manifest {
         self.files.iter().find(|e| e.path == path)
     }
 
+    /// 指定パスのエントリを削除
+    pub fn remove_by_path(&mut self, path: &str) {
+        self.files.retain(|e| e.path != path);
+    }
+
+    /// エントリを追加または更新（既存パスがあれば上書き）
+    pub fn upsert_entry(&mut self, entry: FileEntry) {
+        if let Some(existing) = self.files.iter_mut().find(|e| e.path == entry.path) {
+            *existing = entry;
+        } else {
+            self.files.push(entry);
+        }
+    }
+
     /// manifest.json を読み込む。ファイルが存在しない場合は空の Manifest を返す。
     pub fn load_or_default(commandindex_dir: &Path) -> Result<Self, ManifestError> {
         match Self::load(commandindex_dir) {
