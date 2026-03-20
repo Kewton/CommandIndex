@@ -433,11 +433,24 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
     // 13. Save updated manifest
     old_manifest.save(&commandindex_dir)?;
 
-    // 14. Update state
-    state.total_files += added_files;
-    state.total_files -= deleted_files;
-    state.total_sections += added_sections + modified_sections;
-    state.total_sections -= old_deleted_sections + old_modified_sections;
+    // 14. Update state (use saturating arithmetic to prevent underflow on corrupted state)
+    state.total_files = state.total_files.saturating_add(added_files);
+    if deleted_files > state.total_files {
+        eprintln!(
+            "Warning: state inconsistency detected (total_files underflow). Consider running `commandindex clean` and `commandindex index`."
+        );
+    }
+    state.total_files = state.total_files.saturating_sub(deleted_files);
+    state.total_sections = state
+        .total_sections
+        .saturating_add(added_sections + modified_sections);
+    let sections_to_remove = old_deleted_sections + old_modified_sections;
+    if sections_to_remove > state.total_sections {
+        eprintln!(
+            "Warning: state inconsistency detected (total_sections underflow). Consider running `commandindex clean` and `commandindex index`."
+        );
+    }
+    state.total_sections = state.total_sections.saturating_sub(sections_to_remove);
     state.touch();
     state.save(&commandindex_dir)?;
 

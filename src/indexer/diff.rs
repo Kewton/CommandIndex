@@ -72,6 +72,7 @@ pub fn scan_files(
     let mut ignored_count: u64 = 0;
 
     for entry in WalkDir::new(base_path)
+        .follow_links(false)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
