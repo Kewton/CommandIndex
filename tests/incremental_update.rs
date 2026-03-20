@@ -124,13 +124,13 @@ fn update_skips_unchanged_files() {
 }
 
 #[test]
-fn update_fallback_to_full_index() {
+fn update_no_index_shows_error() {
     let dir = setup_single_file();
     // Do NOT run index first - no existing index
 
     run_update(&dir)
-        .success()
-        .stderr(predicate::str::contains("full index"));
+        .failure()
+        .stderr(predicate::str::contains("No index found"));
 }
 
 #[test]

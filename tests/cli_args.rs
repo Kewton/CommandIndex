@@ -82,15 +82,15 @@ fn search_with_all_options_accepted() {
 }
 
 #[test]
-fn update_subcommand_runs_successfully() {
-    // update without existing index triggers fallback to full index
+fn update_without_index_shows_error() {
+    // update without existing index should error
     let dir = tempfile::tempdir().expect("create temp dir");
     std::fs::write(dir.path().join("test.md"), "# Test\n\nContent\n").unwrap();
     common::cmd()
         .args(["update", "--path", dir.path().to_str().unwrap()])
         .assert()
-        .success()
-        .stdout(predicate::str::contains("Incremental update completed"));
+        .failure()
+        .stderr(predicate::str::contains("No index found"));
 }
 
 #[test]

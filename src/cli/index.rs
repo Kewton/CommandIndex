@@ -22,6 +22,9 @@ pub enum IndexError {
     Manifest(ManifestError),
     Ignore(IgnoreError),
     Diff(DiffError),
+    IndexNotFound,
+    SchemaVersionMismatch,
+    IndexCorrupted(String),
 }
 
 impl fmt::Display for IndexError {
@@ -34,6 +37,18 @@ impl fmt::Display for IndexError {
             IndexError::Manifest(e) => write!(f, "Manifest error: {e}"),
             IndexError::Ignore(e) => write!(f, "Ignore filter error: {e}"),
             IndexError::Diff(e) => write!(f, "Diff error: {e}"),
+            IndexError::IndexNotFound => write!(
+                f,
+                "No index found. Run `commandindex index` to build the index first."
+            ),
+            IndexError::SchemaVersionMismatch => write!(
+                f,
+                "Index schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
+            ),
+            IndexError::IndexCorrupted(detail) => write!(
+                f,
+                "Failed to read index state: {detail}. Run `commandindex clean` then `commandindex index` to rebuild."
+            ),
         }
     }
 }
@@ -48,6 +63,9 @@ impl std::error::Error for IndexError {
             IndexError::Manifest(e) => Some(e),
             IndexError::Ignore(e) => Some(e),
             IndexError::Diff(e) => Some(e),
+            IndexError::IndexNotFound
+            | IndexError::SchemaVersionMismatch
+            | IndexError::IndexCorrupted(_) => None,
         }
     }
 }
@@ -291,21 +309,6 @@ fn index_file_and_upsert(
     Ok(section_count)
 }
 
-fn fallback_to_full_index(path: &Path) -> Result<IncrementalSummary, IndexError> {
-    eprintln!("Note: No existing index found. Running full index...");
-    let summary = run(path)?;
-    Ok(IncrementalSummary {
-        added_files: summary.scanned,
-        added_sections: summary.indexed_sections,
-        modified_files: 0,
-        modified_sections: 0,
-        deleted_files: 0,
-        unchanged: 0,
-        skipped: summary.skipped,
-        duration: summary.duration,
-    })
-}
-
 pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
     let start = Instant::now();
 
@@ -320,14 +323,14 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
     // 2. Check preconditions: existing index with valid schema
     let commandindex_dir = crate::indexer::commandindex_dir(path);
     if !IndexState::exists(&commandindex_dir) {
-        return fallback_to_full_index(path);
+        return Err(IndexError::IndexNotFound);
     }
     let mut state = match IndexState::load(&commandindex_dir) {
         Ok(s) => s,
-        Err(_) => return fallback_to_full_index(path),
+        Err(e) => return Err(IndexError::IndexCorrupted(e.to_string())),
     };
     if state.check_schema_version().is_err() {
-        return fallback_to_full_index(path);
+        return Err(IndexError::SchemaVersionMismatch);
     }
 
     // 3. Load ignore filter (from_file returns default if file not found)
@@ -360,7 +363,11 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
     let tantivy_dir = crate::indexer::index_dir(path);
     let mut writer = match IndexWriterWrapper::open_existing(&tantivy_dir) {
         Ok(w) => w,
-        Err(_) => return fallback_to_full_index(path),
+        Err(e) => {
+            return Err(IndexError::IndexCorrupted(format!(
+                "Failed to open tantivy index: {e}"
+            )));
+        }
     };
 
     let mut added_files: u64 = 0;

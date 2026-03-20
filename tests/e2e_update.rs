@@ -137,17 +137,15 @@ fn e2e_update_no_changes() {
 }
 
 #[test]
-fn e2e_update_fallback_full_index() {
+fn e2e_update_no_index_shows_error() {
     let dir = setup_update_dir();
     // Do NOT run index first — no existing index
 
-    // Use cmd() directly to check stderr
     common::cmd()
         .args(["update", "--path", dir.path().to_str().unwrap()])
         .assert()
-        .success()
-        .stderr(predicate::str::contains("full index"))
-        .stdout(predicate::str::contains("Incremental update completed"));
+        .failure()
+        .stderr(predicate::str::contains("No index found"));
 }
 
 #[test]
