@@ -110,3 +110,26 @@ fn unknown_subcommand_shows_error() {
         .failure()
         .stderr(predicate::str::contains("unrecognized subcommand"));
 }
+
+#[test]
+fn search_type_invalid_value_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--type", "invalid"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value 'invalid'"));
+}
+
+#[test]
+fn search_type_valid_values_accepted() {
+    // Each valid type should be accepted by clap (fails only because no index exists)
+    for valid_type in &["markdown", "typescript", "python", "code"] {
+        let tmp = tempfile::tempdir().expect("create temp dir");
+        common::cmd()
+            .current_dir(tmp.path())
+            .args(["search", "test query", "--type", valid_type])
+            .assert()
+            .failure()
+            .stderr(predicate::str::contains("Index not found"));
+    }
+}

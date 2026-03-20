@@ -209,17 +209,19 @@ impl IndexReaderWrapper {
 
 fn matches_file_type(path: &str, file_type: &str) -> bool {
     use crate::indexer::manifest::FileType;
+    use std::path::Path;
 
-    let ext = path.rsplit('.').next().unwrap_or("");
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
 
-    match file_type {
-        "markdown" | "md" => ext == "md",
-        "typescript" | "ts" => ext == "ts" || ext == "tsx",
-        "python" | "py" => ext == "py",
-        "code" => {
-            // All code file types (non-Markdown)
-            FileType::from_extension(ext).is_some_and(|ft| ft.is_code())
-        }
-        _ => false,
+    if file_type == "code" {
+        return FileType::from_extension(ext).is_some_and(|ft| ft.is_code());
+    }
+
+    match FileType::from_type_filter(file_type) {
+        Some(expected) => FileType::from_extension(ext) == Some(expected),
+        None => false,
     }
 }

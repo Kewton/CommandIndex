@@ -33,8 +33,13 @@ enum Commands {
         /// Filter by path prefix
         #[arg(long)]
         path: Option<String>,
-        /// Filter by file type (e.g. "markdown")
-        #[arg(long = "type")]
+        /// Filter by file type
+        #[arg(
+            long = "type",
+            value_parser = clap::builder::PossibleValuesParser::new(
+                commandindex::indexer::manifest::FileType::valid_type_filter_names()
+            )
+        )]
         file_type: Option<String>,
         /// Filter by heading
         #[arg(long)]
