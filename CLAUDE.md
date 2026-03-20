@@ -112,6 +112,9 @@ src/
 ├── lib.rs               # モジュール宣言
 ├── cli/                 # CLI サブコマンド（index, clean）
 ├── parser/              # Markdown / ソースコード解析
+│   ├── code.rs          # コード解析共通型（SymbolInfo, CodeParseResult 等）
+│   ├── typescript.rs    # TypeScript/TSX パーサー（tree-sitter）
+│   └── python.rs        # Python パーサー（tree-sitter）
 ├── indexer/             # tantivy / SQLite インデックス操作
 ├── search/              # 検索ロジック
 └── output/              # 出力フォーマット（human / json / path）
