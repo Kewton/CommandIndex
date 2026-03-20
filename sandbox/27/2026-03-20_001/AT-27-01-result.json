@@ -1,0 +1,1 @@
+{"test_id": "AT-27-01", "title": "update with --path option", "status": "PASS", "command": "commandindex update --path TESTDIR", "exit_code": 0, "notes": "--path works correctly"}

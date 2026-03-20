@@ -410,3 +410,136 @@ fn test_search_with_options_delegates_from_search() {
     let results = reader.search("authentication", 10).unwrap();
     assert!(!results.is_empty());
 }
+
+// === delete_by_path tests ===
+
+#[test]
+fn delete_by_path_removes_single_section() {
+    let tmp = TempDir::new().unwrap();
+    let index_dir = tmp.path().join("tantivy");
+
+    // Add a section
+    {
+        let mut writer = IndexWriterWrapper::open(&index_dir).unwrap();
+        writer
+            .add_section(&create_test_section(
+                "docs/target.md",
+                "Target",
+                "This is the target document to be deleted.",
+                "test",
+            ))
+            .unwrap();
+        writer.commit().unwrap();
+    }
+
+    // Verify it exists
+    {
+        let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+        let results = reader.search("target", 10).unwrap();
+        assert_eq!(results.len(), 1);
+    }
+
+    // Delete by path
+    {
+        let mut writer = IndexWriterWrapper::open_existing(&index_dir).unwrap();
+        writer.delete_by_path("docs/target.md").unwrap();
+        writer.commit().unwrap();
+    }
+
+    // Verify it's gone
+    {
+        let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+        let results = reader.search("target", 10).unwrap();
+        assert_eq!(results.len(), 0);
+    }
+}
+
+#[test]
+fn delete_by_path_removes_multiple_sections() {
+    let tmp = TempDir::new().unwrap();
+    let index_dir = tmp.path().join("tantivy");
+
+    // Add 3 sections with the same path
+    {
+        let mut writer = IndexWriterWrapper::open(&index_dir).unwrap();
+        for i in 0..3 {
+            writer
+                .add_section(&create_test_section(
+                    "docs/multi.md",
+                    &format!("Section {i}"),
+                    &format!("Body content for section {i} of multi document."),
+                    "multi",
+                ))
+                .unwrap();
+        }
+        writer.commit().unwrap();
+    }
+
+    // Verify all 3 exist
+    {
+        let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+        let results = reader.search("multi", 10).unwrap();
+        assert_eq!(results.len(), 3);
+    }
+
+    // Delete by path
+    {
+        let mut writer = IndexWriterWrapper::open_existing(&index_dir).unwrap();
+        writer.delete_by_path("docs/multi.md").unwrap();
+        writer.commit().unwrap();
+    }
+
+    // Verify all are gone
+    {
+        let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+        let results = reader.search("multi", 10).unwrap();
+        assert_eq!(results.len(), 0);
+    }
+}
+
+#[test]
+fn delete_by_path_does_not_affect_other_paths() {
+    let tmp = TempDir::new().unwrap();
+    let index_dir = tmp.path().join("tantivy");
+
+    // Add two sections with different paths
+    {
+        let mut writer = IndexWriterWrapper::open(&index_dir).unwrap();
+        writer
+            .add_section(&create_test_section(
+                "docs/keep.md",
+                "Keep This",
+                "This document should be kept after deletion of other.",
+                "keep",
+            ))
+            .unwrap();
+        writer
+            .add_section(&create_test_section(
+                "docs/remove.md",
+                "Remove This",
+                "This document should be removed.",
+                "remove",
+            ))
+            .unwrap();
+        writer.commit().unwrap();
+    }
+
+    // Delete only remove.md
+    {
+        let mut writer = IndexWriterWrapper::open_existing(&index_dir).unwrap();
+        writer.delete_by_path("docs/remove.md").unwrap();
+        writer.commit().unwrap();
+    }
+
+    // Verify keep.md still exists
+    {
+        let reader = IndexReaderWrapper::open(&index_dir).unwrap();
+        let results = reader.search("kept", 10).unwrap();
+        assert!(!results.is_empty());
+        assert_eq!(results[0].path, "docs/keep.md");
+
+        // Verify remove.md is gone
+        let results2 = reader.search("removed", 10).unwrap();
+        assert!(results2.is_empty());
+    }
+}

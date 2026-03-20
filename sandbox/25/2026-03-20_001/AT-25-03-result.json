@@ -1,0 +1,1 @@
+{"test_id": "AT-25-03", "title": "Deleted file detection", "status": "PASS", "command": "commandindex update --path TESTDIR", "exit_code": 0, "notes": "Deleted file detected"}

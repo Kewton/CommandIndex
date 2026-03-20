@@ -98,6 +98,40 @@ impl Manifest {
     pub fn find_by_path(&self, path: &str) -> Option<&FileEntry> {
         self.files.iter().find(|e| e.path == path)
     }
+
+    /// 指定パスのエントリを削除
+    pub fn remove_by_path(&mut self, path: &str) {
+        self.files.retain(|e| e.path != path);
+    }
+
+    /// エントリを追加または更新（既存パスがあれば上書き）
+    pub fn upsert_entry(&mut self, entry: FileEntry) {
+        if let Some(existing) = self.files.iter_mut().find(|e| e.path == entry.path) {
+            *existing = entry;
+        } else {
+            self.files.push(entry);
+        }
+    }
+
+    /// manifest.json を読み込む。ファイルが存在しない場合は空の Manifest を返す。
+    pub fn load_or_default(commandindex_dir: &Path) -> Result<Self, ManifestError> {
+        match Self::load(commandindex_dir) {
+            Ok(m) => Ok(m),
+            Err(ManifestError::Io(ref e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                Ok(Self::new())
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// 絶対パスを base_path からの相対パス文字列に変換する
+pub fn to_relative_path_string(absolute: &Path, base: &Path) -> String {
+    absolute
+        .strip_prefix(base)
+        .unwrap_or(absolute)
+        .to_string_lossy()
+        .to_string()
 }
 
 /// ファイルのSHA-256ハッシュを計算する

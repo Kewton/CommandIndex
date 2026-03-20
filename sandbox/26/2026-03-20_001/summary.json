@@ -1,0 +1,15 @@
+{
+  "issue": 26,
+  "title": "tantivy差分更新",
+  "date": "2026-03-20",
+  "total_tests": 5,
+  "passed": 5,
+  "failed": 0,
+  "results": [
+    {"test_id": "AT-26-01", "title": "Added file is searchable after update", "status": "PASS"},
+    {"test_id": "AT-26-02", "title": "Modified file reflects new content", "status": "PASS"},
+    {"test_id": "AT-26-03", "title": "Deleted file removed from index", "status": "PASS"},
+    {"test_id": "AT-26-04", "title": "manifest.json updated correctly", "status": "PASS"},
+    {"test_id": "AT-26-05", "title": "state.json last_updated changes", "status": "PASS"}
+  ]
+}

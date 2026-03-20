@@ -1,6 +1,6 @@
 use std::fmt;
 use std::path::Path;
-use tantivy::{Index, IndexWriter as TantivyIndexWriter, doc};
+use tantivy::{Index, IndexWriter as TantivyIndexWriter, Term, doc};
 
 use crate::indexer::schema::IndexSchema;
 
@@ -95,6 +95,14 @@ impl IndexWriterWrapper {
             self.schema.heading_level => section.heading_level,
             self.schema.line_start => section.line_start,
         ))?;
+        Ok(())
+    }
+
+    /// path フィールド（STRING 型）をキーに、該当パスの全ドキュメントを削除する。
+    /// 1ファイルに複数セクションがある場合も全て削除される。
+    pub fn delete_by_path(&mut self, path: &str) -> Result<(), WriterError> {
+        let term = Term::from_field_text(self.schema.path, path);
+        self.writer.delete_term(term);
         Ok(())
     }
 

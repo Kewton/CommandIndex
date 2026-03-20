@@ -1,0 +1,16 @@
+{
+  "issue": 25,
+  "title": "差分検知エンジン",
+  "date": "2026-03-20",
+  "total_tests": 6,
+  "passed": 6,
+  "failed": 0,
+  "results": [
+    {"test_id": "AT-25-01", "title": "Added file detection", "status": "PASS"},
+    {"test_id": "AT-25-02", "title": "Modified file detection", "status": "PASS"},
+    {"test_id": "AT-25-03", "title": "Deleted file detection", "status": "PASS"},
+    {"test_id": "AT-25-04", "title": "No changes detection", "status": "PASS"},
+    {"test_id": "AT-25-05", "title": ".cmindexignore applied", "status": "PASS"},
+    {"test_id": "AT-25-06", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

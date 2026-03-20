@@ -1,0 +1,1 @@
+{"test_id": "AT-27-04", "title": "Full pipeline e2e", "status": "PASS", "command": "index→update→search→status→clean", "exit_code": 0, "notes": "Full pipeline completed successfully"}

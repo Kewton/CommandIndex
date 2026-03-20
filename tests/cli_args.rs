@@ -82,12 +82,15 @@ fn search_with_all_options_accepted() {
 }
 
 #[test]
-fn update_subcommand_exits_with_not_implemented() {
+fn update_without_index_shows_error() {
+    // update without existing index should error
+    let dir = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(dir.path().join("test.md"), "# Test\n\nContent\n").unwrap();
     common::cmd()
-        .arg("update")
+        .args(["update", "--path", dir.path().to_str().unwrap()])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
+        .stderr(predicate::str::contains("No index found"));
 }
 
 #[test]

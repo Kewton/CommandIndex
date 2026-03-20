@@ -1,0 +1,1 @@
+{"test_id": "AT-25-04", "title": "No changes detection", "status": "PASS", "command": "commandindex update --path TESTDIR", "exit_code": 0, "notes": "No changes scenario"}

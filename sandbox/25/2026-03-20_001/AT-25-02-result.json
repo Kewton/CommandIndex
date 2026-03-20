@@ -1,0 +1,1 @@
+{"test_id": "AT-25-02", "title": "Modified file detection", "status": "PASS", "command": "commandindex update --path TESTDIR", "exit_code": 0, "notes": "Modified file detected"}

@@ -44,7 +44,11 @@ enum Commands {
         limit: usize,
     },
     /// Incrementally update the index
-    Update,
+    Update {
+        /// Target directory
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+    },
     /// Show index status
     Status {
         /// Target directory
@@ -109,10 +113,28 @@ fn main() {
                 }
             }
         }
-        Commands::Update => {
-            eprintln!("Error: `update` command is not yet implemented. Coming in Phase 2.");
-            1
-        }
+        Commands::Update { path } => match commandindex::cli::index::run_incremental(&path) {
+            Ok(summary) => {
+                println!("Incremental update completed:");
+                println!(
+                    "  Added:     {} files ({} sections)",
+                    summary.added_files, summary.added_sections
+                );
+                println!(
+                    "  Modified:  {} files ({} sections)",
+                    summary.modified_files, summary.modified_sections
+                );
+                println!("  Deleted:   {} files", summary.deleted_files);
+                println!("  Unchanged: {} files", summary.unchanged);
+                println!("  Skipped:   {} files", summary.skipped);
+                println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
+                0
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Status { path, format } => {
             match commandindex::cli::status::run(&path, format, &mut std::io::stdout()) {
                 Ok(()) => 0,

@@ -1,0 +1,1 @@
+{"test_id": "AT-26-03", "title": "Deleted file removed from index", "status": "PASS", "command": "search deleted content", "exit_code": 0, "notes": "Deleted file content not found in search"}
