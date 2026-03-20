@@ -61,3 +61,24 @@ pub fn run_search_jsonl(path: impl AsRef<std::path::Path>, query: &str) -> Vec<s
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     parse_jsonl(&stdout)
 }
+
+/// Runs `commandindex search --symbol <name> --format json` with current_dir set to path.
+pub fn run_symbol_search(
+    path: impl AsRef<std::path::Path>,
+    name: &str,
+) -> assert_cmd::assert::Assert {
+    cmd()
+        .args(["search", "--symbol", name, "--format", "json"])
+        .current_dir(path.as_ref())
+        .assert()
+}
+
+/// Composite: run symbol search and parse JSONL results.
+pub fn run_symbol_search_jsonl(
+    path: impl AsRef<std::path::Path>,
+    name: &str,
+) -> Vec<serde_json::Value> {
+    let output = run_symbol_search(path, name).success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    parse_jsonl(&stdout)
+}

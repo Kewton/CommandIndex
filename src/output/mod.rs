@@ -54,6 +54,31 @@ impl From<serde_json::Error> for OutputError {
     }
 }
 
+/// シンボル検索結果
+#[derive(Debug, Clone)]
+pub struct SymbolSearchResult {
+    pub name: String,
+    pub kind: String,
+    pub file_path: String,
+    pub line_start: u32,
+    pub line_end: u32,
+    pub parent_name: Option<String>,
+    pub children: Vec<SymbolSearchResult>,
+}
+
+/// シンボル検索結果を指定フォーマットで出力する
+pub fn format_symbol_results(
+    results: &[SymbolSearchResult],
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_symbol_human(results, writer),
+        OutputFormat::Json => json::format_symbol_json(results, writer),
+        OutputFormat::Path => path::format_symbol_path(results, writer),
+    }
+}
+
 /// 検索結果を指定フォーマットで出力する
 // NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討
 pub fn format_results(
