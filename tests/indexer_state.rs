@@ -197,3 +197,74 @@ fn test_compute_file_hash_nonexistent() {
     let path = tmp.path().join("nonexistent.md");
     assert!(manifest::compute_file_hash(&path).is_err());
 }
+
+// === Manifest remove_by_path / upsert_entry tests ===
+
+#[test]
+fn manifest_remove_by_path_removes_entry() {
+    let mut manifest = Manifest::new();
+    manifest.add_entry(FileEntry {
+        path: "docs/target.md".to_string(),
+        hash: "sha256:aaa".to_string(),
+        last_modified: Utc::now(),
+        sections: 2,
+    });
+    assert_eq!(manifest.file_count(), 1);
+
+    manifest.remove_by_path("docs/target.md");
+    assert!(manifest.find_by_path("docs/target.md").is_none());
+    assert_eq!(manifest.file_count(), 0);
+}
+
+#[test]
+fn manifest_remove_by_path_nonexistent_is_noop() {
+    let mut manifest = Manifest::new();
+    manifest.add_entry(FileEntry {
+        path: "docs/keep.md".to_string(),
+        hash: "sha256:bbb".to_string(),
+        last_modified: Utc::now(),
+        sections: 1,
+    });
+    let count_before = manifest.file_count();
+
+    manifest.remove_by_path("docs/nonexistent.md");
+    assert_eq!(manifest.file_count(), count_before);
+}
+
+#[test]
+fn manifest_upsert_entry_adds_new() {
+    let mut manifest = Manifest::new();
+    assert_eq!(manifest.file_count(), 0);
+
+    manifest.upsert_entry(FileEntry {
+        path: "docs/new.md".to_string(),
+        hash: "sha256:ccc".to_string(),
+        last_modified: Utc::now(),
+        sections: 3,
+    });
+    assert_eq!(manifest.file_count(), 1);
+    assert!(manifest.find_by_path("docs/new.md").is_some());
+}
+
+#[test]
+fn manifest_upsert_entry_updates_existing() {
+    let mut manifest = Manifest::new();
+    manifest.add_entry(FileEntry {
+        path: "docs/existing.md".to_string(),
+        hash: "sha256:old".to_string(),
+        last_modified: Utc::now(),
+        sections: 1,
+    });
+
+    manifest.upsert_entry(FileEntry {
+        path: "docs/existing.md".to_string(),
+        hash: "sha256:new".to_string(),
+        last_modified: Utc::now(),
+        sections: 5,
+    });
+
+    assert_eq!(manifest.file_count(), 1);
+    let entry = manifest.find_by_path("docs/existing.md").unwrap();
+    assert_eq!(entry.hash, "sha256:new");
+    assert_eq!(entry.sections, 5);
+}

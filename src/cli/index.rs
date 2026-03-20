@@ -5,7 +5,9 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use walkdir::WalkDir;
 
-use crate::indexer::manifest::{self, FileEntry, Manifest, ManifestError};
+use crate::indexer::SUPPORTED_EXTENSIONS;
+use crate::indexer::diff::{DiffError, detect_changes, scan_files};
+use crate::indexer::manifest::{self, FileEntry, Manifest, ManifestError, to_relative_path_string};
 use crate::indexer::state::{IndexState, StateError};
 use crate::indexer::writer::{IndexWriterWrapper, SectionDoc, WriterError};
 use crate::parser::ignore::{IgnoreError, IgnoreFilter};
@@ -19,6 +21,7 @@ pub enum IndexError {
     State(StateError),
     Manifest(ManifestError),
     Ignore(IgnoreError),
+    Diff(DiffError),
 }
 
 impl fmt::Display for IndexError {
@@ -30,6 +33,7 @@ impl fmt::Display for IndexError {
             IndexError::State(e) => write!(f, "State error: {e}"),
             IndexError::Manifest(e) => write!(f, "Manifest error: {e}"),
             IndexError::Ignore(e) => write!(f, "Ignore filter error: {e}"),
+            IndexError::Diff(e) => write!(f, "Diff error: {e}"),
         }
     }
 }
@@ -43,6 +47,7 @@ impl std::error::Error for IndexError {
             IndexError::State(e) => Some(e),
             IndexError::Manifest(e) => Some(e),
             IndexError::Ignore(e) => Some(e),
+            IndexError::Diff(e) => Some(e),
         }
     }
 }
@@ -80,6 +85,12 @@ impl From<ManifestError> for IndexError {
 impl From<IgnoreError> for IndexError {
     fn from(e: IgnoreError) -> Self {
         IndexError::Ignore(e)
+    }
+}
+
+impl From<DiffError> for IndexError {
+    fn from(e: DiffError) -> Self {
+        IndexError::Diff(e)
     }
 }
 
@@ -218,6 +229,227 @@ pub fn run(path: &Path) -> Result<IndexSummary, IndexError> {
         indexed_sections,
         skipped,
         ignored,
+        duration: start.elapsed(),
+    })
+}
+
+pub struct IncrementalSummary {
+    pub added_files: u64,
+    pub added_sections: u64,
+    pub modified_files: u64,
+    pub modified_sections: u64,
+    pub deleted_files: u64,
+    pub unchanged: u64,
+    pub skipped: u64,
+    pub duration: Duration,
+}
+
+/// Result type for parse failures that should be skipped vs fatal errors.
+enum IndexFileResult {
+    Skipped,
+    Error(IndexError),
+}
+
+/// Parse a file, add its sections to the index, and upsert the manifest entry.
+/// Returns the number of sections indexed, or `IndexFileResult::Skipped` on parse failure.
+fn index_file_and_upsert(
+    file_path: &Path,
+    rel_path: &str,
+    writer: &mut IndexWriterWrapper,
+    manifest: &mut Manifest,
+) -> Result<u64, IndexFileResult> {
+    let doc = match markdown::parse_file(file_path) {
+        Ok(doc) => doc,
+        Err(e) => {
+            eprintln!("Warning: skipping {}: {e}", file_path.display());
+            return Err(IndexFileResult::Skipped);
+        }
+    };
+
+    let section_count = doc.sections.len() as u64;
+    for section in &doc.sections {
+        let section_doc = section_to_doc(section, rel_path, doc.frontmatter.as_ref());
+        writer
+            .add_section(&section_doc)
+            .map_err(|e| IndexFileResult::Error(e.into()))?;
+    }
+
+    let hash =
+        manifest::compute_file_hash(file_path).unwrap_or_else(|_| "sha256:unknown".to_string());
+    let last_modified = std::fs::metadata(file_path)
+        .and_then(|m| m.modified())
+        .map(DateTime::<Utc>::from)
+        .unwrap_or_else(|_| Utc::now());
+
+    manifest.upsert_entry(FileEntry {
+        path: rel_path.to_string(),
+        hash,
+        last_modified,
+        sections: section_count,
+    });
+
+    Ok(section_count)
+}
+
+fn fallback_to_full_index(path: &Path) -> Result<IncrementalSummary, IndexError> {
+    eprintln!("Note: No existing index found. Running full index...");
+    let summary = run(path)?;
+    Ok(IncrementalSummary {
+        added_files: summary.scanned,
+        added_sections: summary.indexed_sections,
+        modified_files: 0,
+        modified_sections: 0,
+        deleted_files: 0,
+        unchanged: 0,
+        skipped: summary.skipped,
+        duration: summary.duration,
+    })
+}
+
+pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
+    let start = Instant::now();
+
+    // 1. Validate target directory
+    if !path.is_dir() {
+        return Err(IndexError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Directory not found: {}", path.display()),
+        )));
+    }
+
+    // 2. Check preconditions: existing index with valid schema
+    let commandindex_dir = crate::indexer::commandindex_dir(path);
+    if !IndexState::exists(&commandindex_dir) {
+        return fallback_to_full_index(path);
+    }
+    let mut state = match IndexState::load(&commandindex_dir) {
+        Ok(s) => s,
+        Err(_) => return fallback_to_full_index(path),
+    };
+    if state.check_schema_version().is_err() {
+        return fallback_to_full_index(path);
+    }
+
+    // 3. Load ignore filter (from_file returns default if file not found)
+    let ignore_filter = IgnoreFilter::from_file(&path.join(".cmindexignore"))?;
+
+    // 4. Scan files
+    let scan_result = scan_files(path, &ignore_filter, SUPPORTED_EXTENSIONS)?;
+
+    // 5. Load old manifest
+    let mut old_manifest = Manifest::load_or_default(&commandindex_dir)?;
+
+    // 6. Detect changes
+    let diff_result = detect_changes(path, &old_manifest, &scan_result.files)?;
+
+    // 7. Early return if no changes
+    if diff_result.is_empty() {
+        return Ok(IncrementalSummary {
+            added_files: 0,
+            added_sections: 0,
+            modified_files: 0,
+            modified_sections: 0,
+            deleted_files: 0,
+            unchanged: diff_result.unchanged as u64,
+            skipped: 0,
+            duration: start.elapsed(),
+        });
+    }
+
+    // 8. Open existing tantivy index
+    let tantivy_dir = crate::indexer::index_dir(path);
+    let mut writer = match IndexWriterWrapper::open_existing(&tantivy_dir) {
+        Ok(w) => w,
+        Err(_) => return fallback_to_full_index(path),
+    };
+
+    let mut added_files: u64 = 0;
+    let mut added_sections: u64 = 0;
+    let mut modified_files: u64 = 0;
+    let mut modified_sections: u64 = 0;
+    let mut deleted_files: u64 = 0;
+    let mut skipped: u64 = 0;
+
+    // Track old sections for state update
+    let mut old_deleted_sections: u64 = 0;
+    let mut old_modified_sections: u64 = 0;
+
+    // 9. Process deleted files
+    for del_path in &diff_result.deleted {
+        let path_str = del_path.to_string_lossy().to_string();
+        writer.delete_by_path(&path_str)?;
+
+        // Track old sections count
+        if let Some(entry) = old_manifest.find_by_path(&path_str) {
+            old_deleted_sections += entry.sections;
+        }
+
+        old_manifest.remove_by_path(&path_str);
+        deleted_files += 1;
+    }
+
+    // 10. Process modified files
+    for mod_path in &diff_result.modified {
+        let rel_path = to_relative_path_string(mod_path, path);
+
+        // Track old sections count
+        if let Some(entry) = old_manifest.find_by_path(&rel_path) {
+            old_modified_sections += entry.sections;
+        }
+
+        writer.delete_by_path(&rel_path)?;
+
+        match index_file_and_upsert(mod_path, &rel_path, &mut writer, &mut old_manifest) {
+            Ok(section_count) => {
+                modified_files += 1;
+                modified_sections += section_count;
+            }
+            Err(IndexFileResult::Skipped) => {
+                skipped += 1;
+            }
+            Err(IndexFileResult::Error(e)) => return Err(e),
+        }
+    }
+
+    // 11. Process added files
+    for add_path in &diff_result.added {
+        let rel_path = to_relative_path_string(add_path, path);
+
+        match index_file_and_upsert(add_path, &rel_path, &mut writer, &mut old_manifest) {
+            Ok(section_count) => {
+                added_files += 1;
+                added_sections += section_count;
+            }
+            Err(IndexFileResult::Skipped) => {
+                skipped += 1;
+            }
+            Err(IndexFileResult::Error(e)) => return Err(e),
+        }
+    }
+
+    // 12. Commit index
+    writer.commit()?;
+
+    // 13. Save updated manifest
+    old_manifest.save(&commandindex_dir)?;
+
+    // 14. Update state
+    state.total_files += added_files;
+    state.total_files -= deleted_files;
+    state.total_sections += added_sections + modified_sections;
+    state.total_sections -= old_deleted_sections + old_modified_sections;
+    state.touch();
+    state.save(&commandindex_dir)?;
+
+    // 15. Return summary
+    Ok(IncrementalSummary {
+        added_files,
+        added_sections,
+        modified_files,
+        modified_sections,
+        deleted_files,
+        unchanged: diff_result.unchanged as u64,
+        skipped,
         duration: start.elapsed(),
     })
 }

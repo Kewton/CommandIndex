@@ -82,12 +82,15 @@ fn search_with_all_options_accepted() {
 }
 
 #[test]
-fn update_subcommand_exits_with_not_implemented() {
+fn update_subcommand_runs_successfully() {
+    // update without existing index triggers fallback to full index
+    let dir = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(dir.path().join("test.md"), "# Test\n\nContent\n").unwrap();
     common::cmd()
-        .arg("update")
+        .args(["update", "--path", dir.path().to_str().unwrap()])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("not yet implemented"));
+        .success()
+        .stdout(predicate::str::contains("Incremental update completed"));
 }
 
 #[test]
