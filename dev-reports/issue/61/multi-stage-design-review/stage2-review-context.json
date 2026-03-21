@@ -1,0 +1,22 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "clean.rsのCleanResult拡張が未設計", "description": "keep_embeddings=true時にRemoved意味が曖昧", "suggestion": "PartiallyRemovedバリアント追加またはドキュメント明記"},
+    {"id": "M2", "title": "open_in_memoryに#[cfg(test)]がない", "description": "既存SymbolStoreのパターンと不整合", "suggestion": "#[cfg(test)]属性を付与"},
+    {"id": "M3", "title": "EmbeddingErrorにFrom<rusqlite::Error>実装がない", "description": "既存パターンは型を保持するがString化で情報損失", "suggestion": "Sqlite(rusqlite::Error)バリアント追加"},
+    {"id": "M4", "title": "main.rsのmatchアーム変更コード例がない", "description": "Clean出力メッセージの分岐が未設計", "suggestion": "main.rsの変更コード例を設計方針書に追加"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "source()実装がない", "suggestion": "既存パターンに合わせて実装"},
+    {"id": "S2", "title": "EmbedErrorのFrom/Display未定義", "suggestion": "既存パターンに合わせて追加"},
+    {"id": "S3", "title": "embeddingsテーブルにUNIQUE制約なし", "suggestion": "UNIQUE(section_path, section_heading, model)追加"},
+    {"id": "S4", "title": "EMBEDDINGS_DB_FILE定数定義が未記載", "suggestion": "定数定義を追加"},
+    {"id": "S5", "title": "EmbeddingConfigのSerialize不要", "suggestion": "Deserializeのみに変更"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "dimension()ハードコード"},
+    {"id": "N2", "title": "OpenAI endpoint設定不使用"},
+    {"id": "N3", "title": "スキーマバージョンチェックなし"},
+    {"id": "N4", "title": ".commandindex/ gitignore確認"}
+  ],
+  "summary": "clean.rsのCleanResult拡張、open_in_memoryの#[cfg(test)]、From実装パターンの整合が主要指摘。"
+}

@@ -1,0 +1,66 @@
+{
+  "status": "completed",
+  "changes_made": true,
+  "summary": "OllamaProviderとOpenAiProviderの重複コードを共通ユーティリティとして抽出",
+  "refactoring_details": [
+    {
+      "category": "DRY",
+      "description": "truncate_text関数をollama.rs/openai.rsから抽出し、embedding/mod.rsの共通ユーティリティとして定義。max_lengthをパラメータ化してプロバイダー固有の制限値を渡せるようにした。",
+      "files_changed": [
+        "src/embedding/mod.rs",
+        "src/embedding/ollama.rs",
+        "src/embedding/openai.rs"
+      ]
+    },
+    {
+      "category": "DRY",
+      "description": "HTTPステータスコードからEmbeddingErrorへの変換ロジック(429→RateLimited, 404→ModelNotFound, その他→ApiError)をmap_status_to_error関数として共通化。両プロバイダーの3つのif文を1つの関数呼び出しに統合。",
+      "files_changed": [
+        "src/embedding/mod.rs",
+        "src/embedding/ollama.rs",
+        "src/embedding/openai.rs"
+      ]
+    },
+    {
+      "category": "DRY",
+      "description": "reqwest::Errorからのタイムアウト判定とEmbeddingError変換をmap_reqwest_error関数として共通化。",
+      "files_changed": [
+        "src/embedding/mod.rs",
+        "src/embedding/ollama.rs",
+        "src/embedding/openai.rs"
+      ]
+    }
+  ],
+  "not_changed": [
+    {
+      "category": "エラーメッセージ品質",
+      "reason": "既にユーザーフレンドリーなメッセージが設定されており、変更不要。"
+    },
+    {
+      "category": "マジックナンバー",
+      "reason": "BATCH_SIZE, MAX_TEXT_LENGTH, CONNECT_TIMEOUT_SECS, REQUEST_TIMEOUT_SECS等、全て適切に定数化済み。"
+    },
+    {
+      "category": "不要なimport/未使用変数",
+      "reason": "clippy警告0件。不要なimportや未使用変数は存在しない。"
+    },
+    {
+      "category": "パフォーマンス",
+      "reason": "不要なクローンは見当たらない。model.clone()はリクエスト構築に必須。"
+    },
+    {
+      "category": "store.rs",
+      "reason": "コード品質が高く、変更不要。"
+    },
+    {
+      "category": "cli/embed.rs",
+      "reason": "コード品質が高く、変更不要。"
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (warnings: 0)",
+    "cargo_test": "pass (17 tests)",
+    "cargo_fmt": "pass (no diff)"
+  }
+}

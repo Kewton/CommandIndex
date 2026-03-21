@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["M1: CleanResult出力メッセージ分岐", "M2: open_in_memory #[cfg(test)]", "M3: EmbeddingStoreErrorにFrom<rusqlite::Error>", "M4: main.rs matchアーム変更例追加", "S1: source()実装追加", "S2: EmbedError From/Display追加", "S3: UNIQUE制約追加", "S5: Serialize削除"]}

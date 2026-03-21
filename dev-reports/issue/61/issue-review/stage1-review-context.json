@@ -1,0 +1,87 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Embedding格納方法が未決定",
+      "description": "Issueの「仮説検証結果」セクションで「Embedding格納方法（tantivy拡張 or SQLite）の明確化が必要」と記載されているが、解決策が提示されていない。tantivy 0.25 はネイティブなベクトル検索フィールドをサポートしていないため、768次元や1536次元のfloat配列をどこにどのように格納するかの設計が欠落している。",
+      "suggestion": "SQLiteのsymbols.db（またはembeddings.db）にembeddingsテーブル（section_path TEXT, section_heading TEXT, embedding BLOB, dimension INTEGER, model TEXT, file_hash TEXT）を追加する方針を明記する。tantivy拡張は現バージョンでベクトル検索未対応のため不適切。"
+    },
+    {
+      "id": "M2",
+      "title": "config.toml の新規構築スコープが曖昧",
+      "description": "仮説検証で「config.toml設定管理は現在存在しないため新規構築が必要」と判明しているが、Issueのスコープ内でconfig.toml基盤をどこまで構築するかが未定義。TOML パーサーの依存もない。",
+      "suggestion": "config.toml基盤の構築を別Issue（prerequisite）として切り出すか、このIssue内で実装する場合は詳細設計を追記する。tomlクレートの依存追加も明記する。"
+    },
+    {
+      "id": "M3",
+      "title": "EmbeddingProviderトレイトのエラー型が未定義",
+      "description": "提案されたトレイト定義の Result で使用するエラー型が不明。既存コードベースはモジュールごとに構造化エラー型を定義するパターンを採用している。",
+      "suggestion": "EmbeddingError enum を定義する方針を明記する。NetworkError, ApiError, ModelNotFound, InvalidResponse, RateLimited, Timeout 等のバリアント。"
+    },
+    {
+      "id": "M4",
+      "title": "HTTPクライアントの非同期/同期選択が未定義",
+      "description": "reqwestのblocking機能を使うか、async（tokio runtime）を導入するかの方針が未記載。現在のコードベースは完全に同期的。",
+      "suggestion": "reqwest::blocking を使用する方針を明記する。将来的にasync化する場合は別Issueで対応。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "コードファイルのembedding粒度が不明確",
+      "description": "コードファイルは1ファイル = 1セクション（heading_level = 0）としてtantivyに格納されている。コードファイル全体のembeddingを生成するのか、関数/クラス単位にするのかが不明。",
+      "suggestion": "コードファイルのembedding粒度を明確化する。"
+    },
+    {
+      "id": "S2",
+      "title": "キャッシュのハッシュ粒度とembedding粒度の不整合リスク",
+      "description": "ファイルハッシュベースだと、1セクションの変更で全セクションのembeddingを再生成することになる。",
+      "suggestion": "Phase 1としてはファイルハッシュベースで十分だが、トレードオフを明記する。"
+    },
+    {
+      "id": "S3",
+      "title": "embedサブコマンドの前提条件が不明確",
+      "description": "既にインデックスが構築済みであることが前提なのか、データソースが不明。",
+      "suggestion": "embedサブコマンドはインデックス構築済みを前提とする方針を明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "cleanコマンドの--keep-embeddingsオプションの影響範囲",
+      "description": "現在のclean.rsは .commandindex/ 全体削除。選択的削除への変更設計が未記載。",
+      "suggestion": "embeddingデータの格納先を独立させ、cleanコマンドの修正方針を明記する。"
+    },
+    {
+      "id": "S5",
+      "title": "受け入れ基準にEmbeddingの検証方法が欠落",
+      "description": "生成されたembeddingの次元数検証、ゼロベクトルチェック等がない。",
+      "suggestion": "受け入れ基準に次元数検証、一貫性チェック、空テキストハンドリングを追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "バッチサイズの設定可能性",
+      "description": "バッチサイズが固定値で記載されている。",
+      "suggestion": "config.tomlにbatch_sizeオプションを追加可能にする。"
+    },
+    {
+      "id": "N2",
+      "title": "タイムアウトとリトライポリシーの記載",
+      "description": "タイムアウト値やリトライポリシーの設計が記載されていない。",
+      "suggestion": "デフォルトのタイムアウト値とリトライポリシーを設計に追記。"
+    },
+    {
+      "id": "N3",
+      "title": "テスト戦略の明記",
+      "description": "外部サービス依存のテスト方法が不明。",
+      "suggestion": "モック実装によるユニットテスト、統合テストの分離方針を追記。"
+    },
+    {
+      "id": "N4",
+      "title": "プログレスインジケーター",
+      "description": "大規模リポジトリでの進捗表示が未記載。",
+      "suggestion": "バッチ処理の進捗表示をオプション機能として検討。"
+    }
+  ],
+  "summary": "Issue #61 は Phase 5 のセマンティック検索基盤としてのEmbedding生成機能を提案しており、方向性は妥当。しかし4つの重要な課題がある: (1) Embedding格納先が未決定（SQLite案を確定すべき）、(2) config.toml基盤の新規構築範囲が不明確、(3) トレイトのエラー型設計が欠落、(4) reqwestの同期/非同期選択が必要。"
+}
