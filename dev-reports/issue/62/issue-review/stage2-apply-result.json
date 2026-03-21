@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "status": "skipped_github_update",
+  "applied_items": [
+    "section_headingをNOT NULL DEFAULT ''に変更（ユニーク制約対応）",
+    "file_path + section_headingの複合ユニーク制約追加",
+    "EmbeddingInfo / EmbeddingSimilarityResult構造体定義を追加",
+    "byteorderの代わりに標準ライブラリ(f32::to_le_bytes/from_le_bytes)を使用",
+    "insert_embeddingsバルクインサートAPIシグネチャ追加",
+    "ゼロベクトル・dimension不一致のエッジケース対応を明記",
+    "created_atの用途をデバッグ・診断用と明記",
+    "受け入れ基準に重複防止・エッジケーステストを追加"
+  ],
+  "note": "GitHub Issue本文への直接更新はスキップ。設計方針書に反映する。"
+}

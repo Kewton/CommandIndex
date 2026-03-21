@@ -1,0 +1,8 @@
+{
+  "status": "skipped",
+  "reason": "Codex authentication token expired",
+  "critical": [],
+  "warnings": [],
+  "summary": "Codexレビューはスキップ。Claude opusによる4段階設計レビュー済み。",
+  "requires_fix": false
+}

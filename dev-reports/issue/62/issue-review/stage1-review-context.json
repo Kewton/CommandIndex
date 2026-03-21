@@ -1,0 +1,54 @@
+{
+  "must_fix": [
+    {
+      "title": "embeddingsテーブルのfile_path + section_heading複合ユニーク制約が未定義",
+      "description": "提案されたスキーマでは file_path と section_heading の組み合わせに対するユニーク制約がない。delete-before-insertパターンで運用する前提ではあるが、何らかの理由でdeleteが失敗した場合や、同一ファイル・同一セクションのembeddingが重複挿入されるリスクがある。",
+      "suggestion": "CREATE UNIQUE INDEX idx_embeddings_path_section ON embeddings(file_path, section_heading) を追加するか、受け入れ基準に重複防止のテストケースを明示する。"
+    },
+    {
+      "title": "section_headingがNULLableだがNULLのユニーク性が曖昧",
+      "description": "section_heading が NULL の場合（ファイル全体のembedding）、SQLiteではNULL同士はユニーク制約で等しいとみなされない。同一file_pathで section_heading=NULL のレコードが複数挿入される可能性がある。",
+      "suggestion": "section_headingにデフォルト値（例: 空文字列 ''）を使うか、COALESCE(section_heading, '') でユニーク制約を構成する。あるいはNULLを許容する設計意図をIssueに明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "search_similarの戻り値型が具体的すぎる",
+      "description": "search_similarの戻り値が Result<Vec<(String, String, f32)>> とタプルで定義されている。既存コードベースでは SymbolInfo, FileLinkInfo のように専用構造体を定義するパターンが統一されている。",
+      "suggestion": "EmbeddingSimilarityResult のような専用構造体を定義し、既存パターンに合わせる。"
+    },
+    {
+      "title": "コサイン類似度計算のゼロベクトル対策が未記載",
+      "description": "コサイン類似度はベクトルのノルムで除算するため、ゼロベクトルが入力された場合にゼロ除算またはNaNが発生する。",
+      "suggestion": "ゼロベクトルの入力に対する挙動を明記し、受け入れ基準にテストケースを追加する。"
+    },
+    {
+      "title": "dimensionカラムの整合性チェックが未定義",
+      "description": "検索時にクエリベクトルの次元数と格納済みベクトルの次元数が不一致の場合の挙動が未定義。",
+      "suggestion": "search_similar実行時にdimension一致チェックを追加するか、model_nameでフィルタする検索APIを検討する。"
+    },
+    {
+      "title": "insert_embeddingsのバルクインサートAPIが未定義",
+      "description": "既存コードではinsert_symbols等のバルクインサートAPIが定義されているが、embeddingsのinsert APIシグネチャが記載されていない。",
+      "suggestion": "insert_embeddingsのシグネチャとEmbeddingInfo構造体の定義をIssueに追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "byteorderの代わりに標準ライブラリのみで実装可能",
+      "description": "f32::to_le_bytes() / f32::from_le_bytes() を使えば、byteorder crateを追加せずにBLOB変換が可能。",
+      "suggestion": "byteorder crateの追加を見送り、標準ライブラリでBLOB変換を実装することを検討する。"
+    },
+    {
+      "title": "created_atカラムの用途が不明確",
+      "description": "created_atの用途（デバッグ用 / TTLベースの無効化等）が未記載。",
+      "suggestion": "用途を明記する。"
+    },
+    {
+      "title": "将来のANN移行パスの軽い言及があると良い",
+      "description": "現在のBLOB格納方式がANN移行時にどの程度の変更を伴うかの見積もりがない。",
+      "suggestion": "コメントで軽く言及しておく。"
+    }
+  ],
+  "summary": "Issue #62は既存コードベースとの整合性が高く、技術選定も想定規模に対して妥当。主な指摘は (1) embeddingsテーブルの重複防止策が未定義、(2) section_heading NULLの扱いが曖昧。should_fixとして戻り値の構造体化、エッジケース対策、insert APIシグネチャ明記を推奨。"
+}
