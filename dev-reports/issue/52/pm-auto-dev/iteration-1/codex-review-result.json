@@ -1,0 +1,29 @@
+{
+  "critical": [
+    {
+      "title": "Traversal-like path input is not rejected before related lookup",
+      "file": "src/cli/context.rs",
+      "line": 80,
+      "detail": "`run_context()` only checks emptiness and length, then passes each user-supplied path into `RelatedSearchEngine::find_related()`. The downstream normalizer used by related search drops `..` path components instead of rejecting them, so inputs such as `docs/../secret.md` can be reinterpreted as a different repository path. This is an input validation gap with path traversal characteristics and can return context for an unintended indexed file.",
+      "suggestion": "Reject paths containing `..`, backslashes, absolute-path prefixes, or non-normalized forms in `src/cli/context.rs` before calling related search. Prefer canonical repository-relative validation instead of relying on lossy normalization."
+    }
+  ],
+  "warnings": [
+    {
+      "title": "`--max-tokens` can be exceeded by the first oversized entry",
+      "file": "src/cli/context.rs",
+      "line": 186,
+      "detail": "The limit check only breaks when `token_total + entry_tokens > max_tok && !entries.is_empty()`. If the first entry alone exceeds `max_tok`, it is still included and `estimated_tokens` will exceed the requested cap. This is a behavioral bug in the limit enforcement logic.",
+      "suggestion": "Enforce the cap for every entry, including the first one. Either skip oversized entries, truncate them further, or document and implement an explicit `always include top-1` policy."
+    },
+    {
+      "title": "Merging relation types drops `TagMatch` data from later results",
+      "file": "src/cli/context.rs",
+      "line": 118,
+      "detail": "Duplicate suppression compares only `std::mem::discriminant`, so two `RelationType::TagMatch` values with different `matched_tags` are treated as duplicates. In multi-file merges this can silently lose tag evidence from later target files, producing incomplete context metadata.",
+      "suggestion": "Merge relation payloads structurally. For `TagMatch`, union the `matched_tags` arrays instead of deduplicating only by enum variant."
+    }
+  ],
+  "summary": "2件の潜在バグと1件の入力バリデーション起因の脆弱性リスクを確認しました。特に `src/cli/context.rs` のユーザー入力パス検証不足は、`..` を含む経路が別パスとして解釈されうるため修正優先度が高いです。`src/output/context_pack.rs` には今回の観点で重大な問題は見当たりませんでした。",
+  "requires_fix": true
+}

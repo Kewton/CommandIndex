@@ -1,0 +1,1 @@
+{"stage": 3, "applied": ["SearchError の依存関係を明示（cli::search::SearchError 再利用）", "lib.rs 変更不要を影響範囲セクションに明記", "cli_args.rs テスト更新推奨を追記"]}

@@ -1,0 +1,1 @@
+{"stage": 1, "applied": ["OutputError::FormatError を ? 演算子 + From impl に修正", "run_context の責務分離（collect_related_context + build_context_pack）", "enrich_entry のフォールバック動作を明記（取得失敗時は None）"]}

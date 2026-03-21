@@ -75,6 +75,20 @@ enum Commands {
         #[arg(long, default_value = ".")]
         path: PathBuf,
     },
+    /// Generate AI-oriented context pack for specified files
+    Context {
+        /// Target file paths (multiple allowed)
+        #[arg(required = true)]
+        files: Vec<String>,
+
+        /// Maximum number of related files to include
+        #[arg(long, default_value = "20")]
+        max_files: usize,
+
+        /// Estimated token limit
+        #[arg(long)]
+        max_tokens: Option<usize>,
+    },
 }
 
 fn main() {
@@ -172,6 +186,17 @@ fn main() {
                 }
             }
         }
+        Commands::Context {
+            files,
+            max_files,
+            max_tokens,
+        } => match commandindex::cli::context::run_context(&files, max_files, max_tokens) {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Clean { path } => match commandindex::cli::clean::run(&path) {
             Ok(commandindex::cli::clean::CleanResult::Removed) => {
                 println!("Removed index at .commandindex/");

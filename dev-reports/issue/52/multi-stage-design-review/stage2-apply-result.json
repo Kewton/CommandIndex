@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["TagMatch { matched_tags } のデータ付きvariant対応を明記", "SearchError の全バリアントを列挙", "imported_names のカンマ+スペース区切り形式を明記", "truncate_body() の具体的引数値（10, 500）を明記"]}

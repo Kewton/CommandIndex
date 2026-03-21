@@ -1,0 +1,17 @@
+{
+  "status": "success",
+  "files_created": [
+    "src/cli/context.rs",
+    "src/output/context_pack.rs",
+    "tests/e2e_context_pack.rs"
+  ],
+  "files_modified": [
+    "src/main.rs",
+    "src/cli/mod.rs",
+    "src/output/mod.rs",
+    "tests/cli_args.rs"
+  ],
+  "tests_passed": 270,
+  "tests_failed": 0,
+  "issues": []
+}

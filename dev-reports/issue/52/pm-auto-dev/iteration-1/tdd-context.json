@@ -1,0 +1,17 @@
+{
+  "issue_number": 52,
+  "title": "Context Pack 生成（AI向け文脈パッケージ出力）",
+  "design_policy": "dev-reports/design/issue-52-context-pack-design-policy.md",
+  "work_plan": "dev-reports/issue/52/work-plan.md",
+  "tasks": [
+    "Task 1.1: ContextPack型定義 (output/mod.rs)",
+    "Task 1.2: format_context_pack実装 (output/context_pack.rs)",
+    "Task 2.1: Commands::Context追加 (main.rs)",
+    "Task 2.2: cli/mod.rs モジュール宣言",
+    "Task 3.1: cli/context.rs 入力検証+インデックスオープン",
+    "Task 3.2: collect_related_context (マージロジック)",
+    "Task 3.3: build_context_pack (エンリッチ+制限適用)",
+    "Task 4.1: E2Eテスト (tests/e2e_context_pack.rs)",
+    "Task 4.2: CLI引数テスト (tests/cli_args.rs)"
+  ]
+}
