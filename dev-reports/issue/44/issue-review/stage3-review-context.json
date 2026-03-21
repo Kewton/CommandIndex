@@ -1,0 +1,55 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "format_results() シグネチャ変更による tests/output_format.rs の破壊",
+      "description": "format_results() に Option<SnippetConfig> を追加すると tests/output_format.rs の全テスト（11件）がコンパイルエラーになる。",
+      "suggestion": "既存テストでは None を渡してデフォルト動作を維持する。"
+    },
+    {
+      "id": "M2",
+      "title": "cli/search.rs run() から format_results() への受け渡し",
+      "description": "run() に snippet_config 引数追加が必要。main.rs の呼び出し側も修正が必要。",
+      "suggestion": "run() に snippet_config: Option<SnippetConfig> 引数を追加。"
+    },
+    {
+      "id": "M3",
+      "title": "truncate_body の 0=無制限セマンティクスが未実装",
+      "description": "0を渡すと空文字列になるため、ガード条件追加が必要。",
+      "suggestion": "max_lines == 0 or max_chars == 0 の場合は切り詰めスキップ。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "format_human() シグネチャ変更",
+      "description": "SnippetConfig を format_human() の引数として受け取る必要がある。"
+    },
+    {
+      "id": "S2",
+      "title": "context.rs の truncate_body 呼び出し",
+      "description": "context.rs:288 で truncate_body(body, 10, 500) を直接呼び出し。シグネチャ不変なら影響なし。"
+    },
+    {
+      "id": "S3",
+      "title": "SnippetConfig に Default トレイト実装",
+      "description": "Default::default() で lines=2, chars=120 を返すようにする。"
+    },
+    {
+      "id": "S4",
+      "title": "SnippetConfig の pub 可視性",
+      "description": "main.rs から構築するため pub struct として定義が必要。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "CLIバリデーション上限値"
+    },
+    {
+      "id": "N2",
+      "title": "E2Eテストへの影響確認"
+    }
+  ],
+  "summary": "影響範囲は限定的。変更は主に4つの呼び出しチェーン（main.rs → cli/search.rs → output/mod.rs → output/human.rs）に閉じる。format_symbol_results / format_related_results には波及しない。context.rs はシグネチャ不変なら影響なし。"
+}

@@ -1,0 +1,16 @@
+{
+  "stage": 4,
+  "action": "apply",
+  "applied_items": [
+    "M1: format_results() シグネチャ変更による既存テスト影響を影響範囲セクションに明記",
+    "M2: run() への snippet_config 引数追加を呼び出しチェーンとして明記",
+    "M3: truncate_body の 0=無制限ガード条件追加を設計方針に明記",
+    "S1: format_human() のシグネチャ変更を呼び出しチェーンに反映",
+    "S2: context.rs への影響なしを影響範囲に明記",
+    "S3: SnippetConfig に Default トレイト実装を設計方針に明記",
+    "S4: SnippetConfig の pub 可視性を設計方針に明記"
+  ],
+  "must_fix_count": 3,
+  "should_fix_count": 4,
+  "result": "success"
+}

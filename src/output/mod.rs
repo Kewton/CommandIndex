@@ -11,6 +11,22 @@ use serde::Serialize;
 
 use crate::indexer::reader::SearchResult;
 
+/// スニペット表示設定
+#[derive(Debug, Clone, Copy)]
+pub struct SnippetConfig {
+    pub lines: usize,
+    pub chars: usize,
+}
+
+impl Default for SnippetConfig {
+    fn default() -> Self {
+        Self {
+            lines: 2,
+            chars: 120,
+        }
+    }
+}
+
 /// 出力フォーマット
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum OutputFormat {
@@ -120,7 +136,7 @@ pub fn format_results(
     writer: &mut dyn Write,
 ) -> Result<(), OutputError> {
     match format {
-        OutputFormat::Human => human::format_human(results, writer),
+        OutputFormat::Human => human::format_human(results, writer, SnippetConfig::default()),
         OutputFormat::Json => json::format_json(results, writer),
         OutputFormat::Path => path::format_path(results, writer),
     }
