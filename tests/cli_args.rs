@@ -239,3 +239,63 @@ fn test_no_semantic_conflicts_with_related() {
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
 }
+
+#[test]
+fn search_with_rerank_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--rerank"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_with_rerank_and_rerank_top_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--rerank", "--rerank-top", "30"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_rerank_conflicts_with_symbol() {
+    common::cmd()
+        .args(["search", "--symbol", "name", "--rerank"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_rerank_conflicts_with_related() {
+    common::cmd()
+        .args(["search", "--related", "file.rs", "--rerank"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_rerank_conflicts_with_semantic() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--rerank"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_rerank_top_requires_rerank() {
+    common::cmd()
+        .args(["search", "test query", "--rerank-top", "20"])
+        .assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("required").or(predicate::str::contains("can only be used")),
+        );
+}

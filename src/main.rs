@@ -62,6 +62,12 @@ enum Commands {
         /// Maximum number of results (1-1000)
         #[arg(long, default_value_t = 20)]
         limit: usize,
+        /// Enable LLM-based reranking of search results
+        #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
+        rerank: bool,
+        /// Number of top candidates to rerank (requires --rerank)
+        #[arg(long, requires = "rerank")]
+        rerank_top: Option<usize>,
     },
     /// Incrementally update the index
     Update {
@@ -153,6 +159,8 @@ fn main() {
             file_type,
             heading,
             limit,
+            rerank,
+            rerank_top,
         } => {
             let result = match (query, symbol, related, semantic) {
                 (Some(q), None, None, None) => {
@@ -167,7 +175,7 @@ fn main() {
                         path_prefix: path,
                         file_type,
                     };
-                    commandindex::cli::search::run(&options, &filters, format)
+                    commandindex::cli::search::run(&options, &filters, format, rerank, rerank_top)
                 }
                 (None, Some(s), None, None) => {
                     commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)

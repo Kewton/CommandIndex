@@ -138,6 +138,7 @@ impl EmbeddingConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub embedding: Option<EmbeddingConfig>,
+    pub rerank: Option<crate::rerank::RerankConfig>,
 }
 
 impl Config {
@@ -337,6 +338,41 @@ provider = "ollama"
         let toml_str = "";
         let config: Config = toml::from_str(toml_str).unwrap();
         assert!(config.embedding.is_none());
+        assert!(config.rerank.is_none());
+    }
+
+    #[test]
+    fn test_config_parse_with_rerank_section() {
+        let toml_str = r#"
+[embedding]
+provider = "ollama"
+
+[rerank]
+model = "gemma2"
+top_candidates = 30
+endpoint = "http://localhost:11434"
+timeout_secs = 60
+"#;
+        let config: Config = toml::from_str(toml_str).unwrap();
+        let rerank = config.rerank.unwrap();
+        assert_eq!(rerank.model, "gemma2");
+        assert_eq!(rerank.top_candidates, 30);
+        assert_eq!(rerank.endpoint, "http://localhost:11434");
+        assert_eq!(rerank.timeout_secs, 60);
+        assert!(rerank.api_key.is_none());
+    }
+
+    #[test]
+    fn test_config_parse_rerank_defaults() {
+        let toml_str = r#"
+[rerank]
+"#;
+        let config: Config = toml::from_str(toml_str).unwrap();
+        let rerank = config.rerank.unwrap();
+        assert_eq!(rerank.model, "llama3");
+        assert_eq!(rerank.top_candidates, 20);
+        assert_eq!(rerank.endpoint, "http://localhost:11434");
+        assert_eq!(rerank.timeout_secs, 30);
     }
 
     // --- Config::load ---

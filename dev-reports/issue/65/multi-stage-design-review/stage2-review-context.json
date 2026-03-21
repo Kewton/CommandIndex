@@ -1,0 +1,1 @@
+{"stage":2,"type":"整合性レビュー","must_fix_count":3,"should_fix_count":5,"nice_to_have_count":3,"key_findings":["M1: run()シグネチャ変更時のmain.rs同期","M2: RerankConfig全フィールドにデフォルト値必要","M3: body空文字列ケースのハンドリング","S1: src/rerank/ vs src/search/rerank.rs配置","S2: try_rerank()呼び出し位置","S3: BM25-only時のrerank適用","S4: --semantic専用パス対応方針","S5: 既存テストへの--rerank追加","SF-6: build_document_textのバイト境界パニック"]}

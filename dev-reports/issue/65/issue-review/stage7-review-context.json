@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能影響",
+      "description": "--limit の意味が変わる可能性。--limit > --rerank-top のとき候補が打ち切られ再現率が下がる。candidate_count = max(limit, rerank_top) のような取得規則が必要。",
+      "suggestion": "candidate_count = max(limit, rerank_top) のルールを acceptance criteria に含める。"
+    },
+    {
+      "id": "M2",
+      "category": "テスト影響",
+      "description": "CLI引数、設定デシリアライズ、検索フロー、JSON出力を横断する変更だが、既存テストの期待値変更や回帰テストの維持方針が書かれていない。特に --rerank 時のみ score の意味が変わる。",
+      "suggestion": "既存テストの影響範囲と更新方針を明示。"
+    },
+    {
+      "id": "M3",
+      "category": "パフォーマンス",
+      "description": "逐次20リクエスト・各10秒タイムアウトではローカル環境次第で10秒目標を満たせない。reqwest blocking前提でasyncランタイムもない。",
+      "suggestion": "性能要件を受け入れ基準ではなく目安に落とすか、途中打ち切り時の結果品質の扱いを明示。"
+    },
+    {
+      "id": "M4",
+      "category": "依存関係",
+      "description": "Cohere対応をモジュール構成に含めているが、初期実装で本当に入れるのかトレイトとenumだけ先に入れて実装は将来Issueにするのか未確定。",
+      "suggestion": "初期実装はOllamaのみ。Cohereはトレイトとenum定義のみで実装は将来Issue。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "既存機能影響",
+      "description": "rerank時だけscoreが0-10スコアに上書きされるので、利用側がBM25/RRFと同じ意味だと誤解する。JSON互換性影響を明記すべき。",
+      "suggestion": "JSON出力のscore意味変更を明記。"
+    },
+    {
+      "id": "S2",
+      "category": "テスト方針",
+      "description": "embedding不在時のBM25フォールバック後にもrerankをかけるのかどうかで結果とレイテンシが変わる。",
+      "suggestion": "BM25フォールバック後のrerank適用可否を明記。"
+    },
+    {
+      "id": "S3",
+      "category": "依存関係",
+      "description": "CohereのAPIバージョン固定が弱い。endpointを設定可能にするなら、デフォルトendpointとAPIバージョンをacceptance criteriaに含める。",
+      "suggestion": "APIバージョンとデフォルトendpointを明記。"
+    },
+    {
+      "id": "S4",
+      "category": "パフォーマンス",
+      "description": "長いbodyを毎回8192文字まで送るコストが未評価。top-20なら最悪16万字超の入力。",
+      "suggestion": "bodyの先頭数千文字や要約対象を検討。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "stderrポリシー",
+      "description": "rerankの警告が追加されると既存のstderr前提E2Eが読みにくくなる。",
+      "suggestion": "1回だけ出すなどのルールを入れる。"
+    },
+    {
+      "id": "N2",
+      "category": "テスト方針",
+      "description": "数値の厳密一致より順序・件数・tie-breakを主対象にした方が保守しやすい。",
+      "suggestion": "順序互換を重視するテスト方針を明記。"
+    },
+    {
+      "id": "N3",
+      "category": "設定共通化",
+      "description": "endpoint/api_key/timeoutはembedding側と似た責務。将来の共通化余地を意識。",
+      "suggestion": "設定読み込みやreqwest client初期化の共通化余地を検討。"
+    }
+  ],
+  "summary": "前回よりスコープは整理されたが、--limitと--rerank-topの関係、既存テスト更新方針、逐次HTTPの性能ばらつき、Cohere依存の切り分けがまだ甘い。初回はOllamaのみ実装し、Cohereはトレイトとenum定義のみで後続分離が安全。性能要件は保証値ではなく運用目安として扱う。"
+}

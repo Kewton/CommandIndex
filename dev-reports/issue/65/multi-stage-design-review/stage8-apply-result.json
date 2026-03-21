@@ -1,0 +1,1 @@
+{"stage":8,"action":"apply_review","applied_items":["M1: OllamaRerankProviderの引数を&[RerankCandidate]に統一","M2: Config暫定配置の注記追加","M3: テスト影響を後方互換性セクションで言及済み","M4: セキュリティ方針注記(現行ユーティリティとの差異認識)","S1: 判断6からCohere関連の古い記述を削除","S4: 出力モジュールの影響にscore意味変更を明記"],"summary":"Stage 7 Codexレビューの指摘を設計方針書に反映。API契約の統一、暫定配置の明記、出力影響の明確化。"}

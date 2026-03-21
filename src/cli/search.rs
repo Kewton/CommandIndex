@@ -110,6 +110,8 @@ pub fn run(
     options: &SearchOptions,
     filters: &SearchFilters,
     format: OutputFormat,
+    rerank: bool,
+    rerank_top: Option<usize>,
 ) -> Result<(), SearchError> {
     let tantivy_dir = crate::indexer::index_dir(Path::new("."));
     if !tantivy_dir.exists() {
@@ -117,16 +119,50 @@ pub fn run(
     }
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
+    // rerank有効時、検索前にlimitを拡大して候補を多く取得
+    let original_limit = options.limit;
+    let rerank_top_resolved = rerank_top.unwrap_or_else(|| {
+        // CLI未指定時はconfig.toml → デフォルト20の順で解決
+        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+        crate::embedding::Config::load(&commandindex_dir)
+            .ok()
+            .flatten()
+            .and_then(|c| c.rerank)
+            .map(|r| r.top_candidates)
+            .unwrap_or(20)
+    });
+    let effective_options = if rerank {
+        let mut opts = options.clone();
+        opts.limit = std::cmp::max(options.limit, rerank_top_resolved);
+        opts
+    } else {
+        options.clone()
+    };
+
     // BM25検索実行
-    let results = reader.search_with_options(options, filters)?;
+    let results = reader.search_with_options(&effective_options, filters)?;
 
     // ハイブリッド判定: no_semanticでなく、heading指定がない場合にハイブリッド統合
-    let use_hybrid = !options.no_semantic && options.heading.is_none();
+    let use_hybrid = !effective_options.no_semantic && effective_options.heading.is_none();
 
     let final_results = if use_hybrid {
-        try_hybrid_search(results, options, filters)?
+        try_hybrid_search(results, &effective_options, filters)?
     } else {
         results
+    };
+
+    // Reranking適用
+    let final_results = if rerank {
+        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+        let reranked = try_rerank(
+            final_results,
+            &effective_options.query,
+            rerank_top_resolved,
+            &commandindex_dir,
+        );
+        reranked.into_iter().take(original_limit).collect()
+    } else {
+        final_results
     };
 
     if final_results.is_empty() {
@@ -592,4 +628,84 @@ fn build_symbol_tree(
         });
     }
     Ok(results)
+}
+
+/// Reranking を試行する。失敗時はeprintlnで警告を出し、元の結果をそのまま返す。
+fn try_rerank(
+    results: Vec<crate::indexer::reader::SearchResult>,
+    query: &str,
+    rerank_top: usize,
+    commandindex_dir: &Path,
+) -> Vec<crate::indexer::reader::SearchResult> {
+    // 1. Config読み込み
+    let rerank_config = match crate::embedding::Config::load(commandindex_dir) {
+        Ok(Some(config)) => config.rerank.unwrap_or_default(),
+        Ok(None) => crate::rerank::RerankConfig::default(),
+        Err(e) => {
+            eprintln!("[rerank] Failed to load config: {e}");
+            return results;
+        }
+    };
+
+    // 2. Provider生成
+    let provider = match crate::rerank::ollama::create_rerank_provider(&rerank_config) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("[rerank] Failed to create provider: {e}");
+            return results;
+        }
+    };
+
+    // 3. 候補を RerankCandidate に変換（上位 rerank_top 件）
+    let candidates: Vec<crate::rerank::RerankCandidate> = results
+        .iter()
+        .take(rerank_top)
+        .enumerate()
+        .map(|(i, r)| crate::rerank::RerankCandidate {
+            document_text: crate::rerank::build_document_text(&r.heading, &r.body),
+            original_index: i,
+        })
+        .collect();
+
+    // 4. Rerank実行
+    let rerank_results = match provider.rerank(query, &candidates) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[rerank] Reranking failed: {e}");
+            return results;
+        }
+    };
+
+    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexは警告+スキップ）
+    let mut reranked: Vec<crate::indexer::reader::SearchResult> = rerank_results
+        .iter()
+        .filter_map(|rr| {
+            if rr.index >= results.len() {
+                eprintln!(
+                    "[rerank] Warning: provider returned out-of-range index {}, skipping",
+                    rr.index
+                );
+                return None;
+            }
+            results.get(rr.index).map(|sr| {
+                let mut new_sr = sr.clone();
+                new_sr.score = rr.score;
+                new_sr
+            })
+        })
+        .collect();
+
+    // rerank対象外の結果を末尾に追加
+    let reranked_indices: std::collections::HashSet<usize> = rerank_results
+        .iter()
+        .filter(|r| r.index < results.len())
+        .map(|r| r.index)
+        .collect();
+    for (i, r) in results.iter().enumerate() {
+        if !reranked_indices.contains(&i) {
+            reranked.push(r.clone());
+        }
+    }
+
+    reranked
 }

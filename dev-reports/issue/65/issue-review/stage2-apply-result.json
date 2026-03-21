@@ -1,0 +1,6 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": ["M1", "M2", "M3", "S1", "S2", "S3", "S4"],
+  "summary": "Stage 1 の Must Fix 3件と Should Fix 4件を Issue 本文に反映。APIエンドポイント明記、統合ポイント明確化、Config構造体拡張方針、パフォーマンス要件、Graceful Degradation、テスト方針を追加。"
+}
