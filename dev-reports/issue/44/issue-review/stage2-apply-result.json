@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "action": "apply",
+  "applied_items": [
+    "M1: truncate_body の「0 = 無制限」仕様の矛盾を明記（ロジック改修が必要な旨を追記）",
+    "M2: truncate_body の排他的分岐挙動を「truncate_body の挙動仕様」セクションとして追記",
+    "S1: SnippetConfig 構造体の設計方針を追記",
+    "S2: --symbol / --related モードへの影響がない旨を明記",
+    "S3: 入力バリデーション方針を追記"
+  ],
+  "deferred_items": [
+    "N1: テスト計画のパラメータ化 → 実装時に対応",
+    "N2: 短縮エイリアス → スコープ外として将来検討"
+  ],
+  "result": "success"
+}

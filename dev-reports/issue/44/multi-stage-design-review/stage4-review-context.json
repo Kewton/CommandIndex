@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "0=無制限時のメモリ消費・端末フリーズリスク（ドキュメント注記で対応）"},
+    {"id": "S2", "title": "JSON出力で body に strip_control_chars が未適用（既存Issue、本Issue scope外）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "0=無制限ガード条件の実装テスト"},
+    {"id": "N2", "title": "strip_control_chars のUnicode双方向制御文字対応（将来検討）"}
+  ],
+  "summary": "Must fix 0件。unsafe使用なし、パストラバーサルリスクなし。0=無制限時のメモリリスクはローカルCLIのため低。JSON出力のサニタイズ漏れは既存問題で本Issue scope外"
+}

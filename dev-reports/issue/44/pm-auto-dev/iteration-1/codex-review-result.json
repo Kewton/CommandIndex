@@ -1,0 +1,31 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/output/human.rs",
+      "line": 23,
+      "severity": "medium",
+      "category": "security",
+      "description": "Human出力の先頭行で `result.path` をそのまま端末へ書き出しており、インデックス対象ファイル名に改行やANSIエスケープが含まれていた場合にターミナル制御文字インジェクションが成立します。見出しや本文では `strip_control_chars` を使っているのに、パスだけ未サニタイズです。",
+      "suggestion": "`location` を組み立てる前に `result.path` にも `strip_control_chars` を適用し、ファイル名由来の制御文字が端末に流れないようにしてください。"
+    },
+    {
+      "file": "src/output/human.rs",
+      "line": 74,
+      "severity": "medium",
+      "category": "security",
+      "description": "関連検索の human 出力で `matched_tags.join(\",\")` をそのまま表示しており、タグ値に制御文字が含まれるとANSIインジェクションやログ汚染が可能です。`file_path` はサニタイズしていますが、タグ値は未処理です。",
+      "suggestion": "`matched_tags` の各要素にも `strip_control_chars` を適用してから結合してください。JSON出力側も必要なら同様の方針を明確化してください。"
+    },
+    {
+      "file": "src/main.rs",
+      "line": 54,
+      "severity": "low",
+      "category": "bug",
+      "description": "`limit` はヘルプ上では `1-1000` とされていますが、実装では下限チェックがなく `--limit 0` を受け付けます。この場合、検索結果が存在しても 0 件に切り詰められ、`No results found.` など誤解を招く挙動になります。",
+      "suggestion": "clap の `value_parser` などで `1..=1000` を強制するか、実行前に `limit == 0` を明示的にエラーとして扱ってください。"
+    }
+  ],
+  "summary": "対象変更ファイルを潜在バグとセキュリティ脆弱性の観点で確認し、重大なクラッシュ要因や unsafe 起因の問題は見つかりませんでした。一方で、human 出力に端末制御文字を混入できる箇所が2件あり、CLI引数の `limit` に対する下限制約も実装とヘルプで不整合があります。`cargo test --test output_format` は通過しています。",
+  "requires_fix": true
+}
