@@ -1,0 +1,10 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "must_fix": [
+    {"title": "chrono依存の記述矛盾", "suggestion": "技術選定に既存chrono使用を明記。"},
+    {"title": "UPSERT戦略の曖昧さ", "suggestion": "INSERT OR REPLACEを使用。"}
+  ],
+  "should_fix_count": 4,
+  "nice_to_have_count": 3
+}

@@ -1,0 +1,10 @@
+{
+  "stage": 1,
+  "type": "design_principles",
+  "must_fix": [
+    {"title": "SRP違反: SymbolStoreへのEmbedding責務追加による肥大化", "suggestion": "EmbeddingStoreを独立構造体として分離。cosine_similarityは純粋関数として配置。"},
+    {"title": "insert_embeddingsにおけるdelete-before-insertの暗黙的戦略が未定義", "suggestion": "INSERT OR REPLACEを使用するか、呼び出しプロトコルをdocコメントに明記。"}
+  ],
+  "should_fix_count": 3,
+  "nice_to_have_count": 3
+}

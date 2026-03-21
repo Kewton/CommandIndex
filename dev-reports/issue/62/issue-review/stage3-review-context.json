@@ -1,0 +1,54 @@
+{
+  "must_fix": [
+    {
+      "title": "スキーマバージョンv2→v3変更による既存DBの互換性切断",
+      "description": "v2 DBをv3コードで開くとSchemaVersionMismatchエラー。ただしclean→indexワークフローで対応済み。",
+      "suggestion": "CHANGELOG等でv3への変更による再インデックスの必要性を明記すること。"
+    },
+    {
+      "title": "delete_by_file()にembeddings削除を追加する際のトランザクション整合性",
+      "description": "既存のunchecked_transaction内にDELETE FROM embeddingsを追加する必要がある。",
+      "suggestion": "同一トランザクション内で実施し、テストで網羅する。"
+    },
+    {
+      "title": "create_tables()のembeddingsテーブル追加と冪等性確認",
+      "description": "IF NOT EXISTSで冪等性を維持する必要がある。",
+      "suggestion": "embeddingsテーブルのCREATE TABLE IF NOT EXISTS文をcreate_tables()のexecute_batch内に追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "E2Eテストへの影響確認",
+      "description": "既存テストは壊れないが、embeddings用のE2Eテストを新規追加すべき。",
+      "suggestion": "index→update→search_similarのフローテストを追加。"
+    },
+    {
+      "title": "status.rsのget_symbol_count()への影響",
+      "description": "SchemaVersionMismatch時の警告は既存動作で適切。embedding_countの表示は将来対応。",
+      "suggestion": "現時点では変更不要。"
+    },
+    {
+      "title": "ブルートフォース検索のメモリ使用量",
+      "description": "全ベクトルをメモリにロードするため上限考慮が必要。",
+      "suggestion": "初期実装ではブルートフォースで十分。top_kで結果を制限する。"
+    },
+    {
+      "title": "Vec<f32> ↔ BLOB変換のエンディアン安全性",
+      "description": "リトルエンディアンに明示的に固定する必要がある。",
+      "suggestion": "f32::to_le_bytes()/from_le_bytes()でLE固定。BLOBサイズバリデーションも必須。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "SymbolStoreErrorにEmbedding固有エラーバリアント追加",
+      "description": "InvalidEmbedding等のバリアントを検討。",
+      "suggestion": "ゼロベクトル、次元不一致のケースを明確にハンドリング。"
+    },
+    {
+      "title": "search_similarにfile_pathフィルタオプション追加",
+      "description": "特定ファイルやディレクトリに限定した類似検索。",
+      "suggestion": "初期実装ではオプショナルなフィルタパラメータを検討。"
+    }
+  ],
+  "summary": "既存のSymbolStoreアーキテクチャに自然に組み込める変更。主な影響: (1) スキーマバージョンv2→v3、(2) delete_by_file拡張、(3) create_tables拡張。既存テストは壊れない見込み。Cargo.toml新規依存追加不要。"
+}
