@@ -1,0 +1,15 @@
+{
+  "must_fix": [
+    {"id": "SEC-001", "title": "api_keyがDebug出力で平文漏洩", "suggestion": "カスタムDebug実装でマスキング"},
+    {"id": "SEC-002", "title": "SSRFエンドポイントURLバリデーション未定義", "suggestion": "スキーム制限、プライベートIP検出、url crate使用"},
+    {"id": "SEC-003", "title": "embed()テキスト入力サイズ制限未定義", "suggestion": "最大文字数制限を明記"}
+  ],
+  "should_fix": [
+    {"id": "SEC-004", "title": "config.tomlのファイルパーミッション未定義"},
+    {"id": "SEC-005", "title": "ApiErrorメッセージのAPIキーサニタイズ"},
+    {"id": "SEC-006", "title": "reqwest TLS/タイムアウト具体値未定義"},
+    {"id": "SEC-007", "title": "section_pathのパス正規化不足"},
+    {"id": "SEC-008", "title": "ProviderType enumと文字列リテラルの混在"}
+  ],
+  "summary": "APIキー管理、SSRF対策、入力サイズ制限が主要セキュリティ課題。基本設計は適切。"
+}

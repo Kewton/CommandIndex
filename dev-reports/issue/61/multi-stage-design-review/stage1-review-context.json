@@ -1,0 +1,20 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "dimension()のハードコードはモデル可変性と矛盾", "description": "同プロバイダーでも別モデルなら次元数が変わる", "suggestion": "初回embed時にベクトル長を記録する遅延初期化パターンか、モデル→次元数マッピングテーブルを内部に持つ"},
+    {"id": "M2", "title": "EmbeddingErrorにStorageError/IndexNotFoundが混在し単一責任違反", "description": "Embedding生成の責務を超えている", "suggestion": "StorageErrorはEmbeddingStoreError、IndexNotFoundはEmbedErrorに分離"},
+    {"id": "M3", "title": "Boolean引数によるシグネチャ変更がOptions未採用で拡張性が低い", "description": "将来のオプション追加時に同じ破壊を引き起こす", "suggestion": "IndexOptions/CleanOptionsパターンを採用しDefaultで後方互換維持"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "provider文字列型で型安全性が低い", "suggestion": "ProviderType enumを定義"},
+    {"id": "S2", "title": "EmbeddingStoreがSymbolStoreと構造的重複(DRY)", "suggestion": "SQLite管理の共通化を検討"},
+    {"id": "S3", "title": "Config配置がembeddingモジュール内で将来の拡張性に問題", "suggestion": "src/config.rsに独立配置"},
+    {"id": "S4", "title": "api_keyの環境変数サポートがない", "suggestion": "COMMANDINDEX_OPENAI_API_KEY環境変数を優先"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "health_checkメソッドがない"},
+    {"id": "N2", "title": "バッチサイズがハードコード"},
+    {"id": "N3", "title": "embeddingsテーブルにUNIQUE制約がない"},
+    {"id": "N4", "title": "OpenAiProviderのendpointがハードコード"}
+  ],
+  "summary": "SOLID観点でM1-M3の改善が必要。KISS/YAGNIは適切。"
+}

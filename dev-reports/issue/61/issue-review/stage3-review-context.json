@@ -1,0 +1,80 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "main.rs: Index/Updateコマンドへの--with-embeddingオプション追加",
+      "description": "run()とrun_incremental()のシグネチャ変更が必要。既存テストへの影響を最小化するためデフォルトfalseにする。",
+      "suggestion": "Options構造体を導入し、with_embeddingのデフォルトをfalseにして後方互換性を維持する。"
+    },
+    {
+      "id": "M2",
+      "title": "main.rs: embedサブコマンドの追加",
+      "description": "Commands enumにEmbed variant追加、main.rsのmatch文に新アーム追加が必要。",
+      "suggestion": "cli/mod.rsにpub mod embed;追加、cli/embed.rsを新規作成。"
+    },
+    {
+      "id": "M3",
+      "title": "cleanコマンドへの--keep-embeddingsオプション追加",
+      "description": "clean.rsの大幅改修が必要。remove_dir_allから選択的削除に変更。",
+      "suggestion": "run(path, keep_embeddings: bool)にシグネチャ変更、embeddings.dbを残す選択的削除。"
+    },
+    {
+      "id": "M4",
+      "title": "lib.rsへのembeddingモジュール宣言追加",
+      "description": "src/embedding/mod.rsにトレイト定義・プロバイダー実装・エラー型を配置。",
+      "suggestion": "lib.rsにpub mod embedding;を追加。"
+    },
+    {
+      "id": "M5",
+      "title": "Cargo.tomlへのreqwest/toml依存追加",
+      "description": "reqwestは大きなクレートでコンパイル時間に影響。feature flagでオプション化を推奨。",
+      "suggestion": "reqwest = { version = \"0.12\", features = [\"blocking\", \"json\"] }とtoml = \"0.8\"を追加。"
+    },
+    {
+      "id": "M6",
+      "title": "indexer/mod.rsへのembeddings.dbパス関数追加",
+      "description": "symbol_db_path()と同様のパターンでembeddings_db_path()を追加。",
+      "suggestion": "const EMBEDDINGS_DB_FILE追加、pub fn embeddings_db_path追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "config.tomlエラーハンドリング整合性",
+      "description": "ConfigError enumの新設と既存エラー型へのFrom実装が必要。",
+      "suggestion": "IndexErrorにEmbedding(EmbeddingError)バリアントを追加。config.toml不在時はembedding無効をデフォルトに。"
+    },
+    {
+      "id": "S2",
+      "title": "statusコマンドでのembedding情報表示",
+      "description": "StatusInfoにembedding_countとembedding_providerの追加が望ましい。",
+      "suggestion": "StatusInfoを拡張、Human/JSON両フォーマットの出力更新。"
+    },
+    {
+      "id": "S3",
+      "title": "embeddings.dbを別ファイルにする（symbols.dbスキーマ変更回避）",
+      "description": "symbols.dbのスキーマ変更を避けることで既存互換性を維持。",
+      "suggestion": "embeddings.dbを独立ファイルとして設計。"
+    },
+    {
+      "id": "S4",
+      "title": "ファイルハッシュ関数の共有",
+      "description": "manifest::compute_file_hash()をembedding層からも参照。",
+      "suggestion": "crate::indexer::manifest::compute_file_hash()として参照する設計を明記。"
+    },
+    {
+      "id": "S5",
+      "title": "既存E2Eテストの安定性確認",
+      "description": "--with-embeddingデフォルトfalseで既存テスト21ファイルは変更なしで通過するはず。",
+      "suggestion": "新テストはtests/e2e_embedding.rsとして分離。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "feature flagによるembedding機能のオプション化"},
+    {"id": "N2", "title": "embedサブコマンドのhelpテスト追加"},
+    {"id": "N3", "title": "search/related.rsへのembedding類似度統合の準備"},
+    {"id": "N4", "title": "CI/CDでのembeddingテスト戦略"},
+    {"id": "N5", "title": ".commandindex/内ファイル一覧の文書化"}
+  ],
+  "summary": "中程度の影響。main.rs、cli/index.rs、cli/clean.rs、Cargo.tomlが主な変更対象。embeddings.dbを独立ファイルにする設計で既存互換性を維持。reqwest依存追加によるビルド時間増大が最大の懸念。"
+}

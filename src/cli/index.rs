@@ -4,10 +4,13 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
 
+use crate::embedding::store::{EmbeddingStore, EmbeddingStoreError};
+use crate::embedding::{Config, EmbeddingError, create_provider};
 use crate::indexer::diff::{DiffError, detect_changes, scan_files};
 use crate::indexer::manifest::{
     self, FileEntry, FileType, Manifest, ManifestError, to_relative_path_string,
 };
+use crate::indexer::reader::IndexReaderWrapper;
 use crate::indexer::state::{IndexState, StateError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
 use crate::indexer::writer::{IndexWriterWrapper, SectionDoc, WriterError};
@@ -26,6 +29,8 @@ pub enum IndexError {
     Diff(DiffError),
     CodeParse(CodeParseError),
     SymbolStore(SymbolStoreError),
+    Embedding(EmbeddingError),
+    EmbeddingStore(EmbeddingStoreError),
     IndexNotFound,
     SchemaVersionMismatch,
     IndexCorrupted(String),
@@ -43,6 +48,8 @@ impl fmt::Display for IndexError {
             IndexError::Diff(e) => write!(f, "Diff error: {e}"),
             IndexError::CodeParse(e) => write!(f, "Code parse error: {e}"),
             IndexError::SymbolStore(e) => write!(f, "Symbol store error: {e}"),
+            IndexError::Embedding(e) => write!(f, "Embedding error: {e}"),
+            IndexError::EmbeddingStore(e) => write!(f, "Embedding store error: {e}"),
             IndexError::IndexNotFound => write!(
                 f,
                 "No index found. Run `commandindex index` to build the index first."
@@ -71,6 +78,8 @@ impl std::error::Error for IndexError {
             IndexError::Diff(e) => Some(e),
             IndexError::CodeParse(e) => Some(e),
             IndexError::SymbolStore(e) => Some(e),
+            IndexError::Embedding(e) => Some(e),
+            IndexError::EmbeddingStore(e) => Some(e),
             IndexError::IndexNotFound
             | IndexError::SchemaVersionMismatch
             | IndexError::IndexCorrupted(_) => None,
@@ -133,6 +142,24 @@ impl From<SymbolStoreError> for IndexError {
             other => IndexError::SymbolStore(other),
         }
     }
+}
+
+impl From<EmbeddingError> for IndexError {
+    fn from(e: EmbeddingError) -> Self {
+        IndexError::Embedding(e)
+    }
+}
+
+impl From<EmbeddingStoreError> for IndexError {
+    fn from(e: EmbeddingStoreError) -> Self {
+        IndexError::EmbeddingStore(e)
+    }
+}
+
+/// インデックスオプション（Default実装で後方互換性を維持）
+#[derive(Debug, Default)]
+pub struct IndexOptions {
+    pub with_embedding: bool,
 }
 
 /// コードファイル識別用の heading_level 定数（Markdown の heading_level 1-6 と区別するため 0 を使用）
@@ -209,7 +236,7 @@ fn section_to_doc(
     }
 }
 
-pub fn run(path: &Path) -> Result<IndexSummary, IndexError> {
+pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexError> {
     let start = Instant::now();
 
     // 1. Validate target directory
@@ -291,7 +318,12 @@ pub fn run(path: &Path) -> Result<IndexSummary, IndexError> {
     state.total_sections = indexed_sections;
     state.save(&commandindex_dir)?;
 
-    // 11. Return summary
+    // 11. Generate embeddings if requested
+    if options.with_embedding {
+        generate_embeddings_for_manifest(path, &commandindex_dir, &manifest)?;
+    }
+
+    // 12. Return summary
     Ok(IndexSummary {
         scanned,
         indexed_sections,
@@ -561,7 +593,10 @@ fn index_file_and_upsert(
     }
 }
 
-pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
+pub fn run_incremental(
+    path: &Path,
+    options: &IndexOptions,
+) -> Result<IncrementalSummary, IndexError> {
     let start = Instant::now();
 
     // 1. Validate target directory
@@ -732,7 +767,13 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
     state.touch();
     state.save(&commandindex_dir)?;
 
-    // 16. Return summary
+    // 16. Generate embeddings if requested
+    if options.with_embedding {
+        let updated_manifest = Manifest::load(&commandindex_dir)?;
+        generate_embeddings_for_manifest(path, &commandindex_dir, &updated_manifest)?;
+    }
+
+    // 17. Return summary
     Ok(IncrementalSummary {
         added_files,
         added_sections,
@@ -743,6 +784,80 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
         skipped,
         duration: start.elapsed(),
     })
+}
+
+/// Embedding生成の共通ロジック（run / run_incremental から呼ばれる）
+fn generate_embeddings_for_manifest(
+    path: &Path,
+    commandindex_dir: &Path,
+    manifest: &Manifest,
+) -> Result<(), IndexError> {
+    let config = Config::load(commandindex_dir)?;
+    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
+    let provider = create_provider(&embedding_config)?;
+
+    let db_path = crate::indexer::embeddings_db_path(path);
+    let store = EmbeddingStore::open(&db_path)?;
+    store.create_tables()?;
+
+    let tantivy_dir = crate::indexer::index_dir(path);
+    let reader = IndexReaderWrapper::open(&tantivy_dir).map_err(|e| {
+        IndexError::IndexCorrupted(format!("Failed to open tantivy for embedding: {e}"))
+    })?;
+
+    for entry in &manifest.files {
+        if store.has_current_embedding(&entry.path, &entry.hash)? {
+            continue;
+        }
+
+        let sections = reader.search_by_exact_path(&entry.path).map_err(|e| {
+            IndexError::IndexCorrupted(format!("Failed to read sections for embedding: {e}"))
+        })?;
+        if sections.is_empty() {
+            continue;
+        }
+
+        let texts: Vec<String> = sections
+            .iter()
+            .map(|s| {
+                if s.heading.is_empty() {
+                    s.body.clone()
+                } else {
+                    format!("{}\n{}", s.heading, s.body)
+                }
+            })
+            .collect();
+
+        match provider.embed(&texts) {
+            Ok(embeddings) => {
+                let dimension = provider.dimension();
+                let model = provider.model_name();
+                for (section, embedding) in sections.iter().zip(embeddings.iter()) {
+                    if let Err(e) = store.upsert_embedding(
+                        &entry.path,
+                        &section.heading,
+                        embedding,
+                        dimension,
+                        model,
+                        &entry.hash,
+                    ) {
+                        eprintln!(
+                            "Warning: failed to store embedding for {}#{}: {e}",
+                            entry.path, section.heading
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "Warning: embedding generation failed for {}: {e}",
+                    entry.path
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

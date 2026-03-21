@@ -1,0 +1,1 @@
+{"stage": 4, "applied": ["SEC-001: EmbeddingConfigカスタムDebug(api_keyマスキング)", "SEC-002: SSRFバリデーション具体化(スキーム制限/url crate)", "SEC-003: テキスト入力サイズ制限追加", "SEC-004: config.tomlパーミッション0600", "SEC-006: タイムアウト具体値(connect 10s, request 30s)"]}

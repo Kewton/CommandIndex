@@ -19,6 +19,9 @@ enum Commands {
         /// Target directory to index
         #[arg(long, default_value = ".")]
         path: PathBuf,
+        /// Generate embeddings during indexing
+        #[arg(long)]
+        with_embedding: bool,
     },
     /// Search the index
     Search {
@@ -65,6 +68,9 @@ enum Commands {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
+        /// Generate embeddings during update
+        #[arg(long)]
+        with_embedding: bool,
     },
     /// Show index status
     Status {
@@ -80,6 +86,9 @@ enum Commands {
         /// Target directory containing .commandindex/
         #[arg(long, default_value = ".")]
         path: PathBuf,
+        /// Keep embeddings database when cleaning
+        #[arg(long)]
+        keep_embeddings: bool,
     },
     /// Generate AI-oriented context pack for specified files
     Context {
@@ -95,28 +104,43 @@ enum Commands {
         #[arg(long)]
         max_tokens: Option<usize>,
     },
+    /// Generate embeddings for indexed sections
+    Embed {
+        /// Target directory
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+    },
 }
 
 fn main() {
     let cli = Cli::parse();
 
     let exit_code = match cli.command {
-        Commands::Index { path } => match commandindex::cli::index::run(&path) {
-            Ok(summary) => {
-                println!("Indexing {}...", path.display());
-                println!("  Scanned: {} files", summary.scanned);
-                println!("  Indexed: {} sections", summary.indexed_sections);
-                println!("  Skipped: {} files (parse error)", summary.skipped);
-                println!("  Ignored: {} files (.cmindexignore)", summary.ignored);
-                println!("  Duration: {:.1}s", summary.duration.as_secs_f64());
-                println!("Index saved to .commandindex/");
-                0
+        Commands::Index {
+            path,
+            with_embedding,
+        } => {
+            let options = commandindex::cli::index::IndexOptions { with_embedding };
+            match commandindex::cli::index::run(&path, &options) {
+                Ok(summary) => {
+                    println!("Indexing {}...", path.display());
+                    println!("  Scanned: {} files", summary.scanned);
+                    println!("  Indexed: {} sections", summary.indexed_sections);
+                    println!("  Skipped: {} files (parse error)", summary.skipped);
+                    println!("  Ignored: {} files (.cmindexignore)", summary.ignored);
+                    println!("  Duration: {:.1}s", summary.duration.as_secs_f64());
+                    println!("Index saved to .commandindex/");
+                    if with_embedding {
+                        println!("Embeddings generated.");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
             }
-            Err(e) => {
-                eprintln!("Error: {e}");
-                1
-            }
-        },
+        }
         Commands::Search {
             query,
             symbol,
@@ -167,28 +191,37 @@ fn main() {
                 }
             }
         }
-        Commands::Update { path } => match commandindex::cli::index::run_incremental(&path) {
-            Ok(summary) => {
-                println!("Incremental update completed:");
-                println!(
-                    "  Added:     {} files ({} sections)",
-                    summary.added_files, summary.added_sections
-                );
-                println!(
-                    "  Modified:  {} files ({} sections)",
-                    summary.modified_files, summary.modified_sections
-                );
-                println!("  Deleted:   {} files", summary.deleted_files);
-                println!("  Unchanged: {} files", summary.unchanged);
-                println!("  Skipped:   {} files", summary.skipped);
-                println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
-                0
+        Commands::Update {
+            path,
+            with_embedding,
+        } => {
+            let options = commandindex::cli::index::IndexOptions { with_embedding };
+            match commandindex::cli::index::run_incremental(&path, &options) {
+                Ok(summary) => {
+                    println!("Incremental update completed:");
+                    println!(
+                        "  Added:     {} files ({} sections)",
+                        summary.added_files, summary.added_sections
+                    );
+                    println!(
+                        "  Modified:  {} files ({} sections)",
+                        summary.modified_files, summary.modified_sections
+                    );
+                    println!("  Deleted:   {} files", summary.deleted_files);
+                    println!("  Unchanged: {} files", summary.unchanged);
+                    println!("  Skipped:   {} files", summary.skipped);
+                    println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
+                    if with_embedding {
+                        println!("Embeddings generated.");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
             }
-            Err(e) => {
-                eprintln!("Error: {e}");
-                1
-            }
-        },
+        }
         Commands::Status { path, format } => {
             match commandindex::cli::status::run(&path, format, &mut std::io::stdout()) {
                 Ok(()) => 0,
@@ -209,14 +242,39 @@ fn main() {
                 1
             }
         },
-        Commands::Clean { path } => match commandindex::cli::clean::run(&path) {
-            Ok(commandindex::cli::clean::CleanResult::Removed) => {
-                println!("Removed index at .commandindex/");
-                println!("Run `commandindex index` to rebuild.");
-                0
+        Commands::Clean {
+            path,
+            keep_embeddings,
+        } => {
+            let options = commandindex::cli::clean::CleanOptions { keep_embeddings };
+            match commandindex::cli::clean::run(&path, &options) {
+                Ok(commandindex::cli::clean::CleanResult::Removed) => {
+                    if keep_embeddings {
+                        println!("Removed index (embeddings preserved)");
+                    } else {
+                        println!("Removed index at .commandindex/");
+                    }
+                    println!("Run `commandindex index` to rebuild.");
+                    0
+                }
+                Ok(commandindex::cli::clean::CleanResult::NotFound) => {
+                    println!("No index found. Nothing to clean.");
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
             }
-            Ok(commandindex::cli::clean::CleanResult::NotFound) => {
-                println!("No index found. Nothing to clean.");
+        }
+        Commands::Embed { path } => match commandindex::cli::embed::run(&path) {
+            Ok(summary) => {
+                println!("Embedding generation completed:");
+                println!("  Total sections: {}", summary.total_sections);
+                println!("  Generated: {}", summary.generated);
+                println!("  Cached: {}", summary.cached);
+                println!("  Failed: {}", summary.failed);
+                println!("  Duration: {:.2}s", summary.duration.as_secs_f64());
                 0
             }
             Err(e) => {

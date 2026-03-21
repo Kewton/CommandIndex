@@ -1,0 +1,8 @@
+{
+  "status": "skipped",
+  "reason": "Codex authentication error (access token refresh failure)",
+  "critical": [],
+  "warnings": [],
+  "summary": "Skipped due to Codex authentication error",
+  "requires_fix": false
+}
