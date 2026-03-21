@@ -1,0 +1,8 @@
+{
+  "stage": "1-apply",
+  "applied_items": [
+    {"id": "M1", "action": "setup_tag_match_docs()を廃止し、既存setup_linked_docs()を再利用する設計に変更"},
+    {"id": "M2", "action": "排他制御テストを4本→1本（--tag代表）に削減"},
+    {"id": "S2", "action": "relation_types検証を包含チェックに変更（排他チェックを避ける）"}
+  ]
+}

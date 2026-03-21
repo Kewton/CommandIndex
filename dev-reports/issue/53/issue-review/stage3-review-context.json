@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "タグ一致関連検索テストが欠落",
+      "description": "Issue要件のシナリオ2「タグ一致による関連」の専用E2Eテストが存在しない。既存の e2e_related_search.rs の setup_linked_docs() は同じタグを持つファイルを作成しているが、テストではMarkdownLink経由の関連のみを検証しており、TagMatch が relation_types に含まれることを明示的に検証していない。",
+      "suggestion": "TagMatch専用テストを追加する。同じタグを持つがリンク関係のないファイル群を用意し、--related で検出されること、結果のrelation_typesにTagMatchが含まれることを検証する。"
+    },
+    {
+      "id": "M2",
+      "title": "パス近接性スコアブーストテストが欠落",
+      "description": "Issue要件のシナリオ3「パス近接性によるスコアブースト」のテストが存在しない。DirectoryProximityがrelation_typesに含まれること、およびスコアが加算されることを検証するテストが必要。",
+      "suggestion": "同じディレクトリ内にタグ一致ファイルを配置し、DirectoryProximityがrelation_typesに含まれること、かつスコアが純粋なTagMatchのみの場合より高いことを検証するテストを追加する。"
+    },
+    {
+      "id": "M3",
+      "title": "ImportDependency関連検索のE2Eテストが欠落",
+      "description": "Issue要件のシナリオ4「import依存関係」のテストが存在しない。TSファイルのimportチェーンを作成し、--related で ImportDependency として検出されることを検証するE2Eテストが必要。既存の e2e_phase3_integration.rs はSymbolStoreのホワイトボックステストのみで、CLI経由のE2Eテストではない。",
+      "suggestion": "TSファイルのimport関係（A imports B, B imports C）を作成し、index後に --related で ImportDependency として検出されることをCLI経由で検証するテストを追加する。"
+    },
+    {
+      "id": "M4",
+      "title": "--max-tokens テストが欠落",
+      "description": "Issue要件のシナリオ6「Context Pack制限: --max-tokens テスト」が存在しない。contextコマンドの --max-tokens オプションに対するE2Eテストが必要。",
+      "suggestion": "十分なコンテンツを持つファイル群を用意し、--max-tokens で制限した場合にestimated_tokensが制限値以下になること、含まれるcontextエントリ数が制限なしより少ないことを検証するテストを追加する。"
+    },
+    {
+      "id": "M5",
+      "title": "排他制御の網羅検証テストが欠落",
+      "description": "Issue要件のシナリオ7「排他制御の網羅検証」が不十分。既存テストでは --related と query, --symbol の排他のみ検証（related_search_conflicts_with_query, related_search_conflicts_with_symbol）。--related と --tag, --path, --heading, --type の排他制御テストが欠落している。",
+      "suggestion": "--related と --tag, --path, --heading, --type それぞれの組み合わせでfailureになることを検証するテストを追加する。main.rsのclap定義で conflicts_with_all に全て含まれていることは確認済みだが、テストで網羅する。"
+    },
+    {
+      "id": "M6",
+      "title": "contextコマンドで関連なしファイルのテストが欠落",
+      "description": "Issue要件のシナリオ8「関連なしファイル（contextコマンド）」のテストが存在しない。関連ファイルが一切ないファイルに対してcontextコマンドを実行し、contextが空配列になることを検証するテストが必要。",
+      "suggestion": "リンクもタグもimportも持たない孤立ファイルに対してcontextコマンドを実行し、context配列が空であることを検証するテストを追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "テストデータのセットアップ関数が各ファイルに分散",
+      "description": "Issue方針では「全シナリオ共通のセットアップ関数を定義」「テストファイル内にセットアップヘルパーを集約」とあるが、現状 e2e_related_search.rs と e2e_context_pack.rs で別々のセットアップ関数が定義されている。新シナリオ追加時にデータの重複・不整合が生じやすい。",
+      "suggestion": "共通セットアップ関数を1つの新テストファイル（例: e2e_phase4_integration.rs）内に集約するか、common/mod.rs にPhase4用ヘルパーを追加して全シナリオで共有する。ただし、各テストファイルの独立性を優先する場合はファイル内ヘルパー集約でもよい。"
+    },
+    {
+      "id": "S2",
+      "title": "Context Pack JSON出力の詳細フィールド検証が不十分",
+      "description": "Issue要件のシナリオ5「Context Pack出力: contextコマンドでJSON出力の詳細検証」について、既存テストではtarget_files, context, summaryの存在確認のみ。各ContextEntryのpath, relation, score, heading, snippet, symbolsフィールドの詳細検証が不十分。",
+      "suggestion": "ContextEntryの各フィールド（特にrelation文字列の値、snippetの内容、symbolsの有無）を具体的に検証するテストを追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "テスト間の暗黙的な依存リスク",
+      "description": "全E2Eテストが tempfile::tempdir() を使っているため並列実行時の競合はないが、各テストで独立に index コマンドを実行するため、テスト数増加に伴い並列実行時のCPU・ディスクI/O負荷が増加する。現在のテスト実行時間（最大7秒のテストバイナリ）は許容範囲だが、8シナリオ追加で1.5-2倍に増加する可能性がある。",
+      "suggestion": "新テストではセットアップを最小限に保ち、不要なファイル数を減らす。可能であれば複数検証を1テスト関数にまとめてインデックス構築回数を削減する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "CI timeout設定の検討",
+      "description": "現在のCI設定（.github/workflows/ci.yml）にはテストジョブのtimeout設定がない。テスト数増加に伴い、CIランナーでのタイムアウトリスクが若干高まる。",
+      "suggestion": "testジョブに timeout-minutes: 15 程度の設定を追加する。現状のテスト実行時間は十分短いため緊急性は低い。"
+    },
+    {
+      "id": "N2",
+      "title": "e2e_related_search.rs の setup_linked_docs で d.md の tags を 'unrelated' にしているがTagMatch検出に影響",
+      "description": "d.md は「関連なし」の位置づけだが、tags: unrelated が設定されている。他のファイルに unrelated タグがなければ問題ないが、将来のテストデータ拡張時に意図せずTagMatchが検出される可能性がある。",
+      "suggestion": "d.md のタグを空にするか、明示的に他と重複しないタグにすることを検討する。"
+    },
+    {
+      "id": "N3",
+      "title": "normalize_pathの '..' 除去がセキュリティ的に不完全",
+      "description": "normalize_path関数は '..' セグメントを単にフィルタ除去しているが、これは正確なパス正規化ではない（例: 'src/../lib.rs' は 'src/lib.rs' になるが、正しくは 'lib.rs'）。テストデータで '..' パスを使う場合、予期しない挙動の原因になり得る。ただしこれはIssue #53の範囲外。",
+      "suggestion": "Issue #53の範囲では問題にならないが、テストデータでは '..' を含むパスを避けること。"
+    }
+  ],
+  "summary": "Issue #53の8シナリオのうち、シナリオ1（--related フルフロー）のみが既存テスト（e2e_related_search.rs, e2e_context_pack.rs）でほぼカバーされている。シナリオ2（タグ一致）、3（パス近接性ブースト）、4（import依存）、6（--max-tokens）、7（排他制御網羅）、8（関連なしcontextコマンド）の6シナリオが未実装で、must_fixとして6件を挙げた。シナリオ5（Context Pack詳細検証）は部分的にカバーされているがshould_fixで改善を提案。既存テスト（334件、全パス）への影響は新テストファイル追加のみで既存テストの変更は不要。CI実行時間は現状の合計約7秒から、8シナリオ追加で12-15秒程度に増加する見込みだが許容範囲。依存Issue #50（--related）、#51（リンク解析）、#52（Context Pack）の実装は安定しており、テストが依存するpublic APIに破壊的変更のリスクは低い。"
+}
