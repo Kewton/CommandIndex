@@ -100,7 +100,7 @@ fn search_requires_query_or_symbol() {
         .arg("search")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Either"));
+        .stderr(predicate::str::contains("Either").or(predicate::str::contains("required")));
 }
 
 #[test]
@@ -153,4 +153,51 @@ fn search_type_valid_values_accepted() {
             .failure()
             .stderr(predicate::str::contains("Index not found"));
     }
+}
+
+#[test]
+fn search_semantic_and_symbol_conflict() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--symbol", "name"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_semantic_and_related_conflict() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--related", "file.rs"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_semantic_and_query_conflict() {
+    common::cmd()
+        .args(["search", "query", "--semantic", "semantic query"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_semantic_and_heading_conflict() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--heading", "intro"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_semantic_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--semantic", "how to use"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
 }

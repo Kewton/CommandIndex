@@ -1,0 +1,38 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {
+      "id": "M1",
+      "action": "排他制御セクションに具体的なconflicts_with_all設定を明記。既存--related/--symbolへのsemantic追加も記載。"
+    },
+    {
+      "id": "M2",
+      "action": "エラーハンドリングセクションを新設。SearchErrorの具体的なバリアント（Embedding, SymbolStore, NoEmbeddings）とメッセージを明記。"
+    },
+    {
+      "id": "M3",
+      "action": "出力フォーマットセクションにSemanticSearchResult構造体とformat_semantic_results関数の具体的な定義方針を記載。"
+    },
+    {
+      "id": "M4",
+      "action": "検索フローのステップ2にEmbeddingStore(embeddings.db)は使用しない旨の注記を追加。"
+    },
+    {
+      "id": "S2",
+      "action": "テストへの影響セクションを新設。既存テスト更新と新規テスト追加の具体内容を記載。"
+    },
+    {
+      "id": "S3",
+      "action": "検索フローのステップ3にsection_heading照合とセクション未発見時のスキップ処理を追記。"
+    },
+    {
+      "id": "S4",
+      "action": "エラーハンドリングにOllama未起動時の具体的なメッセージを追記。"
+    },
+    {
+      "id": "S5",
+      "action": "main.rsの変更セクションを新設。matchパターン4変数化と網羅性維持を明記。"
+    }
+  ],
+  "status": "completed"
+}

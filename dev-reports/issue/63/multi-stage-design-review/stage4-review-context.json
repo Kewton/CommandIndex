@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [
+    {"id": "M1", "category": "APIキー管理", "description": "config.tomlのファイルパーミッション検証未実装。"},
+    {"id": "M2", "category": "SSRF", "description": "endpointのURLスキームバリデーション（http/https制限）未実装。"},
+    {"id": "M3", "category": "情報漏洩", "description": "APIエラーレスポンスのサニタイズ不十分。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "クエリテキストサイズ制限。"},
+    {"id": "S2", "description": "OpenAiProviderのDebug実装でapi_keyマスク。"},
+    {"id": "S3", "description": "HTTPエンドポイントでのAPIキー送信制限。"},
+    {"id": "S4", "description": "normalize_path()のパストラバーサル対策強化。"},
+    {"id": "S5", "description": "LIKE patternのescape検証テスト。"}
+  ],
+  "summary": "config.tomlパーミッション、endpoint検証、エラーサニタイズが最重要。CLIツールとしては概ね妥当。"
+}

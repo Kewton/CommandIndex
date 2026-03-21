@@ -1,0 +1,55 @@
+{
+  "reviewer": "Claude Opus (Codexタイムアウトのため代替)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性/用語",
+      "description": "section_heading照合の具体ルールが未定義。section_headingが空文字列の場合（ファイル全体のembedding）の照合ルールが未定義。",
+      "suggestion": "section_headingが空文字の場合はfile_path一致のみでマッチ。非空の場合はtantivyのheadingとの完全一致で照合。"
+    },
+    {
+      "id": "M2",
+      "category": "排他制御/正確性",
+      "description": "--headingはtantivy全文検索のフィルタであり、semantic検索はtantivyクエリを使用しないため併用不可。理由が排他制御セクションから読み取れない。",
+      "suggestion": "排他制御セクションに理由を明記する。"
+    },
+    {
+      "id": "M3",
+      "category": "エラーハンドリング/不整合",
+      "description": "NoEmbeddingsエラーの検知方法がSymbolStoreのAPIと不整合。SymbolStoreにはembedding件数取得メソッドがない。search_similar()は空Vecを返すだけ。",
+      "suggestion": "SymbolStoreにembedding_count()メソッドを追加するか、検索フロー前に件数チェックステップを追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "受け入れ基準/網羅性",
+      "description": "--limitが semantic 検索でも有効であることが受け入れ基準にない。",
+      "suggestion": "受け入れ基準に追加。"
+    },
+    {
+      "id": "S2",
+      "category": "検索フロー/精度",
+      "description": "ポストフィルタ適用時のオーバーサンプリング考慮が未記載。",
+      "suggestion": "search_similar()のtop_kにオーバーサンプリング係数適用。"
+    },
+    {
+      "id": "S3",
+      "category": "出力フォーマット/具体性",
+      "description": "SemanticSearchResult構造体のフィールド定義が未記載。",
+      "suggestion": "想定フィールドを明記。"
+    },
+    {
+      "id": "S4",
+      "category": "エラーハンドリング/一貫性",
+      "description": "EmbeddingError→SearchErrorの変換方針が未記載。NetworkErrorの条件具体化が必要。",
+      "suggestion": "変換方針明記。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "パフォーマンス", "description": "ブルートフォースの注記"},
+    {"id": "N2", "category": "テスト戦略", "description": "具体的テストケースのリストアップ"},
+    {"id": "N3", "category": "CLI/UX", "description": "config.toml読み込みフローの明記"}
+  ],
+  "summary": "1回目の反映は概ね正しい。新たにMust Fix 3件検出：section_heading照合ルール、--heading排他の理由、NoEmbeddings検知方法。"
+}

@@ -1,0 +1,38 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {
+      "id": "M1",
+      "action": "section_heading照合ルールを具体化：空文字→file_path一致のみ、非空→heading完全一致。"
+    },
+    {
+      "id": "M2",
+      "action": "排他制御セクションに--heading排他の理由（tantivyクエリ不使用のため）を明記。"
+    },
+    {
+      "id": "M3",
+      "action": "検索フローにステップ1としてembedding件数チェックを追加。SymbolStoreにembedding_count()追加が必要。"
+    },
+    {
+      "id": "S1",
+      "action": "受け入れ基準に--limitのsemantic検索対応を追加。"
+    },
+    {
+      "id": "S2",
+      "action": "検索フローにオーバーサンプリング係数（limit*5）適用を追記。"
+    },
+    {
+      "id": "S3",
+      "action": "SemanticSearchResult構造体のフィールド定義と各出力形式の例を追記。"
+    },
+    {
+      "id": "S4",
+      "action": "EmbeddingError→SearchError変換方針を具体化（NetworkError→Ollama案内、その他→デフォルト）。"
+    },
+    {
+      "id": "N3",
+      "action": "検索フローにconfig.toml読み込みステップを追加（ステップ0）。"
+    }
+  ],
+  "status": "completed"
+}

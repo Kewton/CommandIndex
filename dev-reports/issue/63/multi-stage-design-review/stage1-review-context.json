@@ -1,0 +1,16 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "SRP/DRY", "description": "run_semantic_search()が7ステップの責務を持ち過剰。enrich_with_metadata()等に分離すべき。"},
+    {"id": "M2", "category": "DRY", "description": "matches_file_type()がreader.rs内にプライベートで存在。重複実装を避けpub(crate)にすべき。"},
+    {"id": "M3", "category": "OCP", "description": "matchパターン4変数タプルは将来の検索モード追加で爆発。SearchMode enumを導入すべき。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "DIP", "description": "provider依存注入でテスタビリティ向上。"},
+    {"id": "S2", "category": "KISS", "description": "search_by_exact_path()のN回呼び出しをfile_pathグルーピングで最適化。"},
+    {"id": "S3", "category": "ISP", "description": "SymbolStore肥大化。将来的なembedding関連メソッド統合を記録。"},
+    {"id": "S4", "category": "DRY", "description": "SemanticSearchResult含め4種類目。5種類目でtrait-basedリファクタ計画。"}
+  ],
+  "summary": "設計は堅実。主改善: 責務分離、DRY違反回避、SearchMode enum導入。"
+}

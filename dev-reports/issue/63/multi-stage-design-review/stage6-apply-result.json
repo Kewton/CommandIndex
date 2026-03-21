@@ -1,0 +1,1 @@
+{"stage":6,"applied_fixes":["count_embeddings()のSQL対象明確化（既に設計書に記載済み）","conflicts_with_all全4箇所既に明示済み確認"],"status":"completed"}

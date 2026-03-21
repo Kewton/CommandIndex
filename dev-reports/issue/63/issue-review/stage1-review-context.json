@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性（Embeddingストレージ）",
+      "description": "Issueの検索フローに「SQLiteのembeddingsテーブルからコサイン類似度でtop-k件を取得」とあるが、実際にはコサイン類似度検索（search_similar）はsymbol_store.rs内のSymbolStoreに実装されており、symbols.db内のembeddingsテーブルを使用する。一方、embedding::store::EmbeddingStoreはembeddings.dbを操作する別のストアであり、search_similar()メソッドを持たない。Issueではどちらのストアを使うか明確にされていない。",
+      "suggestion": "検索フローの記述を「SymbolStore（symbols.db）のsearch_similar()を使用してコサイン類似度でtop-k件を取得」と明記する。"
+    },
+    {
+      "id": "M2",
+      "category": "整合性（フィルタ仕様）",
+      "description": "search_similar()の戻り値EmbeddingSimilarityResultにはfile_pathとsection_headingしか含まれず、tagやfile_type情報がない。タグフィルタの適用にはtantivyのメタデータと結合する必要があるが、結合方法がIssueに記載されていない。また、--relatedオプションは--tag等と排他だが、--semanticでフィルタを許可する場合は異なるconflicts設定が必要。",
+      "suggestion": "検索フローでsearch_similar()結果のfile_path+section_headingをキーにtantivyのsearch_by_exact_path()でメタデータ取得→フィルタリングの具体的な方法を記述する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "正確性（仮説検証セクション）",
+      "description": "SearchFilters/SearchOptionsはtantivy全文検索用であり、semantic検索ではsearch_similar()結果へのポストフィルタとして再利用する設計が必要。この点が誤解を招く。",
+      "suggestion": "semantic検索でのフィルタ方式を明確に補足する。"
+    },
+    {
+      "id": "S2",
+      "category": "受け入れ基準（出力形式の詳細）",
+      "description": "JSONサンプルの「score」はEmbeddingSimilarityResultの「similarity」に対応。snippetの取得元も未記載。",
+      "suggestion": "フィールド対応と、snippetはtantivyのSearchResultのbodyから取得する旨を記載。出力用の新構造体定義方針を追記。"
+    },
+    {
+      "id": "S3",
+      "category": "実装方針（スケーラビリティ）",
+      "description": "search_similar()は全embeddingをメモリに読み込んでブルートフォース計算する実装。パフォーマンス劣化リスクが未記載。",
+      "suggestion": "現時点ではブルートフォースで十分である旨と、将来改善の可能性を注記。"
+    },
+    {
+      "id": "S4",
+      "category": "受け入れ基準（エラーハンドリング）",
+      "description": "embeddingsテーブルが空の場合のエラー条件が曖昧。SymbolStoreとEmbeddingStoreのどちらを指すか不明。",
+      "suggestion": "具体的な判定条件を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "実装方針（ハイブリッド検索）",
+      "description": "将来的なBM25+semantic検索のハイブリッド検索への拡張パスが示されていない。",
+      "suggestion": "将来拡張の可能性を備考欄に記載。"
+    },
+    {
+      "id": "N2",
+      "category": "受け入れ基準（類似度の閾値）",
+      "description": "類似度スコアの最低閾値に関する記述がない。",
+      "suggestion": "--min-score等のオプション追加を検討。"
+    },
+    {
+      "id": "N3",
+      "category": "実装方針（プロバイダー設定のバリデーション）",
+      "description": "格納済みembeddingと異なるモデルでクエリを実行した場合の挙動が未定義。",
+      "suggestion": "モデル不一致時の警告/エラーメッセージを追加。"
+    }
+  ],
+  "summary": "Issue #63は全体として既存コードベースとの整合性が高く実装可能。主な問題は(1)embeddingストレージが2系統存在しどちらを使用するか曖昧、(2)フィルタ適用方法がsemantic検索特有の結合処理を要するが未記載。must_fix解消で実装者が迷わず作業できるIssueになる。"
+}
