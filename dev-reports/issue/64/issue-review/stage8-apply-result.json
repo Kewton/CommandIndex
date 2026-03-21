@@ -1,0 +1,16 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M2", "action": "フォールバック条件を大幅更新。query引数時はprovider/API障害でもBM25フォールバック（後方互換性維持）。--semantic明示時のみエラー。フォールバック条件表をquery引数時/--semantic明示時に分離。設計根拠を追記。"},
+    {"id": "S1", "action": "テスト観点にprovider/API失敗時のBM25フォールバックテストを追加"},
+    {"id": "S2", "action": "出力結果型セクションでscore意味変更を既に明記済み"},
+    {"id": "S4", "action": "実行時依存の拡大に対してフォールバック設計で対応。searchの実行前提条件はBM25のみで維持"}
+  ],
+  "not_applied": [
+    {"id": "M1", "reason": "実装がまだ存在しないのは想定通り。これからTDD実装する。"},
+    {"id": "S3", "reason": "パフォーマンス計測は実装後に実施"},
+    {"id": "N1", "reason": "RRF同点テストはテスト観点に含めた。実装時に対応"},
+    {"id": "N2", "reason": "将来拡張性。今回はSearchResult再利用で十分"}
+  ],
+  "must_fix_remaining": 0
+}

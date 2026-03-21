@@ -1,0 +1,23 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "CLIオプション定義の変更(--no-semantic追加)", "description": "src/main.rsのSearchサブコマンドに--no-semanticオプション追加が必要。--semanticとのconflicts_with設定も必要。"},
+    {"id": "M2", "title": "query検索パスでのハイブリッド統合ロジック追加", "description": "src/cli/search.rsのrun()関数でembedding存在チェック→セマンティック並行実行→RRF統合のロジック追加が必要。"},
+    {"id": "M3", "title": "RRFスコア統合ロジックの新規実装", "description": "src/search/hybrid.rsを新規作成。RRF(k=60)、ドキュメント識別キー(path,heading)、片方のみヒット時rank=limit+1扱い。"},
+    {"id": "M4", "title": "embedding不在時のstderrメッセージ出力", "description": "run()内でembedding不在時にstderrガイダンスメッセージを出力しBM25のみで結果を返す。"},
+    {"id": "M5", "title": "main.rsのパターンマッチ更新", "description": "Commands::Searchのパターンマッチにno_semanticフィールド追加、run()への引数渡し。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SearchResult.scoreフィールドの意味変更に伴うコメント更新"},
+    {"id": "S2", "title": "既存CLIテスト(cli_args.rs)の更新: --no-semanticテスト追加"},
+    {"id": "S3", "title": "E2Eテストのscore値変化確認"},
+    {"id": "S4", "title": "セマンティック検索結果のメタデータenrichmentロジック再利用"},
+    {"id": "S5", "title": "SymbolStoreとEmbeddingStoreの並行アクセスパターン確認"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "RRF統合結果の出力フォーマット拡張"},
+    {"id": "N2", "title": "パフォーマンス計測用トレーシング追加"},
+    {"id": "N3", "title": "contextサブコマンドへのハイブリッド検索統合"},
+    {"id": "N4", "title": "searchモジュールの構造整理"}
+  ],
+  "summary": "影響範囲は3箇所に集中: (1)CLI層:main.rs、(2)検索オーケストレーション層:cli/search.rs、(3)アルゴリズム層:search/hybrid.rs新規。既存機能は破壊されない。テスト追加が必要。"
+}

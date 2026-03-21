@@ -122,6 +122,8 @@ src/
 │   ├── openai.rs        # OpenAI APIプロバイダー
 │   └── store.rs         # SQLite embeddings.db 操作
 ├── search/              # 検索ロジック
+│   ├── hybrid.rs        # ハイブリッド検索（RRF統合）
+│   └── related.rs       # 関連ファイル検索
 └── output/              # 出力フォーマット（human / json / path）
 ```
 

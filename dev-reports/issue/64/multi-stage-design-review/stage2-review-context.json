@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "run()シグネチャ変更が呼び出し元と不整合", "description": "has_heading_filterはSearchOptions.headingから導出可能で冗長。"},
+    {"id": "M2", "title": "rrf_mergeの戻り値型とセマンティック結果の型不整合", "description": "EmbeddingSimilarityResultにはbody,tags等がなく、SearchResultへの変換にIndexReaderWrapperが必要だがシグネチャに含まれていない。"},
+    {"id": "M3", "title": "--no-semanticのconflicts_with_all設計とclap定義の明記不足"},
+    {"id": "M4", "title": "SearchResult.scoreにRRFスコア格納による意味的衝突"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "フォールバックロジックとembeddings不在時の挙動が未定義"},
+    {"id": "S2", "title": "セマンティックのみヒット時のsearch_by_exact_pathのエラーハンドリング"},
+    {"id": "S3", "title": "main.rsのmatchアームにno_semanticの分岐追加が必要"},
+    {"id": "S4", "title": "rrf_mergeを配置するモジュールの設計が不明確"}
+  ],
+  "summary": "rrf_mergeのシグネチャ問題とscore意味衝突が重大。main.rs側の変更も明記すべき。"
+}

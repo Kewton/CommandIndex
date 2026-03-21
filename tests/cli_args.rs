@@ -201,3 +201,41 @@ fn search_semantic_option_accepted() {
         .failure()
         .stderr(predicate::str::contains("not found"));
 }
+
+#[test]
+fn test_no_semantic_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test", "--no-semantic"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn test_no_semantic_conflicts_with_semantic() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--no-semantic"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn test_no_semantic_conflicts_with_symbol() {
+    common::cmd()
+        .args(["search", "--symbol", "name", "--no-semantic"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn test_no_semantic_conflicts_with_related() {
+    common::cmd()
+        .args(["search", "--related", "file.rs", "--no-semantic"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}

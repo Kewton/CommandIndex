@@ -1,0 +1,16 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "ドキュメント識別キーセクションに(path,heading)ユニーク性の制約と根拠を明記（INSERT OR REPLACEによる統合）"},
+    {"id": "M2", "action": "query+--heading時はBM25のみで動作する方針を明記。動作モード表に--heading列追加。CLIオプション設計セクションに例を追加"},
+    {"id": "S1", "action": "フォールバック条件セクションを新設。count_embeddings()==0/DB不在→フォールバック、provider初期化/API失敗→エラーの境界を明確化"},
+    {"id": "S2", "action": "候補取得深さ(oversampling)をlimit*3と定義。検索フローにも反映。片方のみヒット時のランクもlimit*3+1に更新"},
+    {"id": "S3", "action": "--no-semanticをqueryモード専用とし、--semantic/--symbol/--relatedとconflict設定を明記"},
+    {"id": "S4", "action": "出力結果型セクションにBM25時/ハイブリッド時のscore意味を明記。受け入れ基準にもJSON score=RRFスコアを追記"}
+  ],
+  "applied_nice_to_have": [
+    {"id": "N1", "action": "テスト観点セクションを新設し、8つのテスト観点を追加"},
+    {"id": "N2", "action": "RRFスコア同点時の安定ソート方針を設計上の決定事項に追加"}
+  ],
+  "must_fix_remaining": 0
+}

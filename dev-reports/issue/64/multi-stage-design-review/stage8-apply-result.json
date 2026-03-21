@@ -1,0 +1,13 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M1", "action": "ストレージ前提の記述を修正。symbols.db(SymbolStore)とembeddings.db(EmbeddingStore)の2DB構造を正確に記載。検索系はSymbolStoreを使用（既存run_semantic_searchと同パターン）。"},
+    {"id": "M2", "action": "セキュリティ章を更新。auto-hybridによる通常searchの外部送信リスクを明示。対策（ユーザーが明示的にembed実行、--no-semanticで回避可能、config.toml不在時は外部送信なし）を記載。"},
+    {"id": "S1", "action": "テスト影響対象ファイルセクションを新設。tests/indexer_tantivy.rs, tests/common/mod.rsへの影響を追加。"},
+    {"id": "S3", "action": "E2Eテスト影響確認にstore不整合テストを追加。"}
+  ],
+  "not_applied": [
+    {"id": "S2", "reason": "score互換性は判断1で方針記載済み。JSON出力へのscore_type追加は将来Issue。"}
+  ],
+  "must_fix_remaining": 0
+}

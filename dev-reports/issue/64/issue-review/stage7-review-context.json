@@ -1,0 +1,17 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "実装がまだブランチに存在しない", "description": "変更対象ファイルが未作成のため想定影響レビューに留まる。", "suggestion": "実装後に最終レビューを実施。"},
+    {"id": "M2", "title": "通常query検索がprovider/API障害で失敗する回帰リスク", "description": "既存のplain query検索がオンライン依存へ変わる。provider/API失敗→エラーの設計は後方互換性破壊。", "suggestion": "通常query検索ではprovider/API失敗時にBM25へ自動フォールバックする。致命エラーは--semantic明示時のみに限定。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "CLI/E2Eテストが新モード遷移を担保していない", "description": "既存テストは旧競合関係のみ検証。", "suggestion": "新しいモード遷移のテスト追加が必要。"},
+    {"id": "S2", "title": "SearchResult.score意味変更がJSON契約に影響", "description": "score値の意味・スケールが変わる。", "suggestion": "CHANGELOG/README/CLI helpに意味変更を明記。"},
+    {"id": "S3", "title": "ハイブリッド経路の性能劣化ポイント", "description": "BM25+embedding生成+SQLite検索+RRF+enrich_with_metadataが常時走る。", "suggestion": "レイテンシ比較測定。metadata enrichのバッチ化検討。"},
+    {"id": "S4", "title": "実行時依存の拡大（crate追加なし、運用依存増）", "description": "searchコマンドの実行前提条件が変わる。", "suggestion": "README/--help/障害時メッセージにhybrid有効条件を明示。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "RRF同点ソートの専用テスト"},
+    {"id": "N2", "title": "hybrid専用出力フィールドの将来拡張性"}
+  ],
+  "summary": "最大の影響は通常queryの自動ハイブリッド化によるprovider依存追加。provider/API失敗時のフォールバック方針が重要。"
+}
