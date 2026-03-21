@@ -1,0 +1,24 @@
+{
+  "stage": 8,
+  "applied_fixes": [],
+  "deferred_to_design": [
+    {
+      "id": "M1",
+      "reason": "SearchError型のDisplay/source/From実装は実装詳細レベル。設計方針書・作業計画で対応。"
+    },
+    {
+      "id": "M2",
+      "reason": "matchパターン4変数化は既にIssueに記載済み。具体的なパターン分岐は作業計画で対応。"
+    },
+    {
+      "id": "M3",
+      "reason": "count_embeddings()メソッド追加はIssueの検索フローステップ1で言及済み。実装詳細は作業計画。"
+    },
+    {
+      "id": "M4",
+      "reason": "section_heading照合ルールは既にIssueに具体的に記載済み。実装は作業計画で対応。"
+    }
+  ],
+  "notes": "Stage 7のMust Fix 4件はいずれも実装詳細レベルの課題であり、Issue本文には十分な情報が記載されている。設計方針書・作業計画フェーズで具体的な実装手順として扱う。",
+  "status": "completed"
+}

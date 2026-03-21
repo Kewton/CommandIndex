@@ -1,0 +1,19 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "API不整合", "description": "Config::load()はResult<Option<Config>, EmbeddingError>を返す。unwrap_or_default()はConfigにDefault未実装で不可。"},
+    {"id": "M2", "category": "パス不整合", "description": "tantivyインデックスは.commandindex/tantivy。commandindex_dir.join('index')は誤り。indexer::index_dir()を使用すべき。"},
+    {"id": "M3", "category": "メソッド未存在", "description": "count_embeddings()は「修正」ではなく「新規追加」。"},
+    {"id": "M4", "category": "API不整合", "description": "SymbolStore::openのパスはsymbol_db_path()ヘルパー関数を使うべき。"},
+    {"id": "M5", "category": "可視性不整合", "description": "matches_file_type()はモジュールプライベート。pub(crate)に変更必要。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "From<EmbeddingError>実装順序の依存関係明確化。"},
+    {"id": "S2", "description": "embed()結果の安全アクセス（first()使用）。"},
+    {"id": "S3", "description": "query: Stringではなく&strで既存パターン統一。"},
+    {"id": "S4", "description": "SymbolDbNotFound事前チェック追加。"},
+    {"id": "S5", "description": "同一ファイル重複結果の排除方針。"}
+  ],
+  "summary": "Config::load返り値、tantivyパス、matches_file_type可視性が最重要。修正すれば実装可能。"
+}

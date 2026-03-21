@@ -1,0 +1,72 @@
+{
+  "criteria": [
+    {
+      "id": 1,
+      "description": "--semantic でクエリの意味に近いドキュメントが検索できる",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:run_semantic_search() が実装済み。クエリをembeddingに変換し、store.search_similar()でコサイン類似度ベースの検索を実行。main.rsで --semantic オプションが定義され、run_semantic_searchへ正しくディスパッチされている。"
+    },
+    {
+      "id": 2,
+      "description": "類似度スコアでソートされる",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:enrich_with_metadata() 内で enriched.sort_by(|a, b| b.similarity.partial_cmp(&a.similarity)...) により類似度降順ソートが実装されている（L322-327）。"
+    },
+    {
+      "id": 3,
+      "description": "human / json / path 出力形式に対応（SemanticSearchResult構造体）",
+      "status": "pass",
+      "evidence": "src/output/mod.rs にSemanticSearchResult構造体（path, heading, similarity, body, tags, heading_level）が定義。format_semantic_results()がHuman/Json/Pathの3形式にディスパッチ。各実装: human.rs:format_semantic_human(), json.rs:format_semantic_json(), path.rs:format_semantic_path() が全て実装済み。"
+    },
+    {
+      "id": 4,
+      "description": "--semantic と --related / --symbol / query / --heading の排他制御",
+      "status": "pass",
+      "evidence": "main.rs にて --semantic に conflicts_with_all = [\"query\", \"symbol\", \"related\", \"heading\"] が設定済み。tests/cli_args.rs に4つの排他テスト追加: search_semantic_and_symbol_conflict, search_semantic_and_related_conflict, search_semantic_and_query_conflict, search_semantic_and_heading_conflict。全テストpass。"
+    },
+    {
+      "id": 5,
+      "description": "--tag, --path, --type フィルタが適用できる（ポストフィルタ）",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:apply_semantic_filters() にてpath_prefix, file_type, tagの3種フィルタがポストフィルタとして実装。main.rsでsemantic分岐時にpath, file_type, tag引数を全てrun_semantic_searchに渡している。matches_file_type()は既存のreader.rs関数を再利用。"
+    },
+    {
+      "id": 6,
+      "description": "--limit が semantic 検索の返却件数を制御すること",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:run_semantic_search() にて oversample = limit * 5 で多めに取得後、apply_semantic_filtersでフィルタし、filtered.into_iter().take(limit) で最終件数をlimitに制限（L264）。main.rsでlimit.min(1000)が渡される。"
+    },
+    {
+      "id": 7,
+      "description": "embeddingが未生成の場合に適切なエラーメッセージ",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:run_semantic_search() にて store.count_embeddings() == 0 の場合 SearchError::NoEmbeddings を返却。Display実装で \"No embeddings found. Run `commandindex embed` first.\" メッセージを出力（L52-54）。"
+    },
+    {
+      "id": 8,
+      "description": "Ollama未起動時に適切なエラーメッセージ",
+      "status": "pass",
+      "evidence": "SearchError::Embedding のDisplay実装でNetworkError時に \"Hint: Is Ollama running? Try `ollama serve`\" を付加するメッセージ分岐が実装済み（L43-51）。"
+    },
+    {
+      "id": 9,
+      "description": "SearchError型にEmbedding/SymbolStore/NoEmbeddingsバリアント追加",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:SearchError enum に Embedding(EmbeddingError), SymbolStore(SymbolStoreError), NoEmbeddings の3バリアントが定義済み（L18-19, L13）。From impl も Embedding用(L103-107), SymbolStore用(L94-101) が実装済み。"
+    },
+    {
+      "id": 10,
+      "description": "既存テスト更新 + 新規排他テスト追加",
+      "status": "pass",
+      "evidence": "tests/cli_args.rs に5つの新規テスト追加: search_semantic_and_symbol_conflict, search_semantic_and_related_conflict, search_semantic_and_query_conflict, search_semantic_and_heading_conflict, search_semantic_option_accepted。全18テストpass。"
+    },
+    {
+      "id": 11,
+      "description": "cargo test / clippy / fmt 全パス",
+      "status": "pass",
+      "evidence": "cargo test --all: 全297テストpass (138 unit + 159 integration)。cargo clippy --all-targets -- -D warnings: 警告0件。cargo fmt --all -- --check: 差分なし。"
+    }
+  ],
+  "overall": "pass",
+  "summary": "Issue #63 Semantic Searchの全11受入基準を満たしている。run_semantic_search()によるembeddingベース類似度検索、enrich_with_metadata()によるtantivyメタデータ付与、apply_semantic_filters()によるポストフィルタ、SemanticSearchResult構造体による3形式出力、clap conflicts_with_allによる排他制御、適切なエラーハンドリング（NoEmbeddings, Ollama未起動）、SearchError新バリアント追加、排他テスト5件追加が全て実装・検証済み。cargo test 297件全pass、clippy警告0件、fmt差分なし。"
+}

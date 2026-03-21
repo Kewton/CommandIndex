@@ -28,11 +28,14 @@ enum Commands {
         /// Search query (full-text search)
         query: Option<String>,
         /// Search by symbol name (function, class, method)
-        #[arg(long, conflicts_with = "query")]
+        #[arg(long, conflicts_with_all = ["query", "semantic"])]
         symbol: Option<String>,
         /// Search for related files
-        #[arg(long, conflicts_with_all = ["query", "symbol", "tag", "path", "file_type", "heading"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading"])]
         related: Option<String>,
+        /// Semantic search query (embedding-based similarity search)
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading"])]
+        semantic: Option<String>,
         /// Output format (human, json, path)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
@@ -145,6 +148,7 @@ fn main() {
             query,
             symbol,
             related,
+            semantic,
             format,
             tag,
             path,
@@ -158,8 +162,8 @@ fn main() {
                 lines: snippet_lines,
                 chars: snippet_chars,
             };
-            let result = match (query, symbol, related) {
-                (Some(q), None, None) => {
+            let result = match (query, symbol, related, semantic) {
+                (Some(q), None, None, None) => {
                     let options = commandindex::indexer::reader::SearchOptions {
                         query: q,
                         tag,
@@ -172,14 +176,27 @@ fn main() {
                     };
                     commandindex::cli::search::run(&options, &filters, format, snippet_config)
                 }
-                (None, Some(s), None) => {
+                (None, Some(s), None, None) => {
                     commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)
                 }
-                (None, None, Some(f)) => {
+                (None, None, Some(f), None) => {
                     commandindex::cli::search::run_related_search(&f, limit.min(1000), format)
                 }
-                (None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
-                    "Either <QUERY>, --symbol <NAME>, or --related <FILE> is required".to_string(),
+                (None, None, None, Some(q)) => {
+                    let filters = commandindex::indexer::reader::SearchFilters {
+                        path_prefix: path,
+                        file_type,
+                    };
+                    commandindex::cli::search::run_semantic_search(
+                        &q,
+                        limit.min(1000),
+                        format,
+                        tag.as_deref(),
+                        &filters,
+                    )
+                }
+                (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
+                    "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
                 )),
                 _ => unreachable!("clap conflicts_with prevents this"),
             };

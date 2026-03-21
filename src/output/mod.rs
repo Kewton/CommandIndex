@@ -128,6 +128,30 @@ pub fn format_related_results(
     }
 }
 
+/// セマンティック検索結果
+#[derive(Debug, Clone)]
+pub struct SemanticSearchResult {
+    pub path: String,
+    pub heading: String,
+    pub similarity: f32,
+    pub body: String,
+    pub tags: String,
+    pub heading_level: u64,
+}
+
+/// セマンティック検索結果を指定フォーマットで出力する
+pub fn format_semantic_results(
+    results: &[SemanticSearchResult],
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_semantic_human(results, writer),
+        OutputFormat::Json => json::format_semantic_json(results, writer),
+        OutputFormat::Path => path::format_semantic_path(results, writer),
+    }
+}
+
 /// 検索結果を指定フォーマットで出力する
 // NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討
 pub fn format_results(

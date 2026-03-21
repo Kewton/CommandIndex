@@ -1,0 +1,18 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "型整合性", "description": "Config::load()のResult<Option<Config>>ハンドリング誤り。"},
+    {"id": "M2", "category": "matchパターン", "description": "clapの排他制御双方向設定必須。symbol/related両方にsemantic追加。"},
+    {"id": "M3", "category": "SearchError", "description": "source()トレイト実装にEmbedding/NoEmbeddingsアーム追加必要。"},
+    {"id": "M4", "category": "パス不整合", "description": "tantivyパス: index→tantivy。indexer::index_dir()使用。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "テスト名更新: search_requires_query_or_symbol→semantic含む。"},
+    {"id": "S2", "description": "embed結果の安全アクセス。"},
+    {"id": "S3", "description": "--heading排他の設計判断理由明記。"},
+    {"id": "S4", "description": "フォーマッター4種類目の記録。"},
+    {"id": "S5", "description": "symbol_db_path()ヘルパー使用。"}
+  ],
+  "summary": "Config::load、排他制御双方向、source()実装、パス不整合が最重要。"
+}

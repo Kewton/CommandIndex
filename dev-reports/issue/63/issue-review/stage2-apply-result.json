@@ -1,0 +1,32 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {
+      "id": "M1",
+      "action": "検索フローの記述を「SymbolStore（symbols.db）のsearch_similar()を使用」と明記。EmbeddingSimilarityResultのフィールド名も追記。"
+    },
+    {
+      "id": "M2",
+      "action": "フィルタ適用方法を具体化：search_similar()結果のfile_pathをキーにtantivyのsearch_by_exact_path()でメタデータ取得→ポストフィルタとして適用。--semanticと--tag等の排他設定が--relatedとは異なることを明記。"
+    },
+    {
+      "id": "S2",
+      "action": "出力フォーマットのフィールド対応を明記（score→similarity）。snippetの取得元（SearchResult.body）を追記。SemanticSearchResult構造体定義方針を追記。"
+    },
+    {
+      "id": "S3",
+      "action": "パフォーマンスに関する注記セクションを追加。ブルートフォースの現状と将来改善の可能性を記載。"
+    },
+    {
+      "id": "S4",
+      "action": "エラーハンドリングの判定条件をSymbolStoreのembeddingsテーブルレコード0件と具体化。"
+    }
+  ],
+  "skipped_fixes": [
+    {
+      "id": "S1",
+      "reason": "M2の修正で検索フロー全体が具体化されたため、別途対応不要"
+    }
+  ],
+  "status": "completed"
+}

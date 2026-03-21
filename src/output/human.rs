@@ -4,7 +4,8 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SnippetConfig, SymbolSearchResult, parse_tags,
+    OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    parse_tags,
     strip_control_chars, truncate_body,
 };
 
@@ -84,6 +85,43 @@ pub fn format_related_human(
             format!("(score: {score})").dimmed(),
             relations.join(", ")
         )?;
+    }
+    Ok(())
+}
+
+/// セマンティック検索結果をhuman形式で出力する
+pub fn format_semantic_human(
+    results: &[SemanticSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for (i, result) in results.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+
+        let similarity = format!("[{:.2}]", result.similarity);
+        let path = strip_control_chars(&result.path);
+        let heading = strip_control_chars(&result.heading);
+        writeln!(
+            writer,
+            "{} {} > {}",
+            similarity.green(),
+            path.green(),
+            heading.bold()
+        )?;
+
+        // Body snippet (max 2 lines)
+        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        for line in snippet.lines() {
+            writeln!(writer, "  {line}")?;
+        }
+
+        // Tags
+        let tags = parse_tags(&result.tags);
+        if !tags.is_empty() {
+            let tags_str = tags.join(", ");
+            writeln!(writer, "  {}", format!("Tags: {tags_str}").dimmed())?;
+        }
     }
     Ok(())
 }

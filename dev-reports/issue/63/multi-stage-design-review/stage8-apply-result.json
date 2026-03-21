@@ -1,0 +1,1 @@
+{"stage":8,"applied_fixes":["tag引数をOption<&String>に変更、main.rsでtag.as_ref()使用","Noneケースのエラーメッセージ具体的文字列明記","tantivy_dir.exists()チェック追加（IndexNotFound）","embedデータフロー明記（SymbolStore embeddingsテーブル）","SearchMode enum将来改善記録"],"status":"completed"}

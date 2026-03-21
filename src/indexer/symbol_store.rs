@@ -594,6 +594,14 @@ impl SymbolStore {
         Ok(())
     }
 
+    /// Count all embeddings in the store.
+    pub fn count_embeddings(&self) -> Result<u64, SymbolStoreError> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM embeddings", [], |row| row.get(0))?;
+        Ok(count as u64)
+    }
+
     /// Search for the top-k most similar embeddings using cosine similarity.
     ///
     /// Loads all stored embeddings, filters out records whose dimension does not
@@ -1287,6 +1295,25 @@ mod tests {
 
         let results = store.search_similar(&[1.0, 2.0, 3.0], 10).unwrap();
         assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_count_embeddings_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert_eq!(store.count_embeddings().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_count_embeddings_with_data() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let emb1 = sample_embedding("a.rs", "intro", vec![1.0, 0.0, 0.0]);
+        let emb2 = sample_embedding("b.rs", "main", vec![0.0, 1.0, 0.0]);
+        store.insert_embeddings(&[emb1, emb2]).unwrap();
+
+        assert_eq!(store.count_embeddings().unwrap(), 2);
     }
 
     #[test]

@@ -3,7 +3,9 @@ use std::path::Path;
 
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
-use crate::output::{self, OutputError, OutputFormat, SnippetConfig, SymbolSearchResult};
+use crate::output::{
+    self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+};
 
 #[derive(Debug)]
 pub enum SearchError {
@@ -15,6 +17,8 @@ pub enum SearchError {
     InvalidArgument(String),
     SchemaVersionMismatch,
     RelatedSearch(crate::search::related::RelatedSearchError),
+    Embedding(crate::embedding::EmbeddingError),
+    NoEmbeddings,
 }
 
 impl fmt::Display for SearchError {
@@ -38,6 +42,18 @@ impl fmt::Display for SearchError {
                 f,
                 "Index schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
             ),
+            SearchError::Embedding(e) => match e {
+                crate::embedding::EmbeddingError::NetworkError(_) => {
+                    write!(
+                        f,
+                        "Embedding error: {e}\nHint: Is Ollama running? Try `ollama serve`"
+                    )
+                }
+                _ => write!(f, "Embedding error: {e}"),
+            },
+            SearchError::NoEmbeddings => {
+                write!(f, "No embeddings found. Run `commandindex embed` first.")
+            }
         }
     }
 }
@@ -53,6 +69,8 @@ impl std::error::Error for SearchError {
             SearchError::InvalidArgument(_) => None,
             SearchError::SchemaVersionMismatch => None,
             SearchError::RelatedSearch(e) => Some(e),
+            SearchError::Embedding(e) => Some(e),
+            SearchError::NoEmbeddings => None,
         }
     }
 }
@@ -81,6 +99,12 @@ impl From<SymbolStoreError> for SearchError {
             SymbolStoreError::SchemaVersionMismatch { .. } => SearchError::SchemaVersionMismatch,
             other => SearchError::SymbolStore(other),
         }
+    }
+}
+
+impl From<crate::embedding::EmbeddingError> for SearchError {
+    fn from(e: crate::embedding::EmbeddingError) -> Self {
+        SearchError::Embedding(e)
     }
 }
 
@@ -190,6 +214,164 @@ pub fn run_related_search(
     let mut handle = stdout.lock();
     output::format_related_results(&results, format, &mut handle)?;
     Ok(())
+}
+
+pub fn run_semantic_search(
+    query: &str,
+    limit: usize,
+    format: OutputFormat,
+    tag: Option<&str>,
+    filters: &SearchFilters,
+) -> Result<(), SearchError> {
+    if query.is_empty() {
+        return Err(SearchError::InvalidArgument(
+            "Semantic search query cannot be empty".to_string(),
+        ));
+    }
+
+    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    if !tantivy_dir.exists() {
+        return Err(SearchError::IndexNotFound);
+    }
+
+    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    if !db_path.exists() {
+        return Err(SearchError::SymbolDbNotFound);
+    }
+
+    // Load embedding config
+    let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+    let config = crate::embedding::Config::load(&commandindex_dir)?;
+    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
+    let provider = crate::embedding::create_provider(&embedding_config)?;
+
+    // Check embeddings exist
+    let store = SymbolStore::open(&db_path)?;
+    if store.count_embeddings()? == 0 {
+        return Err(SearchError::NoEmbeddings);
+    }
+
+    // Generate query embedding
+    let query_texts = [query.to_string()];
+    let query_embeddings = provider.embed(&query_texts)?;
+    let query_embedding = query_embeddings.first().ok_or_else(|| {
+        SearchError::InvalidArgument("Failed to generate query embedding".to_string())
+    })?;
+
+    // Search similar with oversampling
+    let similar_results = store.search_similar(query_embedding, limit.saturating_mul(5))?;
+
+    // Enrich with metadata from tantivy
+    let reader = IndexReaderWrapper::open(&tantivy_dir)?;
+    let enriched = enrich_with_metadata(&similar_results, &reader)?;
+
+    // Apply filters and truncate to limit
+    let final_results: Vec<SemanticSearchResult> = apply_semantic_filters(enriched, tag, filters)
+        .into_iter()
+        .take(limit)
+        .collect();
+
+    if final_results.is_empty() {
+        eprintln!("No results found.");
+        return Ok(());
+    }
+
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+    output::format_semantic_results(&final_results, format, &mut handle)?;
+    Ok(())
+}
+
+fn enrich_with_metadata(
+    similar_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    reader: &IndexReaderWrapper,
+) -> Result<Vec<SemanticSearchResult>, SearchError> {
+    use std::collections::HashMap;
+
+    // Group by file_path
+    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+        HashMap::new();
+    for result in similar_results {
+        groups.entry(&result.file_path).or_default().push(result);
+    }
+
+    let mut enriched = Vec::new();
+
+    for (file_path, items) in &groups {
+        let sections = reader.search_by_exact_path(file_path)?;
+
+        for item in items {
+            // Find matching section by heading
+            let matched = sections.iter().find(|s| s.heading == item.section_heading);
+
+            if let Some(section) = matched {
+                enriched.push(SemanticSearchResult {
+                    path: section.path.clone(),
+                    heading: section.heading.clone(),
+                    similarity: item.similarity,
+                    body: section.body.clone(),
+                    tags: section.tags.clone(),
+                    heading_level: section.heading_level,
+                });
+            } else {
+                // Fallback: use the first section or create a minimal result
+                enriched.push(SemanticSearchResult {
+                    path: item.file_path.clone(),
+                    heading: item.section_heading.clone(),
+                    similarity: item.similarity,
+                    body: String::new(),
+                    tags: String::new(),
+                    heading_level: 0,
+                });
+            }
+        }
+    }
+
+    // Sort by similarity descending
+    enriched.sort_by(|a, b| {
+        b.similarity
+            .partial_cmp(&a.similarity)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    Ok(enriched)
+}
+
+fn apply_semantic_filters(
+    results: Vec<SemanticSearchResult>,
+    tag: Option<&str>,
+    filters: &SearchFilters,
+) -> Vec<SemanticSearchResult> {
+    results
+        .into_iter()
+        .filter(|r| {
+            // path_prefix filter
+            if let Some(ref prefix) = filters.path_prefix
+                && !r.path.starts_with(prefix.as_str())
+            {
+                return false;
+            }
+
+            // file_type filter
+            if let Some(ref file_type) = filters.file_type
+                && !crate::indexer::reader::matches_file_type(&r.path, file_type)
+            {
+                return false;
+            }
+
+            // tag filter
+            if let Some(tag_value) = tag
+                && !r
+                    .tags
+                    .split_whitespace()
+                    .any(|t| t.eq_ignore_ascii_case(tag_value))
+            {
+                return false;
+            }
+
+            true
+        })
+        .collect()
 }
 
 fn build_symbol_tree(
