@@ -410,6 +410,29 @@ fn index_code_file(
         eprintln!("Warning: parent symbol resolution failed for {rel_path}: {e}");
     }
 
+    // import/依存関係を symbols.db に格納
+    let deps: Vec<_> = result
+        .imports
+        .iter()
+        .map(|imp| crate::indexer::symbol_store::ImportInfo {
+            id: None,
+            source_file: rel_path.to_string(),
+            target_module: imp.source.clone(),
+            imported_names: if imp.imported_names.is_empty() {
+                None
+            } else {
+                Some(imp.imported_names.join(", "))
+            },
+            file_hash: hash.clone(),
+        })
+        .collect();
+
+    if !deps.is_empty()
+        && let Err(e) = symbol_store.insert_dependencies(&deps)
+    {
+        eprintln!("Warning: dependency insert failed for {rel_path}: {e}");
+    }
+
     // tantivy: heading=ファイル名, body=全文
     let filename = file_path
         .file_name()
