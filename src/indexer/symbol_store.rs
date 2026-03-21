@@ -3,7 +3,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, params};
 
-const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 2;
+const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 3;
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -40,6 +40,25 @@ pub struct ImportInfo {
     pub target_module: String,
     pub imported_names: Option<String>,
     pub file_hash: String,
+}
+
+/// Embedding格納用の情報構造体
+#[derive(Debug, Clone, PartialEq)]
+pub struct EmbeddingInfo {
+    pub id: Option<i64>,
+    pub file_path: String,
+    pub section_heading: String, // 空文字 = ファイル全体
+    pub embedding: Vec<f32>,
+    pub model_name: String,
+    pub file_hash: String,
+}
+
+/// コサイン類似度検索の結果構造体
+#[derive(Debug, Clone, PartialEq)]
+pub struct EmbeddingSimilarityResult {
+    pub file_path: String,
+    pub section_heading: String,
+    pub similarity: f32,
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +114,7 @@ pub enum SymbolStoreError {
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
     SchemaVersionMismatch { expected: u32, found: u32 },
+    InvalidEmbedding { reason: String },
 }
 
 impl fmt::Display for SymbolStoreError {
@@ -108,6 +128,9 @@ impl fmt::Display for SymbolStoreError {
                     "Schema version mismatch: expected {expected}, found {found}"
                 )
             }
+            Self::InvalidEmbedding { reason } => {
+                write!(f, "Invalid embedding: {reason}")
+            }
         }
     }
 }
@@ -118,6 +141,7 @@ impl std::error::Error for SymbolStoreError {
             Self::Sqlite(e) => Some(e),
             Self::Io(e) => Some(e),
             Self::SchemaVersionMismatch { .. } => None,
+            Self::InvalidEmbedding { .. } => None,
         }
     }
 }
@@ -150,6 +174,51 @@ pub fn escape_like_pattern(input: &str) -> String {
         }
     }
     result
+}
+
+// ---------------------------------------------------------------------------
+// Embedding helpers
+// ---------------------------------------------------------------------------
+
+/// Convert a `Vec<f32>` embedding to a little-endian BLOB.
+fn embedding_to_blob(embedding: &[f32]) -> Vec<u8> {
+    let mut blob = Vec::with_capacity(embedding.len() * 4);
+    for &val in embedding {
+        blob.extend_from_slice(&val.to_le_bytes());
+    }
+    blob
+}
+
+/// Convert a little-endian BLOB back to `Vec<f32>` with size validation.
+fn blob_to_embedding(blob: &[u8], expected_dimension: usize) -> Result<Vec<f32>, SymbolStoreError> {
+    if blob.len() != expected_dimension * 4 {
+        return Err(SymbolStoreError::InvalidEmbedding {
+            reason: format!(
+                "BLOB size {} != expected {}",
+                blob.len(),
+                expected_dimension * 4
+            ),
+        });
+    }
+    Ok(blob
+        .chunks_exact(4)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect())
+}
+
+/// Compute cosine similarity between two vectors of equal length.
+/// Returns 0.0 if either vector has zero norm.
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    let mut dot = 0.0_f32;
+    let mut norm_a = 0.0_f32;
+    let mut norm_b = 0.0_f32;
+    for (&ai, &bi) in a.iter().zip(b.iter()) {
+        dot += ai * bi;
+        norm_a += ai * ai;
+        norm_b += bi * bi;
+    }
+    let denom = norm_a.sqrt() * norm_b.sqrt();
+    if denom == 0.0 { 0.0 } else { dot / denom }
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +315,22 @@ impl SymbolStore {
             );
 
             CREATE INDEX IF NOT EXISTS idx_file_links_source ON file_links(source_file);
-            CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target_file);",
+            CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target_file);
+
+            CREATE TABLE IF NOT EXISTS embeddings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_path TEXT NOT NULL,
+                section_heading TEXT NOT NULL DEFAULT '',
+                embedding BLOB NOT NULL,
+                dimension INTEGER NOT NULL,
+                model_name TEXT NOT NULL,
+                file_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_embeddings_path ON embeddings(file_path);
+            CREATE INDEX IF NOT EXISTS idx_embeddings_hash ON embeddings(file_hash);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_path_section ON embeddings(file_path, section_heading);",
         )?;
 
         self.conn.execute(
@@ -343,6 +427,10 @@ impl SymbolStore {
         )?;
         tx.execute(
             "DELETE FROM file_links WHERE source_file = ?1",
+            params![file_path],
+        )?;
+        tx.execute(
+            "DELETE FROM embeddings WHERE file_path = ?1",
             params![file_path],
         )?;
         tx.commit()?;
@@ -459,6 +547,117 @@ impl SymbolStore {
         )?;
         let rows = stmt.query_map(params![target_file], file_link_from_row)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Bulk-insert embedding records inside a single transaction.
+    ///
+    /// Uses `INSERT OR REPLACE` so that duplicate `(file_path, section_heading)`
+    /// pairs are overwritten rather than causing a constraint error.
+    pub fn insert_embeddings(&self, embeddings: &[EmbeddingInfo]) -> Result<(), SymbolStoreError> {
+        // Validate all embeddings before starting the transaction.
+        for emb in embeddings {
+            if emb.embedding.is_empty() {
+                return Err(SymbolStoreError::InvalidEmbedding {
+                    reason: "embedding vector must not be empty".to_string(),
+                });
+            }
+            for &val in &emb.embedding {
+                if val.is_nan() || val.is_infinite() {
+                    return Err(SymbolStoreError::InvalidEmbedding {
+                        reason: format!("embedding contains invalid value: {val}"),
+                    });
+                }
+            }
+        }
+
+        let tx = self.conn.unchecked_transaction()?;
+        for emb in embeddings {
+            let blob = embedding_to_blob(&emb.embedding);
+            let dimension = emb.embedding.len() as i64;
+            let created_at = chrono::Utc::now().to_rfc3339();
+            tx.execute(
+                "INSERT OR REPLACE INTO embeddings
+                 (file_path, section_heading, embedding, dimension, model_name, file_hash, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    emb.file_path,
+                    emb.section_heading,
+                    blob,
+                    dimension,
+                    emb.model_name,
+                    emb.file_hash,
+                    created_at,
+                ],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Search for the top-k most similar embeddings using cosine similarity.
+    ///
+    /// Loads all stored embeddings, filters out records whose dimension does not
+    /// match the query, computes cosine similarity, and returns the top-k results
+    /// sorted by descending similarity.
+    pub fn search_similar(
+        &self,
+        query_embedding: &[f32],
+        top_k: usize,
+    ) -> Result<Vec<EmbeddingSimilarityResult>, SymbolStoreError> {
+        let query_dim = query_embedding.len();
+        let mut stmt = self
+            .conn
+            .prepare("SELECT file_path, section_heading, embedding, dimension FROM embeddings")?;
+
+        let mut results: Vec<EmbeddingSimilarityResult> = Vec::new();
+
+        let rows = stmt.query_map([], |row| {
+            let file_path: String = row.get(0)?;
+            let section_heading: String = row.get(1)?;
+            let blob: Vec<u8> = row.get(2)?;
+            let dimension: i64 = row.get(3)?;
+            Ok((file_path, section_heading, blob, dimension as usize))
+        })?;
+
+        for row_result in rows {
+            let (file_path, section_heading, blob, dimension) = row_result?;
+
+            // Validate BLOB size against stored dimension
+            let stored_embedding = match blob_to_embedding(&blob, dimension) {
+                Ok(emb) => emb,
+                Err(_) => {
+                    tracing::warn!(
+                        "Skipping embedding for {file_path}: BLOB size mismatch (expected dimension={dimension})"
+                    );
+                    continue;
+                }
+            };
+
+            // Filter out dimension mismatches with query
+            if stored_embedding.len() != query_dim {
+                tracing::warn!(
+                    "Skipping embedding for {file_path}: dimension {} != query dimension {query_dim}",
+                    stored_embedding.len()
+                );
+                continue;
+            }
+
+            let similarity = cosine_similarity(query_embedding, &stored_embedding);
+            results.push(EmbeddingSimilarityResult {
+                file_path,
+                section_heading,
+                similarity,
+            });
+        }
+
+        // Sort by descending similarity
+        results.sort_by(|a, b| {
+            b.similarity
+                .partial_cmp(&a.similarity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        results.truncate(top_k);
+        Ok(results)
     }
 }
 
@@ -846,5 +1045,263 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Embedding tests
+    // -----------------------------------------------------------------------
+
+    fn sample_embedding(file_path: &str, section_heading: &str, values: Vec<f32>) -> EmbeddingInfo {
+        EmbeddingInfo {
+            id: None,
+            file_path: file_path.to_string(),
+            section_heading: section_heading.to_string(),
+            embedding: values,
+            model_name: "test-model".to_string(),
+            file_hash: "hash123".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_embedding_blob_roundtrip() {
+        let original: Vec<f32> = vec![1.0, -2.5, 3.125, 0.0, f32::MIN, f32::MAX];
+        let blob = embedding_to_blob(&original);
+        assert_eq!(blob.len(), original.len() * 4);
+        let restored = blob_to_embedding(&blob, original.len()).unwrap();
+        assert_eq!(original, restored);
+    }
+
+    #[test]
+    fn test_blob_to_embedding_invalid_size() {
+        let blob = vec![0u8; 10]; // Not a multiple of 4 that matches expected dimension
+        let result = blob_to_embedding(&blob, 3); // expects 12 bytes
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SymbolStoreError::InvalidEmbedding { reason } => {
+                assert!(reason.contains("BLOB size 10 != expected 12"));
+            }
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
+    }
+
+    #[test]
+    fn test_cosine_similarity_basic() {
+        // Identical vectors → similarity = 1.0
+        let a = vec![1.0, 0.0, 0.0];
+        let b = vec![1.0, 0.0, 0.0];
+        let sim = cosine_similarity(&a, &b);
+        assert!((sim - 1.0).abs() < 1e-6);
+
+        // Orthogonal vectors → similarity = 0.0
+        let a = vec![1.0, 0.0];
+        let b = vec![0.0, 1.0];
+        let sim = cosine_similarity(&a, &b);
+        assert!(sim.abs() < 1e-6);
+
+        // Opposite vectors → similarity = -1.0
+        let a = vec![1.0, 0.0];
+        let b = vec![-1.0, 0.0];
+        let sim = cosine_similarity(&a, &b);
+        assert!((sim + 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_cosine_similarity_zero_vector() {
+        let a = vec![0.0, 0.0, 0.0];
+        let b = vec![1.0, 2.0, 3.0];
+        assert_eq!(cosine_similarity(&a, &b), 0.0);
+        assert_eq!(cosine_similarity(&b, &a), 0.0);
+        assert_eq!(cosine_similarity(&a, &a), 0.0);
+    }
+
+    #[test]
+    fn test_create_embeddings_table() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Verify embeddings table exists by querying it
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM embeddings", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_insert_embedding_validation() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Empty vector should fail
+        let emb = sample_embedding("test.rs", "", vec![]);
+        let result = store.insert_embeddings(&[emb]);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SymbolStoreError::InvalidEmbedding { reason } => {
+                assert!(reason.contains("empty"));
+            }
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
+
+        // NaN should fail
+        let emb = sample_embedding("test.rs", "", vec![1.0, f32::NAN, 3.0]);
+        let result = store.insert_embeddings(&[emb]);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SymbolStoreError::InvalidEmbedding { reason } => {
+                assert!(reason.contains("invalid value"));
+            }
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
+
+        // Infinity should fail
+        let emb = sample_embedding("test.rs", "", vec![1.0, f32::INFINITY, 3.0]);
+        let result = store.insert_embeddings(&[emb]);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SymbolStoreError::InvalidEmbedding { reason } => {
+                assert!(reason.contains("invalid value"));
+            }
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
+    }
+
+    #[test]
+    fn test_embedding_unique_constraint() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert first embedding
+        let emb1 = sample_embedding("test.rs", "heading1", vec![1.0, 2.0, 3.0]);
+        store.insert_embeddings(&[emb1]).unwrap();
+
+        // Insert with same file_path + section_heading should replace (INSERT OR REPLACE)
+        let emb2 = sample_embedding("test.rs", "heading1", vec![4.0, 5.0, 6.0]);
+        store.insert_embeddings(&[emb2]).unwrap();
+
+        // Should have only 1 record
+        let count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM embeddings WHERE file_path = 'test.rs'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        // Verify the replaced embedding has the new values
+        let results = store.search_similar(&[4.0, 5.0, 6.0], 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!((results[0].similarity - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_delete_by_file_removes_embeddings() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let emb1 = sample_embedding("src/a.rs", "", vec![1.0, 2.0, 3.0]);
+        let emb2 = sample_embedding("src/b.rs", "", vec![4.0, 5.0, 6.0]);
+        store.insert_embeddings(&[emb1, emb2]).unwrap();
+
+        store.delete_by_file("src/a.rs").unwrap();
+
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM embeddings", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+
+        // Remaining embedding should be for src/b.rs
+        let results = store.search_similar(&[4.0, 5.0, 6.0], 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].file_path, "src/b.rs");
+    }
+
+    #[test]
+    fn test_delete_by_file_cascade_with_embeddings() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let file = "src/target.rs";
+
+        // Insert into all 4 tables
+        let sym = sample_symbol("func", file);
+        store.insert_symbols(&[sym]).unwrap();
+
+        let dep = sample_import(file, "std::io");
+        store.insert_dependencies(&[dep]).unwrap();
+
+        let link = sample_file_link(file, "docs/b.md", "WikiLink");
+        store.insert_file_links(&[link]).unwrap();
+
+        let emb = sample_embedding(file, "", vec![1.0, 2.0, 3.0]);
+        store.insert_embeddings(&[emb]).unwrap();
+
+        // Delete all records for the file
+        store.delete_by_file(file).unwrap();
+
+        // Verify all tables are empty for that file
+        assert!(store.find_by_file(file).unwrap().is_empty());
+        assert!(store.find_imports_by_source(file).unwrap().is_empty());
+        assert!(store.find_file_links_by_source(file).unwrap().is_empty());
+
+        let emb_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM embeddings WHERE file_path = ?1",
+                params![file],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(emb_count, 0);
+    }
+
+    #[test]
+    fn test_insert_and_search_embeddings() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert 3 embeddings with known values
+        let emb1 = sample_embedding("a.rs", "intro", vec![1.0, 0.0, 0.0]);
+        let emb2 = sample_embedding("b.rs", "main", vec![0.0, 1.0, 0.0]);
+        let emb3 = sample_embedding("c.rs", "", vec![1.0, 1.0, 0.0]);
+        store.insert_embeddings(&[emb1, emb2, emb3]).unwrap();
+
+        // Query with [1, 0, 0] → a.rs should be most similar
+        let results = store.search_similar(&[1.0, 0.0, 0.0], 2).unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].file_path, "a.rs");
+        assert_eq!(results[0].section_heading, "intro");
+        assert!((results[0].similarity - 1.0).abs() < 1e-6);
+
+        // c.rs should be second (cos similarity of [1,0,0] and [1,1,0] = 1/sqrt(2))
+        assert_eq!(results[1].file_path, "c.rs");
+    }
+
+    #[test]
+    fn test_search_similar_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.search_similar(&[1.0, 2.0, 3.0], 10).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_schema_version_v3() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let version: String = store
+            .conn
+            .query_row(
+                "SELECT value FROM schema_meta WHERE key = 'schema_version'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, "3");
     }
 }
