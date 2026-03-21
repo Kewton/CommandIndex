@@ -1,0 +1,9 @@
+{
+  "stage": "影響分析レビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "category": "リソース競合", "description": "外部API依存テストに#[ignore]付与が必要。"},
+    {"id": "S2", "category": "コンパイル依存", "description": "内部API型を返すヘルパーはテストファイル内ローカルヘルパーを推奨。"}
+  ],
+  "summary": "Must Fix 0件。影響はほぼなし。ヘルパーの配置場所に注意。"
+}

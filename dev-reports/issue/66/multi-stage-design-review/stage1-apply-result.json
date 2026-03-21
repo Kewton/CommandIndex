@@ -1,0 +1,1 @@
+{"applied": ["M1_SRP_file_split_considered_but_kept_single_file_for_12_tests", "M2_DRY_helpers_moved_to_local"], "note": "SRP: 12テスト程度では1ファイルが妥当と判断。ただしヘルパーをcommon/mod.rsからテストファイル内に移動して既存との混在を回避。DRY: 既存ヘルパー(cmd, run_index等)はそのまま再利用し、新規ヘルパーは重複なし。"}

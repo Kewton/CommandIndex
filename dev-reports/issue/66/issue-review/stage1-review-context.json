@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性",
+      "description": "テストシナリオ9「Context Pack + Semantic」は、contextコマンドがsemantic検索結果を含むContext Pack生成を行うと記載しているが、現在のcontext.rsの実装にはsemantic/embedding関連の統合が一切存在しない。contextコマンドはrelated検索（ImportDependency, TagMatch, MarkdownLink等）のみに基づいており、semantic searchの結果を利用する機能は未実装。",
+      "suggestion": "シナリオ9を削除するか、「contextコマンドの入力ファイルがembedding生成済みである場合でもcontextコマンドが正常に動作すること」程度のテストに変更する。semantic結果をcontext packに統合する機能は本Issueのスコープ外（別Issue）とすべき。"
+    },
+    {
+      "id": "M2",
+      "category": "整合性",
+      "description": "テストシナリオ1「index --with-embedding → embeddingsテーブルにレコードが存在」のE2Eテストは、実際にOllamaへHTTPリクエストを送信する。MockProviderは#[cfg(test)]でsrc内ユニットテスト専用であり、testsディレクトリの統合テスト（別クレート）からは利用できない。Ollamaなしで--with-embeddingのE2Eテストを実現する仕組みが存在しない。",
+      "suggestion": "以下のいずれかを採用する: (a) 環境変数でテスト用固定ベクトルプロバイダーを切替、(b) ライブラリAPIレベルでテスト、(c) SQLiteのembeddingsテーブルにテストフィクスチャとして直接固定embeddingを挿入してからsearch --semanticを実行する。方式をIssueに明記すべき。"
+    },
+    {
+      "id": "M3",
+      "category": "整合性",
+      "description": "テストシナリオ4「--semantic と --related / --symbol の排他制御」は、clapのconflicts_with定義により既にCLIレイヤーで強制されている。テストは実行時エラーではなくclapのパースエラーを検証する形になる。",
+      "suggestion": "テストは「排他的なオプション組合せ時にclapがエラーを返しプロセスが非ゼロ終了すること」を確認する方針であることをIssueに明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "網羅性",
+      "description": "embedコマンド単体のE2Eテストが含まれていない。",
+      "suggestion": "シナリオとして「index（embedding無し）→ embed → embeddingsテーブルにレコードが存在」を追加する。"
+    },
+    {
+      "id": "S2",
+      "category": "網羅性",
+      "description": "ハイブリッド検索のgraceful degradation（embedding生成済みでもOllama停止時にBM25フォールバック）のテストシナリオが不足。",
+      "suggestion": "「embedding生成済み＋Ollama停止環境でsearchがBM25フォールバックし、エラーなく結果を返す」シナリオを追加する。"
+    },
+    {
+      "id": "S3",
+      "category": "実装方針",
+      "description": "「テスト用の小規模embedding（低次元）を使用」の具体的実現方法が不明確。",
+      "suggestion": "テストセットアップでSymbolStore.save_embeddingsを直接呼び出し、3〜8次元の固定ベクトルを挿入する方式を明記する。"
+    },
+    {
+      "id": "S4",
+      "category": "網羅性",
+      "description": "rerankのテストシナリオが曖昧。rerankもOllama依存であり検証方法が不明確。",
+      "suggestion": "Ollamaなし環境で--rerankがフォールバックし結果を返すこと、--rerank-topが受け付けられること等を明記する。"
+    },
+    {
+      "id": "S5",
+      "category": "整合性",
+      "description": "EmbeddingStoreとSymbolStoreの両方にembeddingsテーブル操作が存在し、テストでどちらを使用すべきか不明確。",
+      "suggestion": "SymbolStoreのembeddingsテーブルに固定データを挿入する方式を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "改善",
+      "description": "既存のE2Eテストパターンを共通ユーティリティとして再利用可能にする提案がない。",
+      "suggestion": "tests/common/mod.rsにembedding付きのsetup関数を追加し共有する方針を記載する。"
+    },
+    {
+      "id": "N2",
+      "category": "改善",
+      "description": "--no-semanticテストでハイブリッド検索が無効化されていることの検証方法が記載されていない。",
+      "suggestion": "stderrの[hybrid]メッセージ有無の比較などの検証方法を記載する。"
+    },
+    {
+      "id": "N3",
+      "category": "改善",
+      "description": "Semantic Searchフィルタテストで各フィルタの個別/組合せの方針が不明。",
+      "suggestion": "最低限各フィルタ単独テスト、組合せはNice to haveとする。"
+    }
+  ],
+  "summary": "Must Fix 3件: シナリオ9は未実装機能をテスト対象としている、Ollamaなし環境でのembedding生成方式が未定義、排他制御テストの検証方法の明確化が必要。"
+}

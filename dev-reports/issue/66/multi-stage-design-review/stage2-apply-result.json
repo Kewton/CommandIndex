@@ -1,0 +1,1 @@
+{"applied": ["M1_try_rerank_indirect_test_via_cli", "M2_symbol_store_file_based_init", "S1_dimension_consistency", "S2_create_tables_call"], "note": "try_rerankは非公開のためCLI経由テストに変更。SymbolStoreはopen(&path)+create_tables()パターンに修正。"}

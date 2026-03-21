@@ -1,0 +1,72 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性",
+      "description": "Issueの前提「固定embeddingをSymbolStoreに直接挿入すれば、OllamaなしでSemantic Search / Hybrid RetrievalをE2Eできる」は現行実装と一致しない。CLIのsearch --semanticやhybrid経路は検索時にもクエリembedding生成のため外部providerを必ず呼ぶ（run_semantic_search()はcreate_provider(...).embed(...)を実行）。固定ベクトルをDBに入れるだけではCLIのsemantic/hybrid系シナリオはOllama非依存にならない。",
+      "suggestion": "Issueに「Ollamaなしで可能なのはDB fixture投入まで」であることを明記し、CLIのsemantic/hybridをCIで通したいならテスト用provider切替やprovider注入を別途入れる。そうしないならsearch --semantic / hybrid系のCLIテストはOllama依存として#[ignore]扱いに寄せるべき。"
+    },
+    {
+      "id": "M2",
+      "category": "整合性",
+      "description": "embeddingの保存先・参照先の前提が現行実装と分裂している。index --with-embeddingとembedはEmbeddingStoreを通じて.commandindex/embeddings.dbに保存する一方、search --semantic / hybridはSymbolStoreの.commandindex/symbols.db内embeddingsテーブルを参照している。つまり、Issueの「SymbolStoreへ直接挿入して検索テスト」は現行検索実装には合うが、同じIssue内のindex --with-embedding / embedシナリオとは保存先が一致していない。",
+      "suggestion": "Issueを二系統に分けて整理するべき。1) index/embedの保存確認はembeddings.dbを見るCLI系、2) semantic/hybrid検索はsymbols.dbへfixture投入する検索系。もしくは先に実装側で保存先を一本化する別Issueを切る。"
+    },
+    {
+      "id": "M3",
+      "category": "正確性",
+      "description": "シナリオ2の「commandindex embedがOllama停止時にエラーメッセージを出力して正常終了する」は現実装と一致しない。embedでエラーになるとmainは終了コード1を返す。",
+      "suggestion": "検証条件を「非ゼロ終了かつstderrにエラーを出す」に修正するべき。"
+    },
+    {
+      "id": "M4",
+      "category": "整合性",
+      "description": "シナリオ9「embedding生成済み環境で--semantic指定時にBM25フォールバック」は現行実装では成立しない。BM25フォールバックは通常検索のhybrid経路(run() -> try_hybrid_search())にしかなく、run_semantic_search()はembedding生成失敗時にそのままエラー終了する。",
+      "suggestion": "このシナリオはsearch <query>のhybrid自動切替に対するフォールバック確認へ書き換えるべき。--semanticのフォールバック検証は現実装には存在しない。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "網羅性",
+      "description": "排他制御テストは既にtests/cli_args.rsでかなり網羅されている。",
+      "suggestion": "新規Issueでは「既存cli_argsで担保済みのため再実装しない」か、追加価値を明記する。"
+    },
+    {
+      "id": "S2",
+      "category": "受け入れ基準",
+      "description": "「13シナリオが全てPASS」と「Ollamaが必要なものは#[ignore]」が併記されており、どのコマンドでPASSを判定するのか曖昧。",
+      "suggestion": "受け入れ基準をcargo testで通る範囲とcargo test -- --ignoredで通る範囲に分けて明記するべき。"
+    },
+    {
+      "id": "S3",
+      "category": "実装方針",
+      "description": "--rerank-topの「対象件数制御」は、Ollamaなしフォールバックだけでは外形的に観測しづらい。",
+      "suggestion": "--rerank-topを本当に検証したいなら、テスト用rerank provider注入かlive Ollama前提のignoredテストにするべき。Ollamaなし環境では受理確認に留める方が現実的。"
+    },
+    {
+      "id": "S4",
+      "category": "実装方針",
+      "description": "tests/common/mod.rsの共通基盤にembedding fixtureやDB直接操作の前例がない。",
+      "suggestion": "helperの責務を「index済みfixture生成」「symbols.dbを開いて固定embedding投入」「必要ならconfig.toml作成」まで具体化しておくと実装ブレが減る。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "改善",
+      "description": "--no-semanticシナリオでstderrの[hybrid]メッセージが出ないことまで見ると、hybrid経路を通っていないことの裏取りになる。"
+    },
+    {
+      "id": "N2",
+      "category": "改善",
+      "description": "シナリオ1の名称「Embedding生成フルフロー」は、実際にはSymbolStore::insert_embeddings()によるfixture投入であり名称とずれる。「固定embedding投入フロー」に改名すると誤解が減る。"
+    },
+    {
+      "id": "N3",
+      "category": "改善",
+      "description": "Hybrid/RRFの検証で「RRFスコアそのもの」まで固定するとテストがbittleになりやすい。順位関係や結果集合を主検証にすべき。"
+    }
+  ],
+  "summary": "Must Fix 4件。最大の問題は、Issueが前提にしている「固定embeddingをDB投入すればOllamaなしでCLIのsemantic/hybridをE2Eできる」が現行実装と一致していない点。加えて、EmbeddingStoreとSymbolStoreの保存先分裂、embedの終了コード誤認、--semanticにBM25フォールバックがあるという誤記を修正しないと、Issueの実装方針と受け入れ基準がコードベースと噛み合わない。"
+}

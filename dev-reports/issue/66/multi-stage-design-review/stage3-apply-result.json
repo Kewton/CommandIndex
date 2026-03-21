@@ -1,0 +1,1 @@
+{"applied": ["S1_ignore_attribute_confirmed", "S2_helpers_moved_to_local"], "note": "ヘルパーをテストファイル内ローカルに配置し、common/mod.rsへの影響をゼロにした。"}
