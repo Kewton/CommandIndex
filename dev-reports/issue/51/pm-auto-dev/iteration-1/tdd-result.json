@@ -1,0 +1,138 @@
+{
+  "issue": 51,
+  "title": "Markdownリンク解析・リンクインデックス構築",
+  "iteration": 1,
+  "status": "success",
+  "date": "2026-03-21",
+  "tasks": [
+    {
+      "id": "1.1",
+      "name": "FileLinkInfo構造体 + file_linksテーブル定義",
+      "status": "completed",
+      "file": "src/indexer/symbol_store.rs",
+      "changes": [
+        "Added FileLinkInfo struct",
+        "Changed CURRENT_SYMBOL_SCHEMA_VERSION from 1 to 2",
+        "Added file_links CREATE TABLE and indexes to create_tables()",
+        "Added file_link_from_row() helper"
+      ]
+    },
+    {
+      "id": "1.2",
+      "name": "SymbolStore CRUDメソッド追加",
+      "status": "completed",
+      "file": "src/indexer/symbol_store.rs",
+      "changes": [
+        "Added insert_file_links() method (bulk insert with unchecked_transaction)",
+        "Added find_file_links_by_source() method",
+        "Extended delete_by_file() to also delete from file_links table"
+      ]
+    },
+    {
+      "id": "2.1",
+      "name": "IndexError SchemaVersionMismatch正規化",
+      "status": "completed",
+      "file": "src/cli/index.rs",
+      "changes": [
+        "Modified From<SymbolStoreError> for IndexError to map SchemaVersionMismatch variant"
+      ]
+    },
+    {
+      "id": "2.2",
+      "name": "SearchError SchemaVersionMismatch",
+      "status": "completed",
+      "file": "src/cli/search.rs",
+      "changes": [
+        "Added SchemaVersionMismatch variant to SearchError",
+        "Modified From<SymbolStoreError> for SearchError to map SchemaVersionMismatch",
+        "Added Display implementation with clean/index guidance message",
+        "Added source() implementation returning None"
+      ]
+    },
+    {
+      "id": "2.3",
+      "name": "StatusError SchemaVersionMismatch",
+      "status": "completed",
+      "file": "src/cli/status.rs",
+      "changes": [
+        "Modified get_symbol_count() to detect SchemaVersionMismatch and show eprintln warning, returning 0"
+      ]
+    },
+    {
+      "id": "3.1",
+      "name": "is_indexable_link()フィルタ関数",
+      "status": "completed",
+      "file": "src/cli/index.rs",
+      "changes": [
+        "Added is_indexable_link() function filtering http/https/protocols/mailto/anchors/too-long targets"
+      ]
+    },
+    {
+      "id": "3.2",
+      "name": "index_markdown_file()リンク格納統合",
+      "status": "completed",
+      "file": "src/cli/index.rs",
+      "changes": [
+        "Added symbol_store: Option<&SymbolStore> parameter to index_markdown_file()",
+        "Added link processing flow: delete_by_file -> tantivy write -> filter links -> truncate at 10000 -> create FileLinkInfo -> insert_file_links",
+        "Updated index_file_and_upsert() to pass symbol_store to index_markdown_file()"
+      ]
+    },
+    {
+      "id": "3.3",
+      "name": "run_incremental()削除処理拡張",
+      "status": "completed",
+      "file": "src/cli/index.rs",
+      "changes": [
+        "Removed is_code() condition from delete processing - now calls symbol_store.delete_by_file() for all file types"
+      ]
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": {
+      "status": "pass",
+      "errors": 0
+    },
+    "cargo_clippy": {
+      "status": "pass",
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "warnings": 0
+    },
+    "cargo_test": {
+      "status": "pass",
+      "command": "cargo test --all",
+      "total_passed": 256,
+      "total_failed": 0,
+      "test_suites": 21
+    },
+    "cargo_fmt": {
+      "status": "pass",
+      "command": "cargo fmt --all -- --check",
+      "diffs": 0
+    }
+  },
+  "new_tests_added": [
+    "test_file_links_table_created",
+    "test_insert_and_find_file_links_by_source",
+    "test_find_file_links_by_source_empty",
+    "test_delete_by_file_removes_file_links",
+    "test_insert_file_links_empty",
+    "test_index_error_from_symbol_store_schema_version_mismatch",
+    "test_is_indexable_link_local_file",
+    "test_is_indexable_link_wikilink",
+    "test_is_indexable_link_rejects_http",
+    "test_is_indexable_link_rejects_https",
+    "test_is_indexable_link_rejects_other_protocol",
+    "test_is_indexable_link_rejects_mailto",
+    "test_is_indexable_link_rejects_anchor_only",
+    "test_is_indexable_link_rejects_too_long",
+    "test_is_indexable_link_accepts_max_length",
+    "test_is_indexable_link_accepts_relative_with_anchor"
+  ],
+  "files_modified": [
+    "src/indexer/symbol_store.rs",
+    "src/cli/index.rs",
+    "src/cli/search.rs",
+    "src/cli/status.rs"
+  ]
+}

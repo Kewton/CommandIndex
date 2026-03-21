@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "schema_versionインクリメント（1→2）とclean&rebuild方針を「格納先」セクションに追記"},
+    {"id": "M2", "action": "delete_by_file()のfile_links対応を「index/update連携」セクションに追記。受け入れ基準にupdate時の削除・再挿入を追加"},
+    {"id": "M3", "action": "index_markdown_file()へのsymbol_store引数追加を「index/update連携」セクションに明記"},
+    {"id": "S1", "action": "link_textカラムをlink_typeカラムに変更（YAGNI方針採用）"},
+    {"id": "S2", "action": "外部URL除外方針を「解析対象」と受け入れ基準に追加"},
+    {"id": "S3", "action": "WikiLinkターゲット解決のスコープ限定を新セクションとして追記"},
+    {"id": "N1", "action": "link_typeカラムをテーブル定義に追加済み（S1と統合）"},
+    {"id": "N2", "action": "insert_file_links()バルクインサートメソッドを実装方針に追記"},
+    {"id": "N3", "action": "具体的なテストケースセクションを追加"}
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/51"
+}

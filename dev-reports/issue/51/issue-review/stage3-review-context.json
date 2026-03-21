@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "index_file_and_upsert()のMarkdown分岐でsymbol_storeを渡す必要がある",
+      "description": "index_file_and_upsert()はsymbol_storeをOption<&SymbolStore>として受け取っているが、Markdown分岐ではsymbol_storeを渡していない。両フロー（run/run_incremental）で正しく動作する必要がある。",
+      "suggestion": "index_markdown_file()のシグネチャにOption<&SymbolStore>を追加し、Markdown分岐でsymbol_storeを渡す。Noneの場合はリンク保存をスキップ。"
+    },
+    {
+      "id": "M2",
+      "title": "run_incremental()の削除処理がコードファイルのみでMarkdown未対応",
+      "description": "run_incremental()の削除処理ではentry.file_type.is_code()の場合のみdelete_by_file()を呼んでおり、Markdownファイル削除時にfile_linksが残存するリスクがある。",
+      "suggestion": "削除処理の条件を拡張し、Markdownファイルの場合もdelete_by_file()を呼ぶようにする。"
+    },
+    {
+      "id": "M3",
+      "title": "update時のスキーマバージョン不一致エラーハンドリング",
+      "description": "既存symbols.db(version=1)をversion=2で開くとSchemaVersionMismatchエラーになる。updateコマンドでバージョンアップ直後にエラーが出る可能性がある。",
+      "suggestion": "SchemaVersionMismatchエラー時にclean→indexの再構築を促すメッセージが適切に動作するかテストを追加する。"
+    },
+    {
+      "id": "M4",
+      "title": "外部URL除外ロジックが未実装",
+      "description": "現在のlink.rsのextract_links()にはURL除外フィルタが存在しない。テストでもhttps://example.comがLinkとして抽出されている。",
+      "suggestion": "パーサー層は純粋に抽出に専念し、フィルタリングはインデックス層（insert_file_links呼び出し前）で行う。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "file_linksテーブルのインデックス設計確認",
+      "description": "source_fileとtarget_fileの両方にインデックスが必要。重複レコード防止のためdelete-before-insertパターンで対応。",
+      "suggestion": "CREATE INDEX IF NOT EXISTSで両カラムにインデックスを作成。"
+    },
+    {
+      "id": "S3",
+      "title": "modifiedマークダウンファイルのリンク再構築",
+      "description": "run_incremental()のmodifiedファイル処理で、古いfile_linksを削除してから新しいリンクを挿入する必要がある。",
+      "suggestion": "index_markdown_file()内でdelete_by_file()→insertのdelete-before-insertパターンを採用。index_code_file()と同パターン。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "searchコマンドでのリンク情報活用は将来Issue",
+      "description": "file_linksを活用する検索APIの設計は将来のIssueとして記録。",
+      "suggestion": "Issue #51のスコープ外。"
+    },
+    {
+      "id": "N2",
+      "title": "cleanコマンドへの影響なし（確認済み）",
+      "description": "cleanコマンドは.commandindex/ディレクトリ全体を削除するため影響なし。",
+      "suggestion": "追加対応不要。"
+    }
+  ],
+  "summary": "影響範囲は主に4箇所: (1) index_markdown_file()とindex_file_and_upsert()のシグネチャ変更、(2) SymbolStoreのcreate_tables()とdelete_by_file()、(3) schema_versionインクリメントによる既存DB互換性、(4) 外部URL除外フィルタ。最大リスクはrun_incremental()でのMarkdownファイル削除・変更時のfile_links整合性。cleanとsearchへの影響なし。"
+}

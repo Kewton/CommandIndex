@@ -13,6 +13,7 @@ pub enum SearchError {
     SymbolStore(SymbolStoreError),
     SymbolDbNotFound,
     InvalidArgument(String),
+    SchemaVersionMismatch,
 }
 
 impl fmt::Display for SearchError {
@@ -31,6 +32,10 @@ impl fmt::Display for SearchError {
                 )
             }
             SearchError::InvalidArgument(msg) => write!(f, "{msg}"),
+            SearchError::SchemaVersionMismatch => write!(
+                f,
+                "Index schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
+            ),
         }
     }
 }
@@ -44,6 +49,7 @@ impl std::error::Error for SearchError {
             SearchError::SymbolStore(e) => Some(e),
             SearchError::SymbolDbNotFound => None,
             SearchError::InvalidArgument(_) => None,
+            SearchError::SchemaVersionMismatch => None,
         }
     }
 }
@@ -62,7 +68,10 @@ impl From<OutputError> for SearchError {
 
 impl From<SymbolStoreError> for SearchError {
     fn from(e: SymbolStoreError) -> Self {
-        SearchError::SymbolStore(e)
+        match e {
+            SymbolStoreError::SchemaVersionMismatch { .. } => SearchError::SchemaVersionMismatch,
+            other => SearchError::SymbolStore(other),
+        }
     }
 }
 

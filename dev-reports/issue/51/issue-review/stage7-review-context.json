@@ -1,0 +1,52 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "search --symbolとstatusコマンドへの波及が未記載",
+      "description": "symbols.dbのschema bumpにより、search --symbolはSymbolStore::open()を呼ぶため影響を受ける。statusコマンドもindex sizeなどの統計表示に影響がある可能性がある。影響範囲テーブルに記載がない。",
+      "suggestion": "影響範囲テーブルにsearch --symbolとstatusの行を追加し、schema bump時のopen()エラーハンドリングが適切かを確認する。"
+    },
+    {
+      "id": "M2",
+      "title": "SymbolStoreError::SchemaVersionMismatch発生時のエラー表示が全コマンドで不統一",
+      "description": "update以外にもsearch --symbolやstatusでSymbolStore::open()が呼ばれる可能性があり、各コマンドでのSchemaVersionMismatchの扱いが不統一になる恐れがある。rebuild案内を返す方針を全体で決めるべき。",
+      "suggestion": "全コマンドでSymbolStoreError::SchemaVersionMismatchをclean → indexのrebuild案内に統一する方針をIssueに追記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存テストへの影響が具体化されていない",
+      "description": "schema mismatchの扱い変更、delete_by_file()の削除対象追加、SQLiteテーブル追加により、既存テストの期待値やセットアップが変わる可能性がある。",
+      "suggestion": "影響範囲に既存テストの更新が必要な対象（SymbolStore単体テスト、tests/incremental_update.rs、tests/e2e_update.rs、tests/e2e_phase3_integration.rs）を具体化する。"
+    },
+    {
+      "id": "S2",
+      "title": "パフォーマンス影響が未評価",
+      "description": "Markdownファイルごとにlink抽出結果をフィルタし、delete_by_file()とinsert_file_links()を追加で実行するため、index/updateのSQLite書き込み量は増える。",
+      "suggestion": "影響範囲にパフォーマンス項目を追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "parser::linkの抽出仕様への内部依存を明記すべき",
+      "description": "画像リンクは現在のパーサーでは抽出されないという前提はparser実装変更に弱い。",
+      "suggestion": "依存関係に「parser::linkの抽出仕様とsymbols.db schema version管理に内部依存する」と追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "SQLiteインデックス追加によるread/writeトレードオフを明記",
+      "description": "idx_links_source / idx_links_targetは将来の--relatedクエリには有効だが、挿入コストとDBサイズは増える。",
+      "suggestion": "パフォーマンス欄に補足を追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "cleanの役割変化を補足",
+      "description": "schema bump後の運用フローではcleanの重要性が上がる。",
+      "suggestion": "「実装変更不要。ただしschema mismatch時の推奨回復手順としてclean -> indexがより重要になる」と補足する。"
+    }
+  ],
+  "summary": "影響範囲はindex/update/SymbolStoreだけでは不足。search --symbolとstatusも波及対象。テスト面では既存テスト群の見直しが必要。性能面ではMarkdownごとのlink抽出とSQLite書き込み追加によりI/OとDBサイズが増加。内部依存としてparser::linkの抽出仕様への依存を明示すべき。",
+  "reviewer": "Codex (gpt-5.4)"
+}

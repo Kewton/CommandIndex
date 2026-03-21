@@ -1,0 +1,23 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "test_schema_version_check: スキーマバージョン定数変更で期待値変更", "suggestion": "v1→v2マイグレーション失敗テスト追加、既存テストの値更新"},
+    {"id": "M2", "title": "index_markdown_fileシグネチャ変更の全呼び出し箇所更新", "suggestion": "index_file_and_upsert()のMarkdown分岐でsymbol_store転送"},
+    {"id": "M3", "title": "run_incremental()削除処理でMarkdownファイルのfile_links未削除", "suggestion": "条件を全ファイルタイプに拡張"},
+    {"id": "M4", "title": "SearchErrorにSchemaVersionMismatchバリアントなし", "suggestion": "専用バリアント追加"},
+    {"id": "M5", "title": "status.rsでSchemaVersionMismatchエラーが握りつぶされる", "suggestion": "get_symbol_count()のエラーハンドリング修正"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "cli_index.rsのschema_version検証がハードコード(==1)", "suggestion": "期待値を2に更新"},
+    {"id": "S2", "title": "delete_by_fileテストにfile_links削除検証がない", "suggestion": "テスト追加"},
+    {"id": "S3", "title": "e2e_phase3テストのschema v2互換性", "suggestion": "テストコメントに依存を明記"},
+    {"id": "S4", "title": "パフォーマンス影響: Markdownごとのdelete+insert", "suggestion": "バルクinsertで軽減"},
+    {"id": "S5", "title": "insert_file_links失敗時の挙動未定義", "suggestion": "eprintln+Skippedで統一"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "StatusInfoにlink_count追加", "suggestion": "後続Issue対応"},
+    {"id": "N2", "title": "open_in_memoryのschema v2互換確認", "suggestion": "テスト追加"},
+    {"id": "N3", "title": "From<SymbolStoreError> for IndexErrorの正規化方式", "suggestion": "From実装内でmatch"}
+  ]
+}
