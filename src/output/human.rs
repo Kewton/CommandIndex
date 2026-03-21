@@ -5,8 +5,7 @@ use colored::Colorize;
 use crate::indexer::reader::SearchResult;
 use crate::output::{
     OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
-    parse_tags,
-    strip_control_chars, truncate_body,
+    parse_tags, strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
