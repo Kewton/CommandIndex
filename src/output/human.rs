@@ -4,12 +4,17 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult, parse_tags,
+    OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    parse_tags,
     strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
-pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
+pub fn format_human(
+    results: &[SearchResult],
+    writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+) -> Result<(), OutputError> {
     for (i, result) in results.iter().enumerate() {
         if i > 0 {
             writeln!(writer)?;
@@ -24,8 +29,17 @@ pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<
         );
         writeln!(writer, "{} {}", location.green(), heading_display.bold())?;
 
-        // 本文スニペット（最大2行）
-        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        // 本文スニペット
+        let body_cleaned = strip_control_chars(&result.body);
+        let snippet = if snippet_config.lines == 0 && snippet_config.chars == 0 {
+            body_cleaned
+        } else if snippet_config.lines == 0 {
+            truncate_body(&body_cleaned, usize::MAX, snippet_config.chars)
+        } else if snippet_config.chars == 0 {
+            truncate_body(&body_cleaned, snippet_config.lines, usize::MAX)
+        } else {
+            truncate_body(&body_cleaned, snippet_config.lines, snippet_config.chars)
+        };
         for line in snippet.lines() {
             writeln!(writer, "  {line}")?;
         }

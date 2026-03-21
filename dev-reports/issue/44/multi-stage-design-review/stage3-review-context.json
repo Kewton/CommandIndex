@@ -1,0 +1,16 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "must_fix": [
+    {"id": "M1", "title": "format_results の全呼び出し元修正"},
+    {"id": "M2", "title": "format_results 内 match 分岐での SnippetConfig 受け渡し"},
+    {"id": "M3", "title": "truncate_body の 0=無制限ロジック追加時の既存呼び出し安全性確認"},
+    {"id": "M4", "title": "main.rs での CLI 引数→SnippetConfig 変換"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "symbol/related検索はSnippetConfig対象外であることの明記"},
+    {"id": "S2", "title": "SnippetConfig の pub エクスポートと tests/output_format.rs のuse文"},
+    {"id": "S3", "title": "E2Eテストへの影響確認と新CLIオプションのE2Eテスト追加"}
+  ],
+  "summary": "影響範囲は format_results→format_human→truncate_body の呼び出しチェーンに閉じる。symbol/related/context には影響なし"
+}
