@@ -1,0 +1,1 @@
+{"applied": ["S1_tempfile_tempdir_safe_random", "S2_ollama_localhost_only"], "note": "tempfile::tempdir()による安全なランダムディレクトリ作成を明記。Ollama接続先はlocalhost:11434のみ。"}

@@ -1,0 +1,5 @@
+{
+  "applied": ["M1_symbolstore_write_source_corrected", "M2_helper_result_return_type", "S1_section_module_note", "S2_filter_test_scope_clarified", "S3_cli_contract_noted", "S4_config_helper_scope"],
+  "skipped": [],
+  "design_updated": true
+}

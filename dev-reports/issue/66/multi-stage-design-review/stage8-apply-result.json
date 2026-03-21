@@ -1,0 +1,5 @@
+{
+  "applied": ["M1_api_path_corrected", "M2_result_return_unified", "M3_bm25_fallback_reclassified", "S1_noted", "S2_common_dependency_stated", "S3_config_endpoint_explicit", "S4_fixture_diagram_updated"],
+  "skipped": [],
+  "design_updated": true
+}
