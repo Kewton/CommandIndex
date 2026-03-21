@@ -1,0 +1,93 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "正確性",
+      "description": "Issueの「仮説検証結果」で find_imports_by_target() を挙げているが、--related の実装にはそれだけでは不十分。指定ファイルが「何をimportしているか」を取得する find_imports_by_source() (source_file で検索) も必要だが、このメソッドは現在未実装であり、Issueの「要注意ポイント」に記載されていない。",
+      "suggestion": "要注意ポイントに「find_imports_by_source() (指定ファイルのimport先一覧取得) も未実装 → 追加が必要」を追記する。双方向の依存関係検索 (source→target, target→source) が必要であることを明示する。"
+    },
+    {
+      "id": "M2",
+      "category": "曖昧さ",
+      "description": "スコアリングの重み付けが「高スコア / 中スコア / 低スコア」という定性的表現のみで、具体的な数値やアルゴリズムが未定義。実装者によって全く異なるスコアリング結果になり得る。最終的な関連度スコアの合算方法（加算？重み付き合算？正規化？）も不明。",
+      "suggestion": "初期値でよいので具体的なスコア重みを定義する。例: Markdownリンク=1.0, import依存=0.9, タグ一致=0.5(一致タグ数×0.5), パス部分一致=0.4, ディレクトリ近接=0.2。合算方法（単純加算 or max）も明記する。チューニングは後続Issueに回す旨を記載。"
+    },
+    {
+      "id": "M3",
+      "category": "曖昧さ",
+      "description": "タグ一致による関連判定の具体的なデータ取得方法が未定義。tantivyのスキーマにはtagsフィールドがあるが、「指定ファイルのタグを取得する」APIは現在存在しない。tantivy側で特定pathのドキュメントからタグを取得するか、別途SQLiteにタグを永続化するか、判断が必要。",
+      "suggestion": "タグ取得方法を明示する。案1: tantivy index から path完全一致でドキュメントを取得しtagsフィールドを読み出す。案2: symbol_store (SQLite) にファイル別タグテーブルを追加する。どちらの方式を採用するかを記載する。"
+    },
+    {
+      "id": "M4",
+      "category": "整合性",
+      "description": "CLIオプション設計で --related は query / --symbol と排他とあるが、既存の main.rs の Search コマンド定義では query は Option<String> の positional 引数。--related を追加する場合、3つの排他関係（query, --symbol, --related）を clap でどう表現するか（conflicts_with の組み合わせ or ArgGroup）が未定義。",
+      "suggestion": "clap の conflicts_with を使い、--related は query および --symbol 双方と排他にする具体的な設計を記載する。また、--related 指定時に --tag, --path, --type, --heading などの既存フィルタが適用可能かどうかも明確にする。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "受け入れ基準の網羅性",
+      "description": "受け入れ基準に「指定ファイルが存在しない場合のエラーハンドリング」が含まれていない。--related に存在しないファイルパスを渡した場合の振る舞いが未定義。",
+      "suggestion": "受け入れ基準に「--related に存在しないファイルを指定した場合に適切なエラーメッセージを表示する」を追加する。"
+    },
+    {
+      "id": "S2",
+      "category": "受け入れ基準の網羅性",
+      "description": "受け入れ基準に「指定ファイルがインデックス未登録の場合」の振る舞いが含まれていない。ファイルは存在するがまだ index されていない場合を考慮する必要がある。",
+      "suggestion": "受け入れ基準に「--related に指定したファイルがインデックスに未登録の場合の振る舞い（警告表示 or インデックス登録を促すメッセージ）」を追加する。"
+    },
+    {
+      "id": "S3",
+      "category": "正確性",
+      "description": "import依存関係の target_module は「std::io」や「./utils」のようなモジュールパス文字列であり、実際のファイルパスとは異なる。--related でファイルパスを指定した際に、そのファイルパスとdependencies.target_moduleを突合するためのパス解決ロジック（モジュールパス→ファイルパス変換）が必要だが、Issueに記載がない。",
+      "suggestion": "target_module からファイルパスへの解決ルール（TypeScript: './auth/handler' → 'src/auth/handler.ts', Python: 'auth.handler' → 'auth/handler.py' 等）を定義するか、Phase 3 で既に保存されている情報で十分かを検証・記載する。"
+    },
+    {
+      "id": "S4",
+      "category": "曖昧さ",
+      "description": "パス近接性ロジックの定義が不明確。「同一ディレクトリ内」は具体的にどの深さまでか、「ファイルパスの部分一致」はどのレベルで一致させるか（ディレクトリ名？パスセグメント？）が未定義。",
+      "suggestion": "パス近接性のアルゴリズムを具体化する。例: (1) 共通パスプレフィックスの長さに基づくスコアリング、(2) ディレクトリ階層の距離（共通祖先までのホップ数）に基づくスコアリング、のいずれかを明示する。"
+    },
+    {
+      "id": "S5",
+      "category": "整合性",
+      "description": "既存の --limit オプションとの関係が不明確。--limit のデフォルト値（現在20）をそのまま流用するのか、--related 専用のデフォルト値を設けるのかが未定義。",
+      "suggestion": "--related 使用時も既存の --limit を流用する旨を明記する。"
+    },
+    {
+      "id": "S6",
+      "category": "依存関係",
+      "description": "依存Issueに #51 (Markdownリンク解析・リンクインデックス構築) が記載されていないが、最新コミット a0a9a08 で #51 がマージ済み。file_links テーブルや find_file_links_by_source() はこの #51 由来の機能。",
+      "suggestion": "依存Issueに「#51 Markdownリンク解析・リンクインデックス構築（マージ済み）」を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "受け入れ基準の網羅性",
+      "description": "パフォーマンス要件が未定義。大規模リポジトリでの --related 検索のレスポンスタイム目標がない。",
+      "suggestion": "非機能要件として目標レスポンスタイムを記載する。"
+    },
+    {
+      "id": "N2",
+      "category": "拡張性",
+      "description": "将来的に --related と通常検索の組み合わせが想定されるが、排他設計でこれが不可能になる。",
+      "suggestion": "将来の拡張可能性について一言触れておく。"
+    },
+    {
+      "id": "N3",
+      "category": "整合性",
+      "description": "output モジュールに関連検索用のフォーマット関数を新規追加する必要があるが、具体的な出力構造体の設計がない。",
+      "suggestion": "関連検索結果の出力型のフィールド案を記載しておく。"
+    },
+    {
+      "id": "N4",
+      "category": "テスト",
+      "description": "具体的なテストシナリオの指針がない。",
+      "suggestion": "テストシナリオの例を記載する。"
+    }
+  ],
+  "summary": "Issue #50 は全体として方向性が明確で、既存コードベースとの整合性もおおむね取れている。ただし、実装に直結する4つの Must Fix 項目がある。(1) find_imports_by_source() の未実装が要注意ポイントから漏れている、(2) スコアリングの重み付けが定性的すぎる、(3) タグ一致のデータ取得方法が未定義、(4) CLIの3者排他の具体的な clap 設計が不明確。これらを補完すれば実装に着手可能な品質のIssueになる。"
+}

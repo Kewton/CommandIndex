@@ -1,0 +1,14 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S3-S1", "category": "パフォーマンス", "description": "全パス列挙方法を明記。tantivy TermDictionaryまたはスコープ限定"},
+    {"id": "S3-S2", "category": "テスト戦略", "description": "search_by_exact_path()のテスト方針（from_index() + E2E）を明記"},
+    {"id": "S3-S3", "category": "モジュール結合度", "description": "各score_*メソッドのIndexReaderWrapper/SymbolStore依存を分離明記"}
+  ],
+  "nice_to_have": [
+    {"id": "S3-N1", "category": "波及効果", "description": "SearchMode enumでmatch分岐を整理"}
+  ],
+  "summary": "既存機能への破壊的影響なし。全パス列挙パフォーマンスとテスト戦略が主要懸念。"
+}

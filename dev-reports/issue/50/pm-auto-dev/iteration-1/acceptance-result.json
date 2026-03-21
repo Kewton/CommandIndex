@@ -1,0 +1,16 @@
+{
+  "status": "pass",
+  "criteria_checked": [
+    {"criterion": "--related で指定ファイルの関連ドキュメントが検索できる", "status": "pass", "evidence": "e2e_related_search::related_search_finds_linked_files"},
+    {"criterion": "Markdownリンクによる関連が検出される", "status": "pass", "evidence": "e2e_related_search::related_search_finds_linked_files"},
+    {"criterion": "タグ一致による関連が検出される", "status": "pass", "evidence": "search::related::score_tag_match + unit tests"},
+    {"criterion": "パス近接性による関連が検出される", "status": "pass", "evidence": "search::related::score_path_proximity + unit tests"},
+    {"criterion": "import依存関係による関連が検出される", "status": "pass", "evidence": "search::related::score_import_deps + unit tests"},
+    {"criterion": "関連度スコアでソートされる", "status": "pass", "evidence": "e2e_related_search::related_search_json_format_has_score_and_relations"},
+    {"criterion": "human / json / path 出力形式に対応", "status": "pass", "evidence": "e2e_related_search::*_format tests"},
+    {"criterion": "--related と query / --symbol を同時指定した場合にエラー", "status": "pass", "evidence": "e2e_related_search::related_search_conflicts_with_*"},
+    {"criterion": "関連ファイルが見つからない場合に適切なメッセージ", "status": "pass", "evidence": "e2e_related_search::related_search_no_results_for_unlinked_file"},
+    {"criterion": "--related に存在しないファイルを指定した場合に適切なエラーメッセージ", "status": "pass", "evidence": "e2e_related_search::related_search_nonexistent_file"},
+    {"criterion": "cargo test / clippy / fmt 全パス", "status": "pass", "evidence": "284 tests passed, 0 clippy warnings, 0 fmt diff"}
+  ]
+}

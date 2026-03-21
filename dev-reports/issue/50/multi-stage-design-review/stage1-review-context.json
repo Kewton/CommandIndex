@@ -1,0 +1,14 @@
+{
+  "stage": 1,
+  "type": "design_principles",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1-S1", "category": "SRP/KISS", "description": "各score_*メソッドを pub(crate) にして個別テスト可能にする"},
+    {"id": "S1-S2", "category": "DRY", "description": "normalize_path() を共通ユーティリティに配置"},
+    {"id": "S1-S3", "category": "YAGNI", "description": "未実装のSymbolKeywordMatchをRelationTypeから除外"}
+  ],
+  "nice_to_have": [
+    {"id": "S1-N1", "category": "OCP", "description": "スコア重み定数を明示的に定義"}
+  ],
+  "summary": "SOLID/KISS/YAGNI/DRY の観点で大きな問題なし。normalize_path配置とYAGNI違反が主な改善点。"
+}

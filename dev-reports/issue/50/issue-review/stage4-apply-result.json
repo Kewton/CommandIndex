@@ -1,0 +1,38 @@
+{
+  "stage": 4,
+  "description": "Stage 3 影響範囲レビュー指摘事項をIssue #50に反映",
+  "applied_fixes": [
+    {
+      "id": "S1",
+      "action": "タグ取得方法に「tantivy の TermQuery を使用して path 完全一致で高速検索」を追記。"
+    },
+    {
+      "id": "S4",
+      "action": "モジュール設計セクションを追加。スコアリングロジックを src/search/related.rs に分離する方針を明記。"
+    },
+    {
+      "id": "S1-API",
+      "action": "新規実装APIに search_by_exact_path(path) を追加。"
+    },
+    {
+      "id": "N4",
+      "action": "パス正規化セクションを追加。入力パスの正規化ルールを明記。"
+    }
+  ],
+  "skipped": [
+    {
+      "id": "M5",
+      "reason": "データ互換性（スキーマバージョン変更）はリリース時対応。Issue #50のスコープ外。"
+    },
+    {
+      "id": "S5",
+      "reason": "index.rsのロールバック処理の論理バグは既存コードの問題であり、Issue #50のスコープ外。別Issueで対応すべき。"
+    },
+    {
+      "id": "S6",
+      "reason": "Markdown削除時のfile_linksテストカバレッジは既存テストの改善であり、Issue #50実装時のテスト追加で対応。"
+    }
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/50"
+}

@@ -79,6 +79,37 @@ pub fn format_symbol_results(
     }
 }
 
+/// 関連検索結果
+#[derive(Debug, Clone)]
+pub struct RelatedSearchResult {
+    pub file_path: String,
+    pub score: f32,
+    pub relation_types: Vec<RelationType>,
+}
+
+/// 関連タイプ
+#[derive(Debug, Clone)]
+pub enum RelationType {
+    MarkdownLink,
+    ImportDependency,
+    TagMatch { matched_tags: Vec<String> },
+    PathSimilarity,
+    DirectoryProximity,
+}
+
+/// 関連検索結果を指定フォーマットで出力する
+pub fn format_related_results(
+    results: &[RelatedSearchResult],
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_related_human(results, writer),
+        OutputFormat::Json => json::format_related_json(results, writer),
+        OutputFormat::Path => path::format_related_path(results, writer),
+    }
+}
+
 /// 検索結果を指定フォーマットで出力する
 // NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討
 pub fn format_results(

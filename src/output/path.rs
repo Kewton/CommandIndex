@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
-use crate::output::{OutputError, SymbolSearchResult};
+use crate::output::{OutputError, RelatedSearchResult, SymbolSearchResult};
 
 /// Path形式で検索結果を出力する（重複除去）
 pub fn format_path(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
@@ -9,6 +9,20 @@ pub fn format_path(results: &[SearchResult], writer: &mut dyn Write) -> Result<(
     for result in results {
         if seen.insert(&result.path) {
             writeln!(writer, "{}", result.path)?;
+        }
+    }
+    Ok(())
+}
+
+/// 関連検索結果をpath形式で出力する（重複除去）
+pub fn format_related_path(
+    results: &[RelatedSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let mut seen = std::collections::HashSet::new();
+    for result in results {
+        if seen.insert(&result.file_path) {
+            writeln!(writer, "{}", result.file_path)?;
         }
     }
     Ok(())

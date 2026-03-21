@@ -432,6 +432,34 @@ impl SymbolStore {
         let rows = stmt.query_map(params![target_module], import_from_row)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
+
+    /// Find import records whose source file matches exactly.
+    /// Returns all modules that the given file imports.
+    pub fn find_imports_by_source(
+        &self,
+        source_file: &str,
+    ) -> Result<Vec<ImportInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_module, imported_names, file_hash
+             FROM dependencies WHERE source_file = ?1",
+        )?;
+        let rows = stmt.query_map(params![source_file], import_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Find file links where the given file is the target.
+    /// Returns all files that link to the given target file.
+    pub fn find_file_links_by_target(
+        &self,
+        target_file: &str,
+    ) -> Result<Vec<FileLinkInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_file, link_type, file_hash
+             FROM file_links WHERE target_file = ?1",
+        )?;
+        let rows = stmt.query_map(params![target_file], file_link_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -760,5 +788,63 @@ mod tests {
         let _store = SymbolStore::open(&db_path).unwrap();
 
         assert!(db_path.exists());
+    }
+
+    #[test]
+    fn test_find_imports_by_source() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let deps = vec![
+            sample_import("src/main.rs", "std::io"),
+            sample_import("src/main.rs", "serde"),
+            sample_import("src/lib.rs", "std::io"),
+        ];
+        store.insert_dependencies(&deps).unwrap();
+
+        let results = store.find_imports_by_source("src/main.rs").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].source_file, "src/main.rs");
+    }
+
+    #[test]
+    fn test_find_imports_by_source_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert!(
+            store
+                .find_imports_by_source("nonexistent.rs")
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_find_file_links_by_target() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let links = vec![
+            sample_file_link("docs/a.md", "docs/b.md", "WikiLink"),
+            sample_file_link("docs/c.md", "docs/b.md", "MarkdownLink"),
+            sample_file_link("docs/a.md", "docs/d.md", "WikiLink"),
+        ];
+        store.insert_file_links(&links).unwrap();
+
+        let results = store.find_file_links_by_target("docs/b.md").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].target_file, "docs/b.md");
+    }
+
+    #[test]
+    fn test_find_file_links_by_target_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert!(
+            store
+                .find_file_links_by_target("nonexistent.md")
+                .unwrap()
+                .is_empty()
+        );
     }
 }
