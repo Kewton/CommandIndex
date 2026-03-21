@@ -1,0 +1,22 @@
+{
+  "stage": 1,
+  "type": "design_principles",
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "truncate_body の 0=無制限ロジックを format_human 側で制御すべき（SRP維持）",
+      "suggestion": "format_human 側で SnippetConfig.lines/chars が 0 のときに truncate_body をスキップする分岐にし、truncate_body 自体は純粋な切り詰め関数のまま保つ"
+    },
+    {
+      "id": "S2",
+      "title": "format_results にフォーマット非依存の SnippetConfig を渡すのは ISP 違反",
+      "suggestion": "format_results のシグネチャに SnippetConfig を追加せず、format_human のみ引数追加する方法を検討"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "lines=0 かつ chars=0 の振る舞いを明示"},
+    {"id": "N3", "title": "入力上限値バリデーション不要の YAGNI 判断に補足注記"}
+  ],
+  "summary": "Must fix 0件。KISS/YAGNI意識した堅実な設計。改善点: (1) truncate_body の0特殊セマンティクスを呼び出し側で制御、(2) format_results のシグネチャにHuman専用設定を追加しないほうがクリーン"
+}

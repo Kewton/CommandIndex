@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "truncate_body の「0 = 無制限」仕様が現在の実装と矛盾",
+      "description": "受入条件に「--snippet-lines 0 で全文が表示される」とあるが、現在の truncate_body 実装では max_lines=0 を渡すと take(0) で0行になり、全文表示にはならない。max_chars=0 も同様。「0 = 無制限」のセマンティクスを実現するには truncate_body の内部ロジック改修が必要。",
+      "suggestion": "要件に「--snippet-lines 0 および --snippet-chars 0 は無制限を意味する」と明記し、truncate_body 関数内で 0 の場合は切り詰めをスキップするロジックを追加する旨を記載する。"
+    },
+    {
+      "id": "M2",
+      "title": "truncate_body の分岐ロジックと snippet-lines/snippet-chars の関係が不整合",
+      "description": "現在の truncate_body は lines.len() > 1 の場合は max_lines で切り詰め（max_chars 未使用）、1行以下の場合は max_chars で切り詰め（max_lines 未使用）という排他的な分岐。複数行テキストでは --snippet-chars が効かず、単一行テキストでは --snippet-lines が効かない。",
+      "suggestion": "この挙動をIssueに明記するか、truncate_body のロジックを改修して両方を適用する設計に変更するか方針を決定して記載する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "スニペット設定の受け渡し設計が不明確",
+      "description": "format_results は全フォーマットの共通エントリポイント。human 形式のみに影響する設定の受け渡し方針が不明。",
+      "suggestion": "SnippetConfig 構造体を定義し、format_results の引数に Option<SnippetConfig> として追加する設計を推奨。"
+    },
+    {
+      "id": "S2",
+      "title": "symbol検索・related検索へのスニペット設定の影響が未定義",
+      "description": "search サブコマンドには --symbol と --related モードもある。これらにスニペット設定が影響するかどうかが未定義。",
+      "suggestion": "「--symbol / --related モードではスニペット関連オプションは無視される」と明記する。"
+    },
+    {
+      "id": "S3",
+      "title": "入力バリデーションの仕様が未定義",
+      "description": "--snippet-lines / --snippet-chars に極端に大きな値が指定された場合の挙動が未定義。limit オプションでは .min(1000) でキャップしている前例がある。",
+      "suggestion": "上限値のバリデーションを定義すべき。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "テスト計画でスニペット設定のパラメータ化テストを追加",
+      "description": "新オプション対応後はパラメータ化したテストが必要。",
+      "suggestion": "受入条件にテストパターンの追加を含める。"
+    },
+    {
+      "id": "N2",
+      "title": "短縮エイリアスの検討",
+      "description": "--snippet-lines / --snippet-chars は長い。短縮形の検討。",
+      "suggestion": "--snippet-lines に -L、--snippet-chars に -C 等を検討。"
+    }
+  ],
+  "summary": "Issue の仮説検証結果はすべて正確。最重要の指摘: (1)「0 = 無制限」の仕様は現在の truncate_body 実装と矛盾する。(2) truncate_body の分岐ロジック上、max_lines と max_chars は排他的に適用されるため、両オプション同時指定時の挙動が期待と乖離する可能性がある。"
+}

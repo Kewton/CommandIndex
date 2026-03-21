@@ -1,5 +1,5 @@
 use commandindex::indexer::reader::SearchResult;
-use commandindex::output::{OutputFormat, format_results};
+use commandindex::output::{OutputFormat, SnippetConfig, format_results};
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
     SearchResult {
@@ -147,4 +147,75 @@ fn test_format_empty_results() {
             format
         );
     }
+}
+
+// --- Snippet config tests ---
+
+fn format_human_to_string(results: &[SearchResult], snippet_config: SnippetConfig) -> String {
+    colored::control::set_override(false);
+    let mut buf = Vec::new();
+    commandindex::output::human::format_human(results, &mut buf, snippet_config).unwrap();
+    String::from_utf8(buf).unwrap()
+}
+
+#[test]
+fn test_snippet_custom_lines() {
+    let body = "line1\nline2\nline3\nline4\nline5\nline6";
+    let results = vec![make_result("test.md", "Title", body, "")];
+    let config = SnippetConfig {
+        lines: 5,
+        chars: 120,
+    };
+    let output = format_human_to_string(&results, config);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line5"));
+    assert!(output.contains("..."));
+    assert!(!output.contains("line6"));
+}
+
+#[test]
+fn test_snippet_custom_chars() {
+    let body = "あ".repeat(100);
+    let results = vec![make_result("test.md", "Title", &body, "")];
+    let config = SnippetConfig {
+        lines: 2,
+        chars: 50,
+    };
+    let output = format_human_to_string(&results, config);
+    assert!(output.contains("..."));
+    // 50文字分の「あ」が含まれていること
+    assert!(output.contains(&"あ".repeat(50)));
+    // 51文字分は含まれていないこと
+    assert!(!output.contains(&"あ".repeat(51)));
+}
+
+#[test]
+fn test_snippet_lines_zero_unlimited() {
+    let body = "line1\nline2\nline3\nline4\nline5\nline6";
+    let results = vec![make_result("test.md", "Title", body, "")];
+    let config = SnippetConfig { lines: 0, chars: 0 };
+    let output = format_human_to_string(&results, config);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line6"));
+    assert!(!output.contains("..."));
+}
+
+#[test]
+fn test_snippet_chars_zero_unlimited() {
+    let body = "あ".repeat(200);
+    let results = vec![make_result("test.md", "Title", &body, "")];
+    let config = SnippetConfig { lines: 2, chars: 0 };
+    let output = format_human_to_string(&results, config);
+    // 単一行なのでchars=0(無制限)で全文表示される
+    assert!(output.contains(&body));
+    assert!(!output.contains("..."));
+}
+
+#[test]
+fn test_snippet_default_unchanged() {
+    let body = "line1\nline2\nline3\nline4";
+    let results = vec![make_result("test.md", "Title", body, "")];
+    let default_output = format_human_to_string(&results, SnippetConfig::default());
+    let format_results_output = format_to_string(&results, OutputFormat::Human);
+    assert_eq!(default_output, format_results_output);
 }

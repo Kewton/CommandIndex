@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
-use crate::output::{self, OutputError, OutputFormat, SymbolSearchResult};
+use crate::output::{self, OutputError, OutputFormat, SnippetConfig, SymbolSearchResult};
 
 #[derive(Debug)]
 pub enum SearchError {
@@ -88,6 +88,7 @@ pub fn run(
     options: &SearchOptions,
     filters: &SearchFilters,
     format: OutputFormat,
+    snippet_config: SnippetConfig,
 ) -> Result<(), SearchError> {
     let tantivy_dir = crate::indexer::index_dir(Path::new("."));
     if !tantivy_dir.exists() {
@@ -101,7 +102,14 @@ pub fn run(
     }
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_results(&results, format, &mut handle)?;
+    match format {
+        OutputFormat::Human => {
+            output::human::format_human(&results, &mut handle, snippet_config)?;
+        }
+        _ => {
+            output::format_results(&results, format, &mut handle)?;
+        }
+    }
     Ok(())
 }
 
