@@ -1,0 +1,1 @@
+{"stage": 4, "applied": ["入力ファイル数上限100件を追加", "機密ファイル露出対策（.cmindexignore 運用推奨）を追記", "strip_control_chars() 適用を明記", "normalize_path() の制限事項を明記"]}

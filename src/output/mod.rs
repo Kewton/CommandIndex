@@ -1,3 +1,4 @@
+pub mod context_pack;
 pub mod human;
 pub mod json;
 pub mod path;
@@ -6,6 +7,7 @@ use std::fmt;
 use std::io::Write;
 
 use clap::ValueEnum;
+use serde::Serialize;
 
 use crate::indexer::reader::SearchResult;
 
@@ -156,4 +158,34 @@ pub(crate) fn strip_control_chars(s: &str) -> String {
     s.chars()
         .filter(|c| !c.is_control() || *c == '\n')
         .collect()
+}
+
+/// AI向け文脈パッケージ
+#[derive(Debug, Serialize)]
+pub struct ContextPack {
+    pub target_files: Vec<String>,
+    pub context: Vec<ContextEntry>,
+    pub summary: ContextSummary,
+}
+
+/// コンテキストエントリ
+#[derive(Debug, Serialize)]
+pub struct ContextEntry {
+    pub path: String,
+    pub relation: String,
+    pub score: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snippet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symbols: Option<Vec<String>>,
+}
+
+/// コンテキストサマリー
+#[derive(Debug, Serialize)]
+pub struct ContextSummary {
+    pub total_related: usize,
+    pub included: usize,
+    pub estimated_tokens: usize,
 }
