@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "index_file_and_upsert()のMarkdown分岐でsymbol_store渡しの明示が必要", "suggestion": "L481の呼び出し変更を設計書に明記"},
+    {"id": "M2", "title": "file_linksテーブルの外部キー設計を明記", "suggestion": "file_linksはsource_file TEXTで識別、symbolsへのFK参照なしと明記"},
+    {"id": "M3", "title": "SearchErrorにSchemaVersionMismatchバリアントがない", "suggestion": "SearchError/StatusErrorにSchemaVersionMismatchバリアント追加、From実装でマッチ"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "run_incremental()でのv1→v2マイグレーション戦略不明確", "suggestion": "SchemaVersionMismatch時にclean→indexを促すエラー伝播を明記"},
+    {"id": "S2", "title": "FileLinkInfoに行番号情報の要否が不明", "suggestion": "行番号は含めない方針を明記（パーサー変更不要）"},
+    {"id": "S3", "title": "run_incremental()の削除条件拡張が暗黙の依存", "suggestion": "全ファイルタイプでdelete_by_file()を呼ぶ方式に変更"},
+    {"id": "S4", "title": "is_indexable_link()の配置場所がCLI層", "suggestion": "pub関数として実装し将来の移動に備える"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "file_linksテーブルのインデックス定義", "suggestion": "設計書に既に記載済み"},
+    {"id": "N2", "title": "insert_file_linksのバッチサイズ考慮", "suggestion": "unchecked_transactionでバルクinsert"},
+    {"id": "N3", "title": "MarkdownDocument.linksの重複排除", "suggestion": "重複許容の方針を明記"}
+  ]
+}

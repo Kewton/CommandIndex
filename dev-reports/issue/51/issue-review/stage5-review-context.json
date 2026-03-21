@@ -1,0 +1,40 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "SchemaVersionMismatchの挙動説明が既存コードと一致していない",
+      "description": "Issueでは「update時にsymbols.dbのschema version不一致が起きた場合、既存のSchemaVersionMismatchハンドリングでclean -> indexを促すメッセージが出る」としているが、現状の実装ではrun_incremental()はstate.jsonの不一致しかIndexError::SchemaVersionMismatchに変換していない。symbols.db側はSymbolStore::open()がSymbolStoreError::SchemaVersionMismatchを返し、そのままIndexError::SymbolStoreになるため、実際の表示はrebuild案内付きではなく単なるSymbol store error: Schema version mismatch...になる。",
+      "suggestion": "Issueの実装方針に、SymbolStoreError::SchemaVersionMismatchをIndexError::SchemaVersionMismatch相当に正規化する変更を明記するか、少なくともupdateコマンドでrebuild案内文を出す専用ハンドリングを追加すると記載する。"
+    },
+    {
+      "id": "M2",
+      "title": "Markdownのfile_links更新時の失敗時整合性が未定義",
+      "description": "既存のindex_code_file()はsymbols.dbへのdelete/insert後にTantivy書き込みが失敗した場合、delete_by_file()でロールバックして整合性を保っている。一方、IssueのMarkdown方針はdelete-before-insertまでは書かれているが、writer.add_section()失敗時にfile_linksをどう巻き戻すかが書かれていない。",
+      "suggestion": "Issueに、Markdownでも既存コードファイルと同じ整合性ルールを適用する方針を追記する。「全sectionのTantivy追加成功後にfile_linksをinsertする」か、「先にinsertするなら失敗時にdelete_by_file()でロールバックする」のどちらかを明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "Markdownリンクのtarget解決スコープがWikiLinkだけに限定されており不十分",
+      "description": "IssueはWikiLinkの未解決保存だけを明示しているが、標準Markdownリンクも現状パーサーは./docs.mdのような生文字列を返すだけで、source_fileからの相対解決は行っていない。",
+      "suggestion": "Issueに「このIssueではMarkdownLinkもraw targetを格納するだけで、source_file基準の正規化・実ファイル解決は後続Issueで扱う」を明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "除外条件がhttp/httpsのみではファイル間参照として不正確",
+      "description": "extract_markdown_links()は#sectionのようなフラグメント、mailto:など他スキーム、![alt](img.png)の画像参照相当まで拾いうる。http/httpsだけ除外するとfile_linksに文書間参照ではないレコードが混入する余地がある。",
+      "suggestion": "受け入れ基準を少し厳密化し、「文書間参照として格納する対象」を定義する。少なくともfragment-only、明らかな外部スキーム、画像リンクをどう扱うかを明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "link_typeの保存値を明文化した方がよい",
+      "description": "既存のLinkTypeはDisplay実装でWikiLink / MarkdownLinkを返す。保存値の表記ゆれルールが書かれていないため、後続クエリやテストが実装依存になりやすい。",
+      "suggestion": "link_typeの保存値を明記する。例えばwiki / markdownの固定値にするか、既存DisplayのWikiLink / MarkdownLinkをそのまま使うかを決める。"
+    }
+  ],
+  "summary": "1回目レビューの主要指摘は概ね反映できているが、2点の重要なズレがある。最大の問題はsymbols.dbのschema version不一致時にrebuild案内が出るという前提が現行コードでは成立していないこと。加えて、Markdownのfile_linksをupdateフローでdelete-before-insertする方針だけでは、Tantivy書き込み失敗時のロールバック規約が不足。次点では、MarkdownLinkのtargetも未解決保存なのか正規化保存なのかを明文化した方がよく、除外条件もhttp/httpsのみでは精度不足。",
+  "reviewer": "Codex (gpt-5.4)"
+}

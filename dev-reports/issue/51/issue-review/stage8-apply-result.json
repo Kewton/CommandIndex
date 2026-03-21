@@ -1,0 +1,14 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M1", "action": "search --symbolとstatusコマンドを影響範囲テーブルに追加。SchemaVersionMismatch正規化の対象として明記"},
+    {"id": "M2", "action": "全コマンド共通でSchemaVersionMismatchを統一する方針を「スキーマバージョン不一致時の挙動」セクションに追記"},
+    {"id": "S1", "action": "既存テストの見直し対象（SymbolStore単体テスト、incremental_update、e2e_update、e2e_phase3_integration）を影響範囲テーブルに具体化"},
+    {"id": "S2", "action": "パフォーマンス影響を影響範囲テーブルに追加"},
+    {"id": "S3", "action": "内部依存（parser::link、schema version管理）を依存関係セクションに追記"},
+    {"id": "N1", "action": "SQLiteインデックスのread/writeトレードオフを格納先セクションに追記"},
+    {"id": "N2", "action": "cleanコマンドのschema mismatch時の役割変化を影響範囲テーブルに追記"}
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/51"
+}

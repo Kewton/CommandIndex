@@ -1,0 +1,6 @@
+{"stage": 8, "applied_fixes": [
+  {"id": "M1", "action": "search --symbolのSchemaVersionMismatch時の挙動をfail-fastに明記（影響範囲テーブル更新）"},
+  {"id": "S1", "action": "テスト影響は9.3で既に記載。Stage 6で修正済み"},
+  {"id": "S2-S4", "action": "Stage 6で反映済みのため追加対応不要"},
+  {"id": "N2", "action": "cleanの運用面は既にIssue本文に記載済み"}
+]}

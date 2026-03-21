@@ -1,0 +1,19 @@
+{
+  "stage": 7,
+  "type": "整合性・影響分析レビュー（2回目 - Codex）",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {"id": "M1", "title": "search --symbolとstatusの仕様変更を明示", "description": "どちらをfail-fastにするか、どちらは警告付き継続にするかを決める必要がある", "suggestion": "影響範囲に仕様変更を明記。既存UX変更理由の記載と専用テスト追加"},
+    {"id": "note", "title": "state.json/symbols.db混同、整合性フロー矛盾はStage 6で反映済み", "description": "前回反映済みのため追加対応不要"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "テスト影響の棚卸し不足", "suggestion": "影響範囲に既存テスト群を具体的に列挙"},
+    {"id": "S2", "title": "is_indexable_link()の配置（Stage 6で反映済み: cli/index.rsに配置）"},
+    {"id": "S3", "title": "画像リンク除外がパーサー仕様依存", "suggestion": "parser仕様変更時に再レビューが必要な前提を記載"},
+    {"id": "S4", "title": "未知link_type/破損データ時の扱い（Stage 6で反映済み）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "DoS上限値の根拠補足（Stage 6で反映済み）"},
+    {"id": "N2", "title": "cleanの運用面での役割補足"}
+  ]
+}

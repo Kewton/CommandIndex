@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "file_linksテーブル追加時のschema_versionインクリメントが未記載",
+      "description": "file_linksテーブルを新規追加する場合、CURRENT_SYMBOL_SCHEMA_VERSIONを1→2にインクリメントする必要があり、既存DBとの互換性対応（マイグレーションまたはclean&rebuild）が必要になるが、その点が記載されていない。",
+      "suggestion": "CURRENT_SYMBOL_SCHEMA_VERSIONを2に上げ、create_tables()にfile_linksのCREATE文を追加し、マイグレーション戦略（clean&rebuildで十分か）を明記する。"
+    },
+    {
+      "id": "M2",
+      "title": "delete_by_file()のfile_links対応が未記載",
+      "description": "現在のdelete_by_file()はsymbolsとdependenciesの2テーブルしか削除しない。file_linksテーブルを追加した場合、差分更新時のdelete_by_file()でfile_linksも削除する必要がある。",
+      "suggestion": "受け入れ基準に「差分更新（update）時にファイル削除・変更でfile_linksレコードが正しく削除・再挿入される」を明示的に追加する。SymbolStore::delete_by_file()にDELETE FROM file_links WHERE source_file = ?1を追加する。"
+    },
+    {
+      "id": "M3",
+      "title": "index_markdown_file()にsymbol_store引数が渡されていない",
+      "description": "現在のindex_markdown_file()のシグネチャにはsymbol_store引数がない。リンクをDBに保存するにはsymbol_storeへのアクセスが必要だが、この変更点がIssueに記載されていない。",
+      "suggestion": "実装方針に「index_markdown_file()のシグネチャにsymbol_store: &SymbolStoreを追加し、呼び出し元も修正する」ことを明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "link_textカラムの値が不明確",
+      "description": "file_linksテーブルのlink_textカラムについて、現在のLink構造体にはtargetとlink_typeしかなく、Markdownリンクのテキスト部分（[text](url)のtext）は保持されていない。",
+      "suggestion": "Link構造体にdisplay_textフィールドを追加するか、file_linksテーブルからlink_textカラムを除外しlink_typeカラムに変更する。YAGNI方針を推奨。"
+    },
+    {
+      "id": "S2",
+      "title": "外部URL(http/https)リンクのフィルタリング方針が未記載",
+      "description": "extract_markdown_links()はhttps://example.comなどの外部URLも抽出する。file_linksテーブルの目的が「ファイル間の参照関係」であれば、外部URLは除外すべき。",
+      "suggestion": "受け入れ基準に「外部URL（http/https）リンクはfile_linksに格納しない」を追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "WikiLinkのターゲット解決方針が未記載",
+      "description": "[[wiki-link]]のtargetは拡張子なしのファイル名であり、実際のファイルパスとの対応関係が不明確。",
+      "suggestion": "このIssueでは「抽出・格納のみ」とスコープを限定し、パス解決は後続Issueに委ねる旨を記載する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "file_linksテーブルにlink_typeカラムの追加を検討",
+      "description": "Link構造体にはlink_type(WikiLink/MarkdownLink)があるが、提案されたfile_linksテーブルにはlink_typeカラムがない。",
+      "suggestion": "file_linksテーブルにlink_type TEXTカラムを追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "バルクインサートの考慮",
+      "description": "dependenciesと同様にfile_linksもバルクインサートメソッドを用意すべき。",
+      "suggestion": "SymbolStoreにinsert_file_links(&self, links: &[FileLinkInfo])メソッドを追加する。"
+    },
+    {
+      "id": "N3",
+      "title": "テストケースの具体的な記載",
+      "description": "受け入れ基準にcargo testパスとあるが、具体的にどのようなテストを追加するかが不明確。",
+      "suggestion": "具体的なテストケースを明記する。"
+    }
+  ],
+  "summary": "Issue #51の核心である「index_markdown_file()でdoc.linksをDB保存する処理が欠落」という問題認識は正確。しかし、実装方針に3つの重要な欠落がある: (1) schema_versionインクリメントの考慮漏れ、(2) delete_by_file()のfile_links対応の未記載、(3) index_markdown_file()のシグネチャ変更の未記載。また、link_textカラムは現在のLink構造体に対応するフィールドがなく実装不可能であること、外部URLのフィルタリング方針が未定であることも対処が必要。"
+}

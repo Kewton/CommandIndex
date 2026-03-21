@@ -1,0 +1,44 @@
+{
+  "critical": [
+    {
+      "id": "C1",
+      "title": "Markdown再インデックス失敗時にfile_linksが消失する",
+      "description": "`src/cli/index.rs` の `index_markdown_file()` は冒頭で `symbol_store.delete_by_file(rel_path)` を実行した後、Tantivy への `writer.add_section()` を進めています。複数 section の途中で `add_section()` が失敗すると、その場でエラー復帰しており、旧 `file_links` は既に削除済みでロールバックされません。`run_incremental()` では旧 Tantivy ドキュメントも先に `writer.delete_by_path()` しているため、DB 側だけ先に欠落する不整合状態を作れます。",
+      "suggestion": "Markdown でもコードファイル同様に整合性を担保してください。少なくとも `writer.add_section()` 失敗時に `symbol_store.delete_by_file(rel_path)` を明示的に実行するか、より安全には Tantivy 追加成功後に `file_links` を書き込む順序へ変更してください。"
+    },
+    {
+      "id": "C2",
+      "title": "差分更新で既存データを先に削除してから失敗すると永続状態が壊れる",
+      "description": "`src/cli/index.rs` の `run_incremental()` は modified/deleted ファイルで `writer.delete_by_path()` を先に行い、Markdown とコードの両方で `symbol_store.delete_by_file()` も早い段階で実行します。以降の処理でパース失敗・SQLite失敗・Tantivy失敗が起きると関数はそのままエラー終了しますが、`SymbolStore` の削除は各メソッド内で `unchecked_transaction()` により即 commit 済みです。結果として commit されなかった Tantivy 更新と、既に反映済みの SQLite 削除が食い違います。",
+      "suggestion": "差分更新の単位で整合性戦略を見直してください。最低限、ファイル単位の DB 更新を成功時にだけ commit するか、失敗時に復元できるよう順序を変更してください。`delete_by_file()` を先行させるなら rollback 設計が必要です。"
+    }
+  ],
+  "warnings": [
+    {
+      "id": "W1",
+      "title": "外部スキーム判定が不完全で危険なURIを内部リンク扱いする",
+      "description": "`src/cli/index.rs` の `is_indexable_link()` は `http://`, `https://`, `mailto:`, `://` を除外していますが、`javascript:`, `data:`, `file:`, `tel:` など `://` を含まないスキームは通過します。現状は保存のみでも、後続機能で表示・解決・開封に使う際の踏み台になります。入力バリデーション不足です。",
+      "suggestion": "URI スキームを allowlist 方式に切り替え、相対パスと WikiLink だけを許可してください。少なくとも `^[a-zA-Z][a-zA-Z0-9+.-]*:` に一致する absolute URI は一律除外する方が安全です。"
+    },
+    {
+      "id": "W2",
+      "title": "statusがSymbolStoreエラーを握りつぶして誤った正常系を返す",
+      "description": "`src/cli/status.rs` の `get_symbol_count()` は schema mismatch 以外の `SymbolStore::open()` / `count_all()` エラーを 0 件として握りつぶします。DB 破損や I/O 異常があっても `status` が成功し、運用上の異常検知を妨げます。セキュリティ事故の直接原因ではないものの、破損状態の見逃しにつながります。",
+      "suggestion": "少なくとも open/count の失敗は警告を出すか、`StatusError` に昇格してください。schema mismatch だけ特別扱いするなら、それ以外を黙殺しない方がよいです。"
+    },
+    {
+      "id": "W3",
+      "title": "フル再構築時のsymbols.db削除失敗を無視している",
+      "description": "`src/cli/index.rs` の `run()` は既存 `symbols.db`, `-wal`, `-shm` の削除で `remove_file()` エラーを無視しています。権限不足やロック中で削除できなくても続行するため、意図しない古い DB を残したまま `SymbolStore::open()` が動く可能性があります。即時のパニックはないものの、障害解析を難しくします。",
+      "suggestion": "存在しているのに削除できなかった場合は警告またはエラーにしてください。少なくとも `NotFound` 以外は握りつぶさない方が安全です。"
+    },
+    {
+      "id": "W4",
+      "title": "Schema version文字列のparse失敗を0へ潰している",
+      "description": "`src/indexer/symbol_store.rs` の `SymbolStore::open()` は `schema_meta.value` の parse 失敗を `unwrap_or(0)` で 0 に変換しています。パニックは回避できていますが、DB 破損と単純な version mismatch を区別できず、原因追跡が難しくなります。",
+      "suggestion": "parse失敗は `SchemaVersionMismatch` ではなく、破損データとして別エラーにするか、少なくともログ上で不正値だったことが分かるようにしてください。"
+    }
+  ],
+  "summary": "最重要の問題は `src/cli/index.rs` の整合性です。Markdown の再インデックスと差分更新の両方で、SQLite 側の削除が先に commit される一方、後続の Tantivy 更新や再挿入が失敗するとロールバックされず、インデックスと DB が食い違います。セキュリティ面では SQL インジェクションや unsafe の問題は見当たりませんが、リンクの外部スキーム判定が不完全で、将来のリンク利用機能へ危険な URI を持ち込む余地があります。加えて `status` のエラー握りつぶしと DB 削除失敗の黙殺は障害の見逃しにつながります。",
+  "requires_fix": true
+}

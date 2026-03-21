@@ -1,0 +1,12 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "SymbolStoreError::SchemaVersionMismatchをIndexError::SchemaVersionMismatchに正規化する方針を「スキーマバージョン不一致時の挙動」セクションに追記"},
+    {"id": "M2", "action": "整合性ルールセクションを新設。Tantivy書き込み成功後にfile_linksをinsert、失敗時はdelete_by_file()でロールバックする方針を明記"},
+    {"id": "S1", "action": "MarkdownLinkもraw target文字列をそのまま格納する方針を「ターゲット解決について」セクションに追記"},
+    {"id": "S2", "action": "除外対象を拡充（外部スキーム、フラグメントのみリンク、画像リンク）。受け入れ基準とテストケースにも反映"},
+    {"id": "N1", "action": "link_typeの保存値（\"WikiLink\" / \"MarkdownLink\"）を明記"}
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/51"
+}

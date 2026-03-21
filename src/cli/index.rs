@@ -128,12 +128,43 @@ impl From<CodeParseError> for IndexError {
 
 impl From<SymbolStoreError> for IndexError {
     fn from(e: SymbolStoreError) -> Self {
-        IndexError::SymbolStore(e)
+        match e {
+            SymbolStoreError::SchemaVersionMismatch { .. } => IndexError::SchemaVersionMismatch,
+            other => IndexError::SymbolStore(other),
+        }
     }
 }
 
 /// コードファイル識別用の heading_level 定数（Markdown の heading_level 1-6 と区別するため 0 を使用）
 const CODE_FILE_HEADING_LEVEL: u64 = 0;
+
+/// 1ファイルあたりのリンク格納上限
+const MAX_FILE_LINKS: usize = 10_000;
+
+/// インデックスに格納すべきリンクかどうかを判定する
+fn is_indexable_link(link: &crate::parser::link::Link) -> bool {
+    let target = &link.target;
+    if target.len() > 1024 {
+        return false;
+    }
+    if target.starts_with('#') {
+        return false;
+    }
+    // Exclude absolute URIs: any scheme matching ^[a-zA-Z][a-zA-Z0-9+.-]*:
+    if let Some(colon_pos) = target.find(':') {
+        let scheme = &target[..colon_pos];
+        if !scheme.is_empty()
+            && scheme.as_bytes()[0].is_ascii_alphabetic()
+            && scheme
+                .bytes()
+                .skip(1)
+                .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'-' || b == b'.')
+        {
+            return false;
+        }
+    }
+    true
+}
 
 /// parser::code::SymbolInfo を symbol_store::SymbolInfo に変換する
 fn convert_symbol(
@@ -293,6 +324,7 @@ fn index_markdown_file(
     rel_path: &str,
     writer: &mut IndexWriterWrapper,
     manifest: &mut Manifest,
+    symbol_store: Option<&SymbolStore>,
 ) -> Result<u64, IndexFileResult> {
     let doc = match markdown::parse_file(file_path) {
         Ok(doc) => doc,
@@ -302,16 +334,56 @@ fn index_markdown_file(
         }
     };
 
-    let section_count = doc.sections.len() as u64;
-    for section in &doc.sections {
-        let section_doc = section_to_doc(section, rel_path, doc.frontmatter.as_ref());
-        writer
-            .add_section(&section_doc)
+    let hash =
+        manifest::compute_file_hash(file_path).unwrap_or_else(|_| "sha256:unknown".to_string());
+
+    // Delete old file links if symbol_store is available
+    if let Some(store) = symbol_store {
+        store
+            .delete_by_file(rel_path)
             .map_err(|e| IndexFileResult::Error(e.into()))?;
     }
 
-    let hash =
-        manifest::compute_file_hash(file_path).unwrap_or_else(|_| "sha256:unknown".to_string());
+    let section_count = doc.sections.len() as u64;
+    for section in &doc.sections {
+        let section_doc = section_to_doc(section, rel_path, doc.frontmatter.as_ref());
+        if let Err(e) = writer.add_section(&section_doc) {
+            // Tantivy write failed: rollback SQLite deletion
+            if let Some(store) = symbol_store {
+                let _ = store.delete_by_file(rel_path);
+            }
+            return Err(IndexFileResult::Error(e.into()));
+        }
+    }
+
+    // Store file links after successful Tantivy writes
+    if let Some(store) = symbol_store {
+        let mut filtered_links: Vec<_> =
+            doc.links.iter().filter(|l| is_indexable_link(l)).collect();
+        if filtered_links.len() > MAX_FILE_LINKS {
+            eprintln!(
+                "Warning: {rel_path} has {} links, truncating to {MAX_FILE_LINKS}",
+                filtered_links.len()
+            );
+            filtered_links.truncate(MAX_FILE_LINKS);
+        }
+        let file_links: Vec<_> = filtered_links
+            .iter()
+            .map(|l| crate::indexer::symbol_store::FileLinkInfo {
+                id: None,
+                source_file: rel_path.to_string(),
+                target_file: l.target.clone(),
+                link_type: l.link_type.to_string(),
+                file_hash: hash.clone(),
+            })
+            .collect();
+        if !file_links.is_empty()
+            && let Err(e) = store.insert_file_links(&file_links)
+        {
+            eprintln!("Warning: file link insert failed for {rel_path}: {e}");
+        }
+    }
+
     let last_modified = std::fs::metadata(file_path)
         .and_then(|m| m.modified())
         .map(DateTime::<Utc>::from)
@@ -478,7 +550,9 @@ fn index_file_and_upsert(
 ) -> Result<u64, IndexFileResult> {
     let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
     match FileType::from_extension(ext) {
-        Some(FileType::Markdown) => index_markdown_file(file_path, rel_path, writer, manifest),
+        Some(FileType::Markdown) => {
+            index_markdown_file(file_path, rel_path, writer, manifest, symbol_store)
+        }
         Some(ft) if ft.is_code() => {
             let store = symbol_store.ok_or(IndexFileResult::Skipped)?;
             index_code_file(file_path, rel_path, writer, manifest, store, ft)
@@ -572,11 +646,9 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
         // Track old sections count
         if let Some(entry) = old_manifest.find_by_path(&path_str) {
             old_deleted_sections += entry.sections;
-            // Delete symbols for code files
-            if entry.file_type.is_code() {
-                symbol_store.delete_by_file(&path_str)?;
-            }
         }
+        // Delete symbols/dependencies/file_links for all file types
+        symbol_store.delete_by_file(&path_str)?;
 
         old_manifest.remove_by_path(&path_str);
         deleted_files += 1;
@@ -677,6 +749,7 @@ pub fn run_incremental(path: &Path) -> Result<IncrementalSummary, IndexError> {
 mod tests {
     use super::*;
     use crate::parser::code::{SymbolInfo as CodeSymbolInfo, SymbolKind};
+    use crate::parser::link::{Link, LinkType};
     use std::path::PathBuf;
 
     #[test]
@@ -748,11 +821,109 @@ mod tests {
 
     #[test]
     fn test_index_error_from_symbol_store_error() {
+        let e = SymbolStoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows);
+        let ie: IndexError = e.into();
+        assert!(matches!(ie, IndexError::SymbolStore(_)));
+    }
+
+    #[test]
+    fn test_index_error_from_symbol_store_schema_version_mismatch() {
         let e = SymbolStoreError::SchemaVersionMismatch {
             expected: 1,
             found: 99,
         };
         let ie: IndexError = e.into();
-        assert!(matches!(ie, IndexError::SymbolStore(_)));
+        assert!(matches!(ie, IndexError::SchemaVersionMismatch));
+    }
+
+    #[test]
+    fn test_is_indexable_link_local_file() {
+        let link = Link {
+            target: "docs/other.md".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_wikilink() {
+        let link = Link {
+            target: "other-note".to_string(),
+            link_type: LinkType::WikiLink,
+        };
+        assert!(is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_http() {
+        let link = Link {
+            target: "http://example.com".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_https() {
+        let link = Link {
+            target: "https://example.com/page".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_other_protocol() {
+        let link = Link {
+            target: "ftp://example.com/file".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_mailto() {
+        let link = Link {
+            target: "mailto:user@example.com".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_anchor_only() {
+        let link = Link {
+            target: "#section-heading".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_rejects_too_long() {
+        let link = Link {
+            target: "a".repeat(1025),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(!is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_accepts_max_length() {
+        let link = Link {
+            target: "a".repeat(1024),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(is_indexable_link(&link));
+    }
+
+    #[test]
+    fn test_is_indexable_link_accepts_relative_with_anchor() {
+        // "docs/page.md#section" is a local file link with anchor - should be indexable
+        let link = Link {
+            target: "docs/page.md#section".to_string(),
+            link_type: LinkType::MarkdownLink,
+        };
+        assert!(is_indexable_link(&link));
     }
 }
