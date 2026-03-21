@@ -1,0 +1,6 @@
+{
+  "stage": 6,
+  "action": "apply_review",
+  "applied_items": ["M1", "M2", "M3", "M4", "S2", "S3", "S4", "S5"],
+  "summary": "Stage 5 Codexレビューの指摘を反映。実装箇所をsrc/cli/search.rsベースに修正、--semantic経路を初期スコープ外に限定、top_candidatesデフォルト50→20に縮小、全体タイムアウト30秒追加、document_text組み立て規則明記、provider型をenum化、--rerank-topにrequires設定追加。"
+}

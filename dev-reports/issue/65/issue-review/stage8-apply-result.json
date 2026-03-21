@@ -1,0 +1,6 @@
+{
+  "stage": 8,
+  "action": "apply_review",
+  "applied_items": ["M1", "M2", "M3", "M4", "S1", "S2", "S4"],
+  "summary": "Stage 7 Codex影響範囲レビューの指摘を反映。候補取得数をmax(limit, rerank_top)に変更、既存テスト無影響を明記、パフォーマンス要件を運用目安に変更、Cohere初期実装はトレイト定義のみ、JSON score意味変更を注記、BM25フォールバック後もrerank適用、document_text最大長を4096文字に縮小。"
+}

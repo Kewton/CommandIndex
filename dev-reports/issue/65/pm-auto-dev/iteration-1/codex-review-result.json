@@ -1,0 +1,55 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/main.rs",
+      "line": 69,
+      "title": "config.toml の top_candidates が実質無効化されている",
+      "detail": "`--rerank-top` に `default_value_t = 20` を付けているため、ユーザーが指定しなくても常に 20 が `search::run()` に渡ります。結果として `src/cli/search.rs:123-126` の候補数拡大や `src/cli/search.rs:650-652` の rerank 対象数で config の `rerank.top_candidates` が一切使われません。仕様と実装が食い違っており、設定変更が効かない潜在バグです。"
+    },
+    {
+      "file": "src/cli/search.rs",
+      "line": 670,
+      "title": "provider が不正な index を返しても静かに結果を壊す",
+      "detail": "`try_rerank()` は `rerank_results` の `index` を検証せず、`results.get(rr.index)` を `filter_map` で黙って無視しています。さらに重複 index もそのまま複製されます。悪いレスポンスや実装バグが入ると、結果件数の欠落や重複表示が起きても検知できません。少なくとも範囲外・重複 index はエラーとして元結果へフォールバックすべきです。"
+    },
+    {
+      "file": "src/rerank/ollama.rs",
+      "line": 67,
+      "title": "全体タイムアウトが in-flight リクエストを止められていない",
+      "detail": "全体期限の判定は各リクエスト送信前のみです。`reqwest` の個別 timeout は固定 10 秒なので、`timeout_secs` が 1 秒でも最後の 1 件で最大 10 秒待ちます。設計上の \"全体タイムアウト\" を満たしておらず、長時間ブロックする潜在バグです。"
+    },
+    {
+      "file": "src/rerank/ollama.rs",
+      "line": 106,
+      "title": "API エラーレスポンス本文をそのまま出力しており情報漏えいリスクがある",
+      "detail": "非 2xx 時のレスポンス本文を無制限で `RerankError::ApiError.message` に格納しています。上位の `eprintln!` でそのまま stderr に流れるため、プロキシや中間層が返した長文エラー、認証関連情報、HTML 等が露出します。長さ制限とサニタイズを入れるべきです。"
+    },
+    {
+      "file": "src/rerank/ollama.rs",
+      "line": 140,
+      "title": "query と document_text を生でプロンプトに差し込んでおりプロンプトインジェクションに弱い",
+      "detail": "ドキュメントをバッククォートで囲っていても、本文や query 自体にバッククォートや指示文が含まれるケースは防げません。悪意あるインデックス内容で \"数値以外を返す\" よう誘導されると rerank 品質が崩れます。少なくとも delimiter のエスケープと、応答契約逸脱時の監視強化が必要です。"
+    },
+    {
+      "file": "src/rerank/ollama.rs",
+      "line": 150,
+      "title": "スコア抽出が厳しすぎて正常応答の一部を 0 点化する",
+      "detail": "`parse_score()` は文字列全体が `f32` として parse できる場合しか受け付けません。LLM は `8/10` や `Score: 8` のような軽微な揺れを返しやすく、その場合は全部 0 点になります。想定どおりの graceful degradation ではあるものの、順位が大きく壊れる実運用バグにつながります。最初の数値トークン抽出程度は入れた方が安全です。"
+    },
+    {
+      "file": "src/rerank/mod.rs",
+      "line": 79,
+      "title": "未使用の ProviderNotImplemented が残っており設計と実装が不一致",
+      "detail": "現実装は Ollama 専用ファクトリしか持たないのに `ProviderNotImplemented` を公開エラー型に残しています。今は直ちに壊れませんが、到達不能な分岐を API に露出しているため、将来の分岐追加時に使われない設定や dead code を呼び込みやすい状態です。"
+    },
+    {
+      "file": "src/embedding/mod.rs",
+      "line": 139,
+      "title": "トップレベル Config 変更に対する回帰テストが不足している",
+      "detail": "`Config` に `rerank` を追加していますが、今回レビュー対象の `tests/cli_args.rs` には config 読み込み経路の確認がありません。既存の embedding 設定だけを読むコードパスが多いため、`[rerank]` を含む `config.toml` が他コマンドに与える影響を見落としやすいです。これはテストギャップとして修正対象です。"
+    }
+  ],
+  "summary": "重大な RCE や認可回避は見当たりませんでしたが、rerank 候補数設定が config から効かない点、provider 応答の index 未検証、全体タイムアウト未達成、stderr への生レスポンス露出、プロンプト注入耐性不足は修正が必要です。特に `src/main.rs` と `src/cli/search.rs` の組み合わせによる `top_candidates` 無効化は、仕様逸脱が常時発生するため優先度が高いです。",
+  "requires_fix": true
+}
