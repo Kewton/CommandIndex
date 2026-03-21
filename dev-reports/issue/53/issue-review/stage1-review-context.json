@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "シナリオ3「パス近接性」は単独では検出されない設計",
+      "description": "Issueのシナリオ3は「同じディレクトリ内のファイル → --related で検出」と記載しているが、実装上 score_path_proximity は既にscoresに存在するファイルに対してのみ加算する設計（既存のscoresのkeysからパス近接性を計算）。つまり、パス近接性だけでは関連ファイルとして検出されず、MarkdownLink/Import/TagMatchのいずれかで先にscoresに入っている必要がある。シナリオ3を「パス近接性のみで検出できる」と解釈するとテストが失敗する。",
+      "suggestion": "シナリオ3の期待動作を「パス近接性は他の関連タイプ（リンク、タグ等）で検出されたファイルに対してスコアを加算するブースト要素である」と明記する。テストは、同じディレクトリ内にタグ一致のファイルを配置し、DirectoryProximityがrelation_typesに含まれること＆スコアが加算されていることを検証する形に修正すべき。"
+    },
+    {
+      "id": "M2",
+      "title": "シナリオ4「import依存関係」のE2Eテスト可能性の確認が必要",
+      "description": "既存の e2e_related_search.rs のテストデータにはTSファイルのimportチェーンが含まれていない。e2e_context_pack.rs には c.ts→d.ts のimportチェーンがあるが、--related での検証は行われていない。tree-sitterによるimport解析がインデックス時にSymbolStoreのimport_dependenciesテーブルに正しく格納されるかが前提条件であり、e2e_phase3_integration.rs の Test 6 ではmanual insertで検証しているに留まる。",
+      "suggestion": "シナリオ4のテストでは、TSファイルのimportチェーン（例: a.ts → b.ts → c.ts）を作成し、index後に --related a.ts でb.tsが ImportDependency として検出されることを検証する。ただし、tree-sitterのimport解析が正しくSymbolStoreに格納されるか事前にe2e_phase3テストで確認済みであることを依存関係として明記すべき。"
+    },
+    {
+      "id": "M3",
+      "title": "シナリオ7「--related と query の排他制御」は既にテスト済み",
+      "description": "e2e_related_search.rs に related_search_conflicts_with_query と related_search_conflicts_with_symbol が既に存在する。Issueのシナリオ7は既存テストと完全に重複している。重複テストの作成は保守コストを増やすだけで価値がない。",
+      "suggestion": "シナリオ7を削除するか、「既存テスト（e2e_related_search.rs）で検証済み」と明記し、新規テスト作成対象から除外する。もしくは、--related と --tag, --path, --heading, --type との排他制御（conflicts_with_allで定義済み）も含めた網羅テストに拡張する形で差別化する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "シナリオ5「Context Pack出力」のJSON構造検証が不十分",
+      "description": "Issueでは「context コマンドでJSON出力 → 構造が正しい」としか記載がないが、既存の e2e_context_pack.rs で context_pack_outputs_valid_json, context_pack_includes_target_files, context_pack_summary_fields, context_pack_no_self_reference 等がすでに検証済み。新規テストで何を追加検証するかが不明確。",
+      "suggestion": "シナリオ5で追加検証すべき項目を具体化する。例: (a) context[]内の各エントリにrelation, score, pathが含まれること、(b) snippetやheadingが適切に付与されていること、(c) estimated_tokensが0以上であること、(d) 関連なしファイル指定時にcontextが空配列になること。既存テストとの差分を明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "シナリオ6「--max-tokens」のテストが未定義",
+      "description": "既存テストに --max-tokens のE2Eテストが存在しない。Context Pack の max_tokens 制限は estimate_tokens (bytes/4) に基づくため、テストデータのサイズ設計が重要。Issueでは「--max-files / --max-tokens で出力制限」と記載があるが、--max-files は e2e_context_pack.rs の context_pack_max_files_limits_output で検証済み。",
+      "suggestion": "--max-tokens テストを具体的に設計する: (a) 十分な量のコンテンツを持つ関連ファイルを複数作成、(b) --max-tokens に小さい値（例: 50）を指定して実行、(c) summary.estimated_tokens が max_tokens 以下であることを検証、(d) context配列のエントリ数がmax-tokensなしの場合より少ないことを検証。"
+    },
+    {
+      "id": "S3",
+      "title": "シナリオ8「関連なしファイル」は既存テストと部分的に重複",
+      "description": "e2e_related_search.rs の related_search_no_results_for_unlinked_file が docs/d.md（タグ unrelated、リンクなし）で同様のシナリオを検証済み。ただし、既存テストは --related 側のみで context コマンド側の動作は未検証。",
+      "suggestion": "シナリオ8を「context コマンドに孤立ファイルを指定した場合、contextが空配列になり、summary.total_related=0, included=0 となること」に焦点を絞る。--related 側の検証は既存テスト参照で済ませる。"
+    },
+    {
+      "id": "S4",
+      "title": "テストデータの共通化方針が未定義",
+      "description": "既存テストでは各テストファイルで独自の setup_* ヘルパー関数を定義している（e2e_related_search.rs の setup_linked_docs, e2e_context_pack.rs の setup_context_docs 等）。Issue #53 の8シナリオでテストデータが散在すると保守性が低下する。",
+      "suggestion": "テストデータのセットアップ方針を明記する: (a) 全シナリオ共通のセットアップ関数を1つ定義し、Markdownリンク、タグ、importチェーン、孤立ファイルをすべて含む、(b) シナリオ固有のデータが必要な場合のみ追加ヘルパーを作成、(c) tests/common/mod.rs にセットアップヘルパーを集約するか、テストファイル内にまとめるか方針を決定する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "タグ一致によるスコア重み検証",
+      "description": "シナリオ2「タグ一致による関連」では、タグが一致するファイルが検出されることのみが要求されているが、複数タグ一致時のスコア加算（TAG_MATCH_WEIGHT * matched_tags.len()）の正確性も検証できると品質が向上する。",
+      "suggestion": "タグが1つ一致するファイルと2つ一致するファイルを用意し、2つ一致の方がスコアが高いことを検証するテストケースを追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "context コマンドの入力バリデーションE2Eテスト",
+      "description": "cli/context.rs にはパストラバーサル防止（..禁止）、絶対パス禁止、バックスラッシュ禁止等の入力バリデーションが実装されているが、E2Eテストでのカバーが不足している。",
+      "suggestion": "以下のエッジケーステストを追加: (a) context ../etc/passwd → エラー、(b) context /absolute/path → エラー、(c) context path\\with\\backslash → エラー。セキュリティ関連のバリデーションはE2Eでの検証が望ましい。"
+    },
+    {
+      "id": "N3",
+      "title": "relation文字列の網羅的検証",
+      "description": "ContextEntry.relation は relation_to_string で 'linked', 'import_dependency', 'tag_match', 'path_similarity', 'directory_proximity' のいずれかが設定されるが、全パターンのE2E検証があると回帰テストとして有用。",
+      "suggestion": "各relation種別が出力されるテストケースを1つずつ用意し、JSON出力のrelationフィールドが期待値と一致することを検証する。"
+    }
+  ],
+  "summary": "Issue #53 のテストシナリオは概ね妥当だが、3点の必須修正が必要。(1) シナリオ3「パス近接性」は実装上単独では関連ファイルを検出できない設計のため、期待動作の修正が必要。(2) シナリオ4「import依存関係」はtree-sitterのimport解析がSymbolStoreに正しく格納される前提のE2Eテスト設計が必要。(3) シナリオ7「排他制御」は既存テストと完全に重複しており、削除または差別化が必要。また、既存テスト（e2e_related_search.rs: 10テスト、e2e_context_pack.rs: 7テスト）との重複を整理し、新規テストで追加検証すべき項目を明確にすることが重要。テストデータの共通化方針と --max-tokens のテスト設計も具体化すべき。"
+}

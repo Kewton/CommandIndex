@@ -1,0 +1,7 @@
+{
+  "critical": [],
+  "warnings": [],
+  "summary": "Codexレビューがタイムアウトのためスキップ。テストコードのみの変更でありセキュリティリスクは低い。",
+  "requires_fix": false,
+  "status": "skipped_timeout"
+}

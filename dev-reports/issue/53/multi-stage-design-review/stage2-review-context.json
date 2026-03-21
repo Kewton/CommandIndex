@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "JSON出力のフィールド名不一致: relation_types vs relations",
+      "description": "設計方針書ではJSON出力のフィールド名を `relation_types` としているが、実際の src/output/json.rs (L53) では `relations` として出力している。テスト `related_full_flow_markdown_links_with_relation_types` が `relation_types` フィールドを検証する場合、テストが失敗する。",
+      "suggestion": "テストコード側を実コードに合わせ、JSONパース時に `relations` フィールドを参照するようにする。テスト関数名も `related_full_flow_markdown_links_with_relations` に変更するか、関数名はそのままでもフィールドアクセスを `relations` にする。"
+    },
+    {
+      "id": "M2",
+      "title": "RelationType のJSON表現が設計方針書と不一致",
+      "description": "設計方針書ではrelation_typesに 'MarkdownLink' (PascalCase) が含まれるか検証するとしているが、実際のJSON出力 (src/output/json.rs L35-48) では 'markdown_link' (snake_case文字列)、TagMatchは {\"tag_match\": [...]} というオブジェクト形式で出力される。テストで 'MarkdownLink' を検索しても見つからない。",
+      "suggestion": "テストでは実際のJSON表現に合わせる: MarkdownLink -> 'markdown_link', ImportDependency -> 'import_dependency', TagMatch -> {\"tag_match\": [...]}, DirectoryProximity -> 'directory_proximity'。"
+    },
+    {
+      "id": "M3",
+      "title": "DirectoryProximityのスコア0.7以上の検証は単独では不可能",
+      "description": "設計方針書のテスト `related_directory_proximity_boosts_score` ではスコア0.7以上を検証するが、DIR_PROXIMITY_WEIGHT=0.2 (src/search/related.rs L13) であるため、DirectoryProximityだけではスコア0.7に到達しない。他のRelationType(MarkdownLink=1.0, ImportDependency=0.9, TagMatch=0.5)との複合でのみ0.7以上になる。テストで同一ディレクトリ配置だけを条件にする場合、スコア検証の閾値を下げる必要がある。",
+      "suggestion": "テストを以下のいずれかに修正: (1) スコア閾値を0.2以上に変更しDirectoryProximity単体を検証する、(2) MarkdownLink+DirectoryProximityの複合で1.2以上を検証する、(3) テスト名を変更しDirectoryProximityがスコアを上昇させることを比較検証する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "Context Packの relation フィールド値が設計方針書の想定と異なる可能性",
+      "description": "設計方針書では context_pack_entry_fields_are_enriched で relation 値を検証するとしているが、実際の relation_to_string() (src/cli/context.rs L345-373) は優先度順に1つだけの文字列を返す: 'linked'(MarkdownLink), 'import_dependency', 'tag_match', 'path_similarity', 'directory_proximity'。MarkdownLinkの場合 'linked' であり 'markdown_link' ではない。",
+      "suggestion": "テストで relation 値を検証する際は実際の文字列 ('linked', 'import_dependency', 'tag_match', 'path_similarity', 'directory_proximity') を使用する。"
+    },
+    {
+      "id": "S2",
+      "title": "conflicts_with_all の file_type フィールド名に注意",
+      "description": "main.rs L31 の conflicts_with_all は [\"query\", \"symbol\", \"tag\", \"path\", \"file_type\", \"heading\"] を指定している。CLIオプションとしては --type だが、clap内部ではフィールド名 file_type で管理される。設計方針書のテスト related_conflicts_with_type_filter が --type を使う場合、clapは正しく排他制御するが、テストのエラーメッセージ検証でフィールド名の差異に注意が必要。",
+      "suggestion": "排他制御テストでは、エラーメッセージに含まれるオプション名がclapバージョンによって --type または --file-type と表示される可能性を考慮し、exit codeベースの検証を優先する。"
+    },
+    {
+      "id": "S3",
+      "title": "context サブコマンドに --format オプションがない",
+      "description": "search サブコマンドには --format オプションがあるが、context サブコマンド (main.rs L79-91) には --format がなく常にJSON出力。設計方針書で --format を context コマンドに使用するテストがある場合、テストが失敗する。",
+      "suggestion": "context サブコマンドのテストでは --format オプションを使用しないようにする。出力は常にpretty-printed JSONであることを前提とする。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "related検索のJSON出力はJSONL形式（1行1JSON）",
+      "description": "search --related --format json の出力は json.rs の format_related_json() により JSONL形式（各行が独立したJSONオブジェクト）で出力される。一方 context サブコマンドは format_context_pack() により pretty-printed JSON（単一JSONオブジェクト）で出力される。テストでのパース方法が異なる点に注意。",
+      "suggestion": "related検索テストでは各行を個別にserde_json::from_strでパースし、context packテストでは全体を1つのJSONとしてパースする設計にする。"
+    },
+    {
+      "id": "N2",
+      "title": "ContextEntry の symbols フィールドは skip_serializing_if = None",
+      "description": "ContextEntry の heading, snippet, symbols は Option 型で、None の場合JSONに含まれない (serde skip_serializing_if)。テストでこれらのフィールドの存在/不在を検証する場合、serde_json::Value でアクセスしてNoneチェックする必要がある。",
+      "suggestion": "テストではフィールドの存在確認に .get(\"symbols\").is_some() パターンを使用する。"
+    },
+    {
+      "id": "N3",
+      "title": "context_pack_empty_context_for_isolated_file のテスト設計",
+      "description": "孤立ファイル（他ファイルとの関連がない）のcontext packテストでは、context配列が空([])になることを検証する。ただし、score_path_proximity は既にscoresに存在するファイルのみを処理するため、完全に孤立したファイルでは確かにcontextは空になる。テストデータとして他のファイルとリンク・タグ・import関係のないファイルを用意すれば正しく動作する。",
+      "suggestion": "テスト用に独立ディレクトリに単独のMarkdownファイル（タグなし、リンクなし）を配置し、インデックス後にcontext packを生成して空配列を検証する。"
+    }
+  ],
+  "summary": "設計方針書と実コードベース間に3件の重大な不整合を検出した。(M1) related検索のJSON出力フィールド名が `relations` であり設計書の `relation_types` と異なる。(M2) RelationTypeのJSON表現がPascalCaseではなくsnake_case文字列である。(M3) DirectoryProximityのスコア重み(0.2)では単独でスコア0.7以上に到達不可能。これらはテスト実装前に設計方針書側を修正する必要がある。should_fix 3件（relation文字列値、file_type排他制御の表記、contextコマンドのformatオプション不在）、nice_to_have 3件（JSONL vs pretty JSON、Optionフィールドのシリアライズ、孤立ファイルテスト設計）も確認された。"
+}
