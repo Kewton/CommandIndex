@@ -1,0 +1,10 @@
+Indexing ....
+  Scanned: 2 files
+  Indexed: 2 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+INDEX_EXIT=0
+[function] validFunction
+  valid.ts:1-3

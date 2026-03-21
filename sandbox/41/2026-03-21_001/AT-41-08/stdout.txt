@@ -1,0 +1,3 @@
+auth.ts:1 [ auth.ts]
+  // Authentication module content
+  export function authenticate(user: string): boolean {...

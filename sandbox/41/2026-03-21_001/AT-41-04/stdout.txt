@@ -1,0 +1,4 @@
+[class] UserService
+  service.py:1-6
+    [method] __init__ (line 2-3)
+    [method] add_user (line 5-6)

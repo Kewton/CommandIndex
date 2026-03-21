@@ -1,0 +1,18 @@
+{
+  "issue": 39,
+  "title": "--type filter extension",
+  "date": "2026-03-21",
+  "run": "002",
+  "total": 6,
+  "passed": 6,
+  "failed": 0,
+  "status": "ALL PASS",
+  "tests": [
+    {"id": "AT-39-01", "title": "--type typescript (only .ts files)", "status": "PASS"},
+    {"id": "AT-39-02", "title": "--type python (only .py files)", "status": "PASS"},
+    {"id": "AT-39-03", "title": "--type markdown regression (only .md files)", "status": "PASS"},
+    {"id": "AT-39-04", "title": "--type invalid value (error)", "status": "PASS"},
+    {"id": "AT-39-05", "title": "--type code (both .ts and .py)", "status": "PASS"},
+    {"id": "AT-39-06", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

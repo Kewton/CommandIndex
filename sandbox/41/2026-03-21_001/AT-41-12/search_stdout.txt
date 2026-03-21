@@ -1,0 +1,10 @@
+auth.md:1 [# Authentication]
+  This covers authentication mechanisms.
+
+auth.ts:1 [ auth.ts]
+  // authentication handler
+  export function authHandler(): void {}
+
+auth.py:1 [ auth.py]
+  # authentication service
+  def auth_service():...

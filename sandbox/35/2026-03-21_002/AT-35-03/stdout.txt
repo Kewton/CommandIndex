@@ -1,0 +1,13 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+=== Dependencies table contents ===
+1|app.ts|@angular/core|Component|sha256:1e046939f24ae573dcc3fa8e9f341632ad65a0fa71c5499927726c7aa45f7701
+2|app.ts|./user.service|UserService|sha256:1e046939f24ae573dcc3fa8e9f341632ad65a0fa71c5499927726c7aa45f7701
+3|app.ts|fs|fs|sha256:1e046939f24ae573dcc3fa8e9f341632ad65a0fa71c5499927726c7aa45f7701
+SQLITE_EXIT=0
+DEP_COUNT=3

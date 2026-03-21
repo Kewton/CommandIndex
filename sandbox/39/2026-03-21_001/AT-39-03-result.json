@@ -1,0 +1,1 @@
+{"test_id":"AT-39-03","title":"--type markdown regression","status":"PASS","detail":"Only docs/auth.md returned when searching with --type markdown"}

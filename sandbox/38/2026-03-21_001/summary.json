@@ -1,0 +1,20 @@
+{
+  "issue": 38,
+  "title": "--symbol search",
+  "date": "2026-03-21",
+  "total": 9,
+  "passed": 9,
+  "failed": 0,
+  "status": "ALL PASS",
+  "tests": [
+    {"id": "AT-38-01", "title": "--symbol function search", "status": "PASS"},
+    {"id": "AT-38-02", "title": "--symbol class search", "status": "PASS"},
+    {"id": "AT-38-03", "title": "--symbol partial match (LIKE)", "status": "PASS"},
+    {"id": "AT-38-04", "title": "--symbol --format json", "status": "PASS"},
+    {"id": "AT-38-05", "title": "--symbol --format path", "status": "PASS"},
+    {"id": "AT-38-06", "title": "--symbol and query mutual exclusion", "status": "PASS"},
+    {"id": "AT-38-07", "title": "--symbol not found", "status": "PASS"},
+    {"id": "AT-38-08", "title": "--symbol without index", "status": "PASS"},
+    {"id": "AT-38-09", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

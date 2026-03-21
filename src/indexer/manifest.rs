@@ -6,6 +6,54 @@ use std::path::Path;
 
 const MANIFEST_FILE: &str = "manifest.json";
 
+/// ファイル種別を表す enum
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FileType {
+    #[default]
+    Markdown,
+    TypeScript,
+    Python,
+}
+
+impl FileType {
+    /// 拡張子から FileType を判定する
+    pub fn from_extension(ext: &str) -> Option<FileType> {
+        match ext {
+            "md" => Some(FileType::Markdown),
+            "ts" | "tsx" => Some(FileType::TypeScript),
+            "py" => Some(FileType::Python),
+            _ => None,
+        }
+    }
+
+    /// 全サポート拡張子を返す
+    pub fn all_extensions() -> &'static [&'static str] {
+        &["md", "ts", "tsx", "py"]
+    }
+
+    /// コードファイルかどうかを判定（Markdown 以外は全てコード）
+    pub fn is_code(&self) -> bool {
+        !matches!(self, FileType::Markdown)
+    }
+
+    /// フィルタ名から FileType を解決する（エイリアス対応）
+    /// "code" は特殊集約フィルタのため None を返す
+    pub fn from_type_filter(name: &str) -> Option<FileType> {
+        match name {
+            "markdown" | "md" => Some(FileType::Markdown),
+            "typescript" | "ts" => Some(FileType::TypeScript),
+            "python" | "py" => Some(FileType::Python),
+            _ => None,
+        }
+    }
+
+    /// CLI用の有効なフィルタ名一覧（正式名 + "code"）
+    pub fn valid_type_filter_names() -> &'static [&'static str] {
+        &["markdown", "typescript", "python", "code"]
+    }
+}
+
 #[derive(Debug)]
 pub enum ManifestError {
     Io(std::io::Error),
@@ -48,6 +96,8 @@ pub struct FileEntry {
     pub hash: String,
     pub last_modified: DateTime<Utc>,
     pub sections: u64,
+    #[serde(default)]
+    pub file_type: FileType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -139,4 +189,149 @@ pub fn compute_file_hash(path: &Path) -> Result<String, std::io::Error> {
     let content = std::fs::read(path)?;
     let hash = Sha256::digest(&content);
     Ok(format!("sha256:{:x}", hash))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- FileType tests ---
+
+    #[test]
+    fn file_type_from_extension_md() {
+        assert_eq!(FileType::from_extension("md"), Some(FileType::Markdown));
+    }
+
+    #[test]
+    fn file_type_from_extension_ts() {
+        assert_eq!(FileType::from_extension("ts"), Some(FileType::TypeScript));
+    }
+
+    #[test]
+    fn file_type_from_extension_tsx() {
+        assert_eq!(FileType::from_extension("tsx"), Some(FileType::TypeScript));
+    }
+
+    #[test]
+    fn file_type_from_extension_py() {
+        assert_eq!(FileType::from_extension("py"), Some(FileType::Python));
+    }
+
+    #[test]
+    fn file_type_from_extension_unknown() {
+        assert_eq!(FileType::from_extension("rs"), None);
+        assert_eq!(FileType::from_extension(""), None);
+    }
+
+    #[test]
+    fn file_type_all_extensions_contains_all() {
+        let exts = FileType::all_extensions();
+        assert!(exts.contains(&"md"));
+        assert!(exts.contains(&"ts"));
+        assert!(exts.contains(&"tsx"));
+        assert!(exts.contains(&"py"));
+    }
+
+    #[test]
+    fn file_type_is_code() {
+        assert!(!FileType::Markdown.is_code());
+        assert!(FileType::TypeScript.is_code());
+        assert!(FileType::Python.is_code());
+    }
+
+    #[test]
+    fn file_type_default_is_markdown() {
+        assert_eq!(FileType::default(), FileType::Markdown);
+    }
+
+    #[test]
+    fn file_entry_serde_backward_compat() {
+        // Old JSON without file_type should deserialize with default (Markdown)
+        let json = r#"{"path":"test.md","hash":"sha256:abc","last_modified":"2024-01-01T00:00:00Z","sections":1}"#;
+        let entry: FileEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.file_type, FileType::Markdown);
+    }
+
+    #[test]
+    fn file_entry_serde_with_file_type() {
+        let json = r#"{"path":"test.ts","hash":"sha256:abc","last_modified":"2024-01-01T00:00:00Z","sections":1,"file_type":"type_script"}"#;
+        let entry: FileEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.file_type, FileType::TypeScript);
+    }
+
+    // --- from_type_filter tests ---
+
+    #[test]
+    fn from_type_filter_markdown() {
+        assert_eq!(
+            FileType::from_type_filter("markdown"),
+            Some(FileType::Markdown)
+        );
+    }
+
+    #[test]
+    fn from_type_filter_md_alias() {
+        assert_eq!(FileType::from_type_filter("md"), Some(FileType::Markdown));
+    }
+
+    #[test]
+    fn from_type_filter_typescript() {
+        assert_eq!(
+            FileType::from_type_filter("typescript"),
+            Some(FileType::TypeScript)
+        );
+    }
+
+    #[test]
+    fn from_type_filter_ts_alias() {
+        assert_eq!(FileType::from_type_filter("ts"), Some(FileType::TypeScript));
+    }
+
+    #[test]
+    fn from_type_filter_python() {
+        assert_eq!(FileType::from_type_filter("python"), Some(FileType::Python));
+    }
+
+    #[test]
+    fn from_type_filter_py_alias() {
+        assert_eq!(FileType::from_type_filter("py"), Some(FileType::Python));
+    }
+
+    #[test]
+    fn from_type_filter_code_returns_none() {
+        assert_eq!(FileType::from_type_filter("code"), None);
+    }
+
+    #[test]
+    fn from_type_filter_invalid_returns_none() {
+        assert_eq!(FileType::from_type_filter("invalid"), None);
+    }
+
+    #[test]
+    fn from_type_filter_empty_returns_none() {
+        assert_eq!(FileType::from_type_filter(""), None);
+    }
+
+    #[test]
+    fn valid_type_filter_names_contains_expected() {
+        let names = FileType::valid_type_filter_names();
+        assert!(names.contains(&"markdown"));
+        assert!(names.contains(&"typescript"));
+        assert!(names.contains(&"python"));
+        assert!(names.contains(&"code"));
+    }
+
+    #[test]
+    fn file_entry_roundtrip_serde() {
+        let entry = FileEntry {
+            path: "src/main.py".to_string(),
+            hash: "sha256:abc".to_string(),
+            last_modified: chrono::Utc::now(),
+            sections: 3,
+            file_type: FileType::Python,
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        let deserialized: FileEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.file_type, FileType::Python);
+    }
 }

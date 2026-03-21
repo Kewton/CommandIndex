@@ -1,0 +1,5 @@
+error: the argument '--symbol <SYMBOL>' cannot be used with '[QUERY]'
+
+Usage: commandindex search --symbol <SYMBOL> [QUERY]
+
+For more information, try '--help'.

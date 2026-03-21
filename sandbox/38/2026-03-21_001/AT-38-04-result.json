@@ -1,0 +1,1 @@
+{"test_id":"AT-38-04","title":"--symbol --format json","status":"PASS","detail":"Valid JSON with name, kind, path, line_start, line_end fields"}

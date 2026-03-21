@@ -1,0 +1,3 @@
+scripts/auth.py:1 [ auth.py]
+  def authenticate(user: str) -> bool:
+      """Handle authenticate"""...

@@ -1,0 +1,10 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+analysis.py:1 [ analysis.py]
+  # Data analysis pipeline for financial reports
+  def generate_report(data):...

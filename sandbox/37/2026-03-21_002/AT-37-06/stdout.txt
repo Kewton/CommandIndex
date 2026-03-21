@@ -1,0 +1,17 @@
+Indexing ....
+  Scanned: 2 files
+  Indexed: 2 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.3s
+Index saved to .commandindex/
+CommandIndex Status
+  Index root:    .
+  Version:       0.0.2
+  Created:       2026-03-21 01:40:34.241994 UTC UTC
+  Last updated:  2026-03-21 01:40:34.241994 UTC UTC
+  Total files:   2
+  Total sections: 2
+  Files by type: Markdown=0, TypeScript=1, Python=1
+  Symbols:       2
+  Index size:    53.7 KB

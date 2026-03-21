@@ -94,12 +94,32 @@ fn update_without_index_shows_error() {
 }
 
 #[test]
-fn search_requires_query_argument() {
+fn search_requires_query_or_symbol() {
     common::cmd()
         .arg("search")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Usage:"));
+        .stderr(predicate::str::contains("Either"));
+}
+
+#[test]
+fn search_symbol_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--symbol", "my_func"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Symbol database not found"));
+}
+
+#[test]
+fn search_query_and_symbol_conflict() {
+    common::cmd()
+        .args(["search", "query", "--symbol", "name"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 }
 
 #[test]
@@ -109,4 +129,27 @@ fn unknown_subcommand_shows_error() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("unrecognized subcommand"));
+}
+
+#[test]
+fn search_type_invalid_value_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--type", "invalid"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value 'invalid'"));
+}
+
+#[test]
+fn search_type_valid_values_accepted() {
+    // Each valid type should be accepted by clap (fails only because no index exists)
+    for valid_type in &["markdown", "typescript", "python", "code"] {
+        let tmp = tempfile::tempdir().expect("create temp dir");
+        common::cmd()
+            .current_dir(tmp.path())
+            .args(["search", "test query", "--type", valid_type])
+            .assert()
+            .failure()
+            .stderr(predicate::str::contains("Index not found"));
+    }
 }

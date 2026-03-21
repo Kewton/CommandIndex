@@ -1,0 +1,1 @@
+{"body":"def python_util_function():\n    \"\"\"Python utility function for testing.\"\"\"\n    return \"python util active\"\n\nclass UtilClass:\n    def helper(self):\n        return \"helping\"\n","heading":"utils.py","heading_level":0,"line_start":1,"path":"utils.py","score":1.4025914669036865,"tags":[]}

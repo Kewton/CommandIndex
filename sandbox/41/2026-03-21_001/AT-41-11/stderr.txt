@@ -1,0 +1,4 @@
+error: invalid value 'invalid' for '--type <FILE_TYPE>'
+  [possible values: markdown, typescript, python, code]
+
+For more information, try '--help'.

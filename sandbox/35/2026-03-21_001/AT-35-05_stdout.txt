@@ -1,0 +1,6 @@
+{"kind":"class","line_end":23,"line_start":21,"name":"AnotherPyClass","path":"module.py"}
+{"kind":"method","line_end":23,"line_start":22,"name":"extra_method","parent":"AnotherPyClass","path":"module.py"}
+{"kind":"class","line_end":19,"line_start":11,"name":"PyClass","path":"module.py"}
+{"kind":"method","line_end":13,"line_start":12,"name":"__init__","parent":"PyClass","path":"module.py"}
+{"kind":"method","line_end":16,"line_start":15,"name":"get_value","parent":"PyClass","path":"module.py"}
+{"kind":"method","line_end":19,"line_start":18,"name":"set_value","parent":"PyClass","path":"module.py"}

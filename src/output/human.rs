@@ -3,7 +3,9 @@ use std::io::Write;
 use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
-use crate::output::{OutputError, parse_tags, strip_control_chars, truncate_body};
+use crate::output::{
+    OutputError, SymbolSearchResult, parse_tags, strip_control_chars, truncate_body,
+};
 
 /// Human形式で検索結果を出力する
 pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
@@ -32,6 +34,34 @@ pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<
         if !tags.is_empty() {
             let tags_str = tags.join(", ");
             writeln!(writer, "  {}", format!("Tags: {tags_str}").dimmed())?;
+        }
+    }
+    Ok(())
+}
+
+/// シンボル検索結果をhuman形式で出力する
+pub fn format_symbol_human(
+    results: &[SymbolSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for (i, result) in results.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+        let kind = strip_control_chars(&result.kind).to_lowercase();
+        let name = strip_control_chars(&result.name);
+        let path = strip_control_chars(&result.file_path);
+        writeln!(writer, "{} {}", format!("[{kind}]").green(), name.bold())?;
+        writeln!(writer, "  {path}:{}-{}", result.line_start, result.line_end)?;
+
+        for child in &result.children {
+            let child_kind = strip_control_chars(&child.kind).to_lowercase();
+            let child_name = strip_control_chars(&child.name);
+            writeln!(
+                writer,
+                "    [{child_kind}] {child_name} (line {}-{})",
+                child.line_start, child.line_end
+            )?;
         }
     }
     Ok(())

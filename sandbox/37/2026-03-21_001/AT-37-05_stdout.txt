@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "readme.md",
+      "hash": "sha256:c4dee47793487b37dc05e3af4937f356f61d609c0bbdcef270a702af4ff79119",
+      "last_modified": "2026-03-21T00:57:04.522077040Z",
+      "sections": 2,
+      "file_type": "markdown"
+    },
+    {
+      "path": "utils.py",
+      "hash": "sha256:416fc204b80deb9caab3b8a25f17ad6a704026137c3c762557a763446befcba0",
+      "last_modified": "2026-03-21T00:57:04.526521248Z",
+      "sections": 1,
+      "file_type": "python"
+    },
+    {
+      "path": "service.ts",
+      "hash": "sha256:efa2e7818e7c2f257bf2bd48bd67b8cca6ce4a71864f3c0949d217aa824ae410",
+      "last_modified": "2026-03-21T00:57:04.524336416Z",
+      "sections": 1,
+      "file_type": "type_script"
+    }
+  ]
+}

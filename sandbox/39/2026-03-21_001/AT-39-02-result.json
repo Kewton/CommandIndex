@@ -1,0 +1,1 @@
+{"test_id":"AT-39-02","title":"--type python filters correctly","status":"PASS","detail":"Only scripts/auth.py returned when searching with --type python"}

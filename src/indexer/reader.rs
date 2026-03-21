@@ -208,8 +208,20 @@ impl IndexReaderWrapper {
 }
 
 fn matches_file_type(path: &str, file_type: &str) -> bool {
-    match file_type {
-        "markdown" => path.ends_with(".md"),
-        _ => false,
+    use crate::indexer::manifest::FileType;
+    use std::path::Path;
+
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+
+    if file_type == "code" {
+        return FileType::from_extension(ext).is_some_and(|ft| ft.is_code());
+    }
+
+    match FileType::from_type_filter(file_type) {
+        Some(expected) => FileType::from_extension(ext) == Some(expected),
+        None => false,
     }
 }

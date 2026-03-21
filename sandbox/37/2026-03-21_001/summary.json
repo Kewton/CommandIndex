@@ -1,0 +1,8 @@
+{
+  "issue": "#37",
+  "date": "2026-03-21",
+  "total": 8,
+  "pass": 8,
+  "fail": 0,
+  "tests": [{"test_id":"AT-37-01","description":"index includes TypeScript files","result":"PASS"},{"test_id":"AT-37-02","description":"index includes Python files","result":"PASS"},{"test_id":"AT-37-03","description":"update works for code files","result":"PASS"},{"test_id":"AT-37-04","description":"update deletes code files","result":"PASS"},{"test_id":"AT-37-05","description":"manifest.json includes code files","result":"PASS"},{"test_id":"AT-37-06","description":"status shows code file count","result":"PASS"},{"test_id":"AT-37-07","description":"status --format json includes code info","result":"PASS"},{"test_id":"AT-37-08","description":"cargo test/clippy/fmt","result":"PASS"}]
+}

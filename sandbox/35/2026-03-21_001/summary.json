@@ -1,0 +1,8 @@
+{
+  "issue": "#35",
+  "date": "2026-03-21",
+  "total": 8,
+  "pass": 7,
+  "fail": 1,
+  "tests": [{"test_id":"AT-35-01","description":"TypeScript function extraction","result":"PASS"},{"test_id":"AT-35-02","description":"TypeScript class/method extraction","result":"PASS"},{"test_id":"AT-35-03","description":"TypeScript import extraction","result":"FAIL"},{"test_id":"AT-35-04","description":"Python function extraction","result":"PASS"},{"test_id":"AT-35-05","description":"Python class/method extraction","result":"PASS"},{"test_id":"AT-35-06","description":"TSX file support","result":"PASS"},{"test_id":"AT-35-07","description":"Parse error graceful handling","result":"PASS"},{"test_id":"AT-35-08","description":"cargo test/clippy/fmt","result":"PASS"}]
+}

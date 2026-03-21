@@ -1,0 +1,1 @@
+{"test_id":"AT-38-03","title":"--symbol partial match (LIKE)","status":"PASS","detail":"handleAuth found via partial match \"handle\""}

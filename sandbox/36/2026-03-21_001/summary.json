@@ -1,0 +1,8 @@
+{
+  "issue": "#36",
+  "date": "2026-03-21",
+  "total": 5,
+  "pass": 5,
+  "fail": 0,
+  "tests": [{"test_id":"AT-36-01","description":"symbols.db created during index","result":"PASS"},{"test_id":"AT-36-02","description":"Symbol insertion (function found in DB)","result":"PASS"},{"test_id":"AT-36-03","description":"File-level deletion (incremental update)","result":"PASS"},{"test_id":"AT-36-04","description":"clean removes symbols.db","result":"PASS"},{"test_id":"AT-36-05","description":"cargo test/clippy/fmt","result":"PASS"}]
+}

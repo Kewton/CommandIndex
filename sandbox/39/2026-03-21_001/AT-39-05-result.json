@@ -1,0 +1,1 @@
+{"test_id":"AT-39-05","title":"--type code filters all code files","status":"PASS","detail":"Both .ts and .py files returned, .md excluded"}

@@ -1,0 +1,1 @@
+-rw-r--r--@ 1 maenokota  staff  49152  3月 21 09:57 /var/folders/07/jbhw26n10nj_59d4yp7g5lx80000gn/T/tmp.k4yVQCnlIK/.commandindex/symbols.db

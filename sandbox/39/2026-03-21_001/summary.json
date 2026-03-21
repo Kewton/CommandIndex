@@ -1,0 +1,18 @@
+{
+  "issue": 39,
+  "title": "--type filter extension",
+  "date": "2026-03-21",
+  "total": 6,
+  "passed": 6,
+  "failed": 0,
+  "status": "ALL PASS",
+  "note": "Initial AT-39-01 used 'authentication' which appeared only in TS comments (not indexed). Re-tested with 'authenticate' (function name) - filter works correctly.",
+  "tests": [
+    {"id": "AT-39-01", "title": "--type typescript filters correctly", "status": "PASS"},
+    {"id": "AT-39-02", "title": "--type python filters correctly", "status": "PASS"},
+    {"id": "AT-39-03", "title": "--type markdown regression", "status": "PASS"},
+    {"id": "AT-39-04", "title": "--type invalid value rejected", "status": "PASS"},
+    {"id": "AT-39-05", "title": "--type code filters all code files", "status": "PASS"},
+    {"id": "AT-39-06", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

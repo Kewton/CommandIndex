@@ -1,0 +1,2 @@
+docs/auth.md:1 [# Auth Guide]
+  This document describes the authenticate flow.

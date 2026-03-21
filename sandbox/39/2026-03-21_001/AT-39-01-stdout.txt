@@ -1,0 +1,3 @@
+src/auth.ts:1 [ auth.ts]
+  function authenticate(user: string): boolean {
+    return user.length > 0;...

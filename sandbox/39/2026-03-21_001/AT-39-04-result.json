@@ -1,0 +1,1 @@
+{"test_id":"AT-39-04","title":"--type invalid value rejected","status":"PASS","detail":"clap rejects invalid type with exit code 2 and shows possible values"}

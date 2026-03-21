@@ -1,0 +1,11 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+symbols.db exists before clean: yes
+Removed index at .commandindex/
+Run `commandindex index` to rebuild.
+symbols.db exists after clean: no

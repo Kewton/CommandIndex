@@ -1,0 +1,1 @@
+{"body":"export function tsServiceFunction(): string {\n    return \"typescript service active\";\n}\n\nexport class ServiceClass {\n    execute(): void {\n        console.log(\"executing service\");\n    }\n}\n","heading":"service.ts","heading_level":0,"line_start":1,"path":"service.ts","score":0.9866366386413574,"tags":[]}

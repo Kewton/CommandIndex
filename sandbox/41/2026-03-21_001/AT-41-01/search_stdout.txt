@@ -1,0 +1,3 @@
+auth.ts:1 [ auth.ts]
+  export function handleAuth(user: string): boolean {
+    if (user === "admin") {...

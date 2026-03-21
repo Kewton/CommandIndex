@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running tests/e2e_phase3_integration.rs (target/debug/deps/e2e_phase3_integration-3b0e70367eb6d8cc)
+
+running 9 tests
+test e2e_phase3_full_flow_ts_symbol_status_clean ... ok
+test e2e_phase3_import_dependency_whitebox ... ok
+test e2e_phase3_mixed_content_type_filter ... ok
+test e2e_phase3_python_symbol_search ... ok
+test e2e_phase3_symbol_search_without_index ... ok
+test e2e_phase3_symbol_type_simultaneous ... ok
+test e2e_phase3_tsx_file_e2e ... ok
+test e2e_phase3_type_python_filter ... ok
+test e2e_phase3_update_symbol_reflect ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.68s
+

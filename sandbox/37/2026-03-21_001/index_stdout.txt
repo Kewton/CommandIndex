@@ -1,0 +1,7 @@
+Indexing ....
+  Scanned: 3 files
+  Indexed: 4 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.4s
+Index saved to .commandindex/

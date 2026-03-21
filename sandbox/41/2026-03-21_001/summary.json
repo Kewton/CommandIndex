@@ -1,0 +1,28 @@
+{
+  "issue": "#41",
+  "title": "Phase 3: Code Knowledge UAT",
+  "date": "2026-03-21",
+  "run": "2026-03-21_001",
+  "total": 17,
+  "pass": 17,
+  "fail": 0,
+  "results": [
+    {"id": "AT-41-01", "title": "TypeScript index and search", "result": "PASS"},
+    {"id": "AT-41-02", "title": "Python index and search", "result": "PASS"},
+    {"id": "AT-41-03", "title": "--symbol search for TS function", "result": "PASS"},
+    {"id": "AT-41-04", "title": "--symbol search for Python class", "result": "PASS"},
+    {"id": "AT-41-05", "title": "--symbol partial match (LIKE)", "result": "PASS"},
+    {"id": "AT-41-06", "title": "--symbol and query mutual exclusion", "result": "PASS"},
+    {"id": "AT-41-07", "title": "--symbol not found", "result": "PASS"},
+    {"id": "AT-41-08", "title": "--type typescript filter", "result": "PASS"},
+    {"id": "AT-41-09", "title": "--type python filter", "result": "PASS"},
+    {"id": "AT-41-10", "title": "--type markdown filter (regression)", "result": "PASS"},
+    {"id": "AT-41-11", "title": "--type invalid value", "result": "PASS"},
+    {"id": "AT-41-12", "title": "Markdown + Code mixed index", "result": "PASS"},
+    {"id": "AT-41-13", "title": "Code file update (incremental)", "result": "PASS"},
+    {"id": "AT-41-14", "title": "symbols.db created", "result": "PASS"},
+    {"id": "AT-41-15", "title": "clean removes symbols.db", "result": "PASS"},
+    {"id": "AT-41-16", "title": "status shows code file count", "result": "PASS"},
+    {"id": "AT-41-17", "title": "cargo test/clippy/fmt", "result": "PASS"}
+  ]
+}

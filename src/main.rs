@@ -22,8 +22,11 @@ enum Commands {
     },
     /// Search the index
     Search {
-        /// Search query
-        query: String,
+        /// Search query (full-text search)
+        query: Option<String>,
+        /// Search by symbol name (function, class, method)
+        #[arg(long, conflicts_with = "query")]
+        symbol: Option<String>,
         /// Output format (human, json, path)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
@@ -33,8 +36,13 @@ enum Commands {
         /// Filter by path prefix
         #[arg(long)]
         path: Option<String>,
-        /// Filter by file type (e.g. "markdown")
-        #[arg(long = "type")]
+        /// Filter by file type
+        #[arg(
+            long = "type",
+            value_parser = clap::builder::PossibleValuesParser::new(
+                commandindex::indexer::manifest::FileType::valid_type_filter_names()
+            )
+        )]
         file_type: Option<String>,
         /// Filter by heading
         #[arg(long)]
@@ -88,6 +96,7 @@ fn main() {
         },
         Commands::Search {
             query,
+            symbol,
             format,
             tag,
             path,
@@ -95,17 +104,29 @@ fn main() {
             heading,
             limit,
         } => {
-            let options = commandindex::indexer::reader::SearchOptions {
-                query,
-                tag,
-                heading,
-                limit: limit.min(1000),
+            let result = match (query, symbol) {
+                (Some(q), None) => {
+                    let options = commandindex::indexer::reader::SearchOptions {
+                        query: q,
+                        tag,
+                        heading,
+                        limit: limit.min(1000),
+                    };
+                    let filters = commandindex::indexer::reader::SearchFilters {
+                        path_prefix: path,
+                        file_type,
+                    };
+                    commandindex::cli::search::run(&options, &filters, format)
+                }
+                (None, Some(s)) => {
+                    commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)
+                }
+                (None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
+                    "Either <QUERY> or --symbol <NAME> is required".to_string(),
+                )),
+                (Some(_), Some(_)) => unreachable!("clap conflicts_with prevents this"),
             };
-            let filters = commandindex::indexer::reader::SearchFilters {
-                path_prefix: path,
-                file_type,
-            };
-            match commandindex::cli::search::run(&options, &filters, format) {
+            match result {
                 Ok(()) => 0,
                 Err(e) => {
                     eprintln!("Error: {e}");
