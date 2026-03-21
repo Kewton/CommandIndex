@@ -3,7 +3,9 @@ use std::path::Path;
 
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
-use crate::output::{self, OutputError, OutputFormat, SemanticSearchResult, SymbolSearchResult};
+use crate::output::{
+    self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+};
 
 #[derive(Debug)]
 pub enum SearchError {
@@ -110,6 +112,7 @@ pub fn run(
     options: &SearchOptions,
     filters: &SearchFilters,
     format: OutputFormat,
+    snippet_config: SnippetConfig,
 ) -> Result<(), SearchError> {
     let tantivy_dir = crate::indexer::index_dir(Path::new("."));
     if !tantivy_dir.exists() {
@@ -135,7 +138,14 @@ pub fn run(
     }
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_results(&final_results, format, &mut handle)?;
+    match format {
+        OutputFormat::Human => {
+            output::human::format_human(&final_results, &mut handle, snippet_config)?;
+        }
+        _ => {
+            output::format_results(&final_results, format, &mut handle)?;
+        }
+    }
     Ok(())
 }
 
@@ -346,7 +356,7 @@ fn try_hybrid_search(
     options: &SearchOptions,
     filters: &SearchFilters,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
-    use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
+    use crate::search::hybrid::{rrf_merge, HYBRID_OVERSAMPLING_FACTOR};
 
     // 1. SymbolStore を開く
     let db_path = crate::indexer::symbol_db_path(Path::new("."));
@@ -430,14 +440,14 @@ fn try_hybrid_search(
             return Ok(bm25_results);
         }
     };
-    let semantic_search_results = match enrich_semantic_to_search_results(&similar_results, &reader)
-    {
-        Ok(r) => r,
-        Err(_) => {
-            eprintln!("[hybrid] Failed to enrich semantic results, using BM25 only.");
-            return Ok(bm25_results);
-        }
-    };
+    let semantic_search_results =
+        match enrich_semantic_to_search_results(&similar_results, &reader) {
+            Ok(r) => r,
+            Err(_) => {
+                eprintln!("[hybrid] Failed to enrich semantic results, using BM25 only.");
+                return Ok(bm25_results);
+            }
+        };
 
     // 7. フィルタ適用（tag/path/file_type）
     let filtered_semantic: Vec<crate::indexer::reader::SearchResult> = semantic_search_results
