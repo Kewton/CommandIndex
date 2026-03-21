@@ -1,0 +1,48 @@
+{
+  "stage": 2,
+  "description": "Stage 1 指摘事項をIssue #50に反映",
+  "applied_fixes": [
+    {
+      "id": "M1",
+      "action": "find_imports_by_source() の未実装を「新規実装が必要なAPI」セクションとして追加。双方向検索の必要性を明示。"
+    },
+    {
+      "id": "M2",
+      "action": "スコアリングの重み付けを具体的な数値で定義（テーブル形式）。単純加算方式であることを明記。チューニングは後続Issue対応と注記。"
+    },
+    {
+      "id": "M3",
+      "action": "タグ一致のデータ取得方法を追加。tantivy index から path完全一致でドキュメント取得→tagsフィールド読み出し方式を採用。"
+    },
+    {
+      "id": "M4",
+      "action": "排他制御セクションを追加。clap conflicts_with による3者排他設計を明記。既存フィルタの適用可否も明確化。"
+    },
+    {
+      "id": "S1",
+      "action": "受け入れ基準に「存在しないファイル指定時のエラーメッセージ」を追加。"
+    },
+    {
+      "id": "S2",
+      "action": "受け入れ基準に「インデックス未登録ファイル指定時の警告メッセージ」を追加。"
+    },
+    {
+      "id": "S3",
+      "action": "import依存関係のパス解決セクションを追加。source→target/target→source の双方向検索とパス解決ルールを明記。"
+    },
+    {
+      "id": "S4",
+      "action": "パス近接性アルゴリズムセクションを追加。共通パスプレフィックス方式とパスセグメント部分一致の2つのロジックを定義。"
+    },
+    {
+      "id": "S5",
+      "action": "排他制御セクションにて --limit のデフォルト値20を流用する旨を明記。"
+    },
+    {
+      "id": "S6",
+      "action": "依存Issueに #51 Markdownリンク解析・リンクインデックス構築（マージ済み）を追加。"
+    }
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/50"
+}

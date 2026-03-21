@@ -27,6 +27,9 @@ enum Commands {
         /// Search by symbol name (function, class, method)
         #[arg(long, conflicts_with = "query")]
         symbol: Option<String>,
+        /// Search for related files
+        #[arg(long, conflicts_with_all = ["query", "symbol", "tag", "path", "file_type", "heading"])]
+        related: Option<String>,
         /// Output format (human, json, path)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
@@ -97,6 +100,7 @@ fn main() {
         Commands::Search {
             query,
             symbol,
+            related,
             format,
             tag,
             path,
@@ -104,8 +108,8 @@ fn main() {
             heading,
             limit,
         } => {
-            let result = match (query, symbol) {
-                (Some(q), None) => {
+            let result = match (query, symbol, related) {
+                (Some(q), None, None) => {
                     let options = commandindex::indexer::reader::SearchOptions {
                         query: q,
                         tag,
@@ -118,13 +122,16 @@ fn main() {
                     };
                     commandindex::cli::search::run(&options, &filters, format)
                 }
-                (None, Some(s)) => {
+                (None, Some(s), None) => {
                     commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)
                 }
-                (None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
-                    "Either <QUERY> or --symbol <NAME> is required".to_string(),
+                (None, None, Some(f)) => {
+                    commandindex::cli::search::run_related_search(&f, limit.min(1000), format)
+                }
+                (None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
+                    "Either <QUERY>, --symbol <NAME>, or --related <FILE> is required".to_string(),
                 )),
-                (Some(_), Some(_)) => unreachable!("clap conflicts_with prevents this"),
+                _ => unreachable!("clap conflicts_with prevents this"),
             };
             match result {
                 Ok(()) => 0,

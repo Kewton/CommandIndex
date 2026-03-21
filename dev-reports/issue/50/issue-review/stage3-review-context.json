@@ -1,0 +1,110 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "未実装API",
+      "description": "find_imports_by_source() と find_file_links_by_target() が symbol_store.rs に未実装。逆方向の検索APIが必須。",
+      "suggestion": "find_imports_by_source(source_file) と find_file_links_by_target(target_file) を symbol_store.rs に追加する。インデックスは既に作成済み。",
+      "affected_files": ["src/indexer/symbol_store.rs"]
+    },
+    {
+      "id": "M2",
+      "category": "CLI引数",
+      "description": "main.rs の Search サブコマンドに --related オプションが未追加。clap の conflicts_with による排他制御も未実装。",
+      "suggestion": "Search struct に related: Option<String> を追加し、conflicts_with_all で query/symbol と排他にする。",
+      "affected_files": ["src/main.rs"]
+    },
+    {
+      "id": "M3",
+      "category": "コアロジック",
+      "description": "関連検索ロジック（スコアリング）が未実装。run_related_search() 関数が必要。",
+      "suggestion": "src/cli/search.rs に run_related_search() を実装。tantivy と symbol_store を組み合わせたスコアリング。",
+      "affected_files": ["src/cli/search.rs", "src/main.rs"]
+    },
+    {
+      "id": "M4",
+      "category": "出力型",
+      "description": "RelatedSearchResult と RelationType の新規型が未定義。フォーマッタへの対応も未実装。",
+      "suggestion": "src/output/mod.rs に新型を追加し、各フォーマッタに format_related_results() を追加する。",
+      "affected_files": ["src/output/mod.rs", "src/output/human.rs", "src/output/json.rs", "src/output/path.rs"]
+    },
+    {
+      "id": "M5",
+      "category": "データ互換性",
+      "description": "CURRENT_SYMBOL_SCHEMA_VERSION が 1→2 に変更済み。v0.0.3以前のユーザーはインデックス再構築が必要。",
+      "suggestion": "リリース時にマイグレーション手順を明記する。",
+      "affected_files": ["src/indexer/symbol_store.rs"]
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "パフォーマンス",
+      "description": "tantivy から path完全一致でタグを取得するヘルパーが必要。TermQuery を使えば高速。",
+      "suggestion": "reader.rs に search_by_exact_path() を追加する。",
+      "affected_files": ["src/indexer/reader.rs"]
+    },
+    {
+      "id": "S2",
+      "category": "テスト",
+      "description": "関連検索機能のテストが必要: CLIパース、スコアリングユニット、排他制御、E2Eテスト。",
+      "suggestion": "tests/cli_args.rs と tests/e2e_related_search.rs にテストを追加。",
+      "affected_files": ["tests/cli_args.rs", "tests/e2e_related_search.rs", "src/cli/search.rs"]
+    },
+    {
+      "id": "S3",
+      "category": "エラーハンドリング",
+      "description": "指定ファイルがインデックスに存在しない場合のエラーハンドリングが必要。",
+      "suggestion": "SearchError に FileNotInIndex バリアントを追加する。",
+      "affected_files": ["src/cli/search.rs"]
+    },
+    {
+      "id": "S4",
+      "category": "モジュール結合度",
+      "description": "関連検索は3つのデータソースを横断するため、cli/search.rs が肥大化する。",
+      "suggestion": "スコアリングロジックを src/search/related.rs に分離する。",
+      "affected_files": ["src/cli/search.rs", "src/search/related.rs", "src/lib.rs"]
+    },
+    {
+      "id": "S5",
+      "category": "インデックス整合性",
+      "description": "index_markdown_file の tantivy書き込み失敗時のロールバック処理に軽微な論理バグ。",
+      "suggestion": "重複 delete_by_file 呼び出しを除去する。",
+      "affected_files": ["src/cli/index.rs"]
+    },
+    {
+      "id": "S6",
+      "category": "incremental update",
+      "description": "Markdownファイル削除時のfile_links削除を既存テストでカバーすべき。",
+      "suggestion": "tests/incremental_update.rs にテストケースを追加する。",
+      "affected_files": ["tests/incremental_update.rs"]
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "依存関係",
+      "description": "Cargo.toml に新規crate追加は不要。確認済み。",
+      "affected_files": ["Cargo.toml"]
+    },
+    {
+      "id": "N2",
+      "category": "出力フォーマット",
+      "description": "match ベースのディスパッチを維持。将来のリファクタリングに備える。",
+      "affected_files": ["src/output/mod.rs"]
+    },
+    {
+      "id": "N3",
+      "category": "status コマンド拡張",
+      "description": "StatusInfo に file_link_count を追加すると便利。",
+      "affected_files": ["src/indexer/symbol_store.rs", "src/cli/status.rs"]
+    },
+    {
+      "id": "N4",
+      "category": "パス正規化",
+      "description": "関連検索の入力パスを正規化してからマッチングに使用すべき。",
+      "affected_files": ["src/cli/search.rs"]
+    }
+  ],
+  "summary": "Issue #51の基盤は整っているが、Issue #50のコア機能は全て未実装。既存テスト114件は全パス。既存機能への破壊的影響はなし。index.rsのロールバック処理に軽微な論理バグあり。"
+}

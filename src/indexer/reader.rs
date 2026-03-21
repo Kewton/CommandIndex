@@ -205,6 +205,27 @@ impl IndexReaderWrapper {
     fn get_u64(doc: &tantivy::TantivyDocument, field: tantivy::schema::Field) -> u64 {
         doc.get_first(field).and_then(|v| v.as_u64()).unwrap_or(0)
     }
+
+    /// path フィールドの完全一致で検索する（tantivy TermQuery）
+    pub fn search_by_exact_path(&self, path: &str) -> Result<Vec<SearchResult>, ReaderError> {
+        let reader = self
+            .index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
+            .try_into()?;
+        let searcher = reader.searcher();
+
+        let term = tantivy::Term::from_field_text(self.schema.path, path);
+        let query = tantivy::query::TermQuery::new(term, tantivy::schema::IndexRecordOption::Basic);
+
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(1000))?;
+        let mut results = Vec::new();
+        for (score, doc_address) in top_docs {
+            let doc: tantivy::TantivyDocument = searcher.doc(doc_address)?;
+            results.push(self.doc_to_search_result(&doc, score));
+        }
+        Ok(results)
+    }
 }
 
 fn matches_file_type(path: &str, file_type: &str) -> bool {

@@ -4,7 +4,8 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, SymbolSearchResult, parse_tags, strip_control_chars, truncate_body,
+    OutputError, RelatedSearchResult, SymbolSearchResult, parse_tags, strip_control_chars,
+    truncate_body,
 };
 
 /// Human形式で検索結果を出力する
@@ -35,6 +36,41 @@ pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<
             let tags_str = tags.join(", ");
             writeln!(writer, "  {}", format!("Tags: {tags_str}").dimmed())?;
         }
+    }
+    Ok(())
+}
+
+/// 関連検索結果をhuman形式で出力する
+pub fn format_related_human(
+    results: &[RelatedSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for (i, result) in results.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+        let path = strip_control_chars(&result.file_path);
+        let score = format!("{:.2}", result.score);
+        let relations: Vec<String> = result
+            .relation_types
+            .iter()
+            .map(|r| match r {
+                crate::output::RelationType::MarkdownLink => "link".to_string(),
+                crate::output::RelationType::ImportDependency => "import".to_string(),
+                crate::output::RelationType::TagMatch { matched_tags } => {
+                    format!("tags:{}", matched_tags.join(","))
+                }
+                crate::output::RelationType::PathSimilarity => "path".to_string(),
+                crate::output::RelationType::DirectoryProximity => "dir".to_string(),
+            })
+            .collect();
+        writeln!(
+            writer,
+            "{} {} [{}]",
+            path.green(),
+            format!("(score: {score})").dimmed(),
+            relations.join(", ")
+        )?;
     }
     Ok(())
 }

@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"id": "S2-M1", "category": "メソッド名の逆転", "description": "find_imports_by_source/find_file_links_by_targetのセマンティクスを明記すべき"}
+  ],
+  "should_fix": [
+    {"id": "S2-S1", "category": "エラー型整合性", "description": "RelatedSearchError→SearchError変換のFrom impl追加"},
+    {"id": "S2-S2", "category": "既存パターン整合", "description": "Path::new(\".\")ベースのインデックスディレクトリ解決を明記"},
+    {"id": "S2-S3", "category": "型名一貫性", "description": "file_pathに統一（SymbolSearchResultと合わせる）"},
+    {"id": "S2-S4", "category": "CLI排他制御", "description": "--related時に--tag等も排他にする方針を明確化"}
+  ],
+  "nice_to_have": [
+    {"id": "S2-N1", "category": "モジュール構成", "description": "lib.rsへのpub mod search追加を影響範囲に含める"}
+  ],
+  "summary": "メソッドセマンティクスの明確化が最重要。エラー型変換とCLIフィルタ排他制御も明確化が必要。"
+}
