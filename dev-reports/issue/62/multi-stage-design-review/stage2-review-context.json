@@ -1,0 +1,10 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"title": "EmbeddingInfo構造体にidフィールドが欠落", "suggestion": "id: Option<i64>を追加。"},
+    {"title": "insert_embeddingsにUPSERT戦略が不明確", "suggestion": "INSERT OR REPLACE使用を明記。"}
+  ],
+  "should_fix_count": 4,
+  "nice_to_have_count": 3
+}

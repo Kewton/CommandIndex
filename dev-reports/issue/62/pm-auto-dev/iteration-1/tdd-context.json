@@ -1,0 +1,18 @@
+{
+  "issue_number": 62,
+  "title": "[Feature] Embeddingストレージ（SQLite ベクトル格納）",
+  "target_file": "src/indexer/symbol_store.rs",
+  "design_policy": "dev-reports/design/issue-62-embedding-storage-design-policy.md",
+  "work_plan": "dev-reports/issue/62/work-plan.md",
+  "implementation_order": [
+    "1. InvalidEmbeddingエラーバリアント追加",
+    "2. EmbeddingInfo / EmbeddingSimilarityResult構造体定義",
+    "3. embedding_to_blob / blob_to_embedding / cosine_similarity関数",
+    "4. CURRENT_SYMBOL_SCHEMA_VERSION 2→3",
+    "5. create_tables()にembeddingsテーブル追加",
+    "6. insert_embeddings()実装（INSERT OR REPLACE + バリデーション）",
+    "7. delete_by_file()にembeddings削除追加",
+    "8. search_similar()実装"
+  ],
+  "tdd_cycle": "Red→Green→Refactorの順でテストを先に書き、実装を追加"
+}
