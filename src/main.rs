@@ -62,6 +62,12 @@ enum Commands {
         /// Maximum number of results (1-1000)
         #[arg(long, default_value_t = 20)]
         limit: usize,
+        /// Number of snippet lines (0 = unlimited)
+        #[arg(long, default_value_t = 2)]
+        snippet_lines: usize,
+        /// Number of snippet characters for single-line body (0 = unlimited)
+        #[arg(long, default_value_t = 120)]
+        snippet_chars: usize,
         /// Enable LLM-based reranking of search results
         #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
         rerank: bool,
@@ -159,9 +165,15 @@ fn main() {
             file_type,
             heading,
             limit,
+            snippet_lines,
+            snippet_chars,
             rerank,
             rerank_top,
         } => {
+            let snippet_config = commandindex::output::SnippetConfig {
+                lines: snippet_lines,
+                chars: snippet_chars,
+            };
             let result = match (query, symbol, related, semantic) {
                 (Some(q), None, None, None) => {
                     let options = commandindex::indexer::reader::SearchOptions {
@@ -175,7 +187,7 @@ fn main() {
                         path_prefix: path,
                         file_type,
                     };
-                    commandindex::cli::search::run(&options, &filters, format, rerank, rerank_top)
+                    commandindex::cli::search::run(&options, &filters, format, snippet_config, rerank, rerank_top)
                 }
                 (None, Some(s), None, None) => {
                     commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)

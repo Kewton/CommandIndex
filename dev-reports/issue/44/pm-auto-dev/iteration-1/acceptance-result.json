@@ -1,0 +1,66 @@
+{
+  "acceptance_criteria": [
+    {
+      "id": 1,
+      "description": "--snippet-lines 10 で10行分のスニペットが表示される",
+      "status": "pass",
+      "evidence": "test_snippet_custom_lines テストで lines=5 指定時に5行目まで表示され6行目が表示されないことを検証。format_human 内で truncate_body(body, snippet_config.lines, snippet_config.chars) を呼び出し、任意の行数指定が機能する。CLI引数 --snippet-lines が SnippetConfig.lines にマッピングされている (main.rs L57-58)。"
+    },
+    {
+      "id": 2,
+      "description": "--snippet-chars 200 で200文字まで表示される",
+      "status": "pass",
+      "evidence": "test_snippet_custom_chars テストで chars=50 指定時に50文字で切り詰められることを検証。truncate_body が chars パラメータで文字数制限を適用。CLI引数 --snippet-chars が SnippetConfig.chars にマッピングされている (main.rs L59-61)。"
+    },
+    {
+      "id": 3,
+      "description": "--snippet-lines 0 で全文が表示される",
+      "status": "pass",
+      "evidence": "test_snippet_lines_zero_unlimited テストで lines=0, chars=0 指定時に全6行が表示され '...' が付かないことを検証。human.rs L33-34 で lines==0 && chars==0 の場合 body_cleaned をそのまま返す。lines==0 && chars>0 の場合は truncate_body に usize::MAX を渡して実質無制限 (human.rs L36)。"
+    },
+    {
+      "id": 4,
+      "description": "--snippet-chars 0 で全文が表示される（単一行テキストの場合）",
+      "status": "pass",
+      "evidence": "test_snippet_chars_zero_unlimited テストで chars=0 指定時に200文字の単一行テキストが全文表示されることを検証。human.rs L37-38 で chars==0 の場合 truncate_body に usize::MAX を渡して実質無制限。"
+    },
+    {
+      "id": 5,
+      "description": "オプション未指定時は現状と同じ出力（2行・120文字）",
+      "status": "pass",
+      "evidence": "SnippetConfig::default() が lines=2, chars=120 を返す (mod.rs L22-27)。CLI引数のデフォルト値も snippet_lines=2, snippet_chars=120 (main.rs L57,60)。test_snippet_default_unchanged テストで format_human(default) と format_results(Human) の出力が一致することを検証。既存テスト test_human_format_snippet_truncation も2行切り詰めを検証済み。"
+    },
+    {
+      "id": 6,
+      "description": "--format json / --format path の出力に影響がない",
+      "status": "pass",
+      "evidence": "cli/search.rs L105-112 で OutputFormat::Human の場合のみ snippet_config を渡し、それ以外は output::format_results を使用。format_results 内で json/path は json::format_json / path::format_path を呼び出し、SnippetConfig を参照しない。既存の JSON/Path テスト (test_json_format_basic, test_path_format_basic 等) が全てパス。"
+    },
+    {
+      "id": 7,
+      "description": "--symbol / --related モードの出力に影響がない",
+      "status": "pass",
+      "evidence": "run_symbol_search / run_related_search は SnippetConfig を引数に取らない (search.rs L116-150, L152-193)。main.rs でも symbol/related の場合は snippet_config を渡さない。既存のシンボル・関連検索テストが全てパス。"
+    },
+    {
+      "id": 8,
+      "description": "既存テスト（tests/output_format.rs）がパスする",
+      "status": "pass",
+      "evidence": "cargo test 実行結果: output_format テスト 17件全てパス（既存12件 + 新規5件）。既存テストは format_results 経由で SnippetConfig::default() を使用するため、デフォルト動作が維持されていることも検証済み。"
+    },
+    {
+      "id": 9,
+      "description": "品質チェック全パス",
+      "status": "pass",
+      "evidence": "cargo test --all: 全339テストパス。cargo clippy --all-targets -- -D warnings: 警告0件。cargo fmt --all -- --check: 差分なし。"
+    }
+  ],
+  "quality_checks": {
+    "build": "pass",
+    "clippy": "pass",
+    "test": "pass",
+    "fmt": "pass"
+  },
+  "overall": "pass",
+  "issues": []
+}
