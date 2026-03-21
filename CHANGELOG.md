@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.0.3 — Phase 3: ソースコード解析 (tree-sitter + SQLite)
+
+### Added
+- **tree-sitter パーサー基盤** (#35): TypeScript/Python ソースコード解析（関数・クラス・インターフェース抽出）
+- **SQLite 補助ストア** (#36): symbols.db によるシンボル情報の構造化格納
+- **コード index/update 統合** (#37): TypeScript/Python → tantivy + symbols.db へのインデックス統合
+- **`--symbol` 検索オプション** (#38): シンボル名による関数・クラス検索
+- **`--type` フィルタ拡張** (#39): typescript/python コードファイル種別フィルタ対応
+- **Phase 3 E2E 統合テスト** (#40): コード解析・シンボル検索フロー検証
+
+### Fixed
+- **indexer**: import/依存関係を symbols.db に格納する処理を追加
+
+### Chore
+- Phase 3 UAT結果追加（#35 #36 #37 #38 #39 #40 #41）
+
+---
+
 ## v0.0.2 — Phase 2: 差分更新 (update コマンド)
 
 ### Added
