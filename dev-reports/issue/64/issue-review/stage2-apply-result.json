@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "CLIオプション設計を明確化: query引数でハイブリッド自動化、--semanticは単独維持、--no-semantic新規追加、conflicts_with_all維持方針を明記"},
+    {"id": "M2", "action": "ドキュメント識別キーセクション追加: (path, heading)ペアで一致判定、BM25とSemanticの対応フィールドを明記"},
+    {"id": "S1", "action": "--bm25-weight/--semantic-weightを設計上の決定事項として非実装に。均等重みRRFで実装する方針を明記"},
+    {"id": "S2", "action": "出力結果型セクション追加: SearchResult型を再利用しscoreにRRFスコア格納、既存format_results利用"},
+    {"id": "S3", "action": "片方のランキングにのみ存在するドキュメントの扱いを明記: もう片方はlimit+1として計算"}
+  ],
+  "applied_nice_to_have": [
+    {"id": "N3", "action": "フォールバック時のstderrメッセージを動作モード表と受け入れ基準に追加"}
+  ],
+  "not_applied": [
+    {"id": "N1", "reason": "パフォーマンス最適化は実装フェーズで判断"},
+    {"id": "N2", "reason": "k定数の設定可能性は設計上の決定事項として言及済み"}
+  ]
+}

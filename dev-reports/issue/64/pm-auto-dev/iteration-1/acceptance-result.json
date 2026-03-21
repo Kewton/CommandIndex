@@ -1,0 +1,7 @@
+{
+  "overall": "PASS",
+  "criteria_pass": 12,
+  "criteria_fail": 0,
+  "total_tests": 333,
+  "summary": "全12受け入れ基準PASS。RRF実装、CLIオプション、ハイブリッド自動判定、BM25フォールバック、出力形式対応、品質チェック全て正しく実装。"
+}

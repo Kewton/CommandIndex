@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "M1-M5", "action": "影響範囲セクションをIssueに追加。変更対象ファイル一覧、影響を受けないファイル、テスト影響を明記"},
+    {"id": "S1", "action": "SearchResult.scoreの意味変更を出力結果型セクションと設計上の決定事項に追記"},
+    {"id": "S2", "action": "テスト影響セクションに--no-semanticパーステスト追加要件を記載"},
+    {"id": "S4", "action": "enrich_with_metadataロジック再利用は実装時に対応（Issueスコープ外）"}
+  ],
+  "skipped": [
+    {"id": "S3", "reason": "embedding不在環境では既存テストは影響なし。テスト影響セクションで対応済み"},
+    {"id": "S5", "reason": "SQLite読み取り専用アクセスで問題なし。実装時の注意事項"},
+    {"id": "N1-N4", "reason": "将来的な改善項目。今回のスコープ外"}
+  ],
+  "must_fix_remaining": 0
+}

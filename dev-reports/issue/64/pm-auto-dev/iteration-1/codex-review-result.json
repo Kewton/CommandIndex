@@ -1,0 +1,12 @@
+{
+  "critical": [],
+  "warnings": [
+    {"file": "src/indexer/reader.rs", "line": "164", "severity": "medium", "category": "bug", "description": "path_prefix filteringのstarts_with()が境界チェック不足（既存問題）"},
+    {"file": "src/indexer/reader.rs", "line": "223", "severity": "medium", "category": "bug", "description": "search_by_exact_path()の1000件上限（既存問題）"},
+    {"file": "src/cli/search.rs", "line": "307", "severity": "medium", "category": "bug", "description": "重複見出し時の誤マッピング（既存問題、ハイブリッドパスでも同様）"},
+    {"file": "src/indexer/reader.rs", "line": "135", "severity": "low", "category": "security", "description": "tag/headingのQueryParser直通（既存問題）"},
+    {"file": "src/main.rs", "line": "62", "severity": "low", "category": "bug", "description": "--limit 0が受理される（既存問題）"}
+  ],
+  "summary": "critical 0件。warningsはすべて既存コードの問題で、今回のHybrid Retrieval変更固有のバグ/脆弱性はなし。",
+  "requires_fix": false
+}

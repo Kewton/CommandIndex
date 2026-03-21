@@ -36,6 +36,9 @@ enum Commands {
         /// Semantic search query (embedding-based similarity search)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading"])]
         semantic: Option<String>,
+        /// Disable hybrid (BM25 + Semantic) search, use BM25 only
+        #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
+        no_semantic: bool,
         /// Output format (human, json, path)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
@@ -143,6 +146,7 @@ fn main() {
             symbol,
             related,
             semantic,
+            no_semantic,
             format,
             tag,
             path,
@@ -157,6 +161,7 @@ fn main() {
                         tag,
                         heading,
                         limit: limit.min(1000),
+                        no_semantic,
                     };
                     let filters = commandindex::indexer::reader::SearchFilters {
                         path_prefix: path,

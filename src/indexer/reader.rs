@@ -16,6 +16,7 @@ pub struct SearchOptions {
     pub tag: Option<String>,
     pub heading: Option<String>,
     pub limit: usize,
+    pub no_semantic: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -99,6 +100,7 @@ impl IndexReaderWrapper {
             tag: None,
             heading: None,
             limit,
+            no_semantic: false,
         };
         self.search_with_options(&options, &SearchFilters::default())
     }

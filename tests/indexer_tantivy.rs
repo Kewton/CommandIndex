@@ -299,6 +299,7 @@ fn test_search_with_options_tag_filter() {
         tag: Some("security".to_string()),
         heading: None,
         limit: 10,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: None,
@@ -318,6 +319,7 @@ fn test_search_with_options_heading_filter() {
         tag: None,
         heading: Some("Authentication".to_string()),
         limit: 10,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: None,
@@ -336,6 +338,7 @@ fn test_search_with_options_path_prefix_filter() {
         tag: None,
         heading: None,
         limit: 10,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: Some("docs/".to_string()),
@@ -354,6 +357,7 @@ fn test_search_with_options_file_type_filter() {
         tag: None,
         heading: None,
         limit: 10,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: None,
@@ -372,6 +376,7 @@ fn test_search_with_options_combined_filters() {
         tag: Some("auth".to_string()),
         heading: None,
         limit: 10,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: Some("docs/".to_string()),
@@ -394,6 +399,7 @@ fn test_search_with_options_limit() {
         tag: None,
         heading: None,
         limit: 1,
+        no_semantic: false,
     };
     let filters = SearchFilters {
         path_prefix: None,

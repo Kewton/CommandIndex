@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "CLIオプション設計が既存の相互排他構造と矛盾する",
+      "description": "現在のCLI構造ではqueryと--semanticはconflicts_with_allで相互排他的。ハイブリッド検索はBM25とSemanticを同時実行するが、この制約のままでは不可能。--semanticオプションの位置づけが未定義。",
+      "suggestion": "query引数使用時にembeddingが存在すれば自動でハイブリッド化し、--no-semanticでBM25のみに。--semanticは従来通り単独セマンティック検索として残す。conflicts_with_allの修正方針を明記する。"
+    },
+    {
+      "id": "M2",
+      "title": "RRFスコア統合時のドキュメント識別キーが未定義",
+      "description": "BM25はSearchResult(path+heading)、SemanticはEmbeddingSimilarityResult(file_path+section_heading)を返す。キーの一致保証がない。headingとsection_headingのフォーマットが異なる可能性。",
+      "suggestion": "RRF統合時のドキュメント識別キーを(path, heading)ペアとし、BM25のSearchResult.headingとSemanticのsection_headingの同一性保証または正規化ロジックを記述する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "--bm25-weight / --semantic-weight オプションとRRFの矛盾",
+      "description": "標準RRFはランク順位のみを使用し重み付けの概念がない。重み付きRRFにするなら拡張計算式が必要。",
+      "suggestion": "Weighted RRFの具体的な計算式を明記するか、Phase 1では重みオプションを実装せず均等重みRRFのみとし、重み調整は将来Issueに分離する。"
+    },
+    {
+      "id": "S2",
+      "title": "ハイブリッド検索の出力フォーマットと既存フォーマッタの整合性",
+      "description": "BM25はformat_results(SearchResult)、Semanticはformat_semantic_results(SemanticSearchResult)で別々にフォーマット。統合結果の型・フォーマッタが未定義。",
+      "suggestion": "HybridSearchResult型とフォーマッタの設計方針を追記。RRFスコアをscoreフィールドとして持つSearchResult互換型を使い既存format_resultsを再利用する方針が最もシンプル。"
+    },
+    {
+      "id": "S3",
+      "title": "片方のランキングにのみ存在するドキュメントの扱い",
+      "description": "BM25のみにヒットしSemantic側にないドキュメント（またはその逆）の処理方針が記載されていない。",
+      "suggestion": "片方のランキングにのみ存在する場合はもう片方のランクをlimit+1として扱いRRFスコアを計算する方針を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "パフォーマンスに関する記述の追加",
+      "description": "BM25検索とEmbedding生成の両方実行でレイテンシ増加。クエリEmbedding生成はAPI コール伴う。",
+      "suggestion": "BM25検索とクエリEmbedding生成の並行実行設計、タイムアウト時BM25フォールバックを検討項目として追記。"
+    },
+    {
+      "id": "N2",
+      "title": "k定数の設定可能性",
+      "description": "RRFのk=60は業界標準だがドキュメント粒度により最適値が異なる場合がある。",
+      "suggestion": "Phase 1ではk=60固定で問題ないが将来設定可能にする拡張ポイントとして設計方針に含める。"
+    },
+    {
+      "id": "N3",
+      "title": "フォールバック時のメッセージ要件がない",
+      "description": "embedding不在時にBM25のみで動作する際のユーザー通知が未定義。",
+      "suggestion": "stderrにinfoメッセージ出力する受け入れ基準を追加検討。"
+    }
+  ],
+  "summary": "全体として妥当な方向性だが、既存CLI構造との整合性(M1)とRRF統合時のドキュメント識別キー(M2)に重大な課題あり。Must Fix 2件を解決すれば実装に進める状態。"
+}

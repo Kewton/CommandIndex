@@ -1,0 +1,13 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "E2Eテストでのrun()シグネチャ変更の影響が未分析", "description": "embeddings.db不在環境でBM25フォールバックし既存テストが壊れないことの確認が必要。stderrメッセージが既存テストアサーションと衝突するリスク。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "src/cli/context.rsがSearchErrorに依存しており影響を受ける可能性"},
+    {"id": "S2", "title": "フォールバック時のstderrメッセージが既存テストと衝突するリスク"},
+    {"id": "S3", "title": "rrf_mergeがsearch_by_exact_pathを呼ぶ場合のindexer/reader.rsへの暗黙的依存"}
+  ],
+  "summary": "E2Eテストへの間接的影響分析が欠落。stderrメッセージの既存テストとの共存確認が必要。"
+}
