@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.4 — Phase 4: リンク解析・関連検索・Context Pack
+
+### Added
+- **Markdownリンク解析・リンクインデックス構築** (#51) (#55): Markdown内リンクの解析とリンク関係のインデックス化
+- **`--related` 検索オプション** (#50) (#56): リンク関係に基づく関連ドキュメント検索
+- **`context-pack` サブコマンド** (#52) (#57): Context Pack（コンテキストパック）生成機能
+- **Phase 4 E2E 統合テスト** (#53) (#58): リンク解析・関連検索・Context Packフロー検証
+
+---
+
 ## v0.0.3 — Phase 3: ソースコード解析 (tree-sitter + SQLite)
 
 ### Added
