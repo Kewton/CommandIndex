@@ -1,0 +1,11 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+INDEX_EXIT=0
+[function] greetUser
+  hello.ts:1-3
+SEARCH_EXIT=0

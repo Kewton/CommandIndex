@@ -1,0 +1,12 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+[class] DataProcessor
+  models.py:1-9
+    [method] __init__ (line 2-3)
+    [method] process (line 5-6)
+    [method] summarize (line 8-9)

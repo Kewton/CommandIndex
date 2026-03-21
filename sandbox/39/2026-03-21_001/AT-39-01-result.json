@@ -1,0 +1,1 @@
+{"test_id":"AT-39-01","title":"--type typescript filters correctly","status":"PASS","detail":"Only src/auth.ts returned when searching with --type typescript"}

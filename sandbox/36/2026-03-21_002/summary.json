@@ -1,0 +1,22 @@
+{
+  "issue": 36,
+  "title": "symbols.db ストア（rusqlite）",
+  "date": "2026-03-21",
+  "run": "002",
+  "type": "re-test",
+  "total": 6,
+  "pass": 6,
+  "fail": 0,
+  "skip": 0,
+  "result": "ALL PASS",
+  "critical_fix_verified": true,
+  "critical_fix_detail": "AT-36-05: dependencies table has 3 records (import persistence bug fixed)",
+  "tests": [
+    {"id": "AT-36-01", "title": "symbols.db created during index", "status": "PASS"},
+    {"id": "AT-36-02", "title": "Symbol found via --symbol after index", "status": "PASS"},
+    {"id": "AT-36-03", "title": "File deletion removes symbols", "status": "PASS"},
+    {"id": "AT-36-04", "title": "clean removes symbols.db", "status": "PASS"},
+    {"id": "AT-36-05", "title": "Dependencies table populated", "status": "PASS"},
+    {"id": "AT-36-06", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

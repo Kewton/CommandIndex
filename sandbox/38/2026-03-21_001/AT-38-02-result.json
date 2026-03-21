@@ -1,0 +1,1 @@
+{"test_id":"AT-38-02","title":"--symbol class search","status":"PASS","detail":"UserService class found at src/auth.ts:9-13 with method getName"}

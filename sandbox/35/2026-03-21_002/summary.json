@@ -1,0 +1,24 @@
+{
+  "issue": 35,
+  "title": "tree-sitter AST パーサー（TypeScript / Python）",
+  "date": "2026-03-21",
+  "run": "002",
+  "type": "re-test",
+  "total": 8,
+  "pass": 8,
+  "fail": 0,
+  "skip": 0,
+  "result": "ALL PASS",
+  "critical_fix_verified": true,
+  "critical_fix_detail": "AT-35-03: dependencies table has 3 records after indexing TS file with imports",
+  "tests": [
+    {"id": "AT-35-01", "title": "TypeScript function extraction", "status": "PASS"},
+    {"id": "AT-35-02", "title": "TypeScript class/method extraction", "status": "PASS"},
+    {"id": "AT-35-03", "title": "TypeScript import extraction (dependencies table)", "status": "PASS"},
+    {"id": "AT-35-04", "title": "Python function extraction", "status": "PASS"},
+    {"id": "AT-35-05", "title": "Python class/method extraction", "status": "PASS"},
+    {"id": "AT-35-06", "title": "TSX file support", "status": "PASS"},
+    {"id": "AT-35-07", "title": "Parse error graceful handling", "status": "PASS"},
+    {"id": "AT-35-08", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

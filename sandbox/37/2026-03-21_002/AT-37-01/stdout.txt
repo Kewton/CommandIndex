@@ -1,0 +1,10 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+search_target.ts:1 [ search_target.ts]
+  // This module handles authentication workflow
+  export function authenticateUser(token: string): boolean {...

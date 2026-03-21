@@ -1,0 +1,7 @@
+scripts/auth.py:1 [ auth.py]
+  def authenticate(user: str) -> bool:
+      """Handle authenticate"""...
+
+src/auth.ts:1 [ auth.ts]
+  function authenticate(user: string): boolean {
+    return user.length > 0;...

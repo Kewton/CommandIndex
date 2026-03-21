@@ -1,0 +1,1 @@
+{"kind":"function","line_end":6,"line_start":4,"name":"greetUser","path":"sample.ts"}

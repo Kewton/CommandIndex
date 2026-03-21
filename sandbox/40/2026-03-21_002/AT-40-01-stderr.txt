@@ -1,0 +1,2 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running tests/e2e_phase3_integration.rs (target/debug/deps/e2e_phase3_integration-3b0e70367eb6d8cc)

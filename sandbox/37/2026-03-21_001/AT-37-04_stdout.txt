@@ -1,0 +1,1 @@
+brandNewFunction correctly not found: No symbols found matching 'brandNewFunction'

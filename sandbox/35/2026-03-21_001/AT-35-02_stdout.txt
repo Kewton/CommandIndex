@@ -1,0 +1,4 @@
+{"kind":"class","line_end":26,"line_start":12,"name":"UserService","path":"sample.ts"}
+{"kind":"method","line_end":17,"line_start":15,"name":"constructor","parent":"UserService","path":"sample.ts"}
+{"kind":"method","line_end":21,"line_start":19,"name":"getName","parent":"UserService","path":"sample.ts"}
+{"kind":"method","line_end":25,"line_start":23,"name":"setName","parent":"UserService","path":"sample.ts"}

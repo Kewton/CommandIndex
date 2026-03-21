@@ -1,0 +1,3 @@
+added.ts:1 [ added.ts]
+  export function newlyAddedFunc(): string {
+    return "hello";...

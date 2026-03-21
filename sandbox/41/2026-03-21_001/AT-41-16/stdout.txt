@@ -1,0 +1,10 @@
+CommandIndex Status
+  Index root:    .
+  Version:       0.0.2
+  Created:       2026-03-21 00:39:56.726661 UTC UTC
+  Last updated:  2026-03-21 00:39:56.726661 UTC UTC
+  Total files:   3
+  Total sections: 3
+  Files by type: Markdown=1, TypeScript=1, Python=1
+  Symbols:       2
+  Index size:    55.7 KB

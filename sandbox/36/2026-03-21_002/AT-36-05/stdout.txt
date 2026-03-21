@@ -1,0 +1,14 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+=== Dependencies table contents ===
+1|main.ts|express|Router|sha256:c411e8b87d64ed940c791e6cd3d517d816b211a92cbbdcea80b602f90095d2f9
+2|main.ts|./auth|AuthService|sha256:c411e8b87d64ed940c791e6cd3d517d816b211a92cbbdcea80b602f90095d2f9
+3|main.ts|path|path|sha256:c411e8b87d64ed940c791e6cd3d517d816b211a92cbbdcea80b602f90095d2f9
+DEP_COUNT=3
+=== All tables ===
+dependencies  schema_meta   symbols     

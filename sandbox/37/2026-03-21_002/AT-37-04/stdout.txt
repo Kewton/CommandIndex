@@ -1,0 +1,19 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.3s
+Index saved to .commandindex/
+deleteme.ts:1 [ deleteme.ts]
+  // Unique platypus counting algorithm
+  export function platypusCounter(): number { return 7; }
+--- Before delete ---
+Incremental update completed:
+  Added:     0 files (0 sections)
+  Modified:  0 files (0 sections)
+  Deleted:   1 files
+  Unchanged: 0 files
+  Skipped:   0 files
+  Duration:  0.14s
+--- After delete+update ---

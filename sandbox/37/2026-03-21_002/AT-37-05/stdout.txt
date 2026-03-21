@@ -1,0 +1,33 @@
+Indexing ....
+  Scanned: 3 files
+  Indexed: 3 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.3s
+Index saved to .commandindex/
+=== manifest.json ===
+{
+  "files": [
+    {
+      "path": "readme.md",
+      "hash": "sha256:2f11d0bb0084628d1041fff061fe6ed084edb0b8adce19bfc48bacab259b0bd2",
+      "last_modified": "2026-03-21T01:40:30.708146351Z",
+      "sections": 1,
+      "file_type": "markdown"
+    },
+    {
+      "path": "code.ts",
+      "hash": "sha256:3e8b9159b990451706c84e30c550249d5c6809058f5a56f50189a6e872354aef",
+      "last_modified": "2026-03-21T01:40:30.702773446Z",
+      "sections": 1,
+      "file_type": "type_script"
+    },
+    {
+      "path": "script.py",
+      "hash": "sha256:44c239eb85fd8aa5b7d8186e1ecb797bea47bfaf5450a7b0518c0d83af6ba78e",
+      "last_modified": "2026-03-21T01:40:30.705533253Z",
+      "sections": 1,
+      "file_type": "python"
+    }
+  ]
+}

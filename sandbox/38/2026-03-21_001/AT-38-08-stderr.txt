@@ -1,0 +1,1 @@
+Error: Symbol database not found. Run `commandindex index` first.

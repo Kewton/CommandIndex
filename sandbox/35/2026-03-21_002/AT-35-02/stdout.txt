@@ -1,0 +1,12 @@
+Indexing ....
+  Scanned: 1 files
+  Indexed: 1 sections
+  Skipped: 0 files (parse error)
+  Ignored: 0 files (.cmindexignore)
+  Duration: 0.2s
+Index saved to .commandindex/
+[class] UserService
+  user.ts:1-15
+    [method] constructor (line 4-6)
+    [method] getName (line 8-10)
+    [method] setName (line 12-14)

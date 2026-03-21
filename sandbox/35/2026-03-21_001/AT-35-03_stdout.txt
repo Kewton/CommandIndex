@@ -1,0 +1,1 @@
+Dependencies table empty. Symbols count: 21, Dependencies count: 0. Imports parsed by tree-sitter but not inserted into dependencies table in index_code_file().

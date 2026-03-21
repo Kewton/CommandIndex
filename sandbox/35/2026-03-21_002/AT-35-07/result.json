@@ -1,0 +1,1 @@
+{"test_id":"AT-35-07","title":"Parse error graceful handling","status":"PASS","note":"Indexing succeeded despite malformed file, valid symbols found"}

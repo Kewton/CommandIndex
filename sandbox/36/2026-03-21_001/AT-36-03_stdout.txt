@@ -1,0 +1,1 @@
+appFunction correctly not found after deletion: No symbols found matching 'appFunction'

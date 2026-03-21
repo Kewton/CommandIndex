@@ -1,0 +1,22 @@
+{
+  "issue": 37,
+  "title": "コードファイル対応インデクサ拡張",
+  "date": "2026-03-21",
+  "run": "002",
+  "type": "re-test",
+  "total": 8,
+  "pass": 8,
+  "fail": 0,
+  "skip": 0,
+  "result": "ALL PASS",
+  "tests": [
+    {"id": "AT-37-01", "title": "index includes TypeScript files", "status": "PASS"},
+    {"id": "AT-37-02", "title": "index includes Python files", "status": "PASS"},
+    {"id": "AT-37-03", "title": "update works for code files", "status": "PASS"},
+    {"id": "AT-37-04", "title": "update deletes code files", "status": "PASS"},
+    {"id": "AT-37-05", "title": "manifest.json includes code files", "status": "PASS"},
+    {"id": "AT-37-06", "title": "status shows code file count", "status": "PASS"},
+    {"id": "AT-37-07", "title": "status --format json", "status": "PASS"},
+    {"id": "AT-37-08", "title": "cargo test/clippy/fmt", "status": "PASS"}
+  ]
+}

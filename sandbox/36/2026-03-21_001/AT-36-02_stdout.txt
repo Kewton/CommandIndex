@@ -1,0 +1,1 @@
+{"kind":"function","line_end":3,"line_start":1,"name":"appFunction","path":"app.ts"}
