@@ -130,6 +130,12 @@ fn get_symbol_count(base_path: &Path) -> u64 {
     }
     match SymbolStore::open(&db_path) {
         Ok(store) => store.count_all().unwrap_or(0),
+        Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
+            eprintln!(
+                "Warning: Symbol database schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
+            );
+            0
+        }
         Err(_) => 0,
     }
 }

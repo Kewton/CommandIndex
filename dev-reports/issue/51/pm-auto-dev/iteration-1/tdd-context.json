@@ -1,0 +1,16 @@
+{
+  "issue_number": 51,
+  "title": "Markdownリンク解析・リンクインデックス構築",
+  "design_policy": "dev-reports/design/issue-51-markdown-link-index-design-policy.md",
+  "work_plan": "dev-reports/issue/51/work-plan.md",
+  "tasks": [
+    "Task 1.1: FileLinkInfo構造体 + file_linksテーブル定義 + CURRENT_SYMBOL_SCHEMA_VERSION 1→2",
+    "Task 1.2: insert_file_links, find_file_links_by_source, delete_by_file拡張",
+    "Task 2.1: From<SymbolStoreError> for IndexError SchemaVersionMismatch正規化",
+    "Task 2.2: SearchError SchemaVersionMismatch追加",
+    "Task 2.3: StatusError SchemaVersionMismatch警告付き継続",
+    "Task 3.1: is_indexable_link()フィルタ関数",
+    "Task 3.2: index_markdown_file()リンク格納統合",
+    "Task 3.3: run_incremental()削除処理拡張"
+  ]
+}

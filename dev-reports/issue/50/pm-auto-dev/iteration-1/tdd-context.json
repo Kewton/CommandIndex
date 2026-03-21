@@ -1,0 +1,15 @@
+{
+  "issue_number": 50,
+  "title": "--related 検索オプション実装",
+  "branch": "feature/issue-50-related-search",
+  "design_policy": "dev-reports/design/issue-50-related-search-design-policy.md",
+  "work_plan": "dev-reports/issue/50/work-plan.md",
+  "implementation_order": [
+    "Phase 1: symbol_store.rs 追加メソッド (find_imports_by_source, find_file_links_by_target)",
+    "Phase 1: reader.rs 追加メソッド (search_by_exact_path)",
+    "Phase 2: output/mod.rs 型定義 (RelatedSearchResult, RelationType, format_related_results)",
+    "Phase 3: search/related.rs スコアリングエンジン",
+    "Phase 4: main.rs + cli/search.rs CLI統合",
+    "Phase 5: E2Eテスト"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "status": "success",
+  "tests_total": 284,
+  "tests_passed": 284,
+  "tests_failed": 0,
+  "clippy_warnings": 0,
+  "fmt_diff": false,
+  "files_changed": [
+    "src/indexer/symbol_store.rs (2 methods + 4 tests added)",
+    "src/indexer/reader.rs (search_by_exact_path added)",
+    "src/output/mod.rs (RelatedSearchResult, RelationType, format_related_results added)",
+    "src/output/human.rs (format_related_human added)",
+    "src/output/json.rs (format_related_json added)",
+    "src/output/path.rs (format_related_path added)",
+    "src/search/mod.rs (new)",
+    "src/search/related.rs (new - RelatedSearchEngine with scoring)",
+    "src/lib.rs (pub mod search added)",
+    "src/cli/search.rs (run_related_search, SearchError::RelatedSearch added)",
+    "src/main.rs (--related option + match branch added)",
+    "tests/e2e_related_search.rs (new - 10 E2E tests)"
+  ]
+}

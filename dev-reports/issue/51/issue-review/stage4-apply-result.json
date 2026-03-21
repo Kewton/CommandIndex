@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "M1", "action": "index_file_and_upsert()のMarkdown分岐でsymbol_storeを渡す修正方針を明記。Option<&SymbolStore>を使用"},
+    {"id": "M2", "action": "run_incremental()の削除処理条件拡張（Markdownファイル削除時もdelete_by_file()を呼ぶ）を明記"},
+    {"id": "M3", "action": "スキーマバージョン不一致時の挙動セクション追加。SchemaVersionMismatchエラーハンドリングのテスト追加を受け入れ基準に追加"},
+    {"id": "M4", "action": "フィルタリングはインデックス層で行う方針を明記（パーサー層は純粋な抽出に専念）"},
+    {"id": "S1", "action": "テーブル定義にCREATE INDEX文は既存。delete-before-insertパターンで重複防止"},
+    {"id": "S3", "action": "index_markdown_file()内でdelete-before-insertパターン採用を明記"},
+    {"other": "影響範囲テーブルを追加"}
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/51"
+}

@@ -1,0 +1,10 @@
+{
+  "stage": "2-apply",
+  "applied_items": [
+    {"id": "M1", "action": "フィールド名をrelation_types→relationsに修正"},
+    {"id": "M2", "action": "RelationType表現をPascalCase→snake_case（markdown_link等）に修正、TagMatchをオブジェクト形式に修正"},
+    {"id": "M3", "action": "スコア0.7以上の固定閾値検証を廃止し、相対比較（ブースト効果）検証に変更"},
+    {"id": "S1", "action": "ContextEntry.relation値を実装に合わせてlinked等に修正"},
+    {"id": "S3", "action": "contextコマンドに--formatオプションを使用しない設計に修正"}
+  ]
+}

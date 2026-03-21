@@ -3,7 +3,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, params};
 
-const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 1;
+const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 2;
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -19,6 +19,16 @@ pub struct SymbolInfo {
     pub line_start: u32,
     pub line_end: u32,
     pub parent_symbol_id: Option<i64>,
+    pub file_hash: String,
+}
+
+/// A file-to-file link record (WikiLink or MarkdownLink) stored in the symbol database.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileLinkInfo {
+    pub id: Option<i64>,
+    pub source_file: String,
+    pub target_file: String,
+    pub link_type: String, // "WikiLink" / "MarkdownLink"
     pub file_hash: String,
 }
 
@@ -48,6 +58,18 @@ fn symbol_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SymbolInfo> {
         line_end: row.get(5)?,
         parent_symbol_id: row.get(6)?,
         file_hash: row.get(7)?,
+    })
+}
+
+/// Map a SQLite row to a [`FileLinkInfo`]. The row must contain columns in the
+/// order: id, source_file, target_file, link_type, file_hash.
+fn file_link_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileLinkInfo> {
+    Ok(FileLinkInfo {
+        id: Some(row.get(0)?),
+        source_file: row.get(1)?,
+        target_file: row.get(2)?,
+        link_type: row.get(3)?,
+        file_hash: row.get(4)?,
     })
 }
 
@@ -213,7 +235,18 @@ impl SymbolStore {
             CREATE INDEX IF NOT EXISTS idx_symbols_kind ON symbols(kind);
             CREATE INDEX IF NOT EXISTS idx_symbols_parent ON symbols(parent_symbol_id);
             CREATE INDEX IF NOT EXISTS idx_deps_source ON dependencies(source_file);
-            CREATE INDEX IF NOT EXISTS idx_deps_target ON dependencies(target_module);",
+            CREATE INDEX IF NOT EXISTS idx_deps_target ON dependencies(target_module);
+
+            CREATE TABLE IF NOT EXISTS file_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_file TEXT NOT NULL,
+                target_file TEXT NOT NULL,
+                link_type TEXT NOT NULL,
+                file_hash TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_file_links_source ON file_links(source_file);
+            CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target_file);",
         )?;
 
         self.conn.execute(
@@ -265,7 +298,39 @@ impl SymbolStore {
         Ok(())
     }
 
-    /// Delete all symbols and dependencies that belong to the given file.
+    /// Bulk-insert file link records inside a single transaction.
+    pub fn insert_file_links(&self, links: &[FileLinkInfo]) -> Result<(), SymbolStoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+        for link in links {
+            tx.execute(
+                "INSERT INTO file_links (source_file, target_file, link_type, file_hash)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![
+                    link.source_file,
+                    link.target_file,
+                    link.link_type,
+                    link.file_hash,
+                ],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Find file links originating from the given source file.
+    pub fn find_file_links_by_source(
+        &self,
+        source: &str,
+    ) -> Result<Vec<FileLinkInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_file, link_type, file_hash
+             FROM file_links WHERE source_file = ?1",
+        )?;
+        let rows = stmt.query_map(params![source], file_link_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Delete all symbols, dependencies, and file links that belong to the given file.
     pub fn delete_by_file(&self, file_path: &str) -> Result<(), SymbolStoreError> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
@@ -274,6 +339,10 @@ impl SymbolStore {
         )?;
         tx.execute(
             "DELETE FROM dependencies WHERE source_file = ?1",
+            params![file_path],
+        )?;
+        tx.execute(
+            "DELETE FROM file_links WHERE source_file = ?1",
             params![file_path],
         )?;
         tx.commit()?;
@@ -361,6 +430,34 @@ impl SymbolStore {
              FROM dependencies WHERE target_module = ?1",
         )?;
         let rows = stmt.query_map(params![target_module], import_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Find import records whose source file matches exactly.
+    /// Returns all modules that the given file imports.
+    pub fn find_imports_by_source(
+        &self,
+        source_file: &str,
+    ) -> Result<Vec<ImportInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_module, imported_names, file_hash
+             FROM dependencies WHERE source_file = ?1",
+        )?;
+        let rows = stmt.query_map(params![source_file], import_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Find file links where the given file is the target.
+    /// Returns all files that link to the given target file.
+    pub fn find_file_links_by_target(
+        &self,
+        target_file: &str,
+    ) -> Result<Vec<FileLinkInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_file, link_type, file_hash
+             FROM file_links WHERE target_file = ?1",
+        )?;
+        let rows = stmt.query_map(params![target_file], file_link_from_row)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 }
@@ -601,6 +698,86 @@ mod tests {
         );
     }
 
+    fn sample_file_link(source: &str, target: &str, link_type: &str) -> FileLinkInfo {
+        FileLinkInfo {
+            id: None,
+            source_file: source.to_string(),
+            target_file: target.to_string(),
+            link_type: link_type.to_string(),
+            file_hash: "abc123".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_file_links_table_created() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Verify table exists by inserting
+        let link = sample_file_link("docs/a.md", "docs/b.md", "WikiLink");
+        store.insert_file_links(&[link]).unwrap();
+    }
+
+    #[test]
+    fn test_insert_and_find_file_links_by_source() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let links = vec![
+            sample_file_link("docs/a.md", "docs/b.md", "WikiLink"),
+            sample_file_link("docs/a.md", "docs/c.md", "MarkdownLink"),
+            sample_file_link("docs/other.md", "docs/b.md", "WikiLink"),
+        ];
+        store.insert_file_links(&links).unwrap();
+
+        let results = store.find_file_links_by_source("docs/a.md").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].source_file, "docs/a.md");
+        assert_eq!(results[0].target_file, "docs/b.md");
+        assert_eq!(results[0].link_type, "WikiLink");
+        assert_eq!(results[1].target_file, "docs/c.md");
+        assert_eq!(results[1].link_type, "MarkdownLink");
+        assert!(results[0].id.is_some());
+    }
+
+    #[test]
+    fn test_find_file_links_by_source_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.find_file_links_by_source("nonexistent.md").unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_delete_by_file_removes_file_links() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let links = vec![
+            sample_file_link("docs/a.md", "docs/b.md", "WikiLink"),
+            sample_file_link("docs/other.md", "docs/b.md", "WikiLink"),
+        ];
+        store.insert_file_links(&links).unwrap();
+
+        store.delete_by_file("docs/a.md").unwrap();
+
+        let results = store.find_file_links_by_source("docs/a.md").unwrap();
+        assert!(results.is_empty());
+
+        let remaining = store.find_file_links_by_source("docs/other.md").unwrap();
+        assert_eq!(remaining.len(), 1);
+    }
+
+    #[test]
+    fn test_insert_file_links_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Inserting empty slice should succeed
+        store.insert_file_links(&[]).unwrap();
+    }
+
     #[test]
     fn test_open_creates_db_file() {
         let tmp = TempDir::new().unwrap();
@@ -611,5 +788,63 @@ mod tests {
         let _store = SymbolStore::open(&db_path).unwrap();
 
         assert!(db_path.exists());
+    }
+
+    #[test]
+    fn test_find_imports_by_source() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let deps = vec![
+            sample_import("src/main.rs", "std::io"),
+            sample_import("src/main.rs", "serde"),
+            sample_import("src/lib.rs", "std::io"),
+        ];
+        store.insert_dependencies(&deps).unwrap();
+
+        let results = store.find_imports_by_source("src/main.rs").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].source_file, "src/main.rs");
+    }
+
+    #[test]
+    fn test_find_imports_by_source_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert!(
+            store
+                .find_imports_by_source("nonexistent.rs")
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_find_file_links_by_target() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let links = vec![
+            sample_file_link("docs/a.md", "docs/b.md", "WikiLink"),
+            sample_file_link("docs/c.md", "docs/b.md", "MarkdownLink"),
+            sample_file_link("docs/a.md", "docs/d.md", "WikiLink"),
+        ];
+        store.insert_file_links(&links).unwrap();
+
+        let results = store.find_file_links_by_target("docs/b.md").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].target_file, "docs/b.md");
+    }
+
+    #[test]
+    fn test_find_file_links_by_target_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert!(
+            store
+                .find_file_links_by_target("nonexistent.md")
+                .unwrap()
+                .is_empty()
+        );
     }
 }

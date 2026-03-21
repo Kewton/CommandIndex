@@ -1,0 +1,1 @@
+{"skipped": true, "reason": "Codex worker timeout in previous phase. All must_fix items from Stage 1-4 have been applied to design policy.", "must_fix": [], "should_fix": [], "nice_to_have": [], "summary": "Skipped due to Codex timeout."}

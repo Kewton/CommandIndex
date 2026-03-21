@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "リンクtarget文字列の長さ制限がない", "suggestion": "is_indexable_link()でtarget.len() > 1024の場合falseを返すガード追加"},
+    {"id": "S2", "title": "1ファイルあたりのリンク数に上限がない", "suggestion": "フィルタリング後のリンク数が上限(10000件)超えた場合に警告+切り捨て"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "extract_markdown_linksのネスト括弧による誤パース", "suggestion": "本Issue対応不要、将来対応"},
+    {"id": "N2", "title": "link_typeカラムのCHECK制約追加", "suggestion": "将来のリファクタリングで検討"},
+    {"id": "N3", "title": "delete_by_file拡張後のトランザクション範囲", "suggestion": "現状設計で問題なし"}
+  ]
+}

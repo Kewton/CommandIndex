@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "changes": [
+    {
+      "file": "tests/e2e_related_search.rs",
+      "description": "DRY: search+parse JSONL パターンを run_related_search / run_related_search_with_args ヘルパーに抽出。result_paths / find_result_by_path / has_relation ヘルパーを追加し重複コードを削減。related_full_flow_verifies_relation_types で b.md/c.md の同一検証ロジックをループに統合。"
+    },
+    {
+      "file": "tests/e2e_context_pack.rs",
+      "description": "DRY: setup+cmd+parse パターンを run_context_pack ヘルパーに抽出。context_paths ヘルパーを追加し path 抽出の重複を削減。10テスト全てでボイラープレートを削除。"
+    }
+  ],
+  "no_changes_reason": null,
+  "summary": "両ファイルで繰り返されていた「コマンド実行 -> stdout取得 -> JSON/JSONLパース」のボイラープレートをヘルパー関数に抽出。e2e_related_search.rs では5つのヘルパー関数(run_related_search, run_related_search_with_args, result_paths, find_result_by_path, has_relation)を、e2e_context_pack.rs では2つのヘルパー関数(run_context_pack, context_paths)を導入。テストカバレッジ(15テスト + 10テスト = 25テスト)は維持。全252テストパス、clippy警告0件、fmt差分なしを確認。"
+}

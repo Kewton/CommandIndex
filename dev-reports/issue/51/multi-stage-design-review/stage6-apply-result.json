@@ -1,0 +1,9 @@
+{"stage": 6, "applied_fixes": [
+  {"id": "M1", "action": "整合性パターン3.4を修正: Tantivy書き込み成功後にDB書き込み。insert_file_links失敗時はエラーを上位へ返す"},
+  {"id": "M2", "action": "FileLinkInfo.link_typeをString型に戻し、store層に閉じる。LinkType→String変換はcli/index.rsで実施。レイヤー分離を維持"},
+  {"id": "M3", "action": "9.3のtests/cli_index.rsのschema_version期待値を据え置きに修正（state.jsonのCURRENT_SCHEMA_VERSIONは不変）"},
+  {"id": "S1", "action": "is_indexable_link()をsrc/cli/index.rsに配置変更。SymbolStoreはCRUDに専念"},
+  {"id": "S2", "action": "find_file_links_by_source()にテスト用である旨を注記"},
+  {"id": "S3", "action": "link_type不正値ハンドリング方針を4.2に追記"},
+  {"id": "S4", "action": "status.rsのSchemaVersionMismatch時は警告+symbol_count=0で継続する方針に変更"}
+]}

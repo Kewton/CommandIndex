@@ -1,0 +1,13 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S4-S1", "category": "パストラバーサル", "description": "normalize_path()で..（親ディレクトリ）の処理を追加"},
+    {"id": "S4-S2", "category": "入力バリデーション", "description": "--related入力に長さ制限（1024文字）と空文字チェックを追加"}
+  ],
+  "nice_to_have": [
+    {"id": "S4-N1", "category": "エラー情報漏洩", "description": "エラーメッセージにstrip_control_chars()を適用"}
+  ],
+  "summary": "unsafe使用なし、SQLインジェクション対策適切。..対策と入力長バリデーションが主な改善点。"
+}

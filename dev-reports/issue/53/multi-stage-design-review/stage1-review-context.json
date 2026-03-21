@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "setup_tag_match_docs() と setup_linked_docs() のデータ重複 (DRY違反)",
+      "description": "設計方針書の setup_tag_match_docs() は docs/x.md(auth,security), y.md(auth), z.md(security), unrelated.md(database) を作成するが、既存の setup_linked_docs() も a.md(auth,security), b.md(auth), c.md(security), d.md(unrelated) とほぼ同一構造のテストデータを生成している。タグ構成・ファイル数・目的が酷似しており、DRY原則に明確に違反する。",
+      "suggestion": "setup_tag_match_docs() を新設せず、既存の setup_linked_docs() を再利用するか、共通のビルダー関数（例: setup_docs_with_tags(tags_map: &[(&str, &[&str])])）を tests/common/mod.rs に追加して両者を統一する。"
+    },
+    {
+      "id": "M2",
+      "title": "排他制御テスト4本は既存テストと重複 (YAGNI/DRY違反)",
+      "description": "設計方針書のシナリオ7では --related と --tag, --path, --heading, --type の排他を各1テストで検証する方針だが、既存 e2e_related_search.rs に related_search_conflicts_with_query() と related_search_conflicts_with_symbol() が既にあり、排他制御は clap の conflicts_with_all で宣言的に保証されている。clap による排他制御は全フィールド一括定義であり、個別フィルタごとにテストする価値は低い。",
+      "suggestion": "排他制御テストは代表1本（例: --related + --tag）に絞り、残り3本は削除する。clap のconflicts_with_all 宣言が正しく機能していれば全フィルタが同時に排他される。既存2テスト(query, symbol)と合わせて十分なカバレッジとなる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "シナリオ個別セットアップ方針による実行時間増大 (KISS違反)",
+      "description": "11テスト関数に対して4つの独立セットアップ関数を定義し、各テストがインデックス構築を個別実行する設計。E2Eテストのインデックス構築はI/Oコストが高く、テスト数増加に比例して実行時間が増大する。現状の既存テスト（related: 10テスト, context_pack: 7テスト）も各1セットアップで賄えている。",
+      "suggestion": "同一セットアップを必要とするテストはセットアップを共有する。例えば setup_tag_match_docs() を使うテストが複数あるなら、Rust の once_cell::Lazy またはテスト内で共有可能な構造にする。少なくとも同一ファイル内で同一セットアップを呼ぶテストが3つ以上なら共有を検討すべき。"
+    },
+    {
+      "id": "S2",
+      "title": "relation_types 厳密検証の脆弱性 (SOLID - 開放閉鎖原則)",
+      "description": "シナリオ1で relation_types の厳密検証を行う方針だが、RelationType は現在5種類（MarkdownLink, ImportDependency, TagMatch, PathSimilarity, DirectoryProximity）あり、スコアリングアルゴリズムの内部実装に密結合したアサーションになるリスクがある。将来 RelationType が追加された場合、テストが壊れやすい。",
+      "suggestion": "relation_types の検証は「期待するタイプが含まれること」の包含チェックに留め、「これだけしか含まれない」という排他チェックは避ける。例: assert!(relations.contains('MarkdownLink')) は良いが、assert_eq!(relations.len(), 2) は避ける。"
+    },
+    {
+      "id": "S3",
+      "title": "DirectoryProximityスコアブーストテストの実装難度 (KISS違反)",
+      "description": "シナリオ3で DirectoryProximity のスコアブースト検証を行うが、DirectoryProximity は他の関連タイプ（TagMatch等）が先に存在するファイルに対してのみ加算される設計（score_path_proximity は既存 scores のキーのみを走査）。つまり DirectoryProximity 単体ではスコアに現れず、他タイプとの複合条件でしか発火しない。テストデータ設計が複雑になる。",
+      "suggestion": "setup_dir_proximity_docs() のテストデータに TagMatch や MarkdownLink が発火する条件も含め、DirectoryProximity がブーストとして加算されることを検証する設計にする。例: 同ディレクトリの2ファイルが同一タグを持ち、別ディレクトリのファイルより高スコアになることを検証。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "テストヘルパーの common/mod.rs への集約",
+      "description": "e2e_context_pack.rs 内の parse_context_pack() はファイルローカル関数だが、Context Pack のJSON解析は他テストでも再利用可能。common/mod.rs に移動すれば今後のテスト追加時に DRY を維持しやすい。",
+      "suggestion": "parse_context_pack() を common/mod.rs に pub fn parse_context_pack(stdout: &str) -> serde_json::Value として移動する。"
+    },
+    {
+      "id": "N2",
+      "title": "setup_import_chain() のテストデータにおける拡張子解決の考慮",
+      "description": "setup_import_chain() で src/a.ts -> b.ts -> c.ts のimportチェーンを構築するが、既存の setup_context_docs() も src/c.ts -> d.ts のimportを含んでいる。import解決のロジック（拡張子補完等）に依存するテストデータが分散すると保守コストが上がる。",
+      "suggestion": "import チェーンのテストデータは既存の setup_context_docs() を拡張する形で追加するか、import解決に特化したデータは1箇所に集約する。"
+    },
+    {
+      "id": "N3",
+      "title": "--max-tokens テストと既存 --max-files テストの関係整理",
+      "description": "シナリオ6の --max-tokens テストは既存の context_pack_max_files_limits_output() と並列的な制限テスト。テスト名やデータ構造に一貫性を持たせると可読性が向上する。",
+      "suggestion": "テスト命名を context_pack_max_tokens_limits_output() のように既存テストと揃え、同一セットアップ関数を使用して対称性を保つ。"
+    }
+  ],
+  "summary": "設計方針書は全体として妥当だが、3点の改善が必要。(1) DRY違反: setup_tag_match_docs() が既存 setup_linked_docs() とほぼ同一構造であり、共通化すべき。(2) YAGNI違反: clap の conflicts_with_all で宣言的に保証される排他制御テスト4本は代表1本に削減可能。(3) KISS違反: DirectoryProximity のスコアブーストテストは、同スコアが他タイプの存在を前提とする設計を理解した上でテストデータを設計する必要がある。既存テストの再利用・拡張を優先し、新規セットアップ関数の乱立を避けることで、保守性と実行速度を両立できる。"
+}

@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
-use crate::output::{OutputError, SymbolSearchResult, parse_tags};
+use crate::output::{OutputError, RelatedSearchResult, SymbolSearchResult, parse_tags};
 
 /// JSONL形式で検索結果を出力する
 pub fn format_json(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
@@ -15,6 +15,42 @@ pub fn format_json(results: &[SearchResult], writer: &mut dyn Write) -> Result<(
             "tags": tags,
             "line_start": result.line_start,
             "score": result.score,
+        });
+        serde_json::to_writer(&mut *writer, &json_value)?;
+        writeln!(writer)?;
+    }
+    Ok(())
+}
+
+/// 関連検索結果をJSONL形式で出力する
+pub fn format_related_json(
+    results: &[RelatedSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for result in results {
+        let relations: Vec<serde_json::Value> = result
+            .relation_types
+            .iter()
+            .map(|r| match r {
+                crate::output::RelationType::MarkdownLink => serde_json::json!("markdown_link"),
+                crate::output::RelationType::ImportDependency => {
+                    serde_json::json!("import_dependency")
+                }
+                crate::output::RelationType::TagMatch { matched_tags } => {
+                    serde_json::json!({"tag_match": matched_tags})
+                }
+                crate::output::RelationType::PathSimilarity => {
+                    serde_json::json!("path_similarity")
+                }
+                crate::output::RelationType::DirectoryProximity => {
+                    serde_json::json!("directory_proximity")
+                }
+            })
+            .collect();
+        let json_value = serde_json::json!({
+            "path": result.file_path,
+            "score": result.score,
+            "relations": relations,
         });
         serde_json::to_writer(&mut *writer, &json_value)?;
         writeln!(writer)?;

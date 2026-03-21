@@ -1,0 +1,55 @@
+{
+  "criteria": [
+    {
+      "id": 1,
+      "description": "commandindex context <file> で関連文脈がJSON出力される",
+      "status": "pass",
+      "evidence": "run_context() が format_context_pack() を呼び stdout に JSON 出力。E2E テスト context_pack_outputs_valid_json が target_files, context, summary フィールドの存在を確認済み。"
+    },
+    {
+      "id": 2,
+      "description": "複数ファイル指定に対応（union マージ、スコア最大値）",
+      "status": "pass",
+      "evidence": "collect_related_context() が各ファイルを順次 find_related() し、merge_related_results() が HashMap で union マージ。スコアは max 採用（context.rs:129）、relation_types は重複排除マージ。E2E テスト context_pack_multiple_files が 2 ファイル指定を検証済み。"
+    },
+    {
+      "id": 3,
+      "description": "--max-files で出力ファイル数を制限できる",
+      "status": "pass",
+      "evidence": "build_context_pack() で merged[..min(len, max_files)] によりスライス（context.rs:180）。E2E テスト context_pack_max_files_limits_output が --max-files 1 で context.len() <= 1 を検証済み。"
+    },
+    {
+      "id": 4,
+      "description": "--max-tokens でトークン数概算制限ができる（バイト数/4）",
+      "status": "pass",
+      "evidence": "estimate_tokens() が text.len() / 4 を返す（context.rs:357）。build_context_pack() が token_total + entry_tokens > max_tok で break する制限ロジック実装済み（context.rs:195-203）。CLI 引数 --max-tokens は Option<usize> として定義（main.rs:89）。専用 E2E テストはないが、ロジックはコードレビューで確認。"
+    },
+    {
+      "id": 5,
+      "description": "パイプ連携（stdout JSON出力）が正しく動作する",
+      "status": "pass",
+      "evidence": "run_context() が std::io::stdout().lock() を取得し format_context_pack() に渡す（context.rs:79-81）。serde_json::to_writer_pretty で出力。E2E テストが assert_cmd の stdout キャプチャで JSON パース成功を確認。"
+    },
+    {
+      "id": 6,
+      "description": "relation 型が全5種類に対応している",
+      "status": "pass",
+      "evidence": "RelationType enum が MarkdownLink, ImportDependency, TagMatch{matched_tags}, PathSimilarity, DirectoryProximity の5バリアント（output/mod.rs:94-100）。relation_to_string() が全5種を文字列マッピング: linked, import_dependency, tag_match, path_similarity, directory_proximity（context.rs:325-353）。"
+    },
+    {
+      "id": 7,
+      "description": "cargo test / clippy / fmt 全パス",
+      "status": "fail",
+      "evidence": "cargo test: 全291テスト PASS。cargo clippy --all-targets -- -D warnings: 警告0件 PASS。cargo fmt --all -- --check: src/cli/context.rs に3箇所のフォーマット差分あり（format!マクロの改行位置）。FAIL。"
+    }
+  ],
+  "overall": "fail",
+  "issues": [
+    {
+      "criteria_id": 7,
+      "severity": "minor",
+      "description": "src/cli/context.rs にフォーマット差分あり。`cargo fmt` を実行してフォーマットを修正する必要がある。",
+      "fix": "cargo fmt --all を実行"
+    }
+  ]
+}

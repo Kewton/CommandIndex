@@ -1,0 +1,18 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー（SOLID/KISS/YAGNI/DRY）",
+  "must_fix": [
+    {"id": "M1", "title": "SchemaVersionMismatch正規化でFrom実装との矛盾", "description": "From<SymbolStoreError> for IndexErrorが全てをIndexError::SymbolStoreにラップするため、正規化方式を明記する必要がある", "suggestion": "From実装内でSchemaVersionMismatchのみIndexError::SchemaVersionMismatchにマッピングするmatch armを追加"},
+    {"id": "M2", "title": "Markdownの整合性パターンがコードファイルと非対称", "description": "設計書のdelete→tantivy→insertはindex_code_file()のdelete→insert→tantivy→ロールバックと異なる", "suggestion": "コードファイルと同一パターンに統一する"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "run_incrementalの削除条件拡張方法がDRY違反リスク", "suggestion": "全ファイルタイプでdelete_by_file()を呼ぶか、has_symbol_store_data()メソッドを追加"},
+    {"id": "S2", "title": "is_indexable_linkの配置がCLI層でSRP違反", "suggestion": "indexer層に配置する"},
+    {"id": "S3", "title": "FileLinkInfo.link_typeがString型で型安全性が低い", "suggestion": "LinkType enumを活用し、DB格納時のみto_string()/from_str()で変換"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "insert_file_linksとinsert_dependenciesのDRY", "suggestion": "現段階はKISS優先で個別実装"},
+    {"id": "N2", "title": "スキーママイグレーション戦略が再構築のみ", "suggestion": "将来的にALTER TABLE対応の余地を残す"},
+    {"id": "N3", "title": "find_file_links_by_targetはYAGNI", "suggestion": "本Issueではfind_by_sourceのみ実装、find_by_targetは後続Issue"}
+  ]
+}

@@ -13,7 +13,8 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("search"))
         .stdout(predicate::str::contains("update"))
         .stdout(predicate::str::contains("status"))
-        .stdout(predicate::str::contains("clean"));
+        .stdout(predicate::str::contains("clean"))
+        .stdout(predicate::str::contains("context"));
 }
 
 #[test]

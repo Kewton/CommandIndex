@@ -1,0 +1,50 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "セットアップ関数呼び出しによるCI時間増加（e2e_related_search）",
+      "description": "現在e2e_related_searchは10テストで各テストがsetup_linked_docs()を呼び出し、毎回インデックス構築を実行している（合計4.66秒）。5テスト追加により15テストとなり、各テストが独自セットアップ関数を呼ぶため、インデックス構築が15回実行される。新規セットアップ3関数（setup_tag_match_docs, setup_dir_proximity_docs, setup_import_chain）はそれぞれ固有のテストデータを持つため、テスト実行時間は約7-8秒に増加する見込み。全体のCI test jobは現在最大6.68秒の並列実行で、影響は許容範囲内だが認識しておくべき。",
+      "suggestion": "現時点では許容範囲だが、将来テスト数が増加した場合は、同一セットアップを共有するテストをonce_cell等でインデックスを共有する方式を検討する。現段階では各テストの独立性を優先し、そのままで良い。"
+    },
+    {
+      "id": "S2",
+      "title": "排他制御テスト（シナリオ7）がclapの実装詳細に依存",
+      "description": "related_conflicts_with_tag, related_conflicts_with_path_filter, related_conflicts_with_heading, related_conflicts_with_type_filterの4テストは、clapの引数排他制御（conflicts_with）に依存している。これらのオプション（--tag, --path, --heading, --type）がclapレベルで排他設定されているか確認が必要。もしclapのconflicts_with設定が漏れている場合、テストが意図通り失敗せず、テスト自体が通ってしまう可能性がある。",
+      "suggestion": "テスト実装前に、src/cli/内のclap定義で--relatedと--tag, --path, --heading, --typeの排他設定が存在するか確認すること。未設定の場合はプロダクションコード修正が必要となり、Issue #53のスコープ外となるため、別Issueとして起票する。"
+    },
+    {
+      "id": "S3",
+      "title": "スコア値の数値検証（シナリオ3）が実装定数に密結合",
+      "description": "シナリオ3のrelated_directory_proximity_boosts_scoreテストでは、スコアが0.7（TAG_MATCH_WEIGHT 0.5 + DIR_PROXIMITY_WEIGHT 0.2）以上であることを検証する設計になっている。これらの重み値はプロダクションコードの内部定数であり、将来の調整時にテストが壊れるリスクがある。",
+      "suggestion": "スコアの絶対値ではなく、「DirectoryProximity関係を持つファイルのスコアがTagMatchのみのファイルより高い」という相対比較で検証する方式を検討する。絶対値検証を残す場合は、テストコメントに依存定数の場所（例: src/search/related.rs）を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "一時ディレクトリの使用量監視",
+      "description": "現在の全テスト（311テスト）が各々tempfile::tempdir()で一時ディレクトリを作成している。E2Eテストではインデックスファイル（tantivyインデックス + SQLiteデータベース）も生成されるため、並列実行時のディスク使用量が増加する。新規8テスト追加で約8つの一時ディレクトリが追加される。各インデックスは小規模テストデータ（4-5ファイル）のため、1ディレクトリあたり数MB程度。CI環境のディスク容量には影響しない。",
+      "suggestion": "現時点で対応不要。tempfileクレートはDropでクリーンアップされるため、リソースリークの心配はない。"
+    },
+    {
+      "id": "N2",
+      "title": "テストファイルの行数増加に対するモジュール分割検討",
+      "description": "e2e_related_search.rsは現在218行で、5テスト+3セットアップ関数追加により約350-400行に増加する見込み。Rustのテストファイルとしては許容範囲だが、今後さらにテストが追加される場合はファイル分割が必要になる可能性がある。",
+      "suggestion": "400行を超えた段階でモジュール分割を検討する。現時点では設計方針書の判断（既存ファイルへの追加）を支持する。"
+    },
+    {
+      "id": "N3",
+      "title": "CI並列実行におけるテストバイナリ数",
+      "description": "cargo testはテストファイルごとに独立バイナリを生成し並列実行する。既存ファイルへの追加のため、新規バイナリは生成されず、コンパイル時間への影響は最小限。新規ファイル作成方式と比較して、この点は優れた設計判断である。",
+      "suggestion": "対応不要。既存ファイルへの追加方針を維持すること。"
+    },
+    {
+      "id": "N4",
+      "title": "dev-dependenciesの互換性",
+      "description": "テストで使用するdev-dependencies（tempfile 3, assert_cmd 2, predicates 3）は安定版であり、新規テストで追加のcrateは不要。互換性リスクは極めて低い。",
+      "suggestion": "対応不要。"
+    }
+  ],
+  "summary": "Issue #53のE2Eテスト追加設計は、既存テストへの影響が極めて限定的であり、must_fix（必須修正）事項はない。主な注意点は3つ: (1) CI実行時間の微増（約2-3秒増加、許容範囲内）、(2) シナリオ7の排他制御テストがclapの設定に依存するため事前確認が必要、(3) シナリオ3のスコア数値検証が内部定数に密結合するリスク。テストデータは各テストが独立したtempfileを使用するため並列実行時のリソース競合リスクはゼロ。プロダクションコード変更なし、依存crate追加なしの設計は適切であり、全体として低リスクな変更と評価する。"
+}

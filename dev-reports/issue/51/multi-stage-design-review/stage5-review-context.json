@@ -1,0 +1,20 @@
+{
+  "stage": 5,
+  "type": "通常レビュー（2回目 - Codex）",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {"id": "M1", "title": "insert_file_links()失敗時の扱いが整合性を壊す", "description": "insert_file_links失敗時にSkippedではなく致命エラーとして扱うか、Tantivy追加成功後にDB書き込みの順序を見直すべき", "suggestion": "Tantivy追加成功後にDB書き込み。DB書き込み失敗はそのファイルのindexing失敗として上位へ返す"},
+    {"id": "M2", "title": "symbol_store.rsがparser::link::LinkTypeに依存するとレイヤー境界を壊す", "description": "storage/indexer層がparser層の表現に依存し、パーサー都合の変更がDBモデルに波及する", "suggestion": "FileLinkInfoは保存時点で文字列へ変換してstore向けの型に閉じる。変換はcli/index.rs側で行う"},
+    {"id": "M3", "title": "state.jsonとsymbols.dbのschema versionを混同", "description": "tests/cli_index.rsのschema_version期待値はstate.json側で現状1のまま。symbols.db側のみ2に上がる", "suggestion": "テスト更新方針を修正: cli_index.rsのstate.json期待値は据え置き、symbol_store.rs側のschema versionテスト追加に分離"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "is_indexable_link()の配置がSRP違反", "description": "SymbolStoreはSQLite永続化の責務のみ。リンクの業務ルール判定まで抱えるのは責務過多", "suggestion": "src/cli/index.rsに閉じるか、src/indexer/link_filter.rsのような専用モジュールへ分離"},
+    {"id": "S2", "title": "テストのためだけにfind_file_links_by_source()を公開APIに追加するのはYAGNI", "suggestion": "#[cfg(test)]の補助関数にするか、テストではSQLiteを直接問い合わせる"},
+    {"id": "S3", "title": "link_type逆変換時の不正値ハンドリング方針が欠如", "suggestion": "未知のlink_typeをSymbolStoreError相当で返すか文字列のまま保持するかを明記"},
+    {"id": "S4", "title": "StatusError::SchemaVersionMismatch導入のAPI影響が整理不足", "suggestion": "statusを失敗させるのか警告付き継続するのかを明文化"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "リンク数上限・長さ上限の根拠を補足", "suggestion": "DoS緩和のための暫定値である旨を一文補足"},
+    {"id": "N2", "title": "整合性パターンの説明を既存コードとの差分込みで整理", "suggestion": "既存と同一部分とMarkdown特有の追加判断を分離記述"}
+  ]
+}

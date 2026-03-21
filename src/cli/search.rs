@@ -13,6 +13,8 @@ pub enum SearchError {
     SymbolStore(SymbolStoreError),
     SymbolDbNotFound,
     InvalidArgument(String),
+    SchemaVersionMismatch,
+    RelatedSearch(crate::search::related::RelatedSearchError),
 }
 
 impl fmt::Display for SearchError {
@@ -31,6 +33,11 @@ impl fmt::Display for SearchError {
                 )
             }
             SearchError::InvalidArgument(msg) => write!(f, "{msg}"),
+            SearchError::RelatedSearch(e) => write!(f, "{e}"),
+            SearchError::SchemaVersionMismatch => write!(
+                f,
+                "Index schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
+            ),
         }
     }
 }
@@ -44,6 +51,8 @@ impl std::error::Error for SearchError {
             SearchError::SymbolStore(e) => Some(e),
             SearchError::SymbolDbNotFound => None,
             SearchError::InvalidArgument(_) => None,
+            SearchError::SchemaVersionMismatch => None,
+            SearchError::RelatedSearch(e) => Some(e),
         }
     }
 }
@@ -60,9 +69,18 @@ impl From<OutputError> for SearchError {
     }
 }
 
+impl From<crate::search::related::RelatedSearchError> for SearchError {
+    fn from(e: crate::search::related::RelatedSearchError) -> Self {
+        SearchError::RelatedSearch(e)
+    }
+}
+
 impl From<SymbolStoreError> for SearchError {
     fn from(e: SymbolStoreError) -> Self {
-        SearchError::SymbolStore(e)
+        match e {
+            SymbolStoreError::SchemaVersionMismatch { .. } => SearchError::SchemaVersionMismatch,
+            other => SearchError::SymbolStore(other),
+        }
     }
 }
 
@@ -120,6 +138,49 @@ pub fn run_symbol_search(
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_symbol_results(&results, format, &mut handle)?;
+    Ok(())
+}
+
+pub fn run_related_search(
+    file_path: &str,
+    limit: usize,
+    format: OutputFormat,
+) -> Result<(), SearchError> {
+    if file_path.is_empty() {
+        return Err(SearchError::InvalidArgument(
+            "File path cannot be empty".to_string(),
+        ));
+    }
+    if file_path.len() > 1024 {
+        return Err(SearchError::InvalidArgument(
+            "File path too long (max 1024 characters)".to_string(),
+        ));
+    }
+
+    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    if !tantivy_dir.exists() {
+        return Err(SearchError::IndexNotFound);
+    }
+
+    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    if !db_path.exists() {
+        return Err(SearchError::SymbolDbNotFound);
+    }
+
+    let reader = IndexReaderWrapper::open(&tantivy_dir)?;
+    let store = SymbolStore::open(&db_path)?;
+
+    let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
+    let results = engine.find_related(file_path, limit)?;
+
+    if results.is_empty() {
+        eprintln!("No related files found for '{file_path}'");
+        return Ok(());
+    }
+
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+    output::format_related_results(&results, format, &mut handle)?;
     Ok(())
 }
 
