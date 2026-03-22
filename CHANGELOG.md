@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.0.5 — Phase 5: Semantic Extension + スニペットオプション
+
+### Added
+- **Embedding生成基盤** (#61): Ollama/OpenAI対応のEmbeddingプロバイダー（EmbeddingProviderトレイト、設定管理）
+- **Embeddingストレージ** (#62): SQLite embeddings.db によるベクトル格納・コサイン類似度検索
+- **`embed` サブコマンド** (#61 #62): Embedding生成・格納の統合コマンド
+- **Semantic Search** (#63): `--semantic` オプションによるEmbeddingベースの意味検索機能
+- **Hybrid Retrieval** (#64): 全文検索+Semantic SearchのRRF統合によるハイブリッド検索
+- **Reranking** (#65): `--rerank` オプションによるCross-Encoder方式の再順位付け（Ollama /api/generate ベース）
+- **スニペット表示オプション** (#44): search結果のスニペット行数・文字数をCLIオプションで制御可能に
+- **Phase 5 E2E統合テスト** (#66): Embedding・Semantic Search・Hybrid・Rerankingフロー検証
+
+---
+
 ## v0.0.4 — Phase 4: リンク解析・関連検索・Context Pack
 
 ### Added
