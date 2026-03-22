@@ -197,7 +197,9 @@ fn e2e_status_verify_with_team_config() {
         .args(["status", "--path", dir.path().to_str().unwrap(), "--verify"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Verify: OK"));
+        .stdout(predicate::str::contains("Index Verification"))
+        .stdout(predicate::str::contains("State:     OK"))
+        .stdout(predicate::str::contains("Tantivy:   OK"));
 }
 
 // ===== Scenario 6: status --detail =====

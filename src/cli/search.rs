@@ -1,5 +1,5 @@
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::config::{AppConfig, ConfigError, load_config};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
@@ -7,6 +7,39 @@ use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
 use crate::output::{
     self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
 };
+
+// ---------------------------------------------------------------------------
+// SearchContext
+// ---------------------------------------------------------------------------
+
+pub struct SearchContext {
+    pub base_path: PathBuf,
+    pub config: AppConfig,
+}
+
+impl SearchContext {
+    pub fn from_current_dir() -> Result<Self, SearchError> {
+        let base_path = PathBuf::from(".");
+        let config = load_config(&base_path)?;
+        Ok(Self { base_path, config })
+    }
+
+    pub fn from_path(base_path: &Path) -> Result<Self, SearchError> {
+        let config = load_config(base_path)?;
+        Ok(Self {
+            base_path: base_path.to_path_buf(),
+            config,
+        })
+    }
+
+    pub fn index_dir(&self) -> PathBuf {
+        crate::indexer::index_dir(&self.base_path)
+    }
+
+    pub fn symbol_db_path(&self) -> PathBuf {
+        crate::indexer::symbol_db_path(&self.base_path)
+    }
+}
 
 #[derive(Debug)]
 pub enum SearchError {
@@ -21,6 +54,7 @@ pub enum SearchError {
     Embedding(crate::embedding::EmbeddingError),
     NoEmbeddings,
     Config(String),
+    Workspace(crate::config::workspace::WorkspaceConfigError),
 }
 
 impl fmt::Display for SearchError {
@@ -57,6 +91,7 @@ impl fmt::Display for SearchError {
                 write!(f, "No embeddings found. Run `commandindex embed` first.")
             }
             SearchError::Config(msg) => write!(f, "Config error: {msg}"),
+            SearchError::Workspace(e) => write!(f, "Workspace error: {e}"),
         }
     }
 }
@@ -75,6 +110,7 @@ impl std::error::Error for SearchError {
             SearchError::Embedding(e) => Some(e),
             SearchError::NoEmbeddings => None,
             SearchError::Config(_) => None,
+            SearchError::Workspace(e) => Some(e),
         }
     }
 }
@@ -118,7 +154,14 @@ impl From<ConfigError> for SearchError {
     }
 }
 
+impl From<crate::config::workspace::WorkspaceConfigError> for SearchError {
+    fn from(e: crate::config::workspace::WorkspaceConfigError) -> Self {
+        SearchError::Workspace(e)
+    }
+}
+
 pub fn run(
+    ctx: &SearchContext,
     options: &SearchOptions,
     filters: &SearchFilters,
     format: OutputFormat,
@@ -126,14 +169,14 @@ pub fn run(
     rerank: bool,
     rerank_top: Option<usize>,
 ) -> Result<(), SearchError> {
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let tantivy_dir = ctx.index_dir();
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
-    // Load config once
-    let config = load_config(Path::new("."))?;
+    // Use config from SearchContext
+    let config = &ctx.config;
 
     // rerank有効時、検索前にlimitを拡大して候補を多く取得
     let original_limit = options.limit;
@@ -153,7 +196,7 @@ pub fn run(
     let use_hybrid = !effective_options.no_semantic && effective_options.heading.is_none();
 
     let final_results = if use_hybrid {
-        try_hybrid_search(results, &effective_options, filters, &config)?
+        try_hybrid_search(results, &effective_options, filters, config, &ctx.base_path)?
     } else {
         results
     };
@@ -164,7 +207,7 @@ pub fn run(
             final_results,
             &effective_options.query,
             rerank_top_resolved,
-            &config,
+            config,
         );
         reranked.into_iter().take(original_limit).collect()
     } else {
@@ -392,11 +435,12 @@ fn try_hybrid_search(
     options: &SearchOptions,
     filters: &SearchFilters,
     config: &AppConfig,
+    base_path: &Path,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
 
     // 1. SymbolStore を開く
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(base_path);
     let store = match crate::indexer::symbol_store::SymbolStore::open(&db_path) {
         Ok(s) => s,
         Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
@@ -460,7 +504,7 @@ fn try_hybrid_search(
     };
 
     // 6. セマンティック結果をSearchResult型に変換
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let tantivy_dir = crate::indexer::index_dir(base_path);
     let reader = match IndexReaderWrapper::open(&tantivy_dir) {
         Ok(r) => r,
         Err(_) => {

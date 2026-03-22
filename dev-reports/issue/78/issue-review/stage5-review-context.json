@@ -1,0 +1,60 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性・正確性",
+      "description": "Path::new(\".\")のハードコード箇所数が実際のコードと不一致（13箇所ではなく15箇所）。受け入れ基準に具体数が明記されているため実装時に漏れが生じるリスク。",
+      "suggestion": "受け入れ基準の「13箇所」を「全てのPath::new(\".\")ハードコード箇所」に修正するか、正確な箇所数に更新する。"
+    },
+    {
+      "id": "M2",
+      "category": "実装方針の妥当性",
+      "description": "RRFマージのキーが(path, heading)のタプルだが、マルチリポで同一パス・同一見出しのドキュメントが存在した場合、不正にマージされる。rrf_mergeのキーにrepositoryを含める必要がある。",
+      "suggestion": "ワークスペース検索時のスコアマージ方式を明確に定義し、rrf_mergeのキーを(repository, path, heading)に変更するか、リポジトリ独立にBM25検索してインターリーブする方式を明記する。"
+    },
+    {
+      "id": "M3",
+      "category": "受け入れ基準の網羅性",
+      "description": "src/cli/context.rsが影響範囲分析の対象ファイル一覧に含まれていない。contextサブコマンドのワークスペース非対応も未定義。",
+      "suggestion": "影響ファイル一覧にsrc/cli/context.rsを追加。Phase 1ではcontext --workspaceを非対応とする旨を明示。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "エッジケース",
+      "description": "ワークスペース設定のパスにシンボリックリンクを含む場合やパス正規化（canonicalize）の仕様が未定義。パス重複チェックが曖昧。",
+      "suggestion": "パス解決後にcanonicalize()で正規化し、エイリアス重複チェックの前にパス重複もチェックする。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性・正確性",
+      "description": "SearchContextに含めるフィールドの境界が不明確。実装者によって解釈が分かれる可能性。",
+      "suggestion": "SearchContextに含めるフィールドを明確にリストアップ（最低限base_path必須、config/index_dir/symbol_db_path含む候補、OutputFormat等は含めない）。"
+    },
+    {
+      "id": "S3",
+      "category": "エッジケース",
+      "description": "リポジトリ間のBM25スコア正規化方式が未定義。異なるインデックス間のスコアは直接比較できない。",
+      "suggestion": "Phase 1ではスコア正規化せずリポごとにソートしてインターリーブするか、方式を明確に定義する。"
+    },
+    {
+      "id": "S4",
+      "category": "受け入れ基準の網羅性",
+      "description": "update --workspaceの更新失敗時のエラーハンドリングが未定義。",
+      "suggestion": "statusと同様にエラー時スキップ・続行の方針を明記する。"
+    },
+    {
+      "id": "S5",
+      "category": "整合性・正確性",
+      "description": "status --workspaceの--formatパラメータが既存のStatusFormat型を再利用するかが不明確。",
+      "suggestion": "StatusFormat型を再利用することを明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "ワークスペース設定ファイルのデフォルト探索パスが未定義。Phase 1では明示指定のみとする。"},
+    {"id": "N2", "description": "リポジトリ数の上限が未定義。推奨上限の設定を検討。"},
+    {"id": "N3", "description": "Phase 1で非対応のサブコマンド一覧（embed, context, clean, index）を統一的に定義すべき。"}
+  ],
+  "summary": "2回目レビューで3件のMust Fix発見。Path::new(\".\")箇所数の不一致、RRFマージキーのrepository未考慮、context.rsの影響範囲漏れ。Should Fixとしてパス正規化、SearchContext責務境界、スコア正規化方式、update --workspaceエラーハンドリングを指摘。"
+}

@@ -1,0 +1,91 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "SearchResult構造体変更",
+      "description": "SearchResultにrepositoryフィールドを追加すると、全構築箇所（doc_to_search_result、enrich_semantic_to_search_results、rrf_mergeテスト内make_result等）の修正が必要。コンパイルエラーが大量発生。",
+      "suggestion": "repositoryフィールドにOption<String>型でデフォルトNoneを持たせ後方互換性を維持する。",
+      "affected_files": ["src/indexer/reader.rs", "src/cli/search.rs", "src/search/hybrid.rs", "src/output/json.rs", "src/output/human.rs", "src/output/path.rs", "tests/output_format.rs"]
+    },
+    {
+      "id": "M2",
+      "category": "Path::new('.')ハードコード除去",
+      "description": "search関連関数内に合計13箇所のPath::new('.')ハードコードが存在。contextコマンドにも2箇所。",
+      "suggestion": "全検索関数にbase_path: &Pathパラメータを追加。SearchContext構造体を導入して引数爆発を防ぐ。",
+      "affected_files": ["src/cli/search.rs", "src/cli/context.rs", "src/main.rs", "src/cli/config.rs"]
+    },
+    {
+      "id": "M3",
+      "category": "既存テスト破壊",
+      "description": "SearchResult構造体変更により、SearchResultを直接構築しているテストファイルが全てコンパイルエラー。",
+      "suggestion": "テストヘルパー関数にrepositoryフィールドを追加。SearchResult::default()ベースに変更も検討。",
+      "affected_files": ["tests/output_format.rs", "src/search/hybrid.rs"]
+    },
+    {
+      "id": "M4",
+      "category": "CLI引数定義追加",
+      "description": "--workspace/--repoオプション追加時、既存のconflicts_with_all定義との整合性確認が必要。",
+      "suggestion": "clapのArgsグループまたはglobal argを検討。--workspaceはSearch/Status/Updateに共通追加。",
+      "affected_files": ["src/main.rs"]
+    },
+    {
+      "id": "M5",
+      "category": "ワークスペース設定ファイル読込",
+      "description": "commandindex-workspace.toml解析機能が未実装。WorkspaceConfig構造体とパーサーの新規実装が必要。",
+      "suggestion": "src/config/mod.rsにWorkspaceConfig構造体とload_workspace_config関数を追加。",
+      "affected_files": ["src/config/mod.rs", "Cargo.toml"]
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "出力フォーマット変更",
+      "description": "JSON出力にrepositoryフィールド追加でe2eテストへの影響確認が必要。",
+      "affected_files": ["src/output/json.rs", "tests/e2e_integration.rs"]
+    },
+    {
+      "id": "S2",
+      "category": "パフォーマンス設計",
+      "description": "マルチリポ時のIndexReader openのI/Oコストとメモリ使用量が懸念。",
+      "affected_files": ["src/cli/search.rs", "Cargo.toml"]
+    },
+    {
+      "id": "S3",
+      "category": "rayon依存追加",
+      "description": "tantivyが内部でrayon使用のためバージョン競合リスクは低いが確認必要。",
+      "affected_files": ["Cargo.toml"]
+    },
+    {
+      "id": "S4",
+      "category": "search関数シグネチャ変更の波及",
+      "description": "base_pathパラメータ追加で引数爆発の懸念。SearchContext構造体導入を推奨。",
+      "affected_files": ["src/cli/search.rs", "src/main.rs"]
+    },
+    {
+      "id": "S5",
+      "category": "status/updateコマンドのワークスペース対応",
+      "description": "複数リポのステータス一括表示、逐次/並列更新のラッパー関数が必要。",
+      "affected_files": ["src/cli/status.rs", "src/cli/index.rs", "src/main.rs"]
+    },
+    {
+      "id": "S6",
+      "category": "cli_argsテスト修正",
+      "description": "新CLIオプションのテスト追加が必要。",
+      "affected_files": ["tests/cli_args.rs"]
+    },
+    {
+      "id": "S7",
+      "category": "embedコマンドのワークスペース非対応明示化",
+      "description": "Phase 1ではembedに--workspaceを追加しない設計を明示する。",
+      "affected_files": ["src/main.rs", "src/cli/embed.rs"]
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "スコア正規化", "description": "RRFマージをリポ間マージにも適用"},
+    {"id": "N2", "category": "human出力のリポジトリ識別", "description": "色付きプレフィックス表示"},
+    {"id": "N3", "category": "ワークスペースのバリデーション", "description": "graceful degradation"},
+    {"id": "N4", "category": "テストリファクタリング", "description": "ワークスペース用ヘルパー追加"},
+    {"id": "N5", "category": "context/cleanコマンド", "description": "Phase 1スコープ外を明示"}
+  ],
+  "summary": "影響範囲は広範。最大の影響は(1)SearchResult構造体変更（全出力・テストに波及）、(2)13箇所のPath::new('.')ハードコード除去（全search関数シグネチャ変更）。既存テストはコンパイルエラー発生するが修正は機械的。後方互換維持（ワークスペースオプション未指定時は従来通り動作）は可能。SearchContext構造体導入を推奨。"
+}
