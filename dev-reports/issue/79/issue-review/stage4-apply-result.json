@@ -1,0 +1,5 @@
+{
+  "applied_fixes": ["MF-1", "MF-2", "MF-3", "SF-1", "SF-2", "SF-3", "SF-4", "SF-5"],
+  "issue_updated": true,
+  "summary": "全8件の指摘を反映。StatusOptions構造体導入、StorageBreakdown構造体導入、clap conflicts_with排他制御、serde後方互換性対策、エラーハンドリングパターン統一、walkdirパフォーマンス対策、影響ファイル一覧表・テスト要件セクションを新設。"
+}
