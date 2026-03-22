@@ -7,3 +7,4 @@ pub mod import_index;
 pub mod index;
 pub mod search;
 pub mod status;
+pub mod workspace;

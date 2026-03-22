@@ -29,13 +29,13 @@ enum Commands {
         /// Search query (full-text search)
         query: Option<String>,
         /// Search by symbol name (function, class, method)
-        #[arg(long, conflicts_with_all = ["query", "semantic"])]
+        #[arg(long, conflicts_with_all = ["query", "semantic", "workspace"])]
         symbol: Option<String>,
         /// Search for related files
-        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace"])]
         related: Option<String>,
         /// Semantic search query (embedding-based similarity search)
-        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
         /// Disable hybrid (BM25 + Semantic) search, use BM25 only
         #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
@@ -75,6 +75,12 @@ enum Commands {
         /// Number of top candidates to rerank (requires --rerank)
         #[arg(long, requires = "rerank")]
         rerank_top: Option<usize>,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
+        /// Filter by repository alias
+        #[arg(long, requires = "workspace")]
+        repo: Option<String>,
     },
     /// Incrementally update the index
     Update {
@@ -84,6 +90,9 @@ enum Commands {
         /// Generate embeddings during update
         #[arg(long)]
         with_embedding: bool,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
     },
     /// Show index status
     Status {
@@ -93,6 +102,9 @@ enum Commands {
         /// Output format (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
         /// Show detailed statistics (coverage, staleness, storage)
         #[arg(long, conflicts_with = "coverage")]
         detail: bool,
@@ -208,125 +220,196 @@ fn main() {
             snippet_chars,
             rerank,
             rerank_top,
+            workspace,
+            repo,
         } => {
-            // Resolve optional args with config defaults
-            let config = commandindex::config::load_config(std::path::Path::new("."));
-            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &config
-            {
-                Ok(cfg) => (
-                    limit.unwrap_or(cfg.search.default_limit).min(1000),
-                    snippet_lines.unwrap_or(cfg.search.snippet_lines),
-                    snippet_chars.unwrap_or(cfg.search.snippet_chars),
+            // Build SearchContext for config resolution
+            let ctx = commandindex::cli::search::SearchContext::from_current_dir().ok();
+            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &ctx {
+                Some(c) => (
+                    limit.unwrap_or(c.config.search.default_limit).min(1000),
+                    snippet_lines.unwrap_or(c.config.search.snippet_lines),
+                    snippet_chars.unwrap_or(c.config.search.snippet_chars),
                 ),
-                Err(e) => {
-                    eprintln!("Warning: failed to load config, using defaults: {e}");
-                    (
-                        limit.unwrap_or(20).min(1000),
-                        snippet_lines.unwrap_or(2),
-                        snippet_chars.unwrap_or(120),
-                    )
-                }
+                None => (
+                    limit.unwrap_or(20).min(1000),
+                    snippet_lines.unwrap_or(2),
+                    snippet_chars.unwrap_or(120),
+                ),
             };
             let snippet_config = commandindex::output::SnippetConfig {
                 lines: effective_snippet_lines,
                 chars: effective_snippet_chars,
             };
-            let result = match (query, symbol, related, semantic) {
-                (Some(q), None, None, None) => {
-                    let options = commandindex::indexer::reader::SearchOptions {
-                        query: q,
-                        tag,
-                        heading,
-                        limit: effective_limit,
-                        no_semantic,
-                    };
-                    let filters = commandindex::indexer::reader::SearchFilters {
-                        path_prefix: path,
-                        file_type,
-                    };
-                    commandindex::cli::search::run(&options, &filters, format, snippet_config, rerank, rerank_top)
+
+            // Workspace横断検索分岐
+            if let Some(ws_path) = workspace {
+                let q = match query {
+                    Some(q) => q,
+                    None => {
+                        eprintln!("Error: <QUERY> is required for workspace search");
+                        process::exit(1);
+                    }
+                };
+                let options = commandindex::indexer::reader::SearchOptions {
+                    query: q,
+                    tag,
+                    heading,
+                    limit: effective_limit,
+                    no_semantic,
+                };
+                let filters = commandindex::indexer::reader::SearchFilters {
+                    path_prefix: path,
+                    file_type,
+                };
+                let result = commandindex::cli::workspace::run_workspace_search(
+                    &ws_path,
+                    repo.as_deref(),
+                    &options,
+                    &filters,
+                    format,
+                    snippet_config,
+                    rerank,
+                    rerank_top,
+                );
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
-                (None, Some(s), None, None) => {
-                    commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
-                }
-                (None, None, Some(f), None) => {
-                    commandindex::cli::search::run_related_search(&f, effective_limit, format)
-                }
-                (None, None, None, Some(q)) => {
-                    let filters = commandindex::indexer::reader::SearchFilters {
-                        path_prefix: path,
-                        file_type,
-                    };
-                    commandindex::cli::search::run_semantic_search(
-                        &q,
-                        effective_limit,
-                        format,
-                        tag.as_deref(),
-                        &filters,
-                    )
-                }
-                (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
-                    "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
-                )),
-                _ => unreachable!("clap conflicts_with prevents this"),
-            };
-            match result {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            } else {
+                let result = match (query, symbol, related, semantic) {
+                    (Some(q), None, None, None) => {
+                        // SearchContext is required for full-text search
+                        let ctx = match ctx {
+                            Some(c) => c,
+                            None => match commandindex::cli::search::SearchContext::from_current_dir() {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    eprintln!("Error: {e}");
+                                    process::exit(1);
+                                }
+                            },
+                        };
+                        let options = commandindex::indexer::reader::SearchOptions {
+                            query: q,
+                            tag,
+                            heading,
+                            limit: effective_limit,
+                            no_semantic,
+                        };
+                        let filters = commandindex::indexer::reader::SearchFilters {
+                            path_prefix: path,
+                            file_type,
+                        };
+                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top)
+                    }
+                    (None, Some(s), None, None) => {
+                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
+                    }
+                    (None, None, Some(f), None) => {
+                        commandindex::cli::search::run_related_search(&f, effective_limit, format)
+                    }
+                    (None, None, None, Some(q)) => {
+                        let filters = commandindex::indexer::reader::SearchFilters {
+                            path_prefix: path,
+                            file_type,
+                        };
+                        commandindex::cli::search::run_semantic_search(
+                            &q,
+                            effective_limit,
+                            format,
+                            tag.as_deref(),
+                            &filters,
+                        )
+                    }
+                    (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
+                        "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
+                    )),
+                    _ => unreachable!("clap conflicts_with prevents this"),
+                };
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
             }
         }
         Commands::Update {
             path,
             with_embedding,
+            workspace,
         } => {
-            let options = commandindex::cli::index::IndexOptions { with_embedding };
-            match commandindex::cli::index::run_incremental(&path, &options) {
-                Ok(summary) => {
-                    println!("Incremental update completed:");
-                    println!(
-                        "  Added:     {} files ({} sections)",
-                        summary.added_files, summary.added_sections
-                    );
-                    println!(
-                        "  Modified:  {} files ({} sections)",
-                        summary.modified_files, summary.modified_sections
-                    );
-                    println!("  Deleted:   {} files", summary.deleted_files);
-                    println!("  Unchanged: {} files", summary.unchanged);
-                    println!("  Skipped:   {} files", summary.skipped);
-                    println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
-                    if with_embedding {
-                        println!("Embeddings generated.");
+            if let Some(ws_path) = workspace {
+                match commandindex::cli::workspace::run_workspace_update(&ws_path, with_embedding) {
+                    Ok(code) => code,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
                     }
-                    0
                 }
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            } else {
+                let options = commandindex::cli::index::IndexOptions { with_embedding };
+                match commandindex::cli::index::run_incremental(&path, &options) {
+                    Ok(summary) => {
+                        println!("Incremental update completed:");
+                        println!(
+                            "  Added:     {} files ({} sections)",
+                            summary.added_files, summary.added_sections
+                        );
+                        println!(
+                            "  Modified:  {} files ({} sections)",
+                            summary.modified_files, summary.modified_sections
+                        );
+                        println!("  Deleted:   {} files", summary.deleted_files);
+                        println!("  Unchanged: {} files", summary.unchanged);
+                        println!("  Skipped:   {} files", summary.skipped);
+                        println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
+                        if with_embedding {
+                            println!("Embeddings generated.");
+                        }
+                        0
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
             }
         }
         Commands::Status {
             path,
             format,
+            workspace,
             detail,
             coverage,
             verify,
         } => {
-            let options = commandindex::cli::status::StatusOptions {
-                detail,
-                coverage,
-                format,
-                verify,
-            };
-            match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("{e}");
-                    1
+            if let Some(ws_path) = workspace {
+                match commandindex::cli::workspace::run_workspace_status(&ws_path, format) {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
+                }
+            } else {
+                let options = commandindex::cli::status::StatusOptions {
+                    detail,
+                    coverage,
+                    format,
+                    verify,
+                };
+                match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("{e}");
+                        1
+                    }
                 }
             }
         },

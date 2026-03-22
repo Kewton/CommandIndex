@@ -1,3 +1,5 @@
+pub mod workspace;
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 

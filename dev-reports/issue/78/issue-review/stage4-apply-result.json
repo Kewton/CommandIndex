@@ -1,0 +1,7 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "updated": true,
+  "changes_applied": ["M1", "M2", "M3", "M4", "M5", "S1", "S2", "S3", "S4", "S5", "S6", "S7"],
+  "summary": "Stage 3の影響範囲レビュー全指摘を反映。影響範囲分析セクション新設、影響ファイル一覧（14ファイル）追加、受け入れ基準に12項目追加。"
+}

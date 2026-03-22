@@ -1,0 +1,16 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "APIシグネチャ整合性", "description": "SearchContext導入時のrun()新シグネチャが未定義。main.rsのconfig読み込みとの二重ロード問題。", "suggestion": "run()の新シグネチャを明記。SearchContextにconfig含める場合、main.rs側をSearchContext経由に統一。"},
+    {"id": "M2", "category": "構造体フィールド整合性", "description": "SearchResult.repository追加時の修正対象箇所の網羅性不足。enrich_semantic内2箇所のSearchResult構築が不正確。", "suggestion": "SearchResult構築箇所の完全一覧を記載。doc_to_search_resultでrepository: Noneをデフォルト設定。"},
+    {"id": "M3", "category": "CLIオプション整合性", "description": "既存conflicts_with_allへの'workspace'追加方法が不明確。", "suggestion": "--symbol/--related/--semantic/--rerankの各conflicts_with_allに'workspace'追加を網羅的に明記。"},
+    {"id": "M4", "category": "エラーハンドリング整合性", "description": "WorkspaceConfigErrorのDisplay/Error trait実装とFrom変換が未定義。", "suggestion": "Display, Error trait実装を追加。SearchError::Workspace(WorkspaceConfigError)バリアント追加。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "モジュール配置", "description": "WorkspaceConfigをconfig層に配置すべき。"},
+    {"id": "S2", "category": "出力フォーマット整合性", "description": "Human出力のスコア表示が既存と不一致。JSON出力のNone時の扱い未定義。"},
+    {"id": "S3", "category": "rrf_merge設計", "description": "cross_repo内でrepository設定するフロー未明確。"},
+    {"id": "S4", "category": "status/update設計", "description": "Status/UpdateのCLIオプション追加が欠落。"},
+    {"id": "S5", "category": "Path除去範囲", "description": "Phase 1ではrun()のみSearchContext化し他関数は維持する方針を明記すべき。"}
+  ],
+  "summary": "Must Fix 4件: run()新シグネチャ未定義、SearchResult構築箇所網羅性不足、conflicts_with統合方法欠落、エラートレイト未定義。"
+}

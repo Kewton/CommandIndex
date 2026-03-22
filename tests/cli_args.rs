@@ -408,3 +408,111 @@ fn search_with_explicit_limit_accepted() {
         .failure()
         .stderr(predicate::str::contains("Index not found"));
 }
+
+
+// --- Workspace CLI option tests ---
+
+#[test]
+fn search_workspace_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--workspace", "workspace.toml"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Workspace error"));
+}
+
+#[test]
+fn search_workspace_with_repo_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "test query",
+            "--workspace",
+            "workspace.toml",
+            "--repo",
+            "backend",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Workspace error"));
+}
+
+#[test]
+fn search_repo_without_workspace_fails() {
+    common::cmd()
+        .args(["search", "test query", "--repo", "backend"])
+        .assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("required").or(predicate::str::contains("can only be used")),
+        );
+}
+
+#[test]
+fn search_workspace_conflicts_with_symbol() {
+    common::cmd()
+        .args([
+            "search",
+            "--symbol",
+            "my_func",
+            "--workspace",
+            "workspace.toml",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_workspace_conflicts_with_related() {
+    common::cmd()
+        .args([
+            "search",
+            "--related",
+            "file.rs",
+            "--workspace",
+            "workspace.toml",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_workspace_conflicts_with_semantic() {
+    common::cmd()
+        .args([
+            "search",
+            "--semantic",
+            "query",
+            "--workspace",
+            "workspace.toml",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn status_workspace_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["status", "--workspace", "workspace.toml"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn update_workspace_option_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["update", "--workspace", "workspace.toml"])
+        .assert()
+        .failure();
+}
