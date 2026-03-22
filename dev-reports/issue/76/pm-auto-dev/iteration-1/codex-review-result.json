@@ -1,0 +1,37 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "title": "search のデフォルト値解決で設定エラーを握り潰しており、コマンドごとの挙動が不整合",
+      "location": "src/main.rs:187, src/cli/search.rs:136, src/cli/search.rs:293",
+      "detail": "`main.rs` は検索系オプションの既定値解決で `load_config()` の失敗をすべて `Err(_)` として握り潰し、ハードコード既定値にフォールバックしています。その後、全文検索や semantic search は `src/cli/search.rs` 側で再度 `load_config()` して失敗しますが、`--symbol` と `--related` はそのまま成功経路に進みます。結果として、同じ壊れた `commandindex.toml` でもコマンド種別により失敗したり無視されたりする不整合が発生します。セキュリティ方針違反の team config（`SecretInTeamConfig`）も symbol/related では事実上バイパスされます。"
+    },
+    {
+      "title": "未知の設定キーを黙って無視しており、誤設定を検知できない",
+      "location": "src/config/mod.rs:78, src/config/mod.rs:86, src/config/mod.rs:93, src/config/mod.rs:98, src/config/mod.rs:107",
+      "detail": "`RawConfig` 系に `deny_unknown_fields` 相当の制約がないため、未対応キーやタイプミスを静かに無視します。今回の変更では設定面が広がっており、例えば `rerank.provider` のような未対応フィールドや `api_keey` のような typo が受理されてしまいます。入力バリデーション不足により、ユーザーは設定が反映されたと思って誤った状態で運用する可能性があります。"
+    },
+    {
+      "title": "config show が endpoint を無加工で表示しており、URL 内資格情報を漏らし得る",
+      "location": "src/config/mod.rs:196, src/config/mod.rs:207, src/cli/config.rs:37",
+      "detail": "`config show` は `api_key` だけをマスクし、`embedding.endpoint` と `rerank.endpoint` はそのまま表示します。OpenAI 互換 endpoint や社内プロキシ設定で `https://user:pass@host/...` のような資格情報付き URL が入っていた場合、そのまま端末やCIログに露出します。機密情報露出の観点で防御が不十分です。"
+    },
+    {
+      "title": "OpenAI クライアント生成で expect を使っており、環境依存エラーでプロセスが panic する",
+      "location": "src/embedding/openai.rs:66-70",
+      "detail": "`reqwest::blocking::Client::builder().build()` の失敗を `expect(\"Failed to build HTTP client\")` で処理しているため、TLS 初期化やシステム設定異常などが起きると recover 不能な panic になります。レビュー観点の「パニック可能性 / unwrap/expect」に該当します。"
+    },
+    {
+      "title": "config show が環境変数由来の API キーを“未設定”と誤表示する",
+      "location": "src/config/mod.rs:198-202, src/config/mod.rs:208-212",
+      "detail": "`to_masked_view()` は `embedding.api_key` / `rerank.api_key` の `Option` だけを見てマスク有無を決めています。しかし実際の有効値は `EmbeddingConfig::resolve_api_key()` により環境変数 `COMMANDINDEX_OPENAI_API_KEY` が最優先です。環境変数でキーが入っている場合でも `config show` は `(not set)` を表示し、実際の有効設定と食い違います。診断系コマンドとして誤解を招きます。"
+    },
+    {
+      "title": "ConfigError を文字列化して捨てており、原因追跡が難しい",
+      "location": "src/cli/config.rs:27-30, src/cli/embed.rs:87-90, src/cli/index.rs:151-154, src/cli/search.rs:115-118",
+      "detail": "`ConfigError` を各CLIエラー型で `String` に落としており、`source()` も失われています。未処理エラーではないものの、どのファイル読み込み・パースに失敗したかという構造化情報が消え、障害解析とテストが難しくなります。設定系の変更点としてはエラーハンドリングの後退です。"
+    }
+  ],
+  "summary": "重大なクラッシュや明白なパストラバーサルは見当たりませんでしたが、設定ロード失敗の握り潰しによる検索コマンド間の挙動不整合、未知キーの黙殺、config show 経由のURL資格情報露出、OpenAIクライアント生成の panic 可能性は修正対象です。特に search 既定値解決の `Err(_)` フォールバックと `config show` の表示内容は、運用時の誤診断やポリシーバイパスにつながるため優先度が高いです。",
+  "requires_fix": true
+}

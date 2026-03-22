@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "MF-1", "title": "store.rs の行数記載が不正確（全485行、テスト含む）"},
+    {"id": "MF-2", "title": "main.rs の dispatch 部分の変更コード例が欠落"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "IndexState の PartialEq derive への影響が未考慮"},
+    {"id": "SF-2", "title": "CoverageInfo と StatusInfo の file_type_counts の重複"},
+    {"id": "SF-3", "title": "JSON format テストの書き換え必要性が未記載"},
+    {"id": "SF-4", "title": "EmbeddingStore::open() がDB存在時にテーブル不在エラーの可能性"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "行番号参照の微小なずれ"},
+    {"id": "NH-2", "title": "StatusInfo の既存フォーマットヘッダーと設計書の不一致"},
+    {"id": "NH-3", "title": "walkdir の既存依存確認（問題なし）"},
+    {"id": "NH-4", "title": "test_state_backward_compat のテスト戦略の明確化"}
+  ]
+}

@@ -93,6 +93,12 @@ enum Commands {
         /// Output format (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
+        /// Show detailed statistics (coverage, staleness, storage)
+        #[arg(long, conflicts_with = "coverage")]
+        detail: bool,
+        /// Show coverage statistics only
+        #[arg(long, conflicts_with = "detail")]
+        coverage: bool,
         /// Verify index integrity
         #[arg(long)]
         verify: bool,
@@ -212,11 +218,14 @@ fn main() {
                     snippet_lines.unwrap_or(cfg.search.snippet_lines),
                     snippet_chars.unwrap_or(cfg.search.snippet_chars),
                 ),
-                Err(_) => (
-                    limit.unwrap_or(20).min(1000),
-                    snippet_lines.unwrap_or(2),
-                    snippet_chars.unwrap_or(120),
-                ),
+                Err(e) => {
+                    eprintln!("Warning: failed to load config, using defaults: {e}");
+                    (
+                        limit.unwrap_or(20).min(1000),
+                        snippet_lines.unwrap_or(2),
+                        snippet_chars.unwrap_or(120),
+                    )
+                }
             };
             let snippet_config = commandindex::output::SnippetConfig {
                 lines: effective_snippet_lines,
@@ -303,12 +312,22 @@ fn main() {
         Commands::Status {
             path,
             format,
+            detail,
+            coverage,
             verify,
-        } => match commandindex::cli::status::run(&path, format, verify, &mut std::io::stdout()) {
-            Ok(()) => 0,
-            Err(e) => {
-                eprintln!("{e}");
-                1
+        } => {
+            let options = commandindex::cli::status::StatusOptions {
+                detail,
+                coverage,
+                format,
+                verify,
+            };
+            match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("{e}");
+                    1
+                }
             }
         },
         Commands::Context {

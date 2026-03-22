@@ -3,7 +3,7 @@ mod common;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use commandindex::cli::status::{StatusFormat, compute_dir_size, format_size, run};
+use commandindex::cli::status::{StatusFormat, StatusOptions, compute_dir_size, format_size, run};
 
 // ===== format_size tests =====
 
@@ -67,7 +67,8 @@ fn compute_dir_size_nested() {
 fn run_directory_not_found() {
     let mut buf = Cursor::new(Vec::new());
     let path = PathBuf::from("/nonexistent/path/that/does/not/exist");
-    let result = run(&path, StatusFormat::Human, false, &mut buf);
+    let options = StatusOptions::default();
+    let result = run(&path, &options, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Directory not found"));
@@ -77,7 +78,8 @@ fn run_directory_not_found() {
 fn run_not_initialized() {
     let dir = tempfile::tempdir().expect("create temp dir");
     let mut buf = Cursor::new(Vec::new());
-    let result = run(dir.path(), StatusFormat::Human, false, &mut buf);
+    let options = StatusOptions::default();
+    let result = run(dir.path(), &options, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("not initialized"));
@@ -99,7 +101,8 @@ fn run_human_format() {
     setup_commandindex_dir(dir.path());
 
     let mut buf = Cursor::new(Vec::new());
-    run(dir.path(), StatusFormat::Human, false, &mut buf).expect("run should succeed");
+    let options = StatusOptions::default();
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     assert!(output.contains("CommandIndex Status"));
@@ -118,7 +121,11 @@ fn run_json_format() {
     setup_commandindex_dir(dir.path());
 
     let mut buf = Cursor::new(Vec::new());
-    run(dir.path(), StatusFormat::Json, false, &mut buf).expect("run should succeed");
+    let options = StatusOptions {
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -129,6 +136,172 @@ fn run_json_format() {
     assert!(parsed.get("index_root").is_some());
     assert!(parsed.get("created_at").is_some());
     assert!(parsed.get("last_updated_at").is_some());
+}
+
+#[test]
+fn run_default_json_no_extra_fields() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+    // Default mode should NOT include extended fields
+    assert!(parsed.get("coverage").is_none());
+    assert!(parsed.get("staleness").is_none());
+    assert!(parsed.get("storage").is_none());
+}
+
+#[test]
+fn run_detail_human() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        detail: true,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    assert!(output.contains("CommandIndex Status"));
+    assert!(output.contains("Coverage"));
+    assert!(output.contains("Discoverable files:"));
+    assert!(output.contains("Indexed files:"));
+    assert!(output.contains("Storage"));
+    assert!(output.contains("Tantivy index:"));
+    assert!(output.contains("Total:"));
+}
+
+#[test]
+fn run_detail_json() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        detail: true,
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+    assert!(parsed.get("coverage").is_some());
+    assert!(parsed.get("storage").is_some());
+}
+
+#[test]
+fn run_coverage_only_human() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        coverage: true,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    assert!(output.contains("Coverage"));
+    assert!(output.contains("Discoverable files:"));
+    // coverage only should NOT show staleness/storage
+    assert!(!output.contains("Staleness"));
+    assert!(!output.contains("Storage"));
+}
+
+#[test]
+fn run_coverage_only_json() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        coverage: true,
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+    assert!(parsed.get("coverage").is_some());
+    assert!(parsed.get("staleness").is_none());
+    assert!(parsed.get("storage").is_none());
+}
+
+#[test]
+fn run_embedding_count_no_db() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        coverage: true,
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+    let cov = parsed.get("coverage").expect("coverage should exist");
+    assert_eq!(
+        cov.get("embedding_file_count").unwrap().as_u64().unwrap(),
+        0
+    );
+}
+
+#[test]
+fn run_storage_breakdown() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    setup_commandindex_dir(dir.path());
+
+    let mut buf = Cursor::new(Vec::new());
+    let options = StatusOptions {
+        detail: true,
+        format: StatusFormat::Json,
+        ..Default::default()
+    };
+    run(dir.path(), &options, &mut buf).expect("run should succeed");
+
+    let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+    let storage = parsed.get("storage").expect("storage should exist");
+    assert!(storage.get("tantivy_bytes").is_some());
+    assert!(storage.get("symbols_db_bytes").is_some());
+    assert!(storage.get("embeddings_db_bytes").is_some());
+    assert!(storage.get("other_bytes").is_some());
+    assert!(storage.get("total_bytes").is_some());
+}
+
+// ===== IndexState backward compat =====
+
+#[test]
+fn test_state_backward_compat() {
+    // Old state.json without last_commit_hash should deserialize with None
+    let old_json = r#"{
+        "version": "0.0.5",
+        "schema_version": 1,
+        "created_at": "2024-01-01T00:00:00Z",
+        "last_updated_at": "2024-01-01T00:00:00Z",
+        "total_files": 10,
+        "total_sections": 20,
+        "index_root": "/tmp/test"
+    }"#;
+    let state: commandindex::indexer::state::IndexState =
+        serde_json::from_str(old_json).expect("should parse old format");
+    assert_eq!(state.last_commit_hash, None);
+    assert_eq!(state.total_files, 10);
 }
 
 // ===== E2E tests via CLI binary =====
@@ -193,5 +366,52 @@ fn status_cli_directory_not_found() {
         .failure()
         .stderr(predicates::prelude::predicate::str::contains(
             "Directory not found",
+        ));
+}
+
+#[test]
+fn status_cli_detail_flag() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .args(["index", "--path", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    common::cmd()
+        .args(["status", "--path", dir.path().to_str().unwrap(), "--detail"])
+        .assert()
+        .success()
+        .stdout(predicates::prelude::predicate::str::contains("Coverage"))
+        .stdout(predicates::prelude::predicate::str::contains("Storage"));
+}
+
+#[test]
+fn status_cli_coverage_flag() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .args(["index", "--path", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    common::cmd()
+        .args([
+            "status",
+            "--path",
+            dir.path().to_str().unwrap(),
+            "--coverage",
+        ])
+        .assert()
+        .success()
+        .stdout(predicates::prelude::predicate::str::contains("Coverage"));
+}
+
+#[test]
+fn status_cli_detail_coverage_conflict() {
+    common::cmd()
+        .args(["status", "--detail", "--coverage"])
+        .assert()
+        .failure()
+        .stderr(predicates::prelude::predicate::str::contains(
+            "cannot be used with",
         ));
 }
