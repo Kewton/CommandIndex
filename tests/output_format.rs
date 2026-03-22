@@ -1,5 +1,7 @@
 use commandindex::indexer::reader::SearchResult;
-use commandindex::output::{OutputFormat, SnippetConfig, format_results};
+use commandindex::output::{
+    OutputFormat, SnippetConfig, WorkspaceSearchResult, format_results, format_workspace_results,
+};
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
     SearchResult {
@@ -218,4 +220,84 @@ fn test_snippet_default_unchanged() {
     let default_output = format_human_to_string(&results, SnippetConfig::default());
     let format_results_output = format_to_string(&results, OutputFormat::Human);
     assert_eq!(default_output, format_results_output);
+}
+
+// --- Workspace format tests ---
+
+fn make_workspace_result(
+    repo: &str,
+    path: &str,
+    heading: &str,
+    body: &str,
+    tags: &str,
+) -> WorkspaceSearchResult {
+    WorkspaceSearchResult {
+        repository: repo.to_string(),
+        result: make_result(path, heading, body, tags),
+    }
+}
+
+fn format_workspace_to_string(results: &[WorkspaceSearchResult], format: OutputFormat) -> String {
+    colored::control::set_override(false);
+    let mut buf = Vec::new();
+    format_workspace_results(results, format, &mut buf, SnippetConfig::default()).unwrap();
+    String::from_utf8(buf).unwrap()
+}
+
+#[test]
+fn test_workspace_human_contains_repo_prefix() {
+    let results = vec![make_workspace_result(
+        "backend",
+        "docs/auth.md",
+        "認証フロー",
+        "認証はJWTベースで行う",
+        "",
+    )];
+    let output = format_workspace_to_string(&results, OutputFormat::Human);
+    assert!(output.contains("[backend]"));
+    assert!(output.contains("docs/auth.md:10"));
+    assert!(output.contains("[## 認証フロー]"));
+}
+
+#[test]
+fn test_workspace_json_contains_repository_field() {
+    let results = vec![make_workspace_result(
+        "backend",
+        "docs/auth.md",
+        "Title",
+        "Body",
+        "tag1",
+    )];
+    let output = format_workspace_to_string(&results, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(output.trim()).unwrap();
+    assert_eq!(parsed["repository"], "backend");
+    assert_eq!(parsed["path"], "docs/auth.md");
+    assert_eq!(parsed["heading"], "Title");
+}
+
+#[test]
+fn test_workspace_path_different_repos_same_path_not_deduped() {
+    let results = vec![
+        make_workspace_result("backend", "docs/README.md", "Title1", "Body1", ""),
+        make_workspace_result("frontend", "docs/README.md", "Title2", "Body2", ""),
+    ];
+    let output = format_workspace_to_string(&results, OutputFormat::Path);
+    let lines: Vec<&str> = output.trim().lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert!(lines[0].contains("[backend]"));
+    assert!(lines[0].contains("docs/README.md"));
+    assert!(lines[1].contains("[frontend]"));
+    assert!(lines[1].contains("docs/README.md"));
+}
+
+#[test]
+fn test_workspace_path_same_repo_same_path_deduped() {
+    let results = vec![
+        make_workspace_result("backend", "docs/README.md", "Title1", "Body1", ""),
+        make_workspace_result("backend", "docs/README.md", "Title2", "Body2", ""),
+    ];
+    let output = format_workspace_to_string(&results, OutputFormat::Path);
+    let lines: Vec<&str> = output.trim().lines().collect();
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("[backend]"));
 }

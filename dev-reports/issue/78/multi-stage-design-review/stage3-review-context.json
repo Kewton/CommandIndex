@@ -1,0 +1,19 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "影響範囲", "description": "search.rs内のPath::new('.')が9箇所あるが、run()以外の関数への適用方針が不明確。", "suggestion": "Phase 1ではrun()のみSearchContext化。他関数はconflicts_withで弾かれるため維持。段階的移行方針を明記。"},
+    {"id": "M2", "category": "影響範囲", "description": "main.rsのSearchハンドラにworkspaceオプション有無の分岐が必要。config読込フロー分離が未明確。", "suggestion": "workspace指定時はworkspace.rsの横断検索関数を呼び出す分岐を追加。"},
+    {"id": "M3", "category": "影響範囲", "description": "src/cli/context.rsが変更ファイル一覧に含まれていない。Phase 1非対応でも将来対応予定として記載すべき。", "suggestion": "将来Phase対応予定として記載。"},
+    {"id": "M4", "category": "テスト破壊", "description": "SearchResult::new()やdefault()のようなファクトリメソッド導入で将来のフィールド追加コストを軽減すべき。", "suggestion": "SearchResult構築をファクトリメソッドに集約。"},
+    {"id": "M5", "category": "影響範囲", "description": "json.rsのserde_json::json!マクロ内でのrepository条件付き出力方法が未記載。", "suggestion": "SearchResultにSerialize derive追加を検討。またはjson!内でif let分岐。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "変更順序", "description": "実装フェーズの依存関係グラフが未明示。"},
+    {"id": "S2", "category": "テスト", "description": "cli_args.rsに追加すべき競合テストケースが未列挙。"},
+    {"id": "S3", "category": "影響範囲", "description": "human.rsのformat_humanでrepository表示方法が不明確。"},
+    {"id": "S4", "category": "影響範囲", "description": "path.rsの重複除去キーにrepositoryを含める必要。"},
+    {"id": "S5", "category": "ロールバック", "description": "ロールバック戦略が未記載。"},
+    {"id": "S6", "category": "影響範囲", "description": "rrf_mergeとrrf_merge_cross_repoの使い分けを図示すべき。"},
+    {"id": "S7", "category": "影響範囲", "description": "Status/UpdateのCLIオプション追加が未記載。"}
+  ],
+  "summary": "Must Fix 5件: Path除去の適用範囲、main.rs分岐フロー、context.rs記載漏れ、ファクトリメソッド導入、json出力方法。"
+}

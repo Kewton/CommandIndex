@@ -1,0 +1,8 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "updated": true,
+  "changes_applied": ["M1", "M2", "M3", "S1", "S2", "S3", "S4", "S5"],
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/78",
+  "summary": "Stage 1の全Must Fix(M1-M3)とShould Fix(S1-S5)を反映。実装前提条件セクション新設、TOMLスキーマ詳細定義、SearchResultへのrepositoryフィールド追加、status出力仕様定義、横断検索スコープ(Phase1はBM25のみ)明記。"
+}

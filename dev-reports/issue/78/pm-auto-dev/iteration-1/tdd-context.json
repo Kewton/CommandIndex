@@ -1,0 +1,32 @@
+{
+  "issue_number": 78,
+  "title": "マルチリポジトリ横断検索",
+  "branch": "feature/issue-78-multi-repo",
+  "design_policy": "dev-reports/design/issue-78-design-policy.md",
+  "work_plan": "dev-reports/issue/78/work-plan.md",
+  "implementation_steps": [
+    "Step 1: 依存追加 + WorkspaceConfig型定義（Config層）",
+    "Step 2: rrf_merge_multiple 汎用化（Search層）",
+    "Step 3: SearchContext導入（CLI層リファクタリング）",
+    "Step 4: WorkspaceSearchResult + Output層拡張",
+    "Step 5: CLIオプション追加",
+    "Step 6: 横断検索オーケストレーション",
+    "Step 7: 統合テスト（E2E）",
+    "Step 8: 品質チェック"
+  ],
+  "key_design_decisions": [
+    "SearchResult構造体は変更しない（compositionパターン: WorkspaceSearchResult）",
+    "WorkspaceConfig/WorkspaceConfigErrorはsrc/config/workspace.rsに配置",
+    "横断検索オーケストレーションはsrc/cli/workspace.rsに配置",
+    "rrf_merge_multipleに汎用化、既存rrf_mergeはラッパー",
+    "Phase 1はBM25のみ横断対応、逐次実行",
+    "SearchContextはbase_path+configのみ。run()のみSearchContext化",
+    "マージ前にpathにaliasプレフィックス付与してキー衝突回避"
+  ],
+  "quality_criteria": {
+    "build": "cargo build - エラー0件",
+    "clippy": "cargo clippy --all-targets -- -D warnings - 警告0件",
+    "test": "cargo test --all - 全テストパス",
+    "fmt": "cargo fmt --all -- --check - 差分なし"
+  }
+}
