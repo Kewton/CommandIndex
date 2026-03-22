@@ -1,0 +1,67 @@
+{
+  "stage": 1,
+  "review_type": "設計原則レビュー",
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "category": "入力バリデーション",
+      "principle": "DRY",
+      "description": "run_diff() のインデックス存在チェック（tantivy_dir.exists(), db_path.exists()）は context.rs L59-67 と完全に重複する。同様のボイラープレートが run_related_search() にも存在する。新規サブコマンド追加のたびに同一パターンが増殖する。",
+      "suggestion": "共通ヘルパー関数 open_index_and_store(base: &Path) -> Result<(IndexReaderWrapper, SymbolStore), SearchError> を cli/mod.rs 等に抽出し、diff.rs と context.rs の双方で利用する。これにより将来のサブコマンド追加時も重複しない。"
+    },
+    {
+      "id": "MF-2",
+      "category": "入力バリデーション",
+      "principle": "DRY / 一貫性",
+      "description": "context.rs ではパストラバーサル(..)、絶対パス、バックスラッシュ、空パス、長さ制限のバリデーションを L30-55 で実施しているが、設計方針書の run_diff() では normalize_path() に依存するだけでこれらの検証が欠落している。セキュリティ設計(8章)では normalize_path() で対策済みと記載されているが、context.rs の実装と異なるバリデーション戦略は一貫性の問題。",
+      "suggestion": "context.rs のバリデーションロジックを共通関数 validate_file_paths(files: &[String]) -> Result<(), SearchError> として抽出し、diff.rs でも同一のバリデーションを適用する。normalize_path() だけに依存せず、防御的バリデーションを統一する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "category": "出力フォーマッタ構造",
+      "principle": "SRP（単一責任原則）/ OCP（開放閉鎖原則）",
+      "description": "human.rs, json.rs, path.rs の各ファイルに format_diff_human(), format_diff_json(), format_diff_path() を追加する設計だが、output/mod.rs L177 のコメントに『フォーマットが5種類以上に増えた場合、trait-based Formatter パターンへのリファクタリングを検討』とある。diff 追加で format_results, format_symbol_results, format_related_results, format_semantic_results, format_workspace_results, format_diff_results の6種類となり、この閾値を超える。",
+      "suggestion": "今回の Issue スコープでは既存パターンに従い関数追加で良いが、設計方針書に『format 関数が6種類に到達するため、次回以降で trait-based Formatter へのリファクタリングを検討する』旨を明記すべき。本 Issue でのリファクタリングは YAGNI 観点で不要。"
+    },
+    {
+      "id": "SF-2",
+      "category": "エラーハンドリング",
+      "principle": "OCP（開放閉鎖原則）",
+      "description": "run_diff() の戻り値型が Result<(), SearchError> であり、SearchError を再利用する設計は良い。ただし、同一ファイル指定エラーで SearchError::InvalidArgument(String) を使うのは既存パターンに沿っているが、diff 固有のエラーケース（例: 片方のファイルが未インデックスだが他方は正常）のメッセージが find_related() の RelatedSearchError に依存する。エラーメッセージにどのファイル（file_a / file_b）で失敗したかの情報が含まれない可能性がある。",
+      "suggestion": "find_related() の呼び出しを map_err でラップし、どちらのファイルの検索で失敗したかをエラーメッセージに含める。例: engine.find_related(file_a, limit).map_err(|e| SearchError::RelatedSearch(e).with_context(file_a))"
+    },
+    {
+      "id": "SF-3",
+      "category": "Human出力",
+      "principle": "KISS",
+      "description": "format_diff_human() の only_a, only_b, overlap の3セクション出力で、空の場合に '(none)' を表示するロジックが3回繰り返される（L221-247）。小規模だが同一パターンの繰り返し。",
+      "suggestion": "ヘルパー関数 write_section(writer, title, items) を抽出して DRY にする。ただし、これは3箇所のみの重複で過度なリファクタリングとの判断もありえるため、実装時の判断に委ねる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "category": "集合演算の情報量",
+      "principle": "YAGNI",
+      "description": "現設計では overlap にファイルパスのみを格納するが、将来的に overlap ファイルのスコア情報（file_a 側のスコアと file_b 側のスコア）があるとコンフリクトリスクの重要度判断に有用。ただし、Issue #92 の要件には含まれていない。",
+      "suggestion": "現時点ではパスのみで十分。スコア付き overlap は将来の拡張 Issue として切り出す。DiffResult 型を Serialize derive しているため、後からフィールド追加は容易。"
+    },
+    {
+      "id": "NH-2",
+      "category": "テストデータ",
+      "principle": "KISS",
+      "description": "テスト戦略(7章)のテストデータ構成は Markdown ファイルのリンク・タグベースで設計されているが、コード解析（ImportDependency）のテストケースが含まれていない。diff コマンドは find_related() を利用するため、全関連タイプで動作するはずだが、テストカバレッジとしてはコード系テストもあると良い。",
+      "suggestion": "E2E テストの優先度として、まず Markdown ベースのテストで基本動作を確認し、コード系テストは追加 Issue で対応可能。"
+    },
+    {
+      "id": "NH-3",
+      "category": "CLI引数",
+      "principle": "一貫性",
+      "description": "Context サブコマンドは --max-files と --max-tokens を持つが、Diff サブコマンドは --limit のみ。名称が Context の --max-files ではなく --limit である理由が設計方針書に明記されていない。Search --limit との一貫性を取っているのであれば問題ないが、明示的な説明があると良い。",
+      "suggestion": "設計判断として '--limit は Search --limit と同じ意味（最大結果数）、Context の --max-files は最終出力数の制限で意味が異なる' という注記を設計方針書に追記する。"
+    }
+  ],
+  "summary": "設計方針書は全体として既存アーキテクチャとの整合性が高く、KISS/YAGNI 原則に沿った適切な規模の設計である。独立サブコマンドとしての配置、find_related() の再利用、context.rs パターンの踏襲は合理的な判断。主な改善点は2つ: (1) インデックスオープン処理の DRY 違反（context.rs との重複）を共通ヘルパーで解消すべき、(2) 入力バリデーション戦略を context.rs と統一すべき。これらは must_fix としてマージ前に対応が必要。should_fix の出力フォーマッタ増殖問題は本 Issue ではなく今後の技術的負債として認識すべき。nice_to_have の項目は全て将来対応で問題ない。総合的に、設計方針書の完成度は高く、must_fix 2件の対応で実装着手可能と判断する。"
+}

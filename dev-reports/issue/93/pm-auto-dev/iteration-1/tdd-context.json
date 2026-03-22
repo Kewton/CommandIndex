@@ -1,0 +1,16 @@
+{
+  "issue_number": 93,
+  "title": "ファイル変更監視（watch モード）",
+  "design_policy": "dev-reports/design/issue-93-watch-design-policy.md",
+  "work_plan": "dev-reports/issue/93/work-plan.md",
+  "tasks": [
+    "Task 1.1: Cargo.toml に notify, ctrlc 依存追加",
+    "Task 1.2: WatchError 型定義 (is_recoverable, Display, Error, From)",
+    "Task 1.3: CLI オプション定義 (Commands::Watch, pub mod watch)",
+    "Task 2.1: is_relevant_event() フィルタリング関数",
+    "Task 2.2: Debouncer 構造体",
+    "Task 2.3: メイン watch ループ (run関数)",
+    "Task 2.4: main.rs match ブランチ追加",
+    "Task 3.1-3.4: テスト (WatchError, フィルタ, Debouncer, CLIパース)"
+  ]
+}

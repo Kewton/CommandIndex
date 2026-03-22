@@ -173,6 +173,29 @@ pub fn format_workspace_results(
     }
 }
 
+/// Diff結果
+#[derive(Debug, Clone)]
+pub struct DiffResult {
+    pub file_a: String,
+    pub file_b: String,
+    pub only_a: Vec<String>,
+    pub only_b: Vec<String>,
+    pub overlap: Vec<String>,
+}
+
+/// Diff結果を指定フォーマットで出力する
+pub fn format_diff_results(
+    result: &DiffResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_diff_human(result, writer),
+        OutputFormat::Json => json::format_diff_json(result, writer),
+        OutputFormat::Path => path::format_diff_path(result, writer),
+    }
+}
+
 /// 検索結果を指定フォーマットで出力する
 // NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討
 pub fn format_results(
@@ -221,46 +244,22 @@ pub(crate) fn strip_control_chars(s: &str) -> String {
         .collect()
 }
 
-/// impact サブコマンドの結果（Issue #90 仕様準拠）
+/// impact サブコマンドの結果
 #[derive(Debug, Clone, Serialize)]
 pub struct ImpactResult {
-    /// 入力ファイル一覧（changed_files）
-    pub changed_files: Vec<String>,
-    /// ファイルごとの影響分析結果（impact[]）
-    pub impact: Vec<ImpactPerFile>,
-    /// 複数入力ファイルから共通して影響を受けるファイル一覧
-    pub overlap: Vec<String>,
-    /// 統計サマリー
-    pub summary: ImpactSummary,
+    pub input_files: Vec<String>,
+    pub impacted_files: Vec<ImpactFileResult>,
+    pub total_input_files: usize,
+    pub total_impacted_files: usize,
 }
 
-/// 入力ファイルごとの関連ファイル一覧
+/// impact の個別ファイル結果
 #[derive(Debug, Clone, Serialize)]
-pub struct ImpactPerFile {
-    /// 入力ファイルパス
-    pub file: String,
-    /// 関連ファイル一覧（スコア降順）
-    pub related: Vec<ImpactRelatedFile>,
-}
-
-/// 関連ファイル情報
-#[derive(Debug, Clone, Serialize)]
-pub struct ImpactRelatedFile {
-    pub path: String,
+pub struct ImpactFileResult {
+    pub file_path: String,
     pub score: f32,
-    /// snake_case 文字列（"markdown_link", "import_dependency" 等）
-    pub relations: Vec<String>,
-}
-
-/// 統計サマリー
-#[derive(Debug, Clone, Serialize)]
-pub struct ImpactSummary {
-    /// 入力ファイル数
-    pub changed: usize,
-    /// ユニーク影響ファイル総数（limit 前基準）
-    pub total_impacted: usize,
-    /// overlap 件数
-    pub overlap_count: usize,
+    pub relation_types: Vec<String>,
+    pub impacted_by: Vec<String>,
 }
 
 /// impact 結果を指定フォーマットで出力する

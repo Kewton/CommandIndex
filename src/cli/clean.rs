@@ -46,11 +46,13 @@ pub enum CleanResult {
     NotFound,
 }
 
-pub fn run(path: &Path, options: &CleanOptions) -> Result<CleanResult, CleanError> {
-    let commandindex_dir = path.join(crate::INDEX_DIR_NAME);
-
-    // Symlink safety check
-    match std::fs::symlink_metadata(&commandindex_dir) {
+pub fn run(
+    _path: &Path,
+    commandindex_dir: &Path,
+    options: &CleanOptions,
+) -> Result<CleanResult, CleanError> {
+    // Symlink safety check (also done by caller via reject_symlink, but defence in depth)
+    match std::fs::symlink_metadata(commandindex_dir) {
         Ok(metadata) => {
             if metadata.file_type().is_symlink() {
                 return Err(CleanError::SymlinkDetected);
@@ -101,7 +103,7 @@ pub fn run(path: &Path, options: &CleanOptions) -> Result<CleanResult, CleanErro
         Ok(CleanResult::Removed)
     } else {
         // Full deletion: remove entire .commandindex/
-        match std::fs::remove_dir_all(&commandindex_dir) {
+        match std::fs::remove_dir_all(commandindex_dir) {
             Ok(()) => Ok(CleanResult::Removed),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(CleanResult::NotFound),
             Err(e) => Err(CleanError::Io(e)),

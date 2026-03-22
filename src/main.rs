@@ -8,6 +8,10 @@ use clap::{Parser, Subcommand};
 #[command(about = "Git-native knowledge CLI \u{2014} search across Markdown, Code, and Git")]
 #[command(version)]
 struct Cli {
+    /// Custom index directory path (overrides default .commandindex/)
+    #[arg(long, global = true)]
+    index_path: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -35,19 +39,8 @@ enum Commands {
         #[arg(long, num_args(1..), conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace", "related_stdin"])]
         related: Option<Vec<String>>,
         /// Read related file paths from stdin (one per line)
-        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "tag", "path", "file_type", "heading", "workspace", "no_semantic", "rerank", "changed_since"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "tag", "path", "file_type", "heading", "workspace", "no_semantic", "rerank"])]
         related_stdin: bool,
-        /// Show impact of files changed since (e.g. '12 hours ago', 'yesterday', or commit hash)
-        #[arg(
-            long,
-            conflicts_with_all = [
-                "query", "symbol", "related", "related_stdin",
-                "semantic", "workspace", "tag", "path",
-                "file_type", "heading", "no_semantic", "rerank"
-            ],
-            help = "Show impact of files changed since (e.g. '12 hours ago', 'yesterday', or commit hash)"
-        )]
-        changed_since: Option<String>,
         /// Semantic search query (embedding-based similarity search)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
@@ -138,6 +131,20 @@ enum Commands {
         #[arg(long)]
         keep_embeddings: bool,
     },
+    /// Compare related files between two files (conflict detection)
+    Diff {
+        /// Two files to compare
+        #[arg(required = true, num_args = 2)]
+        files: Vec<String>,
+
+        /// Output format
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+
+        /// Maximum related files per input file
+        #[arg(long, default_value = "100", value_parser = clap::value_parser!(u64).range(1..=10000))]
+        limit: u64,
+    },
     /// Generate AI-oriented context pack for specified files
     Context {
         /// Target file paths (multiple allowed)
@@ -193,6 +200,18 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Watch for file changes and auto-update index
+    Watch {
+        /// Target directory to watch
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+        /// Debounce interval in seconds
+        #[arg(long, default_value = "1")]
+        debounce: u64,
+        /// Generate embeddings during update
+        #[arg(long)]
+        with_embedding: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -203,6 +222,22 @@ enum ConfigCommands {
     Path,
 }
 
+/// Resolve commandindex_dir from CLI --index-path, config, and base_path.
+/// Returns (commandindex_dir, config) pair.
+fn resolve_commandindex_dir(
+    cli_index_path: Option<&std::path::Path>,
+    base_path: &std::path::Path,
+) -> Result<(PathBuf, commandindex::config::AppConfig), String> {
+    let config = commandindex::config::load_config(base_path).map_err(|e| format!("{e}"))?;
+    let commandindex_dir = commandindex::indexer::resolve_index_path(
+        cli_index_path,
+        config.index.path.as_deref(),
+        base_path,
+    )
+    .map_err(|e| format!("{e}"))?;
+    Ok((commandindex_dir, config))
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -211,8 +246,21 @@ fn main() {
             path,
             with_embedding,
         } => {
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), &path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            // reject symlink for write command
+            if let Err(e) = commandindex::indexer::reject_symlink(&commandindex_dir) {
+                eprintln!("Error: {e}");
+                process::exit(1);
+            }
             let options = commandindex::cli::index::IndexOptions { with_embedding };
-            match commandindex::cli::index::run(&path, &options) {
+            match commandindex::cli::index::run(&path, &commandindex_dir, &options) {
                 Ok(summary) => {
                     println!("Indexing {}...", path.display());
                     println!("  Scanned: {} files", summary.scanned);
@@ -220,7 +268,7 @@ fn main() {
                     println!("  Skipped: {} files (parse error)", summary.skipped);
                     println!("  Ignored: {} files (.cmindexignore)", summary.ignored);
                     println!("  Duration: {:.1}s", summary.duration.as_secs_f64());
-                    println!("Index saved to .commandindex/");
+                    println!("Index saved to {}/", commandindex_dir.display());
                     if with_embedding {
                         println!("Embeddings generated.");
                     }
@@ -237,7 +285,6 @@ fn main() {
             symbol,
             related,
             related_stdin,
-            changed_since,
             semantic,
             no_semantic,
             format,
@@ -254,7 +301,10 @@ fn main() {
             repo,
         } => {
             // Build SearchContext for config resolution
-            let ctx = commandindex::cli::search::SearchContext::from_current_dir().ok();
+            let base_path = std::path::Path::new(".");
+            let ctx =
+                commandindex::cli::search::SearchContext::new(base_path, cli.index_path.as_deref())
+                    .ok();
             let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &ctx {
                 Some(c) => (
                     limit.unwrap_or(c.config.search.default_limit).min(1000),
@@ -321,26 +371,16 @@ fn main() {
                         1
                     }
                 }
-            } else if let Some(ref since) = changed_since {
-                let result = commandindex::cli::search::run_changed_since_search(
-                    since,
-                    effective_limit,
-                    format,
-                );
-                match result {
-                    Ok(()) => 0,
-                    Err(e) => {
-                        eprintln!("Error: {e}");
-                        1
-                    }
-                }
             } else {
                 let result = match (query, symbol, related, semantic) {
                     (Some(q), None, None, None) => {
                         // SearchContext is required for full-text search
                         let ctx = match ctx {
                             Some(c) => c,
-                            None => match commandindex::cli::search::SearchContext::from_current_dir() {
+                            None => match commandindex::cli::search::SearchContext::new(
+                                base_path,
+                                cli.index_path.as_deref(),
+                            ) {
                                 Ok(c) => c,
                                 Err(e) => {
                                     eprintln!("Error: {e}");
@@ -362,22 +402,44 @@ fn main() {
                         commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top)
                     }
                     (None, Some(s), None, None) => {
-                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
+                        let ctx_for_symbol = ctx.or_else(|| {
+                            commandindex::cli::search::SearchContext::new(
+                                base_path,
+                                cli.index_path.as_deref(),
+                            )
+                            .ok()
+                        });
+                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format, ctx_for_symbol.as_ref())
                     }
                     (None, None, Some(ref files), None) => {
-                        commandindex::cli::search::run_related_search(files, effective_limit, format)
+                        let ctx_for_related = ctx.or_else(|| {
+                            commandindex::cli::search::SearchContext::new(
+                                base_path,
+                                cli.index_path.as_deref(),
+                            )
+                            .ok()
+                        });
+                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref())
                     }
                     (None, None, None, Some(q)) => {
                         let filters = commandindex::indexer::reader::SearchFilters {
                             path_prefix: path,
                             file_type,
                         };
+                        let ctx_for_semantic = ctx.or_else(|| {
+                            commandindex::cli::search::SearchContext::new(
+                                base_path,
+                                cli.index_path.as_deref(),
+                            )
+                            .ok()
+                        });
                         commandindex::cli::search::run_semantic_search(
                             &q,
                             effective_limit,
                             format,
                             tag.as_deref(),
                             &filters,
+                            ctx_for_semantic.as_ref(),
                         )
                     }
                     (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
@@ -408,8 +470,21 @@ fn main() {
                     }
                 }
             } else {
+                let (commandindex_dir, _config) =
+                    match resolve_commandindex_dir(cli.index_path.as_deref(), &path) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            process::exit(1);
+                        }
+                    };
+                if let Err(e) = commandindex::indexer::reject_symlink(&commandindex_dir) {
+                    eprintln!("Error: {e}");
+                    process::exit(1);
+                }
                 let options = commandindex::cli::index::IndexOptions { with_embedding };
-                match commandindex::cli::index::run_incremental(&path, &options) {
+                match commandindex::cli::index::run_incremental(&path, &commandindex_dir, &options)
+                {
                     Ok(summary) => {
                         println!("Incremental update completed:");
                         println!(
@@ -453,13 +528,26 @@ fn main() {
                     }
                 }
             } else {
+                let (commandindex_dir, _config) =
+                    match resolve_commandindex_dir(cli.index_path.as_deref(), &path) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            process::exit(1);
+                        }
+                    };
                 let options = commandindex::cli::status::StatusOptions {
                     detail,
                     coverage,
                     format,
                     verify,
                 };
-                match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
+                match commandindex::cli::status::run(
+                    &path,
+                    &commandindex_dir,
+                    &options,
+                    &mut std::io::stdout(),
+                ) {
                     Ok(()) => 0,
                     Err(e) => {
                         eprintln!("{e}");
@@ -468,11 +556,11 @@ fn main() {
                 }
             }
         }
-        Commands::Context {
+        Commands::Diff {
             files,
-            max_files,
-            max_tokens,
-        } => match commandindex::cli::context::run_context(&files, max_files, max_tokens) {
+            format,
+            limit,
+        } => match commandindex::cli::diff::run_diff(&files, limit as usize, format) {
             Ok(()) => 0,
             Err(e) => {
                 eprintln!("Error: {e}");
@@ -490,17 +578,56 @@ fn main() {
                 1
             }
         },
+        Commands::Context {
+            files,
+            max_files,
+            max_tokens,
+        } => {
+            let base_path = std::path::Path::new(".");
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), base_path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            match commandindex::cli::context::run_context(
+                &files,
+                max_files,
+                max_tokens,
+                &commandindex_dir,
+            ) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
         Commands::Clean {
             path,
             keep_embeddings,
         } => {
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), &path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            if let Err(e) = commandindex::indexer::reject_symlink(&commandindex_dir) {
+                eprintln!("Error: {e}");
+                process::exit(1);
+            }
             let options = commandindex::cli::clean::CleanOptions { keep_embeddings };
-            match commandindex::cli::clean::run(&path, &options) {
+            match commandindex::cli::clean::run(&path, &commandindex_dir, &options) {
                 Ok(commandindex::cli::clean::CleanResult::Removed) => {
                     if keep_embeddings {
                         println!("Removed index (embeddings preserved)");
                     } else {
-                        println!("Removed index at .commandindex/");
+                        println!("Removed index at {}/", commandindex_dir.display());
                     }
                     println!("Run `commandindex index` to rebuild.");
                     0
@@ -515,43 +642,81 @@ fn main() {
                 }
             }
         }
-        Commands::Embed { path } => match commandindex::cli::embed::run(&path) {
-            Ok(summary) => {
-                println!("Embedding generation completed:");
-                println!("  Total sections: {}", summary.total_sections);
-                println!("  Generated: {}", summary.generated);
-                println!("  Cached: {}", summary.cached);
-                println!("  Failed: {}", summary.failed);
-                println!("  Duration: {:.2}s", summary.duration.as_secs_f64());
-                0
-            }
-            Err(e) => {
+        Commands::Embed { path } => {
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), &path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            if let Err(e) = commandindex::indexer::reject_symlink(&commandindex_dir) {
                 eprintln!("Error: {e}");
-                1
+                process::exit(1);
             }
-        },
-        Commands::Config { command } => match command {
-            ConfigCommands::Show => match commandindex::cli::config::run_show() {
-                Ok(()) => 0,
+            match commandindex::cli::embed::run(&path, &commandindex_dir) {
+                Ok(summary) => {
+                    println!("Embedding generation completed:");
+                    println!("  Total sections: {}", summary.total_sections);
+                    println!("  Generated: {}", summary.generated);
+                    println!("  Cached: {}", summary.cached);
+                    println!("  Failed: {}", summary.failed);
+                    println!("  Duration: {:.2}s", summary.duration.as_secs_f64());
+                    0
+                }
                 Err(e) => {
                     eprintln!("Error: {e}");
                     1
                 }
-            },
-            ConfigCommands::Path => match commandindex::cli::config::run_path() {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            }
+        }
+        Commands::Config { command } => {
+            let base_path = std::path::Path::new(".");
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), base_path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            match command {
+                ConfigCommands::Show => {
+                    match commandindex::cli::config::run_show(base_path, &commandindex_dir) {
+                        Ok(()) => 0,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            1
+                        }
+                    }
                 }
-            },
-        },
+                ConfigCommands::Path => {
+                    match commandindex::cli::config::run_path(base_path, &commandindex_dir) {
+                        Ok(()) => 0,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            1
+                        }
+                    }
+                }
+            }
+        }
         Commands::Export {
             output,
             with_embeddings,
         } => {
+            let base_path = std::path::Path::new(".");
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), base_path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
             let options = commandindex::cli::export::ExportOptions { with_embeddings };
-            match commandindex::cli::export::run(std::path::Path::new("."), &output, &options) {
+            match commandindex::cli::export::run(&commandindex_dir, &output, &options) {
                 Ok(result) => {
                     println!("Export completed:");
                     println!("  Output: {}", result.output_path.display());
@@ -571,9 +736,26 @@ fn main() {
             }
         }
         Commands::Import { input, force } => {
+            let base_path = std::path::Path::new(".");
+            let (commandindex_dir, _config) =
+                match resolve_commandindex_dir(cli.index_path.as_deref(), base_path) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                };
+            if let Err(e) = commandindex::indexer::reject_symlink(&commandindex_dir) {
+                eprintln!("Error: {e}");
+                process::exit(1);
+            }
             let options = commandindex::cli::import_index::ImportOptions { force };
-            match commandindex::cli::import_index::run(std::path::Path::new("."), &input, &options)
-            {
+            match commandindex::cli::import_index::run(
+                base_path,
+                &commandindex_dir,
+                &input,
+                &options,
+            ) {
                 Ok(result) => {
                     println!("Import completed:");
                     println!("  Imported files: {}", result.imported_files);
@@ -591,6 +773,18 @@ fn main() {
                     eprintln!("Error: {e}");
                     1
                 }
+            }
+        }
+        Commands::Watch {
+            path,
+            debounce,
+            with_embedding,
+        } => {
+            if let Err(e) = commandindex::cli::watch::run(&path, debounce, with_embedding) {
+                eprintln!("Watch error: {e}");
+                1
+            } else {
+                0
             }
         }
     };

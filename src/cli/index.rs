@@ -246,7 +246,11 @@ fn section_to_doc(
     }
 }
 
-pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexError> {
+pub fn run(
+    path: &Path,
+    commandindex_dir: &Path,
+    options: &IndexOptions,
+) -> Result<IndexSummary, IndexError> {
     let start = Instant::now();
 
     // 1. Validate target directory
@@ -265,17 +269,16 @@ pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexErr
     let ignored = scan_result.ignored_count;
 
     // 4. Remove existing tantivy directory if present
-    let commandindex_dir = crate::indexer::commandindex_dir(path);
-    let tantivy_dir = crate::indexer::index_dir(path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     if tantivy_dir.exists() {
         std::fs::remove_dir_all(&tantivy_dir)?;
     }
 
     // Ensure .commandindex directory exists before opening SQLite DB
-    std::fs::create_dir_all(&commandindex_dir)?;
+    std::fs::create_dir_all(commandindex_dir)?;
 
     // 5. Initialize SymbolStore: delete old symbols.db + WAL/SHM files, then open fresh
-    let db_path = crate::indexer::symbol_db_path(path);
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     for suffix in &["", "-wal", "-shm"] {
         let p = db_path.with_extension(format!("db{suffix}"));
         if p.exists() {
@@ -320,18 +323,18 @@ pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexErr
     writer.commit()?;
 
     // 9. Save manifest
-    manifest.save(&commandindex_dir)?;
+    manifest.save(commandindex_dir)?;
 
     // 10. Save state
     let mut state = IndexState::new(path.to_path_buf());
     state.total_files = scanned;
     state.total_sections = indexed_sections;
     state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
-    state.save(&commandindex_dir)?;
+    state.save(commandindex_dir)?;
 
     // 11. Generate embeddings if requested
     if options.with_embedding {
-        generate_embeddings_for_manifest(path, &commandindex_dir, &manifest)?;
+        generate_embeddings_for_manifest(path, commandindex_dir, &manifest)?;
     }
 
     // 12. Return summary
@@ -606,6 +609,7 @@ fn index_file_and_upsert(
 
 pub fn run_incremental(
     path: &Path,
+    commandindex_dir: &Path,
     options: &IndexOptions,
 ) -> Result<IncrementalSummary, IndexError> {
     let start = Instant::now();
@@ -619,11 +623,10 @@ pub fn run_incremental(
     }
 
     // 2. Check preconditions: existing index with valid schema
-    let commandindex_dir = crate::indexer::commandindex_dir(path);
-    if !IndexState::exists(&commandindex_dir) {
+    if !IndexState::exists(commandindex_dir) {
         return Err(IndexError::IndexNotFound);
     }
-    let mut state = match IndexState::load(&commandindex_dir) {
+    let mut state = match IndexState::load(commandindex_dir) {
         Ok(s) => s,
         Err(e) => return Err(IndexError::IndexCorrupted(e.to_string())),
     };
@@ -638,7 +641,7 @@ pub fn run_incremental(
     let scan_result = scan_files(path, &ignore_filter, FileType::all_extensions())?;
 
     // 5. Load old manifest
-    let mut old_manifest = Manifest::load_or_default(&commandindex_dir)?;
+    let mut old_manifest = Manifest::load_or_default(commandindex_dir)?;
 
     // 6. Detect changes
     let diff_result = detect_changes(path, &old_manifest, &scan_result.files)?;
@@ -658,7 +661,7 @@ pub fn run_incremental(
     }
 
     // 8. Open existing tantivy index
-    let tantivy_dir = crate::indexer::index_dir(path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let mut writer = match IndexWriterWrapper::open_existing(&tantivy_dir) {
         Ok(w) => w,
         Err(e) => {
@@ -669,7 +672,7 @@ pub fn run_incremental(
     };
 
     // 9. Open SymbolStore (create tables if not yet created)
-    let db_path = crate::indexer::symbol_db_path(path);
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     let symbol_store = SymbolStore::open(&db_path)?;
     symbol_store.create_tables()?;
 
@@ -755,7 +758,7 @@ pub fn run_incremental(
     writer.commit()?;
 
     // 14. Save updated manifest
-    old_manifest.save(&commandindex_dir)?;
+    old_manifest.save(commandindex_dir)?;
 
     // 15. Update state (use saturating arithmetic to prevent underflow on corrupted state)
     state.total_files = state.total_files.saturating_add(added_files);
@@ -777,12 +780,12 @@ pub fn run_incremental(
     state.total_sections = state.total_sections.saturating_sub(sections_to_remove);
     state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
     state.touch();
-    state.save(&commandindex_dir)?;
+    state.save(commandindex_dir)?;
 
     // 16. Generate embeddings if requested
     if options.with_embedding {
-        let updated_manifest = Manifest::load(&commandindex_dir)?;
-        generate_embeddings_for_manifest(path, &commandindex_dir, &updated_manifest)?;
+        let updated_manifest = Manifest::load(commandindex_dir)?;
+        generate_embeddings_for_manifest(path, commandindex_dir, &updated_manifest)?;
     }
 
     // 17. Return summary
@@ -801,17 +804,17 @@ pub fn run_incremental(
 /// Embedding生成の共通ロジック（run / run_incremental から呼ばれる）
 fn generate_embeddings_for_manifest(
     path: &Path,
-    _commandindex_dir: &Path,
+    commandindex_dir: &Path,
     manifest: &Manifest,
 ) -> Result<(), IndexError> {
     let app_config = load_config(path)?;
     let provider = create_provider(&app_config.embedding)?;
 
-    let db_path = crate::indexer::embeddings_db_path(path);
+    let db_path = crate::indexer::embeddings_db_path(commandindex_dir);
     let store = EmbeddingStore::open(&db_path)?;
     store.create_tables()?;
 
-    let tantivy_dir = crate::indexer::index_dir(path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir).map_err(|e| {
         IndexError::IndexCorrupted(format!("Failed to open tantivy for embedding: {e}"))
     })?;

@@ -152,10 +152,11 @@ fn validate_entry_type(entry_type: tar::EntryType, entry_path: &Path) -> Result<
 /// Import index from tar.gz archive
 pub fn run(
     path: &Path,
+    commandindex_dir: &Path,
     archive: &Path,
     options: &ImportOptions,
 ) -> Result<ImportResult, ImportError> {
-    let ci_dir = crate::indexer::commandindex_dir(path);
+    let ci_dir = commandindex_dir.to_path_buf();
 
     // 1. Check archive exists
     if !archive.exists() {

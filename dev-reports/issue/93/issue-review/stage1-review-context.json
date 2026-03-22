@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "受け入れ基準の欠落",
+      "description": "受け入れ基準に「インデックスが未構築の場合のエラーハンドリング」が含まれていない。run_incremental() は IndexNotFound / SchemaVersionMismatch を返すが、watch モードでこれらが発生した場合の振る舞いが未定義。",
+      "suggestion": "受け入れ基準に「インデックス未構築時は明確なエラーメッセージを出して終了する」を追加する。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準の欠落",
+      "description": "受け入れ基準に「対象拡張子以外のファイル変更を無視する」が含まれていない。現在の対象拡張子は md, ts, tsx, py の4種類であり、notify crate は全ファイルイベントを通知するため、対象外ファイルのフィルタリングが必要。",
+      "suggestion": "受け入れ基準に「対象拡張子（md, ts, tsx, py）以外のファイルシステムイベントは無視する」を追加する。"
+    },
+    {
+      "id": "M3",
+      "category": "実装方針の不足",
+      "description": "run_incremental() は差分検知に manifest のハッシュ比較（scan_files + detect_changes）を使用しており、notify イベントの個別ファイルパスを直接渡す設計にはなっていない。Issue ではイベント駆動で update を実行すると書かれているが、実際には run_incremental() をそのまま呼ぶのか、新たにファイル単位の更新関数を設けるのかが不明確。",
+      "suggestion": "実装方針に「notify イベント受信後、既存の run_incremental() をそのまま呼び出す（フルスキャン+差分検知方式）」か「イベントで得たファイルパスのみを対象に差分更新する新関数を作る」かを明記する。前者はシンプルだが大規模リポジトリで非効率、後者は効率的だが実装コストが高い。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "技術的正確性",
+      "description": "--daemon オプションの実装方針が不十分。Rustでのdaemon化はプラットフォーム依存であり、PIDファイル管理、ログ出力先、停止方法など複雑な要件がある。",
+      "suggestion": "--daemon の実装方針を具体化するか、Phase 1 ではフォアグラウンド実行のみにスコープを絞る。"
+    },
+    {
+      "id": "S2",
+      "category": "受け入れ基準の欠落",
+      "description": "エラーリカバリの基準が未定義。watch 中に update が失敗した場合の振る舞いが不明。",
+      "suggestion": "「update 失敗時はエラーをログ出力し監視を継続する（致命的エラー時は終了コード1で停止）」を追加。"
+    },
+    {
+      "id": "S3",
+      "category": "整合性",
+      "description": "--path オプションが既存コマンドと意味が異なる。既存の --path はリポジトリルート指定だが、Issueの --path src/ --path docs/ は監視対象サブセット指定。",
+      "suggestion": "--watch-path や --target など別名にするか、意味を統一する。"
+    },
+    {
+      "id": "S4",
+      "category": "受け入れ基準の欠落",
+      "description": "ログ出力・監視状態の可視性に関する基準がない。",
+      "suggestion": "「ファイル変更検知時・update 開始時・完了時にログメッセージを表示する」を追加。"
+    },
+    {
+      "id": "S5",
+      "category": "実装方針の不足",
+      "description": "デバウンス1秒の設定可能性が未記載。",
+      "suggestion": "--debounce <seconds> オプション（デフォルト1秒）を検討。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "実装効率",
+      "description": "#88 が未実装のため、--index-path 対応を含めるとスコープが膨らむ。",
+      "suggestion": "watch 初期実装では --index-path 統合をスコープ外とする。"
+    },
+    {
+      "id": "N2",
+      "category": "テスト方針",
+      "description": "watch モードのテスト方針が記載されていない。",
+      "suggestion": "デバウンスロジックの単体テスト、IgnoreFilter との統合テスト、手動テスト手順を記載。"
+    },
+    {
+      "id": "N3",
+      "category": "パフォーマンス",
+      "description": "大規模リポジトリでのパフォーマンス考慮が不足。inotify 上限など。",
+      "suggestion": "プラットフォーム固有の注意事項を記載。"
+    },
+    {
+      "id": "N4",
+      "category": "機能拡張性",
+      "description": "--with-embedding 対応が未記載。",
+      "suggestion": "watch にも --with-embedding を含めるか明記。"
+    }
+  ],
+  "summary": "Issue #93 は技術的方向性は妥当だが、3点の必須修正がある: (1) インデックス未構築時のエラーハンドリング基準の欠落、(2) 対象外拡張子のフィルタリング基準の欠落、(3) notify イベントと既存 run_incremental() の接続方針が不明確。また --daemon の複雑さが過小評価されており、スコープ分割を推奨。"
+}

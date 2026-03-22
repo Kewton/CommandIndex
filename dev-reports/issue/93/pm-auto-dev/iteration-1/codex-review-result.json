@@ -1,0 +1,39 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/watch.rs",
+      "line": 214,
+      "severity": "medium",
+      "category": "bug",
+      "description": "notify callback discards watcher-side errors by handling only `Ok(event)` and ignoring `Err(notify::Error)`. If the backend drops events, loses the watch, or hits an OS-level watcher failure, watch mode keeps running without surfacing the failure, so the index can silently stop updating.",
+      "suggestion": "Send both success and error results through the channel, or store the error in shared state and terminate the loop on watcher failures with a clear message."
+    },
+    {
+      "file": "src/cli/watch.rs",
+      "line": 211,
+      "severity": "medium",
+      "category": "bug",
+      "description": "The watch loop uses an unbounded `std::sync::mpsc::channel()` and drains it only from the main loop. During a burst of filesystem activity, especially while `run_incremental()` is executing, queued events can grow without bound and cause memory growth. This is a local denial-of-service risk.",
+      "suggestion": "Use a bounded channel such as `sync_channel`, coalesce events in the callback, or switch to a single atomic dirty flag so multiple events collapse into one pending update."
+    },
+    {
+      "file": "src/cli/watch.rs",
+      "line": 142,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`max_wait` is computed as `debounce_secs * 5` without overflow protection. Because `--debounce` accepts any `u64` from CLI, very large input can panic in debug builds or wrap in release builds, producing incorrect debounce behavior.",
+      "suggestion": "Validate `--debounce` with an upper bound in clap, or compute `max_wait` with `saturating_mul(5)` / `checked_mul(5)` and reject invalid values."
+    },
+    {
+      "file": "src/cli/watch.rs",
+      "line": 206,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`ctrlc::set_handler` installs a global process-wide signal handler and can only be registered once. Re-entering `watch::run()` in the same process, or calling it from tests/library consumers more than once, will fail with `Signal handler error` even if the previous watch session already ended.",
+      "suggestion": "Register the handler once globally with `OnceLock`/`std::sync::Once`, or move signal handling to the CLI entrypoint so the library function is reusable."
+    }
+  ],
+  "summary": "4件の中程度のバグリスクを確認しました。主な論点は、watcher backend エラーの握りつぶし、無制限イベントキューによるメモリ増大、`--debounce` の極端値での算術不整合、そしてグローバル Ctrl+C ハンドラ再登録失敗です。今回の変更範囲では、パストラバーサル、コマンドインジェクション、SQLインジェクション、unsafe 使用、機密情報露出などの明確なセキュリティ脆弱性は見当たりませんでした。",
+  "requires_fix": true
+}

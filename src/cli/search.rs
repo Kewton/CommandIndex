@@ -14,30 +14,39 @@ use crate::output::{
 
 pub struct SearchContext {
     pub base_path: PathBuf,
+    pub commandindex_dir: PathBuf,
     pub config: AppConfig,
 }
 
 impl SearchContext {
-    pub fn from_current_dir() -> Result<Self, SearchError> {
-        let base_path = PathBuf::from(".");
-        let config = load_config(&base_path)?;
-        Ok(Self { base_path, config })
-    }
-
-    pub fn from_path(base_path: &Path) -> Result<Self, SearchError> {
+    /// New constructor: resolves index path from CLI option, config, and base_path
+    pub fn new(base_path: &Path, index_path: Option<&Path>) -> Result<Self, SearchError> {
         let config = load_config(base_path)?;
+        let commandindex_dir =
+            crate::indexer::resolve_index_path(index_path, config.index.path.as_deref(), base_path)
+                .map_err(|e| SearchError::Config(e.to_string()))?;
         Ok(Self {
             base_path: base_path.to_path_buf(),
+            commandindex_dir,
             config,
         })
     }
 
+    /// Convenience: from_path with no CLI index_path override
+    pub fn from_path(base_path: &Path) -> Result<Self, SearchError> {
+        Self::new(base_path, None)
+    }
+
     pub fn index_dir(&self) -> PathBuf {
-        crate::indexer::index_dir(&self.base_path)
+        crate::indexer::index_dir(&self.commandindex_dir)
     }
 
     pub fn symbol_db_path(&self) -> PathBuf {
-        crate::indexer::symbol_db_path(&self.base_path)
+        crate::indexer::symbol_db_path(&self.commandindex_dir)
+    }
+
+    pub fn embeddings_db_path(&self) -> PathBuf {
+        crate::indexer::embeddings_db_path(&self.commandindex_dir)
     }
 }
 
@@ -169,35 +178,9 @@ impl From<crate::cli::stdin::StdinError> for SearchError {
     }
 }
 
-impl From<crate::cli::impact::ImpactError> for SearchError {
-    fn from(e: crate::cli::impact::ImpactError) -> Self {
-        match e {
-            crate::cli::impact::ImpactError::IndexNotFound => SearchError::IndexNotFound,
-            crate::cli::impact::ImpactError::SymbolDbNotFound => SearchError::SymbolDbNotFound,
-            crate::cli::impact::ImpactError::Reader(e) => SearchError::Reader(e),
-            crate::cli::impact::ImpactError::SymbolStore(e) => SearchError::SymbolStore(e),
-            crate::cli::impact::ImpactError::RelatedSearch(e) => SearchError::RelatedSearch(e),
-            crate::cli::impact::ImpactError::Output(e) => SearchError::Output(e),
-            crate::cli::impact::ImpactError::NoValidPaths => {
-                SearchError::InvalidArgument("no valid file paths found".into())
-            }
-            crate::cli::impact::ImpactError::InvalidArgument(s) => SearchError::InvalidArgument(s),
-            crate::cli::impact::ImpactError::Stdin(e) => SearchError::Stdin(e),
-        }
-    }
-}
-
-impl From<crate::cli::git::GitError> for SearchError {
-    fn from(e: crate::cli::git::GitError) -> Self {
-        match e {
-            crate::cli::git::GitError::GitNotFound => {
-                SearchError::InvalidArgument("git command not found".into())
-            }
-            crate::cli::git::GitError::CommandFailed => {
-                SearchError::InvalidArgument("git command failed".into())
-            }
-            crate::cli::git::GitError::InvalidInput(msg) => SearchError::InvalidArgument(msg),
-        }
+impl From<crate::indexer::ResolveIndexPathError> for SearchError {
+    fn from(e: crate::indexer::ResolveIndexPathError) -> Self {
+        SearchError::Config(e.to_string())
     }
 }
 
@@ -237,7 +220,13 @@ pub fn run(
     let use_hybrid = !effective_options.no_semantic && effective_options.heading.is_none();
 
     let final_results = if use_hybrid {
-        try_hybrid_search(results, &effective_options, filters, config, &ctx.base_path)?
+        try_hybrid_search(
+            results,
+            &effective_options,
+            filters,
+            config,
+            &ctx.commandindex_dir,
+        )?
     } else {
         results
     };
@@ -275,6 +264,7 @@ pub fn run_symbol_search(
     symbol_name: &str,
     limit: usize,
     format: OutputFormat,
+    ctx: Option<&SearchContext>,
 ) -> Result<(), SearchError> {
     if symbol_name.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -287,7 +277,12 @@ pub fn run_symbol_search(
         ));
     }
 
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = if let Some(c) = ctx {
+        c.symbol_db_path()
+    } else {
+        let default_dir = Path::new(".").join(crate::INDEX_DIR_NAME);
+        crate::indexer::symbol_db_path(&default_dir)
+    };
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
@@ -311,15 +306,22 @@ pub fn run_related_search(
     file_paths: &[String],
     limit: usize,
     format: OutputFormat,
+    ctx: Option<&SearchContext>,
 ) -> Result<(), SearchError> {
     super::validate_file_paths(file_paths, 100)?;
 
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let (tantivy_dir, db_path) = if let Some(c) = ctx {
+        (c.index_dir(), c.symbol_db_path())
+    } else {
+        let default_dir = Path::new(".").join(crate::INDEX_DIR_NAME);
+        (
+            crate::indexer::index_dir(&default_dir),
+            crate::indexer::symbol_db_path(&default_dir),
+        )
+    };
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
-
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
@@ -400,6 +402,7 @@ pub fn run_semantic_search(
     format: OutputFormat,
     tag: Option<&str>,
     filters: &SearchFilters,
+    ctx: Option<&SearchContext>,
 ) -> Result<(), SearchError> {
     if query.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -407,21 +410,26 @@ pub fn run_semantic_search(
         ));
     }
 
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let (tantivy_dir, db_path, config) = if let Some(c) = ctx {
+        (c.index_dir(), c.symbol_db_path(), c.config.clone())
+    } else {
+        let default_dir = Path::new(".").join(crate::INDEX_DIR_NAME);
+        let cfg = load_config(Path::new("."))?;
+        (
+            crate::indexer::index_dir(&default_dir),
+            crate::indexer::symbol_db_path(&default_dir),
+            cfg,
+        )
+    };
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
-
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
-
-    // Load embedding config via new config system
-    let config = load_config(Path::new("."))?;
     let provider = crate::embedding::create_provider(&config.embedding)?;
 
-    // Check embeddings exist
+    // Check embeddings exist (db_path already validated above)
     let store = SymbolStore::open(&db_path)?;
     if store.count_embeddings()? == 0 {
         return Err(SearchError::NoEmbeddings);
@@ -520,12 +528,12 @@ fn try_hybrid_search(
     options: &SearchOptions,
     filters: &SearchFilters,
     config: &AppConfig,
-    base_path: &Path,
+    commandindex_dir: &Path,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
 
     // 1. SymbolStore を開く
-    let db_path = crate::indexer::symbol_db_path(base_path);
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     let store = match crate::indexer::symbol_store::SymbolStore::open(&db_path) {
         Ok(s) => s,
         Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
@@ -589,7 +597,7 @@ fn try_hybrid_search(
     };
 
     // 6. セマンティック結果をSearchResult型に変換
-    let tantivy_dir = crate::indexer::index_dir(base_path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = match IndexReaderWrapper::open(&tantivy_dir) {
         Ok(r) => r,
         Err(_) => {
@@ -832,65 +840,4 @@ fn try_rerank(
     }
 
     reranked
-}
-
-/// Search for impact of files changed since a given point (time expression or commit hash)
-pub fn run_changed_since_search(
-    since: &str,
-    limit: usize,
-    format: OutputFormat,
-) -> Result<(), SearchError> {
-    // 1. Git changed files
-    let repo_path =
-        std::env::current_dir().map_err(|e| SearchError::InvalidArgument(e.to_string()))?;
-    let changed_files = crate::cli::git::get_changed_files(&repo_path, since)?;
-
-    if changed_files.is_empty() {
-        let sanitized_since = crate::output::strip_control_chars(since);
-        eprintln!("No files changed since: {sanitized_since}");
-        return Ok(());
-    }
-
-    // 2. File count limit check
-    let files = if changed_files.len() > crate::cli::impact::MAX_INPUT_FILES {
-        eprintln!(
-            "Warning: {} files found, limiting to {}",
-            changed_files.len(),
-            crate::cli::impact::MAX_INPUT_FILES
-        );
-        changed_files[..crate::cli::impact::MAX_INPUT_FILES].to_vec()
-    } else {
-        changed_files
-    };
-
-    // 3. Existence check + filter
-    let (valid_files, warnings) = crate::cli::stdin::filter_existing_files(&files);
-    for warning in &warnings {
-        eprintln!("{warning}");
-    }
-    if valid_files.is_empty() {
-        return Err(SearchError::InvalidArgument(
-            "no valid file paths found".into(),
-        ));
-    }
-
-    // 4. Index / DB check
-    let index_path = crate::indexer::index_dir(Path::new("."));
-    if !index_path.exists() {
-        return Err(SearchError::IndexNotFound);
-    }
-    let reader = IndexReaderWrapper::open(&index_path)?;
-    let symbol_db_path = crate::indexer::symbol_db_path(Path::new("."));
-    if !symbol_db_path.exists() {
-        return Err(SearchError::SymbolDbNotFound);
-    }
-    let store = SymbolStore::open(&symbol_db_path)?;
-    let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
-
-    // 5. Aggregate impact
-    let result = crate::cli::impact::aggregate_impact(&engine, &valid_files, limit)?;
-
-    // 6. Output
-    crate::output::format_impact_results(&result, format, &mut std::io::stdout().lock())
-        .map_err(SearchError::Output)
 }

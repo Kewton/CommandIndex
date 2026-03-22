@@ -15,17 +15,18 @@ pub fn run_context(
     files: &[String],
     max_files: usize,
     max_tokens: Option<usize>,
+    commandindex_dir: &Path,
 ) -> Result<(), SearchError> {
     // 入力検証
     super::validate_file_paths(files, 100)?;
 
     // インデックスオープン
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
 
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }

@@ -94,6 +94,7 @@ pub struct RawSearchConfig {
 
 #[derive(Debug, Default, Deserialize)]
 pub struct RawIndexConfig {
+    pub path: Option<String>,
     pub languages: Option<Vec<String>>,
 }
 
@@ -144,6 +145,9 @@ pub enum ConfigSourceKind {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct IndexConfig {
+    /// Raw config value (未解決の設定値)。effective path は resolve_index_path() で別途解決する。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     pub languages: Vec<String>,
 }
 
@@ -341,6 +345,7 @@ fn merge_index(
         (Some(b), None) => Some(b),
         (None, Some(h)) => Some(h),
         (Some(b), Some(h)) => Some(RawIndexConfig {
+            path: h.path.or(b.path),
             languages: h.languages.or(b.languages),
         }),
     }
@@ -400,6 +405,7 @@ fn merge_rerank(
 /// Convert RawConfig to AppConfig with defaults applied
 fn resolve_config(raw: RawConfig, sources: Vec<ConfigSource>) -> AppConfig {
     let index = IndexConfig {
+        path: raw.index.as_ref().and_then(|i| i.path.clone()),
         languages: raw.index.and_then(|i| i.languages).unwrap_or_default(),
     };
 
@@ -694,7 +700,10 @@ mod tests {
     #[test]
     fn test_to_masked_view_masks_api_keys() {
         let config = AppConfig {
-            index: IndexConfig { languages: vec![] },
+            index: IndexConfig {
+                path: None,
+                languages: vec![],
+            },
             search: SearchConfig {
                 default_limit: 20,
                 snippet_lines: 2,
@@ -725,7 +734,10 @@ mod tests {
     #[test]
     fn test_to_masked_view_no_api_keys() {
         let config = AppConfig {
-            index: IndexConfig { languages: vec![] },
+            index: IndexConfig {
+                path: None,
+                languages: vec![],
+            },
             search: SearchConfig {
                 default_limit: 20,
                 snippet_lines: 2,
@@ -949,6 +961,7 @@ timeout_secs = 60
     fn test_view_model_serializes_to_toml() {
         let config = AppConfig {
             index: IndexConfig {
+                path: None,
                 languages: vec!["rust".to_string()],
             },
             search: SearchConfig {
@@ -969,5 +982,65 @@ timeout_secs = 60
         let toml_str = toml::to_string_pretty(&view).unwrap();
         assert!(toml_str.contains("api_key = \"***\""));
         assert!(!toml_str.contains("secret"));
+    }
+
+    // --- index.path config tests ---
+
+    #[test]
+    fn test_index_path_from_toml() {
+        let toml_str = r#"
+[index]
+path = "/shared/index"
+languages = ["typescript"]
+"#;
+        let raw: RawConfig = toml::from_str(toml_str).unwrap();
+        let config = resolve_config(raw, vec![]);
+        assert_eq!(config.index.path.as_deref(), Some("/shared/index"));
+        assert_eq!(config.index.languages, vec!["typescript"]);
+    }
+
+    #[test]
+    fn test_index_path_merge_higher_wins() {
+        let base = RawConfig {
+            index: Some(RawIndexConfig {
+                path: Some("base-path".to_string()),
+                languages: Some(vec!["python".to_string()]),
+            }),
+            ..RawConfig::default()
+        };
+        let higher = RawConfig {
+            index: Some(RawIndexConfig {
+                path: Some("higher-path".to_string()),
+                languages: None,
+            }),
+            ..RawConfig::default()
+        };
+        let merged = merge_raw(base, higher);
+        let idx = merged.index.unwrap();
+        assert_eq!(idx.path.as_deref(), Some("higher-path"));
+        assert_eq!(idx.languages, Some(vec!["python".to_string()]));
+    }
+
+    #[test]
+    fn test_index_path_none_when_not_set() {
+        let raw = RawConfig::default();
+        let config = resolve_config(raw, vec![]);
+        assert!(config.index.path.is_none());
+    }
+
+    #[test]
+    fn test_load_config_with_index_path() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(
+            tmp.path().join("commandindex.toml"),
+            r#"
+[index]
+path = "../shared-index"
+"#,
+        )
+        .unwrap();
+
+        let config = load_config(tmp.path()).unwrap();
+        assert_eq!(config.index.path.as_deref(), Some("../shared-index"));
     }
 }

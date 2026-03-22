@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
+    DiffResult, OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
     WorkspaceSearchResult, parse_tags,
 };
 
@@ -106,12 +106,25 @@ pub fn format_related_json(
     Ok(())
 }
 
-/// impact 結果をJSON形式で出力する（Serialize derive活用）
+/// impact 結果をJSON形式で出力する（単一JSONオブジェクト）
 pub fn format_impact_json(
     result: &crate::output::ImpactResult,
     writer: &mut dyn Write,
 ) -> Result<(), OutputError> {
-    serde_json::to_writer_pretty(&mut *writer, result)?;
+    let json_value = serde_json::json!({
+        "input_files": result.input_files,
+        "total_input_files": result.total_input_files,
+        "total_impacted_files": result.total_impacted_files,
+        "impacted_files": result.impacted_files.iter().map(|f| {
+            serde_json::json!({
+                "file_path": f.file_path,
+                "score": f.score,
+                "relation_types": f.relation_types,
+                "impacted_by": f.impacted_by,
+            })
+        }).collect::<Vec<_>>(),
+    });
+    serde_json::to_writer_pretty(&mut *writer, &json_value)?;
     writeln!(writer)?;
     Ok(())
 }
@@ -144,5 +157,20 @@ pub fn format_symbol_json(
             writeln!(writer)?;
         }
     }
+    Ok(())
+}
+
+/// Diff結果をJSON形式で出力する
+pub fn format_diff_json(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    let json_value = serde_json::json!({
+        "file_a": result.file_a,
+        "file_b": result.file_b,
+        "only_a": result.only_a,
+        "only_b": result.only_b,
+        "overlap": result.overlap,
+        "overlap_count": result.overlap.len(),
+    });
+    serde_json::to_writer_pretty(&mut *writer, &json_value)?;
+    writeln!(writer)?;
     Ok(())
 }

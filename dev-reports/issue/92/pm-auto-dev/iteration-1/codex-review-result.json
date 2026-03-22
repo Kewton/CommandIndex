@@ -1,0 +1,23 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/diff.rs",
+      "line": 12,
+      "severity": "medium",
+      "category": "bug",
+      "description": "run_diff() immediately indexes files[0] and files[1] without validating the slice length. The current CLI path enforces exactly two arguments, but this function is public and can panic if it is reused from tests or another call site with fewer than two entries.",
+      "suggestion": "Add an explicit guard at the start of run_diff() that returns SearchError::InvalidArgument unless files.len() == 2, and only index into the slice after that check."
+    },
+    {
+      "file": "src/output/human.rs",
+      "line": 208,
+      "severity": "medium",
+      "category": "security",
+      "description": "Diff-specific output writes file paths to the terminal without strip_control_chars(). Unlike the existing search formatters, this allows ANSI/control-sequence injection if an indexed path contains terminal escape characters, which can corrupt logs or manipulate terminal display.",
+      "suggestion": "Sanitize result.file_a, result.file_b, and every emitted path with strip_control_chars() before writing them in the diff human formatter, and apply the same hardening to src/output/path.rs for path-mode diff output."
+    }
+  ],
+  "summary": "2 issues found. The new diff entry point has a panic path when called with an invalid slice length, and the diff-only formatters bypass the existing control-character sanitization used elsewhere, creating a terminal injection risk. No other critical bug or direct filesystem/command injection issue was identified in the reviewed changes.",
+  "requires_fix": true
+}
