@@ -1,0 +1,79 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "index_dir() / symbol_db_path() API シグネチャ不一致",
+      "description": "設計書 4.4 節で `crate::indexer::index_dir()?` を引数なしで呼び出しているが、実際の API は `pub fn index_dir(base_path: &Path) -> PathBuf` で &Path 引数が必須。同様に `symbol_db_path()` も `&Path` が必要。さらに戻り値は PathBuf であり Result ではないため `?` 演算子は使用できない。impact.rs の run_impact() では `index_dir(Path::new(\".\"))` / `symbol_db_path(Path::new(\".\"))` と呼び出しているのが正しいパターン。",
+      "location": "設計書 4.4 節 run_changed_since_search() - L213-218",
+      "fix": "let base_path_dir = crate::indexer::index_dir(Path::new(\".\")) および let symbol_db_path = crate::indexer::symbol_db_path(Path::new(\".\")) に修正し、impact.rs の run_impact() と同一パターンにする。exists() チェックも impact.rs と同様に追加する。"
+    },
+    {
+      "id": "MF-2",
+      "title": "filter_existing_files() の戻り値の使い方の不整合",
+      "description": "設計書 4.4 節で filter_existing_files() の第2戻り値を invalid_files として扱い、手動で 'Warning: file not found, skipping: {}' メッセージを生成している。しかし実際の filter_existing_files()（stdin.rs:150-161）は第2戻り値として既に 'file not found, skipping: {p}' 形式の warning メッセージ文字列を返す。impact.rs の run_impact() では warnings として受け取り `eprintln!(\"Warning: {w}\")` と出力している。設計書のコードだと 'Warning: Warning: file not found, skipping: ...' と二重プレフィックスになるか、あるいは実装時に混乱する原因となる。",
+      "location": "設計書 4.4 節 run_changed_since_search() - L201-204",
+      "fix": "impact.rs の run_impact() パターンに合わせ、`let (valid_files, warnings) = filter_existing_files(&files); for w in &warnings { eprintln!(\"Warning: {w}\"); }` とする。"
+    },
+    {
+      "id": "MF-3",
+      "title": "main.rs の分岐位置と changed_since 変数のスコープ設計が不明確",
+      "description": "設計書 4.2 節では `else if let Some(ref since) = changed_since` として分岐を追加するが、main.rs の Search ハンドラ内では changed_since は clap のフィールドとしてデストラクチャリングで受け取る必要がある。現在の Search バリアントのデストラクチャリング（L224-242）に changed_since フィールドが含まれておらず、追加時に workspace 分岐・related_stdin 分岐・pattern match 分岐のどの位置に挿入すべきか明示されていない。related_stdin と同様に workspace 分岐の後・pattern match の前に配置すべきだが、設計書にはこの挿入順序が明記されていない。",
+      "location": "設計書 4.1 節 / 4.2 節",
+      "fix": "main.rs の分岐挿入位置を明示する。具体的には `} else if related_stdin {` ブロックの後、`} else {` ブロック（query/symbol/related/semantic のパターンマッチ）の前に配置することを設計書に明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "IndexReaderWrapper::open / SymbolStore::open の直接使用 vs exists() チェック",
+      "description": "設計書 4.4 節では IndexReaderWrapper::open() と SymbolStore::open() を直接呼び出し、エラー時に map_err で SearchError に変換している。しかし impact.rs の run_impact() では先に tantivy_dir.exists() / db_path.exists() で存在チェックを行い、専用エラー（IndexNotFound / SymbolDbNotFound）を返してから open() を呼ぶ2段階パターンを採用している。設計書のパターンでは open() 失敗時のエラーメッセージがユーザーフレンドリーでない可能性がある。",
+      "location": "設計書 4.4 節 L213-219",
+      "fix": "impact.rs と同じ2段階パターン（exists() チェック → open()）を採用する。これにより 'Index not found. Run commandindex index first.' のような明確なエラーメッセージが返る。"
+    },
+    {
+      "id": "SF-2",
+      "title": "changed_since と conflicts_with_all の網羅性確認",
+      "description": "設計書 4.1 節の conflicts_with_all に 'related_stdin' が含まれているが、main.rs の related_stdin 分岐（L300）は if let 分岐で先に処理されるため、clap レベルでの排他制御と実行時分岐の両方で二重に制御されることになる。これ自体は問題ないが、'workspace' が conflicts_with_all に含まれていない点は確認が必要。workspace 分岐は最初の if let（L264）で処理されるため実行時には問題ないが、'commandindex search --workspace ws.toml --changed-since \"1 hour ago\"' が clap レベルで通過してしまい、workspace 分岐に入って changed_since が無視される可能性がある。",
+      "location": "設計書 4.1 節 conflicts_with_all 定義",
+      "fix": "conflicts_with_all に 'workspace' を追加するか、設計判断としてこの挙動を許容する旨を記載する。related_stdin の conflicts_with_all には workspace が含まれていないため同様のパターンではあるが、--changed-since は workspace 検索と概念的に排他的なので明示的に排他制御すべき。"
+    },
+    {
+      "id": "SF-3",
+      "title": "git log の --since 形式でのエッジケース対応",
+      "description": "git log --since は内部で git の date parsing を使用する。validate_changed_since_input() は先頭 '-' と制御文字と長さのみチェックするが、git が解釈できない日付文字列（例: 'invalid date string'）を渡した場合、git log は空結果を返すだけでエラーにならない場合がある。結果として 'No files changed since: invalid date string' が表示され、ユーザーが入力ミスに気づきにくい。",
+      "location": "設計書 4.3 節 / 4.4 節",
+      "fix": "git log 実行後に結果が空の場合、stderr メッセージに 'verify that the date format is valid' のようなヒントを追加することを検討する。もしくはドキュメントで対応形式を明示する。"
+    },
+    {
+      "id": "SF-4",
+      "title": "changed_since が None/None/None/None パスのエラーメッセージ更新",
+      "description": "main.rs L358 で query/symbol/related/semantic がすべて None の場合のエラーメッセージが 'Either <QUERY>, --symbol, --related, --related-stdin, or --semantic is required' となっているが、--changed-since 追加後はこのメッセージにも --changed-since を含める必要がある。設計書にはこの点が記載されていない。",
+      "location": "main.rs L358-360 / 設計書 4.2 節",
+      "fix": "changed_since の if let 分岐が pattern match の前に入るため、changed_since が Some の場合はこのパスに到達しない。ただし、エラーメッセージにオプション一覧を表示している以上、--changed-since も列挙するのがユーザーフレンドリー。設計書にこの変更を追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NT-1",
+      "title": "git コマンド実行時の NotARepository 検出",
+      "description": "GitError::NotARepository が定義されているが、get_changed_files() ではこのエラーを返すパスがない。git コマンド失敗時は一律 CommandFailed になる。git リポジトリ外で実行した場合のエラーメッセージを区別できるとユーザー体験が向上する。",
+      "location": "設計書 4.3 節",
+      "fix": "spawn 後の exit code や stderr 内容でリポジトリ外検出を行うか、事前に .git ディレクトリの存在チェックを追加する。ただし stderr を無視する設計方針との兼ね合いがあるため、.git チェックが適切。"
+    },
+    {
+      "id": "NT-2",
+      "title": "git log の --name-only で rename 検出",
+      "description": "git log --name-only はファイルのリネーム時に新旧両方のパスを出力する場合がある。リネーム前のパスは現在存在しないため filter_existing_files() でフィルタされるが、warning が大量に出る可能性がある。--diff-filter=ACDMRT オプションの追加を将来的に検討してもよい。",
+      "location": "設計書 4.3 節",
+      "fix": "現時点では filter_existing_files() によるフィルタで十分だが、将来的な改善候補として記録しておく。"
+    },
+    {
+      "id": "NT-3",
+      "title": "E2E テストの CI 環境安定性",
+      "description": "テスト設計方針で git_init_with_commit() に CI 環境対応（-c user.name/email）が記載されているのは良い。追加として、git commit の --date オプションを固定することで、期間ベーステスト（'1 hour ago'）の時刻依存を減らすとテストが安定する。",
+      "location": "設計書 8 節 E2E テスト",
+      "fix": "コミットハッシュベースのテストを主とし、期間ベースのテストは --date で固定するか、十分に長い期間（'1 year ago'）を使用する。"
+    }
+  ],
+  "summary": "設計書は全体としてよく構成されており、既存コードパターン（impact.rs, stdin.rs）の再利用方針は適切。しかし2回目レビューで3点の must_fix を検出: (1) indexer::index_dir() / symbol_db_path() の API シグネチャ不一致（引数なしで呼び出しているが実際は &Path が必要）、(2) filter_existing_files() の戻り値の使い方が impact.rs パターンと不整合、(3) main.rs への分岐挿入位置が不明確。これらはコンパイルエラーまたは実行時の不具合に直結するため、実装前に修正が必要。should_fix として exists() チェックパターンの統一、workspace との排他制御、git date parse のエッジケース対応、エラーメッセージの更新を指摘。セキュリティ設計（コマンドインジェクション防止、入力バリデーション、出力制限）は十分に考慮されている。"
+}

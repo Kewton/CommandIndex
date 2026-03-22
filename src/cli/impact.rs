@@ -13,7 +13,7 @@ use crate::output::{
 };
 use crate::search::related::{RelatedSearchEngine, RelatedSearchError};
 
-const MAX_INPUT_FILES: usize = 500;
+pub(crate) const MAX_INPUT_FILES: usize = 500;
 
 /// impact エラー型
 #[derive(Debug)]
@@ -174,7 +174,7 @@ fn validate_and_normalize(files: &[String]) -> Result<Vec<String>, ImpactError> 
 const INTERNAL_FETCH_LIMIT: usize = 1000;
 
 /// 複数ファイルの関連結果を集約（Issue #90 仕様準拠）
-fn aggregate_impact(
+pub(crate) fn aggregate_impact(
     engine: &RelatedSearchEngine,
     files: &[String],
     limit: usize,

@@ -35,8 +35,19 @@ enum Commands {
         #[arg(long, num_args(1..), conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace", "related_stdin"])]
         related: Option<Vec<String>>,
         /// Read related file paths from stdin (one per line)
-        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "tag", "path", "file_type", "heading", "workspace", "no_semantic", "rerank"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "tag", "path", "file_type", "heading", "workspace", "no_semantic", "rerank", "changed_since"])]
         related_stdin: bool,
+        /// Show impact of files changed since (e.g. '12 hours ago', 'yesterday', or commit hash)
+        #[arg(
+            long,
+            conflicts_with_all = [
+                "query", "symbol", "related", "related_stdin",
+                "semantic", "workspace", "tag", "path",
+                "file_type", "heading", "no_semantic", "rerank"
+            ],
+            help = "Show impact of files changed since (e.g. '12 hours ago', 'yesterday', or commit hash)"
+        )]
+        changed_since: Option<String>,
         /// Semantic search query (embedding-based similarity search)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
@@ -226,6 +237,7 @@ fn main() {
             symbol,
             related,
             related_stdin,
+            changed_since,
             semantic,
             no_semantic,
             format,
@@ -299,6 +311,19 @@ fn main() {
                 }
             } else if related_stdin {
                 let result = commandindex::cli::search::run_related_search_from_stdin(
+                    effective_limit,
+                    format,
+                );
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
+                }
+            } else if let Some(ref since) = changed_since {
+                let result = commandindex::cli::search::run_changed_since_search(
+                    since,
                     effective_limit,
                     format,
                 );

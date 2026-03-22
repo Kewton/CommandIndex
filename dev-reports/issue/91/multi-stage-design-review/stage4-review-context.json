@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "情報漏洩 / エラーメッセージ",
+      "description": "GitError::CommandFailed が git stderr の内容をそのままユーザーに返す設計になっている（L130-133）。git stderr にはリポジトリの内部パス、ブランチ名、設定情報などが含まれる可能性がある。また SearchError::from(GitError::CommandFailed) で format!(\"git command failed: {}\", msg) としてそのまま伝搬される。",
+      "suggestion": "git stderr の内容をそのままユーザーに表示せず、定型メッセージに変換する。デバッグ目的で stderr 内容が必要な場合は、eprintln! でログ出力し、ユーザー向けエラーは 'git command failed (use --verbose for details)' のような定型メッセージにする。既存の git_info.rs では stderr を完全に無視する設計（Option<String> で None を返す）を採用しており、それに倣うべき。"
+    },
+    {
+      "id": "M2",
+      "category": "パストラバーサル / Git出力のバリデーション不足",
+      "description": "get_changed_files() が git log --name-only の出力をそのまま Vec<String> として返し、run_changed_since_search() の filter_existing_files() に渡す設計だが、設計書の filter_existing_files() は単に Path::new(p).exists() を確認するだけ（stdin.rs L150-161）。git log の出力に '../sensitive-repo/secret.txt' のようなパスが含まれた場合（サブモジュールやシンボリックリンク経由）、存在チェックは通過し得る。既存の stdin.rs では validate_file_path() で '..' を拒否しているが、設計書の get_changed_files() → filter_existing_files() のフローでは validate_file_path() が呼ばれていない。",
+      "suggestion": "get_changed_files() の結果に対して、既存の stdin::validate_file_path() を各パスに適用する。具体的には run_changed_since_search() 内で filter_existing_files() の前に validate_file_path() + normalize_path_prefix() を適用し、不正パスは warning 出力してスキップする。impact.rs の validate_and_normalize() パターンを踏襲すべき。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "引数インジェクション / format!() による引数結合",
+      "description": "コミットハッシュ分岐で format!(\"{}..HEAD\", since) を使い、期間文字列分岐で format!(\"--since={}\", since) を使っている。validate_changed_since_input() で先頭 '-' を拒否しているが、コミットハッシュ判定（validate_commit_hash）が false の場合、任意の文字列が --since= に結合される。例えば 'foo --exec=malicious' のようなスペース入り文字列は制御文字チェックを通過し、Command::new(\"git\").args() に渡される。ただし args() はシェル展開しないため、'--since=foo --exec=malicious' が1つの引数として渡され、git 側でパースエラーになるだけなので、実際の攻撃成立は困難。",
+      "suggestion": "現状の Command::new().args() 方式はシェルインジェクションを防ぐため低リスクだが、防御を多層化するために (1) --since= 形式ではなく args に [\"--since\", since] と分離して渡すことを検討、(2) 期間文字列の場合も許可文字をホワイトリスト（英数字、スペース、コロン、ハイフン非先頭）で制限することを推奨。"
+    },
+    {
+      "id": "S2",
+      "category": "DoS / git log 出力サイズ制限",
+      "description": "git log --name-only の出力サイズに制限がない。changed_since に '1 year ago' のような長期間を指定された場合、数万ファイル分の出力が String::from_utf8_lossy で一括メモリ読み込みされる。ファイル数上限（500件）は取得後にスライスで適用されるが、git の stdout 全体はメモリに載る。既存の stdin.rs では MAX_STDIN_BYTES (512KB) でバイト数制限をかけている。",
+      "suggestion": "Command の stdout をパイプで受け取り、BufReader::lines() で行単位処理 + 行数上限（例: 10000行）またはバイト数上限を設ける。または output() の代わりに stdin/stdout パイプを使い、一定量超過で early return する。最低限、output.stdout.len() のチェックを追加し、異常に大きい場合はエラーを返す。"
+    },
+    {
+      "id": "S3",
+      "category": "引数インジェクション / validate_commit_hash の判定漏れ",
+      "description": "validate_commit_hash() は 4-40文字の小文字16進数を判定するが、git の短縮ハッシュは実在しないハッシュでも format で受理される。問題は validate_commit_hash が true を返した場合に format!(\"{}..HEAD\", since) で引数を構築する点。ハッシュバリデーションは厳密だが、存在しないハッシュを指定した場合に git がエラーを返し、そのエラーメッセージが M1 の問題と合わさって情報漏洩するリスクがある。",
+      "suggestion": "M1 の修正で git stderr をサニタイズすれば本件も軽減される。追加で、コミットハッシュの場合は事前に 'git cat-file -t <hash>' で存在確認し、不在時はユーザーフレンドリーなエラーメッセージを返すとより堅牢。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "DoS / 入力値の文字数制限",
+      "description": "256文字の上限は十分だが、git の --since オプションに渡す期間文字列としては過剰に寛容。実用上 '12 hours ago', 'yesterday', '2024-01-01' 等は100文字以内に収まる。",
+      "suggestion": "実害は低いが、128文字程度に下げても実用上問題なく、攻撃面を若干削減できる。"
+    },
+    {
+      "id": "N2",
+      "category": "unsafe 使用",
+      "description": "設計書に unsafe コードは含まれていない。Command::new, String::from_utf8_lossy 等すべて safe API を使用しており、CLAUDE.md の unsafe 禁止ポリシーに準拠している。",
+      "suggestion": "問題なし。実装時もこの方針を維持すること。"
+    },
+    {
+      "id": "N3",
+      "category": "情報漏洩 / eprintln での入力値エコーバック",
+      "description": "run_changed_since_search() 内の eprintln!(\"指定期間内の変更が見つかりません: {}\", since) でユーザー入力をそのまま stderr にエコーバックしている。端末への制御文字インジェクション（ターミナルエスケープシーケンス）のリスクがある。制御文字バリデーションで 0x20 未満を拒否しているが、0x1B (ESC) は拒否対象に含まれている一方、0x7F (DEL) や一部の Unicode 制御文字は通過する可能性がある。",
+      "suggestion": "既存の strip_control_chars() を適用してからエコーバックする。eprintln!(\"指定期間内の変更が見つかりません: {}\", strip_control_chars(since)) とする。"
+    }
+  ],
+  "summary": "設計全体のセキュリティ水準は良好。Command::new() によるシェルインジェクション回避、先頭 '-' 拒否による引数インジェクション防御、制御文字拒否など基本的な対策が施されている。must_fix として (1) git stderr をエラーメッセージにそのまま含めている情報漏洩リスク、(2) git log 出力パスに対する validate_file_path() 未適用によるパストラバーサルリスク の2点を指摘。should_fix として git log 出力のメモリサイズ制限不足、引数結合の多層防御を推奨。unsafe の使用はなく、既存の stdin.rs / mod.rs のセキュリティパターン（validate_file_path, filter_existing_files, strip_control_chars, sanitize_path_for_display）を本設計でも活用することで、一貫したセキュリティレベルを維持できる。"
+}

@@ -169,6 +169,38 @@ impl From<crate::cli::stdin::StdinError> for SearchError {
     }
 }
 
+impl From<crate::cli::impact::ImpactError> for SearchError {
+    fn from(e: crate::cli::impact::ImpactError) -> Self {
+        match e {
+            crate::cli::impact::ImpactError::IndexNotFound => SearchError::IndexNotFound,
+            crate::cli::impact::ImpactError::SymbolDbNotFound => SearchError::SymbolDbNotFound,
+            crate::cli::impact::ImpactError::Reader(e) => SearchError::Reader(e),
+            crate::cli::impact::ImpactError::SymbolStore(e) => SearchError::SymbolStore(e),
+            crate::cli::impact::ImpactError::RelatedSearch(e) => SearchError::RelatedSearch(e),
+            crate::cli::impact::ImpactError::Output(e) => SearchError::Output(e),
+            crate::cli::impact::ImpactError::NoValidPaths => {
+                SearchError::InvalidArgument("no valid file paths found".into())
+            }
+            crate::cli::impact::ImpactError::InvalidArgument(s) => SearchError::InvalidArgument(s),
+            crate::cli::impact::ImpactError::Stdin(e) => SearchError::Stdin(e),
+        }
+    }
+}
+
+impl From<crate::cli::git::GitError> for SearchError {
+    fn from(e: crate::cli::git::GitError) -> Self {
+        match e {
+            crate::cli::git::GitError::GitNotFound => {
+                SearchError::InvalidArgument("git command not found".into())
+            }
+            crate::cli::git::GitError::CommandFailed => {
+                SearchError::InvalidArgument("git command failed".into())
+            }
+            crate::cli::git::GitError::InvalidInput(msg) => SearchError::InvalidArgument(msg),
+        }
+    }
+}
+
 pub fn run(
     ctx: &SearchContext,
     options: &SearchOptions,
@@ -800,4 +832,65 @@ fn try_rerank(
     }
 
     reranked
+}
+
+/// Search for impact of files changed since a given point (time expression or commit hash)
+pub fn run_changed_since_search(
+    since: &str,
+    limit: usize,
+    format: OutputFormat,
+) -> Result<(), SearchError> {
+    // 1. Git changed files
+    let repo_path =
+        std::env::current_dir().map_err(|e| SearchError::InvalidArgument(e.to_string()))?;
+    let changed_files = crate::cli::git::get_changed_files(&repo_path, since)?;
+
+    if changed_files.is_empty() {
+        let sanitized_since = crate::output::strip_control_chars(since);
+        eprintln!("No files changed since: {sanitized_since}");
+        return Ok(());
+    }
+
+    // 2. File count limit check
+    let files = if changed_files.len() > crate::cli::impact::MAX_INPUT_FILES {
+        eprintln!(
+            "Warning: {} files found, limiting to {}",
+            changed_files.len(),
+            crate::cli::impact::MAX_INPUT_FILES
+        );
+        changed_files[..crate::cli::impact::MAX_INPUT_FILES].to_vec()
+    } else {
+        changed_files
+    };
+
+    // 3. Existence check + filter
+    let (valid_files, warnings) = crate::cli::stdin::filter_existing_files(&files);
+    for warning in &warnings {
+        eprintln!("{warning}");
+    }
+    if valid_files.is_empty() {
+        return Err(SearchError::InvalidArgument(
+            "no valid file paths found".into(),
+        ));
+    }
+
+    // 4. Index / DB check
+    let index_path = crate::indexer::index_dir(Path::new("."));
+    if !index_path.exists() {
+        return Err(SearchError::IndexNotFound);
+    }
+    let reader = IndexReaderWrapper::open(&index_path)?;
+    let symbol_db_path = crate::indexer::symbol_db_path(Path::new("."));
+    if !symbol_db_path.exists() {
+        return Err(SearchError::SymbolDbNotFound);
+    }
+    let store = SymbolStore::open(&symbol_db_path)?;
+    let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
+
+    // 5. Aggregate impact
+    let result = crate::cli::impact::aggregate_impact(&engine, &valid_files, limit)?;
+
+    // 6. Output
+    crate::output::format_impact_results(&result, format, &mut std::io::stdout().lock())
+        .map_err(SearchError::Output)
 }

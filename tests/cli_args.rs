@@ -659,3 +659,99 @@ fn search_related_multiple_conflicts_with_symbol() {
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
 }
+
+// --- --changed-since tests ---
+
+#[test]
+fn search_changed_since_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    // Will fail because no git repo, but clap should accept the option
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--changed-since", "12 hours ago"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn search_changed_since_conflicts_with_query() {
+    common::cmd()
+        .args(["search", "query", "--changed-since", "12 hours ago"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_changed_since_conflicts_with_symbol() {
+    common::cmd()
+        .args([
+            "search",
+            "--symbol",
+            "name",
+            "--changed-since",
+            "12 hours ago",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_changed_since_conflicts_with_related() {
+    common::cmd()
+        .args([
+            "search",
+            "--related",
+            "file.rs",
+            "--changed-since",
+            "12 hours ago",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_changed_since_conflicts_with_semantic() {
+    common::cmd()
+        .args([
+            "search",
+            "--semantic",
+            "query",
+            "--changed-since",
+            "12 hours ago",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_changed_since_conflicts_with_workspace() {
+    common::cmd()
+        .args([
+            "search",
+            "--workspace",
+            "ws.toml",
+            "--changed-since",
+            "12 hours ago",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_changed_since_conflicts_with_related_stdin() {
+    common::cmd()
+        .args([
+            "search",
+            "--related-stdin",
+            "--changed-since",
+            "12 hours ago",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}

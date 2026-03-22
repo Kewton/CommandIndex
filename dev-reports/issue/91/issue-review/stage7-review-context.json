@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "セキュリティ - git コマンドインジェクション防御の不足",
+      "description": "1回目レビュー(M3)で期間文字列のホワイトリストバリデーションが指摘されたが、反映結果(stage6)ではスキップされている。--changed-since の値は最終的に std::process::Command の引数として git log --since=<value> や git log <hash>..HEAD に渡される。Command APIの引数渡しはシェルインジェクションを防ぐが、git自体が受け付ける特殊構文（例: --since='$(malicious)' はCommand APIでは安全だが、git log のオプション解釈として --since に続く引数が -- で始まる場合にオプション注入の可能性がある）への対策が不十分。validate_commit_hash() でハッシュ判定する際に、入力が '-' で始まるケース（例: '--exec=...'）を明示的に拒否するバリデーションが必要。",
+      "suggestion": "validate_commit_hash() またはその呼び出し元で、入力文字列が '-' で始まる場合をエラーとして拒否する。さらに、Command::new('git').arg('log').arg('--since=<value>') のように = 付きの単一引数として渡すか、'--' を挿入して引数とオプションを分離する。受け入れ基準に「先頭 '-' 拒否」を追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "影響範囲 - pub(crate) 化による context.rs への波及",
+      "description": "aggregate_impact() を pub(crate) 化して search --changed-since から呼ぶ方針だが、同様のロジックが cli/context.rs の collect_related_context() と collect_and_merge_related() にも存在する。context.rs は RelatedSearchResult 型を返し、impact.rs は ImpactResult 型を返すため、同一の「複数ファイル関連検索 + 集約」ロジックが3箇所（context.rs, impact.rs, 新規changed-since）に分散するリスクがある。1回目レビューではこの重複に言及がなかった。",
+      "suggestion": "aggregate_impact() を pub(crate) 化して changed-since から呼ぶのは妥当だが、将来的に context.rs の collect_related_context() も aggregate_impact() に統合可能か検討する旨を Issue に注記する。現時点では aggregate_impact() の共用に留め、リファクタリングは別 Issue にする。"
+    },
+    {
+      "id": "S2",
+      "category": "影響範囲 - From<ImpactError> for SearchError の網羅性",
+      "description": "stage6 で From<ImpactError> for SearchError の実装が方針に追加されたが、ImpactError の全バリアント（Stdin, IndexNotFound, SymbolDbNotFound, Reader, SymbolStore, RelatedSearch, Output, NoValidPaths, InvalidArgument）をどのように SearchError にマッピングするかが未定義。SearchError に既に存在するバリアント（IndexNotFound, Reader, SymbolStore, RelatedSearch, Output, InvalidArgument, Stdin）と1対1対応するものは良いが、ImpactError::NoValidPaths に対応する SearchError バリアントが存在しない。新バリアント追加か InvalidArgument への変換かを決める必要がある。",
+      "suggestion": "ImpactError::NoValidPaths は SearchError::InvalidArgument(\"no valid file paths found\") にマッピングする方針を明記する。From 実装のマッピング表を設計方針に記載する: Stdin->Stdin, IndexNotFound->IndexNotFound, SymbolDbNotFound->SymbolDbNotFound, Reader->Reader, SymbolStore->SymbolStore, RelatedSearch->RelatedSearch, Output->Output, NoValidPaths->InvalidArgument, InvalidArgument->InvalidArgument。"
+    },
+    {
+      "id": "S3",
+      "category": "テスト網羅性 - git 操作を伴う E2E テストの環境前提",
+      "description": "1回目レビュー(S3)で git init を含むテスト環境の必要性が指摘されたが、既存テスト tests/common/mod.rs のヘルパーには git 操作ユーティリティが存在しない。また、CI環境での git user.name/user.email 未設定によるコミット失敗のリスクがある。テスト内で git -c user.name='test' -c user.email='test@test' commit を使う必要がある。",
+      "suggestion": "tests/common/mod.rs に git_init_with_commit(dir: &Path) -> String（コミットハッシュを返す）ヘルパーを追加し、git -c user.name/user.email オプションで CI 環境対応する。テスト設計にこのヘルパーの仕様を含める。"
+    },
+    {
+      "id": "S4",
+      "category": "影響範囲 - cli_args.rs の排他テスト追加漏れパターン",
+      "description": "1回目レビュー(S3)で排他テスト追加が指摘されたが、具体的なテストケース数の見積もりが不足。現在の search オプションで changed_since と排他になるべきオプションは少なくとも query, symbol, related, related_stdin, semantic, workspace, tag, path, file_type, heading, no_semantic, rerank の12個。双方向テスト（changed_since側とexisting側の両方からの排他確認）が必要であり、最低24テストケースの追加が見込まれる。clap の conflicts_with_all が双方向に自動適用されるかどうかの検証も必要。",
+      "suggestion": "clap の conflicts_with_all は片方にのみ定義すれば双方向に機能する（clap v4 の仕様）。これを前提に、changed_since 側の conflicts_with_all に全12オプションを列挙し、代表的な排他テスト（query, symbol, related, semantic, workspace の5パターン）を追加する。全組み合わせテストは不要だが、代表パターンは必須。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "UX - git が存在しないリポジトリでの --changed-since エラー",
+      "description": "現在 status/git_info.rs の run_git() は Option を返すが、--changed-since では git の存在が必須。ユーザーが .git のないディレクトリで --changed-since を実行した場合のエラーメッセージが「No results」ではなく「Not a git repository」であるべき。",
+      "suggestion": "--changed-since の冒頭で .git ディレクトリの存在チェックまたは git rev-parse --is-inside-work-tree を実行し、失敗時に専用エラーメッセージを返す。"
+    },
+    {
+      "id": "N2",
+      "category": "整合性 - human 出力時のヘッダー表記",
+      "description": "ImpactResult を共用する場合、human 出力の format_impact_human() は「Impact analysis: N changed file(s)」と表示する。--changed-since 経由の場合は「Changed since '<ref>': N file(s)」のようにソースを表示するとユーザビリティが向上するが、ImpactResult 構造体にはソース情報フィールドがない。1回目レビュー(S4)で source フィールドの追加が提案されていたが、stage6 では反映されていない。",
+      "suggestion": "初回実装では ImpactResult をそのまま共用し、human 出力のヘッダーカスタマイズは後続 Issue で対応する。ただし、将来的な拡張性のために ImpactResult に Option<String> の source フィールドを追加しておくことを推奨する。"
+    },
+    {
+      "id": "N3",
+      "category": "パフォーマンス - git log の出力サイズ制限",
+      "description": "git log --since=<期間> --name-only は、指定期間が長い場合（例: '1 year ago'）に大量のファイルパスを返す可能性がある。MAX_INPUT_FILES (500) で制限する方針だが、git log の出力自体が巨大になるケースへの対策（stdout バッファ制限や行数カウントでの早期終了）が検討されていない。",
+      "suggestion": "Command の stdout を BufReader でラップし、500行を超えた時点で読み取りを打ち切る設計にする。または git log --since=... -n 500 等で git 側で制限する。"
+    }
+  ],
+  "summary": "2回目影響範囲レビューでは、1回目で見落とされた以下の観点を中心に分析した。(M1) セキュリティ面で、git コマンドへの引数渡しにおいて先頭 '-' による引数インジェクション防御が未設計。(S1) pub(crate) 化による波及として、context.rs にも類似の「複数ファイル関連検索集約」ロジックが存在し、3箇所にロジック分散するリスク。(S2) From<ImpactError> for SearchError の全バリアントマッピング、特に NoValidPaths の対応先が未定義。(S3-S4) テスト面では、CI環境での git commit に必要な設定や、排他テストの具体的な設計方針が不足。全体として、1回目レビューの指摘は適切に反映されているが、セキュリティ（引数インジェクション防御）とエラー型マッピングの詳細化が必要。コードベースの既存アーキテクチャとの整合性は良好であり、aggregate_impact() の pub(crate) 化と From 変換の実装で、最小限の変更で機能追加が可能。"
+}

@@ -1,0 +1,32 @@
+{
+  "stage": "1-4",
+  "action": "設計方針書更新（4ステージ一括反映）",
+  "applied_must_fix": [
+    "Stage1-M1: validate_commit_hash() を既存 git_info.rs から再利用（DRY）",
+    "Stage1-M2: get_index_path()/open_index()/open_symbol_store() を実際のAPI名に修正（index_dir()/IndexReaderWrapper::open()/SymbolStore::open()）",
+    "Stage1-M3: filter_existing_files() の返り値タプル (Vec<String>, Vec<String>) を正しく受ける形に修正",
+    "Stage2-M1: aggregate_impact() の pub(crate) 化を確認",
+    "Stage2-M2: 実在しない関数名を全て修正",
+    "Stage2-M3: filter_existing_files の返り値を正しく使用",
+    "Stage2-M4: validate_commit_hash() の依存関係を明記",
+    "Stage3-M1: validate_commit_hash() の再利用方針を明記",
+    "Stage3-M2: From<ImpactError> の到達不能バリアントにコメント追加",
+    "Stage4-M1: CommandFailed から stderr 内容を除去（情報漏洩防止）",
+    "Stage4-M2: filter_existing_files() によるパストラバーサル防御を明記"
+  ],
+  "applied_should_fix": [
+    "Stage1-S2: GitError 全バリアントを InvalidArgument に変換する方針を明確化",
+    "Stage1-S4: validate_commit_hash() の再利用を必須とした",
+    "Stage2-S2: main.rs のデストラクチャリングへの changed_since 追加を明記",
+    "Stage2-S4: ? 演算子使用に統一",
+    "Stage3-S4: format!() のライフタイム問題を回避する設計に修正",
+    "Stage4-S2: BufReader + MAX_GIT_OUTPUT_LINES によるDoS防御を追加"
+  ],
+  "applied_nice_to_have": [
+    "Stage1-N1: HashSet + sort() で決定的順序を保証",
+    "Stage1-N2: エラーメッセージを英語に統一",
+    "Stage1-N3: タブ文字も制御文字として拒否"
+  ],
+  "total_must_fix": 11,
+  "total_applied": 11
+}

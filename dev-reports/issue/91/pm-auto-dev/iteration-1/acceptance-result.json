@@ -1,0 +1,77 @@
+{
+  "status": "pass",
+  "criteria": [
+    {
+      "id": 1,
+      "description": "--changed-since で指定期間内の変更ファイルの関連情報が返る",
+      "status": "pass",
+      "evidence": "src/cli/search.rs の run_changed_since_search() が git::get_changed_files() で変更ファイルを取得し、impact::aggregate_impact() で関連情報を集約して出力する。e2e テスト changed_since_commit_hash_json で JSON 出力に changed_files が含まれることを検証済み。",
+      "issues": ""
+    },
+    {
+      "id": 2,
+      "description": "Git の --since 形式とコミットハッシュ形式の両方に対応",
+      "status": "pass",
+      "evidence": "src/cli/git.rs の get_changed_files() で validate_commit_hash() によりコミットハッシュ判定し、コミットハッシュなら hash..HEAD、時間式なら --since=<value> として git log に渡す。e2e テスト changed_since_commit_hash_json でハッシュ形式、changed_since_accepted で時間式を検証。",
+      "issues": ""
+    },
+    {
+      "id": 3,
+      "description": "コミットハッシュ指定時は hash..HEAD の範囲で変更ファイルを取得",
+      "status": "pass",
+      "evidence": "src/cli/git.rs:60-64 で is_commit_hash が true の場合 format!(\"{since}..HEAD\") を生成。git log --name-only --format= <hash>..HEAD の形でコマンド実行される。",
+      "issues": ""
+    },
+    {
+      "id": 4,
+      "description": "human / json / path 出力形式に対応（ImpactResult 形式で出力）",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:893 で output::format_impact_results(&result, format, ...) を呼び出し、format は OutputFormat enum (Human/Json/Path)。e2e テストで json (changed_since_commit_hash_json)、human (changed_since_human_output)、path (changed_since_path_output) の3形式を検証済み。",
+      "issues": ""
+    },
+    {
+      "id": 5,
+      "description": "変更ファイルがない場合に「指定期間内の変更が見つかりません」のメッセージ表示",
+      "status": "pass",
+      "evidence": "src/cli/search.rs:848-850 で changed_files.is_empty() の場合 eprintln!(\"No files changed since: {since}\") を出力。e2e テスト changed_since_no_changes で HEAD ハッシュ指定時に stderr に 'No files changed' が含まれることを検証。",
+      "issues": ""
+    },
+    {
+      "id": 6,
+      "description": "Git リポジトリ外や Git 未インストール環境で実行した場合に適切なエラーメッセージ",
+      "status": "pass",
+      "evidence": "src/cli/git.rs:78 で spawn 失敗時 GitError::GitNotFound、:93-95 で exit code 非0時 GitError::CommandFailed を返す。src/cli/search.rs:192-200 で GitError を SearchError::InvalidArgument に変換。e2e テスト changed_since_not_git_repo で git リポジトリ外実行時に stderr に 'git command failed' が含まれることを検証。",
+      "issues": ""
+    },
+    {
+      "id": 7,
+      "description": "不正な期間文字列指定時のエラーハンドリング（git log の exit code チェック）",
+      "status": "pass",
+      "evidence": "src/cli/git.rs:92-95 で child.wait() の exit status をチェックし、非0なら GitError::CommandFailed を返す。validate_changed_since_input() で空文字、256文字超過、制御文字も事前拒否。ユニットテストで各ケースを検証済み。",
+      "issues": ""
+    },
+    {
+      "id": 8,
+      "description": "先頭 `-` の入力を拒否（引数インジェクション防御）",
+      "status": "pass",
+      "evidence": "src/cli/git.rs:47-51 で input.starts_with('-') をチェックし GitError::InvalidInput を返す。ユニットテスト reject_leading_dash で '--exec=evil' が拒否されることを検証。e2e テスト changed_since_rejects_leading_dash で CLI レベルでも '--exec=evil' が failure になることを検証。",
+      "issues": ""
+    },
+    {
+      "id": 9,
+      "description": "既存の search オプション（query/symbol/related/semantic）との排他制御が正しく動作",
+      "status": "pass",
+      "evidence": "src/main.rs:41-49 で changed_since に conflicts_with_all = [query, symbol, related, related_stdin, semantic, workspace, tag, path, file_type, heading, no_semantic, rerank] を定義。tests/cli_args.rs で query/symbol/related/semantic/workspace/related_stdin との各 conflict テスト (6件) が全て pass。",
+      "issues": ""
+    },
+    {
+      "id": 10,
+      "description": "cargo test / clippy / fmt 全パス",
+      "status": "pass",
+      "evidence": "cargo test --all: 全テスト pass (unit 237 + integration 53 + workspace 31 = 321 tests, 0 failures)。cargo clippy --all-targets -- -D warnings: 警告0件。cargo fmt --all -- --check: 差分なし。",
+      "issues": ""
+    }
+  ],
+  "overall_summary": "Issue #91 の全10項目の受け入れ基準を満たしています。--changed-since オプションは git の --since 形式とコミットハッシュ形式の両方に対応し、ImpactResult 形式で human/json/path 出力をサポートしています。入力バリデーション（先頭ダッシュ拒否、制御文字拒否、長さ制限）、エラーハンドリング（非gitリポジトリ、git未インストール、不正入力）、既存オプションとの排他制御が全て実装・テスト済みです。品質チェック（test/clippy/fmt）も全パスしています。",
+  "blocking_issues": []
+}

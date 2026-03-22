@@ -1,0 +1,15 @@
+{
+  "stage": 6,
+  "action": "Issue本文更新（2回目通常レビュー反映）",
+  "applied_items": [
+    "M1: 排他制御の双方向性を明記（既存オプション側にもchanged_since追加）",
+    "M2: エラー型変換（From<ImpactError> for SearchError）を実装方針に追加",
+    "S2: main.rs分岐方式（if letで先行分岐）を明記",
+    "S3: コミットハッシュ指定時の動作仕様（hash..HEAD）を明記"
+  ],
+  "skipped_items": [
+    "S1: 変更ファイル0件メッセージの具体化は受け入れ基準で対応済み",
+    "N1: --limit のデフォルト値は実装時に検討",
+    "N2: ヘルプテキストの例示は実装時に対応"
+  ]
+}
