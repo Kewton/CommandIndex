@@ -57,7 +57,7 @@ pub fn run_workspace_search(
     for (i, repo) in target_repos.iter().enumerate() {
         eprintln!("[{}/{}] Searching {}...", i + 1, total, repo.alias);
 
-        let index_dir = match SearchContext::from_path(&repo.path) {
+        let index_dir = match SearchContext::new(&repo.path, None) {
             Ok(c) => c.index_dir(),
             Err(e) => {
                 eprintln!("  Warning: skipping '{}': {}", repo.alias, e);
@@ -156,7 +156,17 @@ pub fn run_workspace_status(
             println!("{}", "-".repeat(100));
 
             for repo in &repos {
-                let commandindex_dir = repo.path.join(".commandindex");
+                let commandindex_dir = match crate::indexer::resolve_index_path(
+                    None,
+                    crate::config::load_config(&repo.path)
+                        .ok()
+                        .and_then(|c| c.index.path)
+                        .as_deref(),
+                    &repo.path,
+                ) {
+                    Ok(p) => p,
+                    Err(_) => repo.path.join(crate::INDEX_DIR_NAME),
+                };
                 if !IndexState::exists(&commandindex_dir) {
                     println!(
                         "{:<20} {:<40} {:>10} {:>20} {:<10}",
@@ -199,7 +209,17 @@ pub fn run_workspace_status(
 
             let mut repo_infos = Vec::new();
             for repo in &repos {
-                let commandindex_dir = repo.path.join(".commandindex");
+                let commandindex_dir = match crate::indexer::resolve_index_path(
+                    None,
+                    crate::config::load_config(&repo.path)
+                        .ok()
+                        .and_then(|c| c.index.path)
+                        .as_deref(),
+                    &repo.path,
+                ) {
+                    Ok(p) => p,
+                    Err(_) => repo.path.join(crate::INDEX_DIR_NAME),
+                };
                 if !IndexState::exists(&commandindex_dir) {
                     repo_infos.push(json!({
                         "alias": repo.alias,
@@ -264,8 +284,24 @@ pub fn run_workspace_update(ws_path: &str, with_embedding: bool) -> Result<i32, 
     for (i, repo) in repos.iter().enumerate() {
         eprintln!("[{}/{}] Updating {}...", i + 1, total, repo.alias);
 
+        let commandindex_dir = match crate::indexer::resolve_index_path(
+            None,
+            crate::config::load_config(&repo.path)
+                .ok()
+                .and_then(|c| c.index.path)
+                .as_deref(),
+            &repo.path,
+        ) {
+            Ok(p) => p,
+            Err(e) => {
+                let msg = format!("{e}");
+                eprintln!("  Error: {msg}");
+                errors.push((repo.alias.clone(), msg));
+                continue;
+            }
+        };
         let options = crate::cli::index::IndexOptions { with_embedding };
-        match crate::cli::index::run_incremental(&repo.path, &options) {
+        match crate::cli::index::run_incremental(&repo.path, &commandindex_dir, &options) {
             Ok(summary) => {
                 eprintln!(
                     "  Added: {} files ({} sections), Modified: {} files, Deleted: {} files, Duration: {:.2}s",

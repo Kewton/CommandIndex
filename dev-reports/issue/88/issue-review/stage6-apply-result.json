@@ -1,0 +1,13 @@
+{
+  "applied_fixes": [
+    {"id": "M1", "action": "--path の役割をサブコマンドごとに明示する表を追加。設定探索の基準パスを明確化。"},
+    {"id": "M2", "action": "相対パスの解決基準を CLI(cwd基準) と config(リポジトリルート基準) で分離して定義。"},
+    {"id": "M3", "action": "workspace 対応を search だけでなく status / update も含めて記述。workspace 解決時の index existence check も対象に含めた。"},
+    {"id": "M4", "action": "search の対応を fulltext/symbol/related/semantic 全モードと明記。受け入れ基準にも反映。"},
+    {"id": "S1", "action": "config サブコマンドの期待値を明確化（config show で effective index path 表示、config path で effective index dir 追加表示）。"},
+    {"id": "S2", "action": "clean の安全ガードセクションを新設（symlink拒否、削除対象限定、keep_embeddings対応）。受け入れ基準にも追加。"},
+    {"id": "S3", "action": "parser/ignore.rs のリポジトリ内/外の条件と対応テスト追加を明記。"},
+    {"id": "N1", "action": "出力メッセージの具体的な対象（index/clean の完了メッセージ、依存テスト）を列挙。"}
+  ],
+  "summary": "Stage 5 Codex レビューの全指摘（Must Fix 4件、Should Fix 3件、Nice to Have 1件）を反映完了。"
+}

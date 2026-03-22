@@ -22,8 +22,9 @@ fn e2e_export_import_search() {
     let export_options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
+    let export_ci_dir = source_dir.path().join(".commandindex");
     let export_result =
-        commandindex::cli::export::run(source_dir.path(), &archive_path, &export_options).unwrap();
+        commandindex::cli::export::run(&export_ci_dir, &archive_path, &export_options).unwrap();
     assert!(export_result.archive_size > 0);
 
     // 5. Import into a new directory
@@ -36,9 +37,14 @@ fn e2e_export_import_search() {
     .unwrap();
 
     let import_options = commandindex::cli::import_index::ImportOptions { force: false };
-    let import_result =
-        commandindex::cli::import_index::run(import_dir.path(), &archive_path, &import_options)
-            .unwrap();
+    let import_ci_dir = import_dir.path().join(".commandindex");
+    let import_result = commandindex::cli::import_index::run(
+        import_dir.path(),
+        &import_ci_dir,
+        &archive_path,
+        &import_options,
+    )
+    .unwrap();
     assert!(import_result.imported_files > 0);
 
     // 6. Verify search works on imported index

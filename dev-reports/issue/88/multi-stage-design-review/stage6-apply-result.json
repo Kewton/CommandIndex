@@ -1,0 +1,10 @@
+{
+  "applied_fixes": [
+    {"id": "M1", "action": "判断2のデータフローから「local config追加ロード」を削除、判断10と一致させた。load_local_config_from_index_dir関数も削除。"},
+    {"id": "M2", "action": "IndexConfig.pathをOption<String>に変更（raw値として保持）、resolve_configも対応修正。AppConfigはraw値、effective pathはresolve_index_pathで別途解決する方針を明記。"},
+    {"id": "M3", "action": "normalize_path/clean_pathを廃止、..を含む未作成パスはResolveIndexPathError::PathTraversalで明示的エラーに変更。"},
+    {"id": "S2", "action": "cleanのホワイトリストからconfig.toml/config.local.tomlを除外。インデックス生成物のみ削除に明確化。"},
+    {"id": "S3", "action": "IndexConfig.pathをOption<String>に変更（M2と同時対応）"}
+  ],
+  "summary": "Stage 5 Codex レビューの Must Fix 3件 + Should Fix 2件を反映完了。"
+}

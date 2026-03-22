@@ -68,7 +68,8 @@ fn run_directory_not_found() {
     let mut buf = Cursor::new(Vec::new());
     let path = PathBuf::from("/nonexistent/path/that/does/not/exist");
     let options = StatusOptions::default();
-    let result = run(&path, &options, &mut buf);
+    let ci_dir = path.join(".commandindex");
+    let result = run(&path, &ci_dir, &options, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Directory not found"));
@@ -79,7 +80,8 @@ fn run_not_initialized() {
     let dir = tempfile::tempdir().expect("create temp dir");
     let mut buf = Cursor::new(Vec::new());
     let options = StatusOptions::default();
-    let result = run(dir.path(), &options, &mut buf);
+    let ci_dir = dir.path().join(".commandindex");
+    let result = run(dir.path(), &ci_dir, &options, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("not initialized"));
@@ -102,7 +104,8 @@ fn run_human_format() {
 
     let mut buf = Cursor::new(Vec::new());
     let options = StatusOptions::default();
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     assert!(output.contains("CommandIndex Status"));
@@ -125,7 +128,8 @@ fn run_json_format() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -148,7 +152,8 @@ fn run_default_json_no_extra_fields() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -168,7 +173,8 @@ fn run_detail_human() {
         detail: true,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     assert!(output.contains("CommandIndex Status"));
@@ -191,7 +197,8 @@ fn run_detail_json() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -209,7 +216,8 @@ fn run_coverage_only_human() {
         coverage: true,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     assert!(output.contains("Coverage"));
@@ -230,7 +238,8 @@ fn run_coverage_only_json() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -250,7 +259,8 @@ fn run_embedding_count_no_db() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
@@ -272,7 +282,8 @@ fn run_storage_breakdown() {
         format: StatusFormat::Json,
         ..Default::default()
     };
-    run(dir.path(), &options, &mut buf).expect("run should succeed");
+    let ci_dir = dir.path().join(".commandindex");
+    run(dir.path(), &ci_dir, &options, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
