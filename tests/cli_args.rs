@@ -409,7 +409,6 @@ fn search_with_explicit_limit_accepted() {
         .stderr(predicate::str::contains("Index not found"));
 }
 
-
 // --- Workspace CLI option tests ---
 
 #[test]

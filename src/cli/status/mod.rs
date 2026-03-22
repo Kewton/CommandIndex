@@ -348,7 +348,11 @@ pub fn run(
                 writeln!(
                     writer,
                     "  State:     {}",
-                    if verify_result.state_valid { "OK" } else { "FAIL" }
+                    if verify_result.state_valid {
+                        "OK"
+                    } else {
+                        "FAIL"
+                    }
                 )
                 .ok();
                 writeln!(
