@@ -197,7 +197,9 @@ impl AppConfig {
                 provider: provider_str.to_string(),
                 model: self.embedding.model.clone(),
                 endpoint: self.embedding.endpoint.clone(),
-                api_key: if self.embedding.api_key.is_some() {
+                api_key: if self.embedding.api_key.is_some()
+                    || std::env::var("COMMANDINDEX_OPENAI_API_KEY").is_ok()
+                {
                     "***".to_string()
                 } else {
                     "(not set)".to_string()

@@ -86,10 +86,7 @@ fn f32_slice_to_bytes(data: &[f32]) -> Vec<u8> {
 fn bytes_to_f32_vec(bytes: &[u8]) -> Vec<f32> {
     bytes
         .chunks_exact(4)
-        .map(|chunk| {
-            let arr: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
-            f32::from_le_bytes(arr)
-        })
+        .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("chunks_exact guarantees 4 bytes")))
         .collect()
 }
 
@@ -257,6 +254,16 @@ impl EmbeddingStore {
         let count: i64 = self
             .conn
             .query_row("SELECT COUNT(*) FROM embeddings", [], |row| row.get(0))?;
+        Ok(count as u64)
+    }
+
+    /// ユニークなファイル数を取得
+    pub fn count_distinct_files(&self) -> Result<u64, EmbeddingStoreError> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(DISTINCT section_path) FROM embeddings",
+            [],
+            |row| row.get(0),
+        )?;
         Ok(count as u64)
     }
 }
@@ -472,6 +479,33 @@ mod tests {
             }
             other => panic!("Expected SchemaVersionMismatch, got: {other}"),
         }
+    }
+
+    #[test]
+    fn test_count_distinct_files_empty() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+        assert_eq!(store.count_distinct_files().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_count_distinct_files_with_data() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Same file, two different headings
+        store
+            .upsert_embedding("src/main.rs", "heading1", &[0.1], 1, "nomic", "hash1")
+            .unwrap();
+        store
+            .upsert_embedding("src/main.rs", "heading2", &[0.2], 1, "nomic", "hash1")
+            .unwrap();
+        // Different file
+        store
+            .upsert_embedding("src/lib.rs", "lib", &[0.3], 1, "nomic", "hash2")
+            .unwrap();
+
+        assert_eq!(store.count_distinct_files().unwrap(), 2);
     }
 
     #[test]

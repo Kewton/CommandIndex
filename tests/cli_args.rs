@@ -15,7 +15,9 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("status"))
         .stdout(predicate::str::contains("clean"))
         .stdout(predicate::str::contains("context"))
-        .stdout(predicate::str::contains("config"));
+        .stdout(predicate::str::contains("config"))
+        .stdout(predicate::str::contains("export"))
+        .stdout(predicate::str::contains("import"));
 }
 
 #[test]
@@ -406,6 +408,7 @@ fn search_with_explicit_limit_accepted() {
         .failure()
         .stderr(predicate::str::contains("Index not found"));
 }
+
 
 // --- Workspace CLI option tests ---
 

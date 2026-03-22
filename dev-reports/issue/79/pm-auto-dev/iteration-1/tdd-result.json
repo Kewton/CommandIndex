@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "quality_checks": {
+    "build": "pass",
+    "clippy": "pass",
+    "test": "pass",
+    "fmt": "pass"
+  },
+  "files_modified": [
+    "src/indexer/state.rs",
+    "src/embedding/store.rs",
+    "src/cli/status/mod.rs (was src/cli/status.rs)",
+    "src/cli/status/git_info.rs (new)",
+    "src/main.rs",
+    "src/cli/index.rs",
+    "tests/cli_status.rs"
+  ],
+  "new_types": ["StatusOptions", "CoverageInfo", "StalenessInfo", "StorageBreakdown"],
+  "new_tests": 17,
+  "existing_tests_updated": 6
+}

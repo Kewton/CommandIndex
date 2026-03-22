@@ -326,6 +326,7 @@ pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexErr
     let mut state = IndexState::new(path.to_path_buf());
     state.total_files = scanned;
     state.total_sections = indexed_sections;
+    state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
     state.save(&commandindex_dir)?;
 
     // 11. Generate embeddings if requested
@@ -774,6 +775,7 @@ pub fn run_incremental(
         );
     }
     state.total_sections = state.total_sections.saturating_sub(sections_to_remove);
+    state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
     state.touch();
     state.save(&commandindex_dir)?;
 
