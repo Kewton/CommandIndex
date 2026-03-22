@@ -221,6 +221,37 @@ pub(crate) fn strip_control_chars(s: &str) -> String {
         .collect()
 }
 
+/// impact サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct ImpactResult {
+    pub input_files: Vec<String>,
+    pub impacted_files: Vec<ImpactFileResult>,
+    pub total_input_files: usize,
+    pub total_impacted_files: usize,
+}
+
+/// impact の個別ファイル結果
+#[derive(Debug, Clone, Serialize)]
+pub struct ImpactFileResult {
+    pub file_path: String,
+    pub score: f32,
+    pub relation_types: Vec<String>,
+    pub impacted_by: Vec<String>,
+}
+
+/// impact 結果を指定フォーマットで出力する
+pub fn format_impact_results(
+    result: &ImpactResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_impact_human(result, writer),
+        OutputFormat::Json => json::format_impact_json(result, writer),
+        OutputFormat::Path => path::format_impact_path(result, writer),
+    }
+}
+
 /// AI向け文脈パッケージ
 #[derive(Debug, Serialize)]
 pub struct ContextPack {

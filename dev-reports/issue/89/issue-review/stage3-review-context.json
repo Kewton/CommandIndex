@@ -1,0 +1,24 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "Commands enum 変更", "description": "Impact バリアントを Commands enum に追加し、main() の match 式にハンドラ追加が必要。cli/impact.rs に委譲するパターンを踏襲。"},
+    {"id": "M2", "category": "cli/mod.rs モジュール追加", "description": "pub mod impact; を追加する必要がある。"},
+    {"id": "M3", "category": "Search の conflicts_with 更新", "description": "--related-stdin を追加する場合、--related と相互排他、他オプションとの排他制御が必要。"},
+    {"id": "M4", "category": "SearchError エラー型拡張", "description": "TTY検出エラー、stdin読み取りエラー、空入力エラーのバリアント追加が必要。"},
+    {"id": "M5", "category": "テスト cli_args.rs への影響", "description": "help テストに impact の検証追加、--related-stdin の排他テスト追加が必要。"},
+    {"id": "M6", "category": "Search match 分岐拡張", "description": "related_stdin 分岐を追加する必要。5変数のパターンマッチ複雑度増加への対策が必要。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "出力フォーマッタ", "description": "ImpactResult 型と format_impact_results 関数を output/ に追加。6種目のフォーマッタになる。"},
+    {"id": "S2", "category": "RelatedSearchEngine 再利用", "description": "context.rs の collect_related_context ロジックを impact でも再利用可能。"},
+    {"id": "S3", "category": "stdin ユーティリティ配置", "description": "read_file_paths_from_stdin() を共通関数として配置。std::io::IsTerminal で TTY 検出。"},
+    {"id": "S4", "category": "Cargo.toml", "description": "外部依存追加不要。std::io::IsTerminal（Rust 1.70+）を使用。"},
+    {"id": "S5", "category": "既存テストへの影響", "description": "既存 --related テストは影響なし。新規 conflicts テスト追加が必要。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "パフォーマンス", "description": "入力ファイル数上限設定（例: 500件）"},
+    {"id": "N2", "category": "search モジュール", "description": "search/ 配下への新規モジュール追加は不要。既存 related.rs で対応可能。"},
+    {"id": "N3", "category": "context との統合", "description": "将来的な統合を検討。今回は別サブコマンドで実装。"},
+    {"id": "N4", "category": "バリデーション再利用", "description": "context.rs のファイルパスバリデーションロジックを共通化。"}
+  ],
+  "summary": "変更影響は CLI層（Commands enum, cli/mod.rs, search conflicts_with）、エラー型（SearchError拡張）、出力フォーマッタ（ImpactResult追加）の3領域。既存 related.rs と context.rs のロジックは再利用可能。外部依存追加不要。既存テストへの破壊的影響なし。"
+}

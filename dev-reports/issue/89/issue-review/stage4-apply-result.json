@@ -1,0 +1,16 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "M1-M6", "action": "「実装上の影響範囲」セクションを新規追加。CLI層・エラー型・出力フォーマッタ・テスト・依存の5カテゴリで影響範囲を明記"},
+    {"id": "S3", "action": "stdin ユーティリティの配置（cli/stdin.rs）を影響範囲に明記"},
+    {"id": "S4", "action": "「依存追加不要: std::io::IsTerminal 使用」を明記"},
+    {"id": "N1", "action": "入力ファイル数上限500件を追加"},
+    {"id": "N4", "action": "context.rs バリデーション再利用を「既存ロジックの再利用」セクションに追加"},
+    {"id": "M3", "action": "--related-stdin と --related の相互排他を受け入れ基準に追加"}
+  ],
+  "must_fix_count": 0,
+  "should_fix_count": 0,
+  "skip_stage_5_8": false,
+  "issue_updated": true,
+  "note": "Must Fix 6件を全て反映。2回目レビュー（Stage 5-8）は Codex による多角的レビューで品質をさらに向上させる。"
+}

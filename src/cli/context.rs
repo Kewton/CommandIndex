@@ -28,30 +28,8 @@ pub fn run_context(
         ));
     }
     for f in files {
-        if f.is_empty() {
-            return Err(SearchError::InvalidArgument(
-                "File path cannot be empty".to_string(),
-            ));
-        }
-        if f.len() > 1024 {
-            return Err(SearchError::InvalidArgument(
-                "File path too long (max 1024 characters)".to_string(),
-            ));
-        }
-        if f.contains("..") {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain '..': {f}"
-            )));
-        }
-        if f.starts_with('/') || f.starts_with('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must be relative: {f}"
-            )));
-        }
-        if f.contains('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain backslashes: {f}"
-            )));
+        if let Err(e) = crate::cli::stdin::validate_file_path(f) {
+            return Err(SearchError::InvalidArgument(format!("{e}")));
         }
     }
 
@@ -107,8 +85,31 @@ fn collect_related_context(
     Ok(merge_related_results(results_per_file, files))
 }
 
+/// 外部から呼び出し可能な関連ファイル収集・マージ（search --related-stdin 用）
+pub(crate) fn collect_and_merge_related(
+    engine: &RelatedSearchEngine,
+    files: &[String],
+    limit: usize,
+) -> Result<Vec<RelatedSearchResult>, SearchError> {
+    let mut results_per_file = Vec::new();
+    for file in files {
+        match engine.find_related(file, 1000) {
+            Ok(results) => results_per_file.push(results),
+            Err(crate::search::related::RelatedSearchError::FileNotFound(_))
+            | Err(crate::search::related::RelatedSearchError::FileNotIndexed(_)) => {
+                results_per_file.push(Vec::new());
+            }
+            Err(e) => return Err(SearchError::RelatedSearch(e)),
+        }
+    }
+
+    let mut merged = merge_related_results(results_per_file, files);
+    merged.truncate(limit);
+    Ok(merged)
+}
+
 /// 複数ファイルの関連検索結果をunionマージする
-fn merge_related_results(
+pub(crate) fn merge_related_results(
     results_per_file: Vec<Vec<RelatedSearchResult>>,
     target_files: &[String],
 ) -> Vec<RelatedSearchResult> {

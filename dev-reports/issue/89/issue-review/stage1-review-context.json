@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "実装方針・スコープ",
+      "description": "Issueに impact サブコマンドの機能定義が不明確。impact の出力内容（何を分析し何を返すか）が一切定義されていない。既存の --related は単一ファイルの関連ファイル検索、context は複数ファイルの関連コンテキスト生成。impact がこれらとどう異なるのかが不明。",
+      "suggestion": "impact サブコマンドの具体的な出力仕様を定義する。例: (a) 各入力ファイルに対する関連ファイル一覧、(b) 変更影響範囲の集約（import依存グラフの逆引き）、(c) context との差分。出力スキーマ（JSON構造）を明記すべき。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準",
+      "description": "受け入れ基準に impact の出力形式に関する基準がない。--format json は例示から暗示されているが、human/path もサポートするか不明。既存サブコマンドは全て human/json/path の3形式をサポート。",
+      "suggestion": "受け入れ基準に「impact サブコマンドが --format human/json/path をサポートする」を明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "整合性・設計",
+      "description": "impact と既存 context サブコマンドの機能重複の懸念。context は複数ファイルを引数に取り関連ファイル収集・マージを行う。impact が複数ファイルの関連ファイル検索なら context とほぼ同じ。",
+      "suggestion": "impact と context の差分を明確にする。impact が変更影響範囲（逆依存グラフ）に特化するなら、context の順方向関連との違いを記述する。"
+    },
+    {
+      "id": "S2",
+      "category": "実装方針",
+      "description": "search --related-stdin のオプション名が既存 --related の命名パターンと整合しない。--related-stdin は値を取らないフラグとなり、clap の conflicts_with 定義の大幅な変更が必要。",
+      "suggestion": "代替案: (a) --related - でstdinを示す、(b) --related-from stdin、(c) 引数なしの --related を stdin フォールバックにする。"
+    },
+    {
+      "id": "S3",
+      "category": "受け入れ基準",
+      "description": "空行・空白行・不正パスの処理に関する基準がない。",
+      "suggestion": "空行スキップ、前後空白トリム、重複パスユニーク化、存在しないファイルはwarningスキップを追加。"
+    },
+    {
+      "id": "S4",
+      "category": "実装規模",
+      "description": "実装規模「小」は過小評価。新規サブコマンド＋新オプション＋テストは「中」が妥当。",
+      "suggestion": "実装規模を「中」に変更、または分割検討。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "入力バリデーション",
+      "description": "stdin 入力の最大行数制限が未記載。",
+      "suggestion": "入力ファイルパスの上限数を設定する（例: 最大1000行）。"
+    },
+    {
+      "id": "N2",
+      "category": "ユーザビリティ",
+      "description": "TTY時のエラーメッセージ文言が未定義。",
+      "suggestion": "エラーメッセージ例を記載する。"
+    },
+    {
+      "id": "N3",
+      "category": "テスト方針",
+      "description": "stdin パイプのE2Eテスト方法に言及がない。",
+      "suggestion": "assert_cmd の .write_stdin() メソッドを使ったE2Eテストを明記する。"
+    },
+    {
+      "id": "N4",
+      "category": "ドキュメント",
+      "description": "impact の help テキストやシナリオ10との対応が未記載。",
+      "suggestion": "impact の --help 出力例を受け入れ基準に含める。"
+    }
+  ],
+  "summary": "Issue #89 は Unix パイプ対応という方向性は妥当だが、impact サブコマンドの機能定義が曖昧。既存 context との機能重複が懸念される。search --related-stdin の命名も既存 --related との整合性に課題。実装規模は「中」が適切。受け入れ基準にエッジケース処理と出力形式の明記が必要。"
+}

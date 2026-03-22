@@ -1,0 +1,14 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "impact サブコマンドの機能定義セクション追加。context との差分明記、出力スキーマ定義追加"},
+    {"id": "M2", "action": "--format human/json/path サポートを受け入れ基準に追加"},
+    {"id": "S1", "action": "context との差分セクション追加（順方向 vs 逆方向）"},
+    {"id": "S3", "action": "stdin 入力仕様セクション追加（空行スキップ、トリム、重複排除、不正パス warning）"},
+    {"id": "S4", "action": "実装規模を「小」→「中」に変更"}
+  ],
+  "deferred_fixes": [
+    {"id": "S2", "reason": "search --related-stdin の命名は現状維持。Issue作成者の意図を尊重し、設計レビューで再検討"}
+  ],
+  "issue_updated": true
+}
