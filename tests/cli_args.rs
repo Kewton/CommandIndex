@@ -8,7 +8,7 @@ fn help_flag_shows_usage() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Usage: commandindex <COMMAND>"))
+        .stdout(predicate::str::contains("Usage: commandindex"))
         .stdout(predicate::str::contains("index"))
         .stdout(predicate::str::contains("search"))
         .stdout(predicate::str::contains("update"))
@@ -18,7 +18,9 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("config"))
         .stdout(predicate::str::contains("export"))
         .stdout(predicate::str::contains("import"))
-        .stdout(predicate::str::contains("impact"));
+        .stdout(predicate::str::contains("impact"))
+        .stdout(predicate::str::contains("watch"))
+        .stdout(predicate::str::contains("diff"));
 }
 
 #[test]
@@ -589,4 +591,127 @@ fn update_workspace_option_accepted() {
         .args(["update", "--workspace", "workspace.toml"])
         .assert()
         .failure();
+}
+
+// --- Watch CLI option tests ---
+
+#[test]
+fn watch_help_shows_options() {
+    common::cmd()
+        .args(["watch", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--path"))
+        .stdout(predicate::str::contains("--debounce"))
+        .stdout(predicate::str::contains("--with-embedding"));
+}
+
+#[test]
+fn watch_without_index_shows_error() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .args(["watch", "--path", tmp.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Watch error"));
+}
+
+#[test]
+fn watch_accepts_debounce_option() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .args([
+            "watch",
+            "--path",
+            tmp.path().to_str().unwrap(),
+            "--debounce",
+            "3",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Watch error"));
+}
+
+#[test]
+fn watch_accepts_with_embedding_option() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .args([
+            "watch",
+            "--path",
+            tmp.path().to_str().unwrap(),
+            "--with-embedding",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Watch error"));
+}
+
+// --- --related multiple files tests ---
+
+#[test]
+fn search_related_multiple_files() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--related", "file1.rs", "file2.rs"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_single_file_backward_compat() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--related", "file.rs"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_with_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "--related",
+            "file1.rs",
+            "file2.rs",
+            "--format",
+            "json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_with_limit() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "--related",
+            "file1.rs",
+            "file2.rs",
+            "--limit",
+            "5",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_conflicts_with_symbol() {
+    common::cmd()
+        .args(["search", "--related", "a.rs", "b.rs", "--symbol", "foo"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 }

@@ -1,0 +1,16 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "config.local.toml の扱いが文書内で矛盾", "description": "判断2「解決済みパスからlocal configを追加ロード」と判断10「常にリポジトリローカルから読み込み」が矛盾", "suggestion": "方針を一本化。local/legacy configは常に{base_path}/.commandindex/のみに固定"},
+    {"id": "M2", "title": "load_config維持方針とconfig path/showの要件が不一致", "description": "AppConfig.index.pathがraw値かeffective値か曖昧", "suggestion": "AppConfigにはraw config valueを保持、effective pathはresolve_index_pathの結果として別変数で扱う"},
+    {"id": "M3", "title": "パストラバーサル対策がclean_pathで黙って変換する設計", "description": "..を含む未作成パスを正規化で吸収するのはKISSに反し不正入力を明示的に拒否していない", "suggestion": "..を含む未作成パスはResolveIndexPathError::PathTraversalで明示的エラーにする"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SearchContextがpath解決責務まで抱え込みすぎ", "suggestion": "CommandContext等の共通解決結果structを検討"},
+    {"id": "S2", "title": "cleanのホワイトリスト削除対象にconfig.tomlが含まれ曖昧", "suggestion": "インデックス生成物のみ削除、設定ファイルは保持を推奨"},
+    {"id": "S3", "title": "IndexConfig.pathにPathBufを持たせるのはYAGNI気味", "suggestion": "Option<String>のまま保持し「未解決の設定値」と明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "resolve_index_pathの配置はindexerより独立モジュールが自然", "suggestion": "configかpaths系の小モジュールへ寄せる"}
+  ],
+  "summary": "3件のMust Fix: (1)config.local.tomlの読み込み方針の矛盾解消、(2)raw/effective pathの責務分離明確化、(3)パストラバーサル対策を明示的エラーに変更"
+}

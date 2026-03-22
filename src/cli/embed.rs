@@ -107,11 +107,10 @@ pub struct EmbedSummary {
 // Main entry point
 // ---------------------------------------------------------------------------
 
-pub fn run(path: &Path) -> Result<EmbedSummary, EmbedError> {
+pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedError> {
     let start = Instant::now();
 
     // 1. .commandindex/ existence check
-    let commandindex_dir = crate::indexer::commandindex_dir(path);
     if !commandindex_dir.exists() {
         return Err(EmbedError::IndexNotFound);
     }
@@ -123,15 +122,15 @@ pub fn run(path: &Path) -> Result<EmbedSummary, EmbedError> {
     let provider = create_provider(&app_config.embedding)?;
 
     // 4. Load manifest
-    let manifest = Manifest::load(&commandindex_dir)?;
+    let manifest = Manifest::load(commandindex_dir)?;
 
     // 5. Open EmbeddingStore
-    let db_path = crate::indexer::embeddings_db_path(path);
+    let db_path = crate::indexer::embeddings_db_path(commandindex_dir);
     let store = EmbeddingStore::open(&db_path)?;
     store.create_tables()?;
 
     // 6. Open tantivy reader for section text retrieval
-    let tantivy_dir = crate::indexer::index_dir(path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
     let mut total_sections: u64 = 0;
@@ -297,7 +296,8 @@ mod tests {
     #[test]
     fn test_run_index_not_found() {
         let tmp = tempfile::tempdir().unwrap();
-        let result = run(tmp.path());
+        let commandindex_dir = tmp.path().join(crate::INDEX_DIR_NAME);
+        let result = run(tmp.path(), &commandindex_dir);
         assert!(result.is_err());
         match result.unwrap_err() {
             EmbedError::IndexNotFound => {}

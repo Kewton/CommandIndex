@@ -259,7 +259,8 @@ fn e2e_phase3_import_dependency_whitebox() {
     common::run_index(dir.path());
 
     // Open SymbolStore directly via the public API
-    let db_path = commandindex::indexer::symbol_db_path(dir.path());
+    let ci_dir = dir.path().join(commandindex::INDEX_DIR_NAME);
+    let db_path = commandindex::indexer::symbol_db_path(&ci_dir);
     let store =
         commandindex::indexer::symbol_store::SymbolStore::open(&db_path).expect("open symbol db");
 

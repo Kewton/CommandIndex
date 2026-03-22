@@ -34,12 +34,17 @@ impl From<ConfigError> for ConfigCliError {
 // config show
 // ---------------------------------------------------------------------------
 
-pub fn run_show() -> Result<(), ConfigCliError> {
-    let config = load_config(Path::new("."))?;
+pub fn run_show(base_path: &Path, commandindex_dir: &Path) -> Result<(), ConfigCliError> {
+    let config = load_config(base_path)?;
     let view = config.to_masked_view();
     let toml_str =
         toml::to_string_pretty(&view).map_err(|e| ConfigCliError::Serialize(e.to_string()))?;
     print!("{toml_str}");
+    println!();
+    println!(
+        "# Effective index directory: {}",
+        commandindex_dir.display()
+    );
     Ok(())
 }
 
@@ -47,8 +52,8 @@ pub fn run_show() -> Result<(), ConfigCliError> {
 // config path
 // ---------------------------------------------------------------------------
 
-pub fn run_path() -> Result<(), ConfigCliError> {
-    let config = load_config(Path::new("."))?;
+pub fn run_path(base_path: &Path, commandindex_dir: &Path) -> Result<(), ConfigCliError> {
+    let config = load_config(base_path)?;
 
     if config.loaded_sources.is_empty() {
         println!("No config files loaded (using defaults).");
@@ -62,5 +67,6 @@ pub fn run_path() -> Result<(), ConfigCliError> {
             println!("{} {}", kind_label, source.path.display());
         }
     }
+    println!("Effective index directory: {}", commandindex_dir.display());
     Ok(())
 }

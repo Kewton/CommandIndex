@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
+    DiffResult, OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
     WorkspaceSearchResult,
 };
 
@@ -89,6 +89,14 @@ pub fn format_symbol_path(
         if seen.insert(entry.clone()) {
             writeln!(writer, "{entry}")?;
         }
+    }
+    Ok(())
+}
+
+/// Diff結果をpath形式で出力する（overlapのみ）
+pub fn format_diff_path(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    for path in &result.overlap {
+        writeln!(writer, "{}", path)?;
     }
     Ok(())
 }

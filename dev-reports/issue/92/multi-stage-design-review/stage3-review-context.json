@@ -1,0 +1,91 @@
+{
+  "stage": 3,
+  "review_type": "影響分析レビュー",
+  "must_fix": [
+    {
+      "id": "IMPACT-001",
+      "category": "既存テストへの影響",
+      "title": "help_flag_shows_usage テストに diff サブコマンドの検証が必要",
+      "description": "tests/cli_args.rs の help_flag_shows_usage テストは、helpに表示される全サブコマンド（index, search, update, status, clean, context, config, export, import）を検証している。Diff サブコマンド追加後、このテストは壊れないが、設計方針書にある通り `.stdout(predicate::str::contains(\"diff\"))` を追加しないと、新サブコマンドが help に表示されることの検証が漏れる。設計方針書では「tests/cli_args.rs に diff 検証追加」と記載しており正しいが、テスト追加を忘れると回帰検出漏れになるため必須。",
+      "affected_files": ["tests/cli_args.rs"],
+      "severity": "medium"
+    },
+    {
+      "id": "IMPACT-002",
+      "category": "API可視性",
+      "title": "normalize_path は pub(crate) であり、設計方針書の呼び出しパターンと整合するか確認が必要",
+      "description": "設計方針書 4.2 では `normalize_path(file_a)?` を直接呼び出しているが、normalize_path は src/search/related.rs で `pub(crate)` として定義されている。src/cli/diff.rs は同一クレート内なのでアクセス可能だが、use パスが `crate::search::related::normalize_path` であることを設計方針書に明示すべき。context.rs (L120) が同じパターンで呼び出しているため実装上は問題ないが、設計書の擬似コードにインポートパスが省略されている点を補足すべき。",
+      "affected_files": ["src/cli/diff.rs (新規)", "src/search/related.rs"],
+      "severity": "low"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "IMPACT-003",
+      "category": "モジュール構成への影響",
+      "title": "output/mod.rs のフォーマット関数が6種類目になり、NOTE コメントの閾値（5種類以上）に到達",
+      "description": "src/output/mod.rs L177 に `// NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討` というコメントが存在する。現在 format_results, format_symbol_results, format_related_results, format_semantic_results, format_workspace_results の5関数があり、format_diff_results 追加で6関数になる。すぐにリファクタリングする必要はないが、このIssueのスコープ外として明示的に除外を記録し、後続Issueで対応すべき。",
+      "affected_files": ["src/output/mod.rs"],
+      "severity": "medium"
+    },
+    {
+      "id": "IMPACT-004",
+      "category": "既存テストへの影響",
+      "title": "e2e_diff.rs のテストデータ構成が e2e_related_search.rs の setup_linked_docs() と重複",
+      "description": "設計方針書 7章のテストデータ構成（docs/a.md, b.md, c.md, d.md）は、tests/e2e_related_search.rs の setup_linked_docs() と実質同一のテストデータ構造を使用している。テストヘルパーの共通化（tests/common/mod.rs に setup_linked_docs を移動）を検討すべき。現状は重複しても壊れないが、将来のメンテナンスコストが増加する。",
+      "affected_files": ["tests/e2e_diff.rs (新規)", "tests/e2e_related_search.rs", "tests/common/mod.rs"],
+      "severity": "low"
+    },
+    {
+      "id": "IMPACT-005",
+      "category": "エラーハンドリング整合性",
+      "title": "run_diff の戻り値型 SearchError に InvalidArgument バリアントが既存であることの確認",
+      "description": "設計方針書では同一ファイル指定時に `SearchError::InvalidArgument` を返すとしている。src/cli/search.rs の SearchError enum を確認したところ、InvalidArgument(String) バリアントは既に存在しており、新たなバリアント追加は不要。ただし、normalize_path が返す RelatedSearchError を SearchError に変換するための From impl（SearchError::RelatedSearch(e)）も既に存在する。設計方針書のエラーハンドリング表と既存コードの整合性は取れている。",
+      "affected_files": ["src/cli/search.rs", "src/cli/diff.rs (新規)"],
+      "severity": "low"
+    },
+    {
+      "id": "IMPACT-006",
+      "category": "将来の拡張性",
+      "title": "DiffResult 型に Serialize derive が必要だが、既存の RelatedSearchResult には Serialize がない",
+      "description": "設計方針書では DiffResult に `#[derive(Serialize)]` を付与するが、出力は serde_json::json! マクロでフィールドを手動構築している（4.5 JSON出力）。一方、既存の ContextPack は Serialize derive を持ち serde_json::to_writer で直接シリアライズされている。DiffResult の JSON 出力方式を ContextPack と同様の直接シリアライズに統一するか、json! マクロ方式にするかを明確にすべき。設計書では json! マクロを使用しつつ DiffResult に Serialize を付与しており、Serialize が未使用になる可能性がある。",
+      "affected_files": ["src/output/mod.rs", "src/output/json.rs"],
+      "severity": "low"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "IMPACT-007",
+      "category": "ビルドへの影響",
+      "title": "新たな外部依存は不要であり、ビルド時間・バイナリサイズへの影響は無視可能",
+      "description": "Cargo.toml に新たなクレート追加は不要。diff.rs で使用する HashSet は std::collections、sorted() は itertools ではなく Vec::sort() で代替可能。設計方針書の擬似コードで `.sorted()` (itertools) を使用しているが、Cargo.toml に itertools 依存がないため、実装時は `let mut overlap: Vec<String> = ...; overlap.sort();` パターンに変更が必要。",
+      "affected_files": ["src/cli/diff.rs (新規)", "Cargo.toml"],
+      "severity": "medium"
+    },
+    {
+      "id": "IMPACT-008",
+      "category": "将来の拡張性",
+      "title": "Issue #90 (impact) との統合可能性は高い",
+      "description": "DiffResult の overlap フィールドは、将来の impact サブコマンド（#90）で「変更影響範囲の可視化」に再利用可能。DiffResult を impact の入力として使う場合、overlap に含まれるファイルのスコア情報（現在は保持していない）が必要になる可能性がある。現時点では overlap を Vec<String>（パスのみ）としているが、将来的に Vec<DiffEntry> { path, score_a, score_b } のような拡張が考えられる。ただし YAGNI 原則に従い、現時点では String で十分。",
+      "affected_files": ["src/output/mod.rs"],
+      "severity": "low"
+    },
+    {
+      "id": "IMPACT-009",
+      "category": "モジュール構成への影響",
+      "title": "src/cli/mod.rs への pub mod diff 追加は単純で安全",
+      "description": "src/cli/mod.rs は現在10モジュールを宣言しており、`pub mod diff;` を追加してもアルファベット順で自然な位置（clean と embed の間）に挿入できる。他のモジュールとの名前衝突やcircular dependency のリスクはない。",
+      "affected_files": ["src/cli/mod.rs"],
+      "severity": "none"
+    },
+    {
+      "id": "IMPACT-010",
+      "category": "既存テストへの影響",
+      "title": "既存テスト（全51テスト以上）は変更の影響を受けない",
+      "description": "Commands enum への Diff バリアント追加は後方互換性がある（既存のパターンマッチに影響しない）。main.rs のマッチアームは網羅的パターンではなく個別バリアントごとのマッチであるため、新バリアント追加でコンパイルエラーは発生しない。output モジュールへの関数追加も既存関数に影響しない。",
+      "affected_files": [],
+      "severity": "none"
+    }
+  ],
+  "summary": "Issue #92 の diff サブコマンド設計は、既存アーキテクチャとの整合性が高く、影響範囲は限定的である。must_fix は2件：(1) help テストへの diff 検証追加の確実な実施、(2) normalize_path の use パス明示。should_fix は4件で、最も注目すべきは output/mod.rs のフォーマット関数が6種類目に到達し、NOTE コメントで示された trait-based リファクタリングの検討閾値を超える点。ただしこれは後続Issue扱いで問題ない。nice_to_have として、設計方針書の擬似コードで .sorted()（itertools）を使用しているが、Cargo.toml に itertools がないため実装時に Vec::sort() への置き換えが必要な点を指摘。既存テストへの破壊的影響はゼロであり、新たな外部依存も不要なため、ビルド時間・バイナリサイズへの影響は無視可能。Issue #90 (impact) との将来統合は DiffResult の overlap フィールドを起点に自然に拡張可能。"
+}

@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "num_args(1..) と positional query 引数のパース競合リスク",
+      "description": "clap の num_args(1..) は後続の引数をすべて当該オプションの値として消費しようとする。現在の Search サブコマンドでは query が positional 引数（Option<String>）として定義されており、--related が conflicts_with_all で query と排他になっているため直接の競合は起きないが、--format 等のオプションフラグがない場合にパース境界の曖昧さが生じる可能性がある。設計方針書では「--format 等のオプションフラグで自動的にパース境界が決まるため安全」と記載されているが、--format を省略した場合（デフォルト値使用時）に `search --related file1.rs file2.rs` の後に何も続かないケースのみが想定されており、問題はないが、将来的にオプション追加時に注意が必要。テストで --limit や --format なしの複数ファイル指定ケースを必ず検証すべき。",
+      "suggestion": "CLIパーステスト（cli_args.rs）に `--related file1.rs file2.rs`（後続オプションなし）のケースを必ず追加し、パースが正しく行われることを検証する。設計方針書のテスト戦略（セクション10）にこのケースを明記する。"
+    },
+    {
+      "id": "M2",
+      "title": "既存テスト run_related_search_with_args ヘルパーの後方互換性",
+      "description": "tests/e2e_related_search.rs L49-63 の run_related_search_with_args ヘルパーは `vec![\"search\", \"--related\", file, \"--format\", \"json\"]` として単一ファイルを渡している。Option<String> から Option<Vec<String>> に変更しても、clap は単一値を Vec に自動的にラップするため後方互換性は保たれるが、--related の直後に --format が来る場合、num_args(1..) が --format を値として消費しないことをテストで明示的に確認すべき。現行テストではたまたま --format の前にファイル名が1つだけなので問題ないが、これは暗黙の前提である。",
+      "suggestion": "E2Eテストに `--related file1.rs file2.rs --format json` と `--related file1.rs --format json` の両パターンを追加し、--format がオプションとして正しくパースされることを検証する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "run_related_search の入力検証で context.rs のパストラバーサル検証が欠落",
+      "description": "設計方針書のセクション5.2では入力検証として「空スライス、各パスの空文字・長さチェック」を挙げているが、context.rs L41-55 で実施されている '..' チェック、絶対パスチェック、バックスラッシュチェックが含まれていない。collect_related_context を直接呼び出す設計であっても、run_related_search のエントリポイントで同等の検証を行うべき。設計方針書のセキュリティ設計（セクション8）では normalize_path による対応を記載しているが、早期検証がないと不正入力がエンジン層まで到達する。",
+      "suggestion": "設計方針書のセクション5.2 に context.rs と同等のパス検証（'..' チェック、絶対パスチェック、バックスラッシュチェック、ファイル数上限100）を明記する。collect_related_context を呼び出す前に run_related_search 側で入力検証を完結させる設計にする。"
+    },
+    {
+      "id": "S2",
+      "title": "単一ファイル指定時のエラーメッセージ変更（後方互換性）",
+      "description": "現在の run_related_search (search.rs L301-304) は単一ファイルで結果がない場合に `No related files found for '{file_path}'` とファイル名を含むメッセージを表示する。複数ファイル対応後に collect_related_context を使う場合、空結果時のメッセージが変わる可能性がある。tests/e2e_related_search.rs L170-172 の related_search_nonexistent_file テストは `No related files found` を stderr で検証しており、メッセージ文言の変更でテストが失敗するリスクがある。",
+      "suggestion": "設計方針書に、空結果時の stderr メッセージ仕様を明記する。既存テストの期待値と一致するメッセージ（例: `No related files found`）を維持するか、テストを更新するかを決定する。"
+    },
+    {
+      "id": "S3",
+      "title": "collect_related_context の戻り値と run_related_search の limit 適用順序",
+      "description": "設計方針書セクション5.2 ステップ5で「マージ済み結果を limit で切り詰め」とあるが、collect_related_context は内部で limit=1000 のハードコードを使用し、merge_related_results はスコア降順でソートした全結果を返す。run_related_search 側で effective_limit を適用する設計は正しいが、context.rs の run_context (L76) では build_context_pack 内の max_files で切り詰めている。この二重の制限適用パターンの違いについて設計方針書に明記がなく、将来の保守者が混乱する可能性がある。",
+      "suggestion": "設計方針書に「collect_related_context は全マージ結果を返し、呼び出し側が limit/max_files で切り詰める」という責務分離を明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "既存の conflict テストへの影響確認不足",
+      "description": "tests/cli_args.rs には --related と他オプションの排他テストが複数存在する（L171-177 semantic/related, L239-244 no_semantic/related, L279-284 rerank/related, L470-482 workspace/related）。これらは全て `--related file.rs` と単一値で記述されている。num_args(1..) 追加後、conflicts_with_all の動作が clap 内部でどう評価されるかは clap バージョン依存であり、排他テストが引き続きパスすることを実装時に必ず確認すべき。",
+      "suggestion": "実装時に既存の全 conflict テストを実行し、パスすることを確認する。加えて、複数ファイル指定時の conflict テスト（例: `--related file1.rs file2.rs --symbol foo`）も追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "大量ファイル指定時のパフォーマンス考慮",
+      "description": "設計方針書セクション8で「大量ファイル指定によるDoS」は「低リスク、スコープ外」とされている。context.rs では files.len() > 100 の上限チェック（L25-28）があるが、run_related_search にはこの上限が明記されていない。100ファイル x find_related(1000) の組み合わせで最大10万件のマージ処理が発生し、HashMap の肥大化とソートコストが懸念される。CLI利用においては現実的な問題にならないが、将来的にAPI化する場合のリスク。",
+      "suggestion": "run_related_search にも context.rs と同様の入力数上限（100ファイル）を設ける。パフォーマンス懸念がある場合、find_related の内部 limit を入力ファイル数に応じて動的に調整する方式を検討する。"
+    },
+    {
+      "id": "N2",
+      "title": "merge_related_results を search/related.rs に移動する選択肢の文書化",
+      "description": "設計方針書セクション4の判断1で、context.rs の pub(crate) 化を選択し、search/related.rs への移動は「変更量が増える」として却下している。しかし、過去のレビュー（stage1, stage3, stage5）でも search/related.rs への移動がドメイン的に適切と繰り返し指摘されている。現時点では pub(crate) 化が最小変更で適切だが、将来の refactoring 候補として記録すべき。",
+      "suggestion": "設計方針書のトレードオフセクションに「将来的に search/related.rs にマージロジックを移動することを検討」と追記する。または TODO コメントをコードに残す。"
+    },
+    {
+      "id": "N3",
+      "title": "JSON 出力時の target_files 情報",
+      "description": "複数ファイル指定時、どのファイルが検索対象だったかを出力に含めると、ユーザーが結果を理解しやすくなる。現在の format_related_results は RelatedSearchResult のリストのみを出力しており、入力ファイル情報は含まれない。これは既存動作との一貫性を保つためにスコープ外とするのが妥当だが、将来的な UX 改善候補。",
+      "suggestion": "将来の拡張として、--format json 時に入力ファイル一覧をメタデータとして出力するオプションを検討する。"
+    }
+  ],
+  "summary": "影響範囲分析の結果、設計方針書は概ね適切に影響範囲を特定している。主要な懸念は2点: (1) clap の num_args(1..) と既存 conflicts_with_all の組み合わせにおけるパース境界の確実性（M1, M2）、(2) run_related_search の入力検証が context.rs のセキュリティ検証（パストラバーサル防止等）を網羅していない点（S1）。既存テスト（cli_args.rs の conflict テスト群、e2e_related_search.rs の全テスト）は型変更（Option<String> -> Option<Vec<String>>）により影響を受ける可能性があるが、clap の後方互換性により大半はそのまま通過する見込み。パフォーマンスへの影響は、通常利用（数ファイル程度）では無視できるレベル。設計方針書に記載されていない影響範囲として、(1) stderr メッセージ文言の変更によるE2Eテスト失敗リスク（S2）、(2) 複数ファイル指定時の conflict テスト不足（S4）が挙げられる。全体として、変更は小規模かつ低リスクであり、指摘事項を反映すれば安全に実装可能。"
+}

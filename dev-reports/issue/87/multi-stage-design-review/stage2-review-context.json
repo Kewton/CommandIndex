@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "main.rs: related フィールドの型が設計方針書と不一致",
+      "description": "設計方針書では `related: Option<Vec<String>>` に変更すると記載されているが、現在のコードは `related: Option<String>` のまま。また `num_args(1..)` アトリビュートも未追加。設計方針書の「5.1 main.rs の変更」セクションに記載された After コードと現在のコードが一致していない。",
+      "suggestion": "実装時に `#[arg(long, num_args(1..), conflicts_with_all = [...])]` と `related: Option<Vec<String>>` に変更する。設計方針書の記載はこの変更を正確に反映しており、問題なし。"
+    },
+    {
+      "id": "M2",
+      "title": "main.rs: パターンマッチで related を &str として渡している",
+      "description": "設計方針書では `(None, None, Some(ref files), None)` として `run_related_search(files, ...)` と記載しているが、現在のコードは `(None, None, Some(f), None)` で `run_related_search(&f, ...)` と `&str` を渡している。型変更後はスライス `&[String]` を渡す必要がある。",
+      "suggestion": "設計方針書通りに `Some(ref files) => run_related_search(files, effective_limit, format)` に変更する。設計方針書の記載は正確。"
+    },
+    {
+      "id": "M3",
+      "title": "cli/search.rs: run_related_search のシグネチャが設計方針書と不一致",
+      "description": "設計方針書では `run_related_search(file_paths: &[String], limit, format)` と記載しているが、現在の実装は `run_related_search(file_path: &str, limit, format)` である。また、設計方針書では内部で `context::collect_related_context` を呼び出す設計だが、現在は `RelatedSearchEngine::find_related` を直接呼んでいる。",
+      "suggestion": "実装時にシグネチャを `file_paths: &[String]` に変更し、内部ロジックを `context::collect_related_context` 呼び出しに置き換える。設計方針書の記載は正確。"
+    },
+    {
+      "id": "M4",
+      "title": "cli/context.rs: collect_related_context と merge_related_results の可視性が設計方針書と不一致",
+      "description": "設計方針書では両関数を `pub(crate)` に変更すると記載しているが、現在のコードでは両方とも `fn`（非公開）のまま。cli/search.rs から呼び出すためには `pub(crate)` への変更が必須。",
+      "suggestion": "実装時に `fn collect_related_context` -> `pub(crate) fn collect_related_context`、`fn merge_related_results` -> `pub(crate) fn merge_related_results` に変更する。設計方針書の記載は正確。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "設計方針書の normalize_path 可視性が実コードと一致",
+      "description": "設計方針書セクション5.3の merge_related_results 内で `crate::search::related::normalize_path` を呼び出している（context.rs 87行目付近）。実コードの normalize_path は `pub(crate)` であり、context.rs からのアクセスは可能。設計方針書では normalize_path の可視性について明示的に言及していないが、実コードは既に `pub(crate)` なので問題なし。ただし、設計方針書に normalize_path が `pub(crate)` である前提を明記すべき。",
+      "suggestion": "設計方針書のセクション5.3 または 6 に、`normalize_path` が `pub(crate)` であることを前提条件として明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "設計方針書のエラーハンドリングコード例で FileNotFound/FileNotIndexed の参照パスが省略されている",
+      "description": "設計方針書セクション4の判断4のコード例では `Err(FileNotFound(_)) | Err(FileNotIndexed(_))` と短縮形で書かれているが、実際の context.rs のコードでは `Err(crate::search::related::RelatedSearchError::FileNotFound(_))` とフルパスで参照している。設計方針書のコード例は概念的には正しいが、実際のRustコードとしてはuseインポートなしでは動かない。",
+      "suggestion": "設計方針書のコード例を実際のインポートパスに合わせるか、コード例の前にuse文を追加する。実装時の混乱を防ぐため。"
+    },
+    {
+      "id": "S3",
+      "title": "run_related_search の入力検証が単一ファイル前提",
+      "description": "現在の run_related_search は `file_path.is_empty()` や `file_path.len() > 1024` といった単一文字列の検証しか行っていない。設計方針書セクション5.2では「入力検証（空スライス、各パスの空文字・長さチェック）」と記載されているが、具体的な検証コード例が示されていない。context.rs の run_context が持つ検証ロジック（空チェック、100件上限、各パスの空文字/長さ/パストラバーサル/絶対パスチェック）を参考にすべき。",
+      "suggestion": "設計方針書のセクション5.2に、context.rs の入力検証と同等のバリデーション（空スライス、各パスの空文字、長さ上限、ファイル数上限）の具体的なコード例を追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "設計方針書の型定義セクションに RelationType の derive マクロが未記載",
+      "description": "設計方針書セクション6の RelationType 定義には `#[derive(...)]` が記載されていないが、実コード (output/mod.rs) では `#[derive(Debug, Clone)]` が付与されている。型定義が「変更なし」であるため大きな問題ではないが、正確性のために記載があるとよい。",
+      "suggestion": "設計方針書のセクション6の型定義に `#[derive(Debug, Clone)]` を追記する。"
+    },
+    {
+      "id": "N2",
+      "title": "設計方針書のフロー図で score_markdown_links 等のメソッド呼び出し表記",
+      "description": "設計方針書セクション2の呼び出しフロー図では `score_markdown_links()` とフリー関数のように記載されているが、実際には `RelatedSearchEngine` の `&self` メソッドである。変更不要ファイルに関する記述なので影響は小さい。",
+      "suggestion": "フロー図を `self.score_markdown_links()` に修正するか、RelatedSearchEngine のメソッドである旨を注記する。"
+    },
+    {
+      "id": "N3",
+      "title": "設計方針書に大量ファイル指定時の上限値の明記",
+      "description": "設計方針書セクション8のセキュリティ設計で「大量ファイル指定によるDoS」を「低リスク」としているが、context.rs では既に100件の上限チェックが実装されている。run_related_search でも同様の上限を設けるかどうかの設計判断を明記すべき。",
+      "suggestion": "run_related_search でも context.rs と同様に100件上限を適用するか、明示的にスコープ外とする旨を設計方針書に記載する。"
+    }
+  ],
+  "summary": "設計方針書と現在のコードベースの整合性を4つの観点でレビューした。設計方針書は「変更前(Before)」と「変更後(After)」を明確に区別しており、現在のコードは全て「変更前」の状態と一致している。したがって、must_fix 4件は全て「実装時に変更が必要な箇所」であり、設計方針書自体の誤りではなく、設計方針書の記載通りに実装すれば解消される項目である。should_fix 3件は設計方針書の記載精度向上に関する指摘で、実装時の混乱を防ぐために修正が望ましい。nice_to_have 3件は文書の完全性に関する軽微な指摘である。型定義(RelatedSearchResult, RelationType, RelatedSearchError, SearchError)は全て設計方針書と実コードが一致しており、モジュール構造・エラー型の整合性にも問題はない。設計方針書の「変更不要」指定(search/related.rs, output/mod.rs)も妥当であり、context.rs の既存マージロジック再利用方針は合理的である。"
+}

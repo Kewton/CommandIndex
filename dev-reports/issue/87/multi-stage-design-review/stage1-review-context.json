@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "DRY違反: run_related_search内の入力検証・インデックスオープン処理がcontext.rsと重複する",
+      "description": "設計方針書5.2のrun_related_search変更案では、入力検証（空スライス、パス長チェック）、インデックス存在確認、IndexReaderWrapper/SymbolStoreのオープン処理を記述しているが、これらはcontext.rs::run_contextで既に同等の処理が実装されている。collect_related_contextを呼び出す前段の定型処理が2箇所に分散し、今後の変更時に片方だけ更新される同期ズレリスクがある。",
+      "suggestion": "インデックスオープンとリソース取得をSearchContextまたは専用のヘルパー関数に集約する。例えばSearchContextにopen_reader_and_store()メソッドを追加し、search.rsとcontext.rsの両方がそれを利用する形にすれば、DRY原則を満たしつつ変更箇所も最小化できる。ただし、実装規模が「小」であるため、現段階ではTODOコメントを残して次フェーズで対応する判断も妥当。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "SRP観点: run_related_searchが複数ファイルのマージ責務まで担う設計",
+      "description": "設計方針書5.2では、run_related_searchが(1)入力検証、(2)リソースオープン、(3)collect_related_context呼び出し、(4)limit切り詰め、(5)空結果ハンドリング、(6)出力フォーマットまで一関数で処理する。context.rsのcollect_related_contextへ委譲している点は良いが、run_related_search自体のシグネチャが&str→&[String]に変わることで、単一ファイル・複数ファイルの両方のケースを1つの関数で扱う責務の肥大化が起こる。",
+      "suggestion": "現行のrun_related_searchは単一ファイル専用で簡潔に保ち、複数ファイル時は内部でcollect_related_contextに委譲するif分岐を設けるか、あるいは単一ファイルも&[String]のlen=1として統一的に処理する方針を明記する。設計方針書には後者（統一処理）が暗黙的に示されているが、単一ファイル時にマージオーバーヘッド（limit=1000での全件取得→HashMap→再ソート）が不要である点についてトレードオフの明記があると良い。"
+    },
+    {
+      "id": "S2",
+      "title": "大量ファイル指定時の上限チェックがスコープ外扱い",
+      "description": "設計方針書8のセキュリティ設計で「大量ファイル指定によるDoS」が「現状はスコープ外」とされているが、context.rsには既にfiles.len() > 100の上限チェックが実装されている。run_related_searchが同じcollect_related_contextを呼ぶ場合、この上限チェックはrun_context経由でのみ適用され、run_related_search経由では適用されない。",
+      "suggestion": "collect_related_context内部、またはrun_related_searchの入力検証で同様の上限チェックを追加する。context.rsの既存実装と同じmax 100で十分。設計方針書の5.2「入力検証」セクションに明記すべき。"
+    },
+    {
+      "id": "S3",
+      "title": "context.rsのパス検証ロジック（'..'禁止、相対パス強制等）がrun_related_searchで適用されない",
+      "description": "context.rs::run_contextではパストラバーサル対策として'..'チェック、絶対パス禁止、バックスラッシュ禁止の入力検証を行っているが、設計方針書5.2のrun_related_searchの入力検証では「空スライス、各パスの空文字・長さチェック」のみ記載されている。同じcollect_related_contextを呼ぶにもかかわらず、呼び出し元によってセキュリティ検証レベルが異なる。",
+      "suggestion": "パス検証ロジックをcollect_related_context内部に移動するか、共通のvalidate_file_paths関数を抽出してrun_contextとrun_related_searchの両方で使用する。これによりセキュリティレベルの一貫性を確保できる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "OCP観点: マージ戦略の拡張性",
+      "description": "merge_related_resultsのスコアマージ戦略が「最大値採用」にハードコードされている。将来的に平均値や重み付けなど別の戦略が必要になった場合、関数の修正が必要になる。",
+      "suggestion": "YAGNI原則に従い、現時点では最大値で十分。ただし将来の拡張を見越す場合は、MergeStrategyトレイトを導入してStrategy Patternで切り替え可能にする余地をコメントで残すと良い。現段階での実装変更は不要。"
+    },
+    {
+      "id": "N2",
+      "title": "limit=1000のマジックナンバー",
+      "description": "collect_related_contextで使用されるlimit=1000がハードコードされている。設計判断3で「context.rsと同じ方式」と理由が説明されているが、定数として命名されていない。",
+      "suggestion": "const RELATED_INTERNAL_LIMIT: usize = 1000; として名前付き定数に抽出し、context.rsとsearch.rsで共有する。意図の明確化とメンテナンス性の向上につながる。"
+    },
+    {
+      "id": "N3",
+      "title": "num_args(1..)のCLI設計における位置引数との混同リスク",
+      "description": "設計判断2でnum_args(1..)を選択しているが、--relatedの後に続くファイルリストの終端がオプションフラグ(--で始まる引数)で判定される。ファイル名がハイフンで始まる場合やサブコマンドとの干渉が理論上あり得る。",
+      "suggestion": "テスト戦略にハイフンで始まるファイル名のテストケースを追加する。または設計方針書の判断2に「ハイフン始まりのファイル名は -- セパレータで対処可能」と注記を追加する。"
+    }
+  ],
+  "summary": "Issue #87の設計方針書は全体として良好な設計判断がなされている。特に既存のcollect_related_context/merge_related_resultsの再利用（可視性変更のみ）というアプローチはKISS/YAGNI原則に沿っており、変更量を最小化している。主な改善点は3つ: (1) DRY観点でインデックスオープン処理の重複を将来的に解消すべき（M1）、(2) セキュリティ観点でパス検証ロジックの一貫性を確保すべき（S3）、(3) ファイル数上限チェックをrun_related_search経由でも適用すべき（S2）。エンジン層(related.rs)とアウトプット層(output/mod.rs)に変更が不要な設計はレイヤー分離が適切に機能している証拠であり、依存性逆転の観点でも問題はない。リスコフ置換原則・インターフェース分離原則については、本変更がトレイトや継承を扱わないため適用外。"
+}

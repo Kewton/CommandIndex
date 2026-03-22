@@ -175,8 +175,8 @@ fn count_file_types(commandindex_dir: &Path) -> FileTypeCounts {
 }
 
 /// SymbolStore からシンボル数を取得する（DB が存在しない場合は 0）
-fn get_symbol_count(base_path: &Path) -> u64 {
-    let db_path = crate::indexer::symbol_db_path(base_path);
+fn get_symbol_count(commandindex_dir: &Path) -> u64 {
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     if !db_path.exists() {
         return 0;
     }
@@ -223,8 +223,8 @@ fn count_discoverable_files(base_path: &Path) -> u64 {
 }
 
 /// EmbeddingStore からユニークファイル数を取得する（DB が存在しない場合は 0）
-fn get_embedding_file_count(base_path: &Path) -> u64 {
-    let db_path = crate::indexer::embeddings_db_path(base_path);
+fn get_embedding_file_count(commandindex_dir: &Path) -> u64 {
+    let db_path = crate::indexer::embeddings_db_path(commandindex_dir);
     if !db_path.exists() {
         return 0;
     }
@@ -235,8 +235,8 @@ fn get_embedding_file_count(base_path: &Path) -> u64 {
 }
 
 /// 設定から embedding モデル名を取得する
-fn get_embedding_model(_commandindex_dir: &Path) -> Option<String> {
-    match crate::config::load_config(Path::new(".")) {
+fn get_embedding_model(base_path: &Path) -> Option<String> {
+    match crate::config::load_config(base_path) {
         Ok(config) => Some(config.embedding.model),
         Err(_) => None,
     }
@@ -251,8 +251,8 @@ fn collect_coverage_info(
     let discoverable_files = count_discoverable_files(base_path);
     let indexed_files = state.total_files;
     let skipped_files = discoverable_files.saturating_sub(indexed_files);
-    let embedding_file_count = get_embedding_file_count(base_path);
-    let embedding_model = get_embedding_model(commandindex_dir);
+    let embedding_file_count = get_embedding_file_count(commandindex_dir);
+    let embedding_model = get_embedding_model(base_path);
 
     CoverageInfo {
         discoverable_files,
@@ -269,11 +269,11 @@ fn file_size(path: &Path) -> u64 {
 }
 
 /// StorageBreakdown を計算する
-fn compute_storage_breakdown(base_path: &Path) -> StorageBreakdown {
-    let tantivy_bytes = compute_dir_size(&crate::indexer::index_dir(base_path));
-    let symbols_db_bytes = file_size(&crate::indexer::symbol_db_path(base_path));
-    let embeddings_db_bytes = file_size(&crate::indexer::embeddings_db_path(base_path));
-    let total_bytes = compute_dir_size(&crate::indexer::commandindex_dir(base_path));
+fn compute_storage_breakdown(commandindex_dir: &Path) -> StorageBreakdown {
+    let tantivy_bytes = compute_dir_size(&crate::indexer::index_dir(commandindex_dir));
+    let symbols_db_bytes = file_size(&crate::indexer::symbol_db_path(commandindex_dir));
+    let embeddings_db_bytes = file_size(&crate::indexer::embeddings_db_path(commandindex_dir));
+    let total_bytes = compute_dir_size(commandindex_dir);
     let other_bytes =
         total_bytes.saturating_sub(tantivy_bytes + symbols_db_bytes + embeddings_db_bytes);
 
@@ -289,6 +289,7 @@ fn compute_storage_breakdown(base_path: &Path) -> StorageBreakdown {
 /// status コマンドのメインロジック
 pub fn run(
     path: &Path,
+    commandindex_dir: &Path,
     options: &StatusOptions,
     writer: &mut dyn Write,
 ) -> Result<(), StatusError> {
@@ -296,22 +297,20 @@ pub fn run(
         return Err(StatusError::DirectoryNotFound(path.to_path_buf()));
     }
 
-    let commandindex_dir = path.join(".commandindex");
-
-    if !IndexState::exists(&commandindex_dir) {
+    if !IndexState::exists(commandindex_dir) {
         return Err(StatusError::NotInitialized);
     }
 
-    let state = IndexState::load(&commandindex_dir)?;
+    let state = IndexState::load(commandindex_dir)?;
     state.check_schema_version()?;
 
-    let index_size_bytes = compute_dir_size(&commandindex_dir);
-    let file_type_counts = count_file_types(&commandindex_dir);
-    let symbol_count = get_symbol_count(path);
+    let index_size_bytes = compute_dir_size(commandindex_dir);
+    let file_type_counts = count_file_types(commandindex_dir);
+    let symbol_count = get_symbol_count(commandindex_dir);
 
     // Collect extended info based on options
     let coverage = if options.detail || options.coverage {
-        Some(collect_coverage_info(path, &commandindex_dir, &state))
+        Some(collect_coverage_info(path, commandindex_dir, &state))
     } else {
         None
     };
@@ -323,7 +322,7 @@ pub fn run(
     };
 
     let storage = if options.detail {
-        Some(compute_storage_breakdown(path))
+        Some(compute_storage_breakdown(commandindex_dir))
     } else {
         None
     };
@@ -340,7 +339,7 @@ pub fn run(
 
     // Verify mode
     if options.verify {
-        let verify_result = run_verify(path, &commandindex_dir);
+        let verify_result = run_verify(path, commandindex_dir);
         match options.format {
             StatusFormat::Human => {
                 writeln!(writer).ok();
@@ -587,7 +586,7 @@ fn run_verify(base_path: &Path, commandindex_dir: &Path) -> VerifyResult {
     };
 
     // 2. tantivy
-    let tantivy_dir = crate::indexer::index_dir(base_path);
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let tantivy_valid = if tantivy_dir.exists() {
         match tantivy::Index::open_in_dir(&tantivy_dir) {
             Ok(_) => true,
@@ -637,7 +636,7 @@ fn run_verify(base_path: &Path, commandindex_dir: &Path) -> VerifyResult {
     };
 
     // 4. symbols.db
-    let db_path = crate::indexer::symbol_db_path(base_path);
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     let symbols_valid = if db_path.exists() {
         match SymbolStore::open(&db_path) {
             Ok(_) => true,

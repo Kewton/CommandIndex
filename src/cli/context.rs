@@ -15,31 +15,18 @@ pub fn run_context(
     files: &[String],
     max_files: usize,
     max_tokens: Option<usize>,
+    commandindex_dir: &Path,
 ) -> Result<(), SearchError> {
     // 入力検証
-    if files.is_empty() {
-        return Err(SearchError::InvalidArgument(
-            "At least one file is required".to_string(),
-        ));
-    }
-    if files.len() > 100 {
-        return Err(SearchError::InvalidArgument(
-            "Too many files specified (max 100)".to_string(),
-        ));
-    }
-    for f in files {
-        if let Err(e) = crate::cli::stdin::validate_file_path(f) {
-            return Err(SearchError::InvalidArgument(format!("{e}")));
-        }
-    }
+    super::validate_file_paths(files, 100)?;
 
     // インデックスオープン
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
 
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
@@ -61,8 +48,9 @@ pub fn run_context(
     Ok(())
 }
 
-/// 各ファイルの関連検索結果を収集・マージする
-fn collect_related_context(
+/// 各ファイルの関連検索結果を収集・マージする。
+/// Caller must validate file_paths with validate_file_paths before calling.
+pub(crate) fn collect_related_context(
     files: &[String],
     reader: &IndexReaderWrapper,
     store: &SymbolStore,
@@ -108,7 +96,7 @@ pub(crate) fn collect_and_merge_related(
     Ok(merged)
 }
 
-/// 複数ファイルの関連検索結果をunionマージする
+/// Merges related search results from multiple files using union + max score strategy.
 pub(crate) fn merge_related_results(
     results_per_file: Vec<Vec<RelatedSearchResult>>,
     target_files: &[String],

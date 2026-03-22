@@ -1,0 +1,12 @@
+{
+  "applied_fixes": [
+    {"id": "M1", "action": "テスト戦略セクションを新設し、既存テスト（後方互換）と新規テスト（12項目）を明確に分離"},
+    {"id": "S1", "action": "ヘルプ・ドキュメント更新セクションを追加、--path を持たないサブコマンドの usage/help 更新を明記"},
+    {"id": "S2", "action": "workspace での設定解決を 1 repo 1 回に集約する方針を明記"},
+    {"id": "S3", "action": "parser/ignore.rs の .cmindexignore との合成結果テスト、自己インデックス防止テストを追加"},
+    {"id": "S4", "action": "同時書き込み対策セクションに共有インデックスシナリオでの制約の重要性を明記"},
+    {"id": "N1", "action": "status --detail の既存cwd依存バグ修正を受け入れ基準に追加"},
+    {"id": "N2", "action": "export/import の custom index path での state 整合性テストを新規テストに追加"}
+  ],
+  "summary": "Stage 7 影響範囲レビュー（Codex）の全指摘（Must Fix 1件、Should Fix 4件、Nice to Have 2件）を反映完了。テスト戦略セクションの新設が最大の改善点。"
+}

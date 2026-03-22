@@ -125,7 +125,7 @@ fn index_displays_summary() {
         .stdout(predicate::str::contains("Scanned: 1 files"))
         .stdout(predicate::str::contains("Indexed: 2 sections"))
         .stdout(predicate::str::contains("Duration:"))
-        .stdout(predicate::str::contains("Index saved to .commandindex/"));
+        .stdout(predicate::str::contains("Index saved to"));
 }
 
 #[test]

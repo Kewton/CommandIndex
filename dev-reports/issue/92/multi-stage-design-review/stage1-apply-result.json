@@ -1,0 +1,20 @@
+{
+  "stage": "1-4",
+  "applied_fixes": [
+    {"source": "Stage1-MF-1", "action": "インデックス存在チェック・リーダーオープンは既存パターン踏襲とし、共通ヘルパー抽出はYAGNIで見送り（コメントで明記）"},
+    {"source": "Stage1-MF-2", "action": "context.rs L30-55と同等のパスバリデーション（絶対パス拒否、..含有拒否）をrun_diff()に追加"},
+    {"source": "Stage2-M1", "action": "normalize_pathのuseパスを明記（use crate::search::related::normalize_path）"},
+    {"source": "Stage2-M2", "action": "RelatedSearchError→SearchError変換パスのコメントを追加"},
+    {"source": "Stage2-M3", "action": "--formatがSearchパターン踏襲である旨を明記（Contextには--formatがない）"},
+    {"source": "Stage2-M4", "action": ".sorted()をcollect()+sort()に変更（itertools依存不要）"},
+    {"source": "Stage3-IMPACT-001", "action": "テスト戦略にhelp_flag_shows_usageのdiff検証追加を明記（既にテスト表に記載済み）"},
+    {"source": "Stage3-IMPACT-002", "action": "normalize_pathのuseパスを疑似コードに明記"},
+    {"source": "Stage4-SEC-S1", "action": "context.rsパターンの明示的パスバリデーション（..拒否、絶対パス拒否）を追加"},
+    {"source": "Stage4-SEC-S3", "action": "limitにclap value_parserで1..=10000の上限を設定"},
+    {"source": "Stage1-SF-2", "action": "find_related()エラー時にmap_errでファイル名コンテキストを付与"},
+    {"source": "Stage2-S4", "action": "main.rsのマッチアーム疑似コードを追加"},
+    {"source": "Stage3-IMPACT-003", "action": "output/mod.rsのフォーマット関数6種類到達についてNOTEを追加"},
+    {"source": "DiffResult", "action": "Serialize derive削除、overlap_count()メソッド削除（json!マクロで直接len()使用）"}
+  ],
+  "must_fix_remaining": 0
+}

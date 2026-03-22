@@ -1,0 +1,24 @@
+{
+  "issue_number": 87,
+  "title": "--related の複数ファイル対応",
+  "design_policy": "dev-reports/design/issue-87-design-policy.md",
+  "work_plan": "dev-reports/issue/87/work-plan.md",
+  "tasks": [
+    "Task 1.1: validate_file_paths関数をcli/mod.rsに追加",
+    "Task 1.2: context.rsのrun_contextをvalidate_file_paths呼び出しに置き換え",
+    "Task 2.1: context.rsのcollect_related_context/merge_related_resultsをpub(crate)に変更",
+    "Task 2.2: main.rsのclap定義変更（Option<Vec<String>>, num_args(1..)）",
+    "Task 2.3: run_related_searchのシグネチャ・ロジック変更",
+    "Task 3.1: CLIパーステスト追加",
+    "Task 3.2: E2Eテスト追加"
+  ],
+  "key_files": [
+    "src/main.rs",
+    "src/cli/mod.rs",
+    "src/cli/search.rs",
+    "src/cli/context.rs",
+    "src/search/related.rs",
+    "tests/cli_args.rs",
+    "tests/e2e_related_search.rs"
+  ]
+}

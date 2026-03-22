@@ -1,0 +1,1 @@
+{"stage": 3, "applied": ["M1:helpテストにwatch追加をテスト戦略に反映", "M2:IndexErrorバリアント別ハンドリングをis_recoverable()で対応", "M3:notifyクロスプラットフォームは選定理由に記載済み", "S3:前回run_incremental()実行中のスキップを並行性設計に追加"]}

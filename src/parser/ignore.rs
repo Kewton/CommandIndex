@@ -40,19 +40,37 @@ impl From<std::io::Error> for IgnoreError {
 }
 
 pub struct IgnoreFilter {
+    patterns: Vec<String>,
     glob_set: GlobSet,
 }
 
 impl Default for IgnoreFilter {
     fn default() -> Self {
+        let patterns: Vec<String> = DEFAULT_PATTERNS.iter().map(|s| (*s).to_string()).collect();
+        let glob_set = Self::build_glob_set(&patterns);
+        Self { patterns, glob_set }
+    }
+}
+
+impl IgnoreFilter {
+    fn build_glob_set(patterns: &[String]) -> GlobSet {
         let mut builder = GlobSetBuilder::new();
-        for pattern in DEFAULT_PATTERNS {
+        for pattern in patterns {
             if let Ok(glob) = Glob::new(pattern) {
                 builder.add(glob);
             }
         }
-        let glob_set = builder.build().unwrap();
-        Self { glob_set }
+        builder.build().unwrap_or_default()
+    }
+
+    /// カスタムインデックスパスがリポジトリ内にある場合、除外パターンに追加
+    pub fn with_custom_index_path(mut self, index_path: &Path, repo_root: &Path) -> Self {
+        if let Ok(rel) = index_path.strip_prefix(repo_root) {
+            let pattern = format!("{}/**", rel.display());
+            self.patterns.push(pattern);
+            self.glob_set = Self::build_glob_set(&self.patterns);
+        }
+        self
     }
 }
 
@@ -70,7 +88,7 @@ impl IgnoreFilter {
 
     /// パターン文字列からフィルターを構築する
     pub fn from_content(content: &str) -> Self {
-        let mut builder = GlobSetBuilder::new();
+        let mut patterns = Vec::new();
 
         for line in content.lines() {
             let trimmed = line.trim();
@@ -87,22 +105,11 @@ impl IgnoreFilter {
                 trimmed.to_string()
             };
 
-            match Glob::new(&pattern) {
-                Ok(glob) => {
-                    builder.add(glob);
-                }
-                Err(e) => {
-                    tracing::warn!("Invalid glob pattern '{}': {}", trimmed, e);
-                }
-            }
+            patterns.push(pattern);
         }
 
-        let glob_set = builder.build().unwrap_or_else(|e| {
-            tracing::warn!("Failed to build glob set: {}", e);
-            GlobSetBuilder::new().build().unwrap()
-        });
-
-        Self { glob_set }
+        let glob_set = Self::build_glob_set(&patterns);
+        Self { patterns, glob_set }
     }
 
     /// パスが除外対象かどうかを判定する

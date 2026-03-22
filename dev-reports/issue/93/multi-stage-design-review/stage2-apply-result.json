@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["M1:Cargo.toml依存追加を明記", "M2:pathオプションからshort削除(既存と一貫性)", "M3:mod.rs宣言をアルファベット順で追加", "M4:Commands enumとmatchブランチ追加を明記", "S1:workspace非対応を制限事項に追記", "S3:debounce単位を秒で明記"]}
