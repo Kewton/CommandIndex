@@ -1,0 +1,19 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー（SOLID/KISS/YAGNI/DRY）",
+  "must_fix": [
+    {"id": "MF-1", "title": "run() シグネチャは path, writer を独立引数として維持（StatusOptions は detail/coverage/format のみ）"},
+    {"id": "MF-2", "title": "Git 操作ロジックを status.rs から分離（SRP違反）"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "StorageBreakdown の粒度が YAGNI（過剰な内訳分割）"},
+    {"id": "SF-2", "title": "FileTypeCounts のハードコード問題（DRY違反の懸念）"},
+    {"id": "SF-3", "title": "IndexState への last_commit_hash 追加は責務違反（SRP）"},
+    {"id": "SF-4", "title": "CoverageInfo.total_files と IndexState.total_files の名前重複"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "StatusInfo の Option フィールド増加にビルダーパターン検討"},
+    {"id": "NH-2", "title": "Human フォーマット出力の分離"},
+    {"id": "NH-3", "title": "walkdir 走査ロジックの indexer との共通化"}
+  ]
+}
