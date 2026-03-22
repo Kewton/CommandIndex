@@ -1,0 +1,1 @@
+{"stage": 3, "focus": "影響分析", "must_fix_count": 3, "should_fix_count": 4, "nice_to_have_count": 4, "must_fix_ids": ["M1:CLIテスト更新", "M2:IndexError分類ハンドリング", "M3:notify クロスプラットフォーム"]}

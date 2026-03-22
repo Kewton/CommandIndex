@@ -1,0 +1,14 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "MF-1", "action": "受け入れ基準にPath出力形式を追加、Path形式の出力仕様を追加"},
+    {"id": "MF-2", "action": "--formatオプションのデフォルト値Human、clapパターンを明記"},
+    {"id": "MF-3", "action": "'--relatedを実行'を'RelatedSearchEngine::find_related()を実行'に修正"},
+    {"id": "SF-1", "action": "概要を'2つのファイル'に統一（2ファイル限定）"},
+    {"id": "SF-2", "action": "JSON出力が単一JSONオブジェクトであることを明記、Human形式の出力例を追加"},
+    {"id": "SF-3", "action": "context.rsのcollect_related_context()/merge_related_results()を参考にする旨を追加"},
+    {"id": "SF-4", "action": "エラーハンドリングセクションと受け入れ基準にエラーケースを追加"}
+  ],
+  "skipped_fixes": [],
+  "issue_updated": true
+}

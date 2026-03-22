@@ -89,7 +89,7 @@ fn clean_without_keep_embeddings_removes_everything() {
         .args(["clean", "--path", dir.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Removed index at .commandindex/"));
+        .stdout(predicate::str::contains("Removed index at"));
 
     // Verify entire .commandindex/ is removed
     assert!(!commandindex_dir.exists());

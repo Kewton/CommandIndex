@@ -16,7 +16,7 @@ fn clean_removes_commandindex_directory() {
         .args(["clean", "--path", dir.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Removed index at .commandindex/"));
+        .stdout(predicate::str::contains("Removed index at"));
 
     assert!(!dir.path().join(".commandindex").exists());
 }

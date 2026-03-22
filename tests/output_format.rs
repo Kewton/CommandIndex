@@ -1,7 +1,7 @@
 use commandindex::indexer::reader::SearchResult;
 use commandindex::output::{
-    ImpactPerFile, ImpactRelatedFile, ImpactResult, ImpactSummary, OutputFormat, SnippetConfig,
-    WorkspaceSearchResult, format_impact_results, format_results, format_workspace_results,
+    ImpactFileResult, ImpactResult, OutputFormat, SnippetConfig, WorkspaceSearchResult,
+    format_impact_results, format_results, format_workspace_results,
 };
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
@@ -307,50 +307,26 @@ fn test_workspace_path_same_repo_same_path_deduped() {
 
 fn make_impact_result() -> ImpactResult {
     ImpactResult {
-        changed_files: vec!["src/a.rs".to_string(), "src/b.rs".to_string()],
-        impact: vec![
-            ImpactPerFile {
-                file: "src/a.rs".to_string(),
-                related: vec![
-                    ImpactRelatedFile {
-                        path: "docs/a.md".to_string(),
-                        score: 0.95,
-                        relations: vec!["markdown_link".to_string()],
-                    },
-                    ImpactRelatedFile {
-                        path: "tests/a_test.rs".to_string(),
-                        score: 0.80,
-                        relations: vec!["import_dependency".to_string()],
-                    },
-                    ImpactRelatedFile {
-                        path: "tests/common.rs".to_string(),
-                        score: 0.60,
-                        relations: vec!["directory_proximity".to_string()],
-                    },
-                ],
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![
+            ImpactFileResult {
+                file_path: "src/lib.rs".to_string(),
+                score: 0.9,
+                relation_types: vec!["import_dependency".to_string()],
+                impacted_by: vec!["src/main.rs".to_string()],
             },
-            ImpactPerFile {
-                file: "src/b.rs".to_string(),
-                related: vec![
-                    ImpactRelatedFile {
-                        path: "tests/b_test.rs".to_string(),
-                        score: 0.70,
-                        relations: vec!["import_dependency".to_string()],
-                    },
-                    ImpactRelatedFile {
-                        path: "tests/common.rs".to_string(),
-                        score: 0.50,
-                        relations: vec!["directory_proximity".to_string()],
-                    },
+            ImpactFileResult {
+                file_path: "src/utils.rs".to_string(),
+                score: 0.5,
+                relation_types: vec![
+                    "path_similarity".to_string(),
+                    "directory_proximity".to_string(),
                 ],
+                impacted_by: vec!["src/main.rs".to_string()],
             },
         ],
-        overlap: vec!["tests/common.rs".to_string()],
-        summary: ImpactSummary {
-            changed: 2,
-            total_impacted: 4,
-            overlap_count: 1,
-        },
+        total_input_files: 1,
+        total_impacted_files: 2,
     }
 }
 
@@ -366,27 +342,17 @@ fn test_impact_json_format() {
     let result = make_impact_result();
     let output = format_impact_to_string(&result, OutputFormat::Json);
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
-    // changed_files
+    assert_eq!(parsed["total_input_files"], 1);
+    assert_eq!(parsed["total_impacted_files"], 2);
+    assert_eq!(parsed["input_files"], serde_json::json!(["src/main.rs"]));
+    let files = parsed["impacted_files"].as_array().unwrap();
+    assert_eq!(files.len(), 2);
+    assert_eq!(files[0]["file_path"], "src/lib.rs");
     assert_eq!(
-        parsed["changed_files"],
-        serde_json::json!(["src/a.rs", "src/b.rs"])
+        files[0]["relation_types"],
+        serde_json::json!(["import_dependency"])
     );
-    // impact array
-    let impact = parsed["impact"].as_array().unwrap();
-    assert_eq!(impact.len(), 2);
-    assert_eq!(impact[0]["file"], "src/a.rs");
-    assert_eq!(impact[0]["related"][0]["path"], "docs/a.md");
-    assert!(impact[0]["related"][0]["score"].as_f64().unwrap() > 0.9);
-    assert_eq!(
-        impact[0]["related"][0]["relations"],
-        serde_json::json!(["markdown_link"])
-    );
-    // overlap
-    assert_eq!(parsed["overlap"], serde_json::json!(["tests/common.rs"]));
-    // summary
-    assert_eq!(parsed["summary"]["changed"], 2);
-    assert_eq!(parsed["summary"]["total_impacted"], 4);
-    assert_eq!(parsed["summary"]["overlap_count"], 1);
+    assert_eq!(files[0]["impacted_by"], serde_json::json!(["src/main.rs"]));
 }
 
 #[test]
@@ -394,17 +360,10 @@ fn test_impact_human_format() {
     let result = make_impact_result();
     let output = format_impact_to_string(&result, OutputFormat::Human);
     assert!(output.contains("Impact analysis"));
-    assert!(output.contains("2 changed file(s)"));
-    assert!(output.contains("4 impacted file(s)"));
-    // Per-file sections
-    assert!(output.contains("src/a.rs:"));
-    assert!(output.contains("docs/a.md"));
-    assert!(output.contains("src/b.rs:"));
-    // Overlap section
-    assert!(output.contains("Overlap"));
-    assert!(output.contains("tests/common.rs"));
-    // Summary line
-    assert!(output.contains("Summary: 2 changed, 4 impacted, 1 overlap"));
+    assert!(output.contains("1 input file"));
+    assert!(output.contains("2 impacted file"));
+    assert!(output.contains("src/lib.rs"));
+    assert!(output.contains("impacted by: src/main.rs"));
 }
 
 #[test]
@@ -412,64 +371,21 @@ fn test_impact_path_format() {
     let result = make_impact_result();
     let output = format_impact_to_string(&result, OutputFormat::Path);
     let lines: Vec<&str> = output.trim().lines().collect();
-    // Union of all impacted paths, dedup, sorted by max score desc
-    assert!(
-        lines.len() == 4,
-        "expected 4 unique paths, got {}",
-        lines.len()
-    );
-    // docs/a.md (0.95) should be first
-    assert_eq!(lines[0], "docs/a.md");
-    // tests/a_test.rs (0.80) second
-    assert_eq!(lines[1], "tests/a_test.rs");
-    // tests/b_test.rs (0.70) third
-    assert_eq!(lines[2], "tests/b_test.rs");
-    // tests/common.rs (max(0.60, 0.50) = 0.60) fourth
-    assert_eq!(lines[3], "tests/common.rs");
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0], "src/lib.rs");
+    assert_eq!(lines[1], "src/utils.rs");
 }
 
 #[test]
 fn test_impact_empty_results() {
     let result = ImpactResult {
-        changed_files: vec!["src/main.rs".to_string()],
-        impact: vec![ImpactPerFile {
-            file: "src/main.rs".to_string(),
-            related: vec![],
-        }],
-        overlap: vec![],
-        summary: ImpactSummary {
-            changed: 1,
-            total_impacted: 0,
-            overlap_count: 0,
-        },
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![],
+        total_input_files: 1,
+        total_impacted_files: 0,
     };
     let output = format_impact_to_string(&result, OutputFormat::Json);
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
-    assert_eq!(parsed["summary"]["total_impacted"], 0);
-    assert!(parsed["overlap"].as_array().unwrap().is_empty());
-}
-
-#[test]
-fn test_impact_human_no_overlap() {
-    let result = ImpactResult {
-        changed_files: vec!["src/main.rs".to_string()],
-        impact: vec![ImpactPerFile {
-            file: "src/main.rs".to_string(),
-            related: vec![ImpactRelatedFile {
-                path: "src/lib.rs".to_string(),
-                score: 0.9,
-                relations: vec!["import_dependency".to_string()],
-            }],
-        }],
-        overlap: vec![],
-        summary: ImpactSummary {
-            changed: 1,
-            total_impacted: 1,
-            overlap_count: 0,
-        },
-    };
-    let output = format_impact_to_string(&result, OutputFormat::Human);
-    // No overlap section when empty
-    assert!(!output.contains("Overlap ("));
-    assert!(output.contains("Summary: 1 changed, 1 impacted, 0 overlap"));
+    assert_eq!(parsed["total_impacted_files"], 0);
+    assert!(parsed["impacted_files"].as_array().unwrap().is_empty());
 }

@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "対応サブコマンドのリストに index / clean / config が欠落",
+      "description": "Issueでは search, update, status, context, embed, export, import の7サブコマンドを --index-path 対応として挙げているが、受け入れ基準では search, update, status, context の4つしか言及していない。さらに index と clean と config サブコマンドも .commandindex/ パスに依存しており、--index-path を適用すべきか判断が不明確。",
+      "suggestion": "対応サブコマンドのリストを統一し、受け入れ基準にも全サブコマンドを明記する。index, clean, config についても対応要否を明示する。"
+    },
+    {
+      "id": "M2",
+      "title": "--index-path と既存 --path オプションの関係が未定義",
+      "description": "現在 index, update, status, clean, embed には --path（対象ディレクトリ）オプションが存在する。--index-path はインデックスディレクトリの場所を指定するが、--path との組み合わせ時の動作が未定義。",
+      "suggestion": "--path = リポジトリルート（ソースコード・設定ファイル読み込み元）、--index-path = インデックスの物理パス（.commandindex/ の代替）、と役割を分離して記述する。"
+    },
+    {
+      "id": "M3",
+      "title": "RawIndexConfig に path フィールドが存在しない",
+      "description": "commandindex.toml の [index] path で設定可能と記載しているが、現在の RawIndexConfig には languages フィールドしかなく path フィールドは存在しない。",
+      "suggestion": "RawIndexConfig に path: Option<String> を追加し、優先順位を CLI --index-path > config [index].path > デフォルト .commandindex/ と定義する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "status/mod.rs のハードコード箇所が不完全",
+      "description": "status/mod.rs 内に load_config(Path::new('.')) というハードコードが存在し、これも --index-path 対応時に修正が必要。",
+      "suggestion": "ハードコード箇所リストに追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "workspace.rs のハードコード箇所が未記載",
+      "description": "workspace.rs に repo.path.join('.commandindex') や Path::new('.') のハードコードが複数存在。ワークスペースモードと --index-path の組み合わせについて方針が必要。",
+      "suggestion": "workspace.rs のハードコード箇所を調査結果に追加し、--workspace と --index-path の相互作用を定義する。"
+    },
+    {
+      "id": "S3",
+      "title": "同時書き込み対策のファイルロック実装方針が不足",
+      "description": "ロック方式や失敗時挙動が未定義。現在ファイルロック機構が存在しない。",
+      "suggestion": "ファイルロックは別Issueに切り出し、本Issueのスコープを --index-path パス指定のみに限定する。"
+    },
+    {
+      "id": "S4",
+      "title": "実装規模「小」は過小評価の可能性",
+      "description": "ハードコード箇所が広範囲にわたり、設定ファイル対応やテスト追加も必要。",
+      "suggestion": "実装規模を「中」に変更するか、Phase分割を検討する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "--index-path パス不存在時の挙動定義",
+      "description": "読み取り系はエラー、書き込み系は自動作成、という挙動の違いが未記載。",
+      "suggestion": "コマンドごとの存在チェックポリシーを受け入れ基準に追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "INDEX_DIR_NAME 定数の重複除去への言及",
+      "description": "lib.rs と indexer/mod.rs に .commandindex 定数が重複している。",
+      "suggestion": "本Issueの実装時に定数を一元化する方針を明記する。"
+    },
+    {
+      "id": "N3",
+      "title": "相対パス指定時の解決方針",
+      "description": "相対パスが指定された場合の基準パスが未定義。",
+      "suggestion": "相対パスはカレントディレクトリ基準で canonicalize する方針を明記する。"
+    }
+  ],
+  "summary": "Issue #88 は概ね妥当だが3点の必須修正が必要: (1) 対応サブコマンドのリストと受け入れ基準の不一致、(2) 既存 --path オプションとの関係の未定義、(3) 設定ファイル [index].path の実装に必要な変更の認識不足。"
+}

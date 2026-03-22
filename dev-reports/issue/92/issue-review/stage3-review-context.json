@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "category": "既存テストへの影響",
+      "description": "tests/cli_args.rs の help_flag_shows_usage テスト（L6-21）は、--help出力に全サブコマンド名が含まれることを検証している。diff サブコマンドを Commands enum に追加すると、.stdout(predicate::str::contains(\"diff\")) の検証行がないため、テスト自体は壊れないが、網羅性が欠落する。新サブコマンド追加時はこのテストも更新必須。",
+      "suggestion": "diff サブコマンド追加時に cli_args.rs の help_flag_shows_usage テストへ .stdout(predicate::str::contains(\"diff\")) を追加すること。"
+    },
+    {
+      "id": "MF-2",
+      "category": "エラーハンドリング設計",
+      "description": "diff サブコマンドでは find_related() を2ファイル分呼び出すが、一方のファイルが未インデックスの場合のエラーハンドリング方針が不明確。context.rs (L96-105) では FileNotFound/FileNotIndexed 時にスキップして空結果を返す寛容な設計だが、diff の場合は比較対象が欠損すると結果が無意味になる。",
+      "suggestion": "diff では context.rs と異なり、どちらかのファイルが未インデックスの場合は即座にエラー終了する設計とすること。RelatedSearchError::FileNotFound / FileNotIndexed をそのまま SearchError に伝播させ、ユーザーにどちらのファイルが問題かを明示するエラーメッセージを表示する。"
+    },
+    {
+      "id": "MF-3",
+      "category": "モジュール宣言",
+      "description": "src/cli/mod.rs に新モジュール（例: pub mod diff;）を追加する必要がある。追加漏れはコンパイルエラーとなるため実装時に必ず気づくが、設計段階で明記すべき。",
+      "suggestion": "src/cli/mod.rs に pub mod diff; を追加すること。現在10モジュールが宣言されており、アルファベット順で clean と embed の間に配置するのが慣例に沿う。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "category": "パフォーマンスへの影響",
+      "description": "find_related() を2回実行する設計は、内部で tantivy 検索 + SQLite クエリ（markdown_links, imports, tag検索）を各ファイルごとに実行する。RelatedSearchEngine::new() は reader/store の参照を保持するだけで軽量だが、find_related() 内の score_tag_match() (related.rs L211-269) が tantivy の search() を各タグごとに最大100件呼び出すため、タグ数が多いファイルではコスト増加が顕著になり得る。",
+      "suggestion": "初期実装は find_related() 2回呼び出しのシンプルな設計で問題ない。ただし、将来的にパフォーマンスが問題になった場合に備え、RelatedSearchEngine のインスタンスを共有する設計（context.rs L92 の既存パターンと同様）を採用すること。reader/store のオープンは1回のみとする。"
+    },
+    {
+      "id": "SF-2",
+      "category": "出力型の新規追加",
+      "description": "diff 結果は既存の RelatedSearchResult とは異なる構造（file_a の関連集合、file_b の関連集合、共通ファイル集合、各集合固有ファイル集合）を持つ。output/mod.rs に新しい出力型（例: DiffResult）と対応する format_diff_results 関数、および human.rs / json.rs / path.rs それぞれにフォーマッタを追加する必要がある。",
+      "suggestion": "output/mod.rs に DiffResult 構造体（common_files, only_a, only_b, file_a, file_b フィールド）を定義し、format_diff_results() 関数を追加する。human / json / path の3形式それぞれにフォーマッタ関数を実装する。既存の format_related_results パターン (output/mod.rs L119-129) を参考にすること。"
+    },
+    {
+      "id": "SF-3",
+      "category": "同一ファイル指定のバリデーション",
+      "description": "Issue要件に「同一ファイル指定」のエラーハンドリングが含まれているが、パス正規化（related.rs の normalize_path）後に比較しないと、'./src/main.rs' と 'src/main.rs' が同一ファイルと判定されない可能性がある。",
+      "suggestion": "同一ファイルチェックは normalize_path() で正規化した後のパスで比較すること。normalize_path() は related.rs L57-74 に pub(crate) として既に公開されているので、diff モジュールから crate::search::related::normalize_path で利用可能。"
+    },
+    {
+      "id": "SF-4",
+      "category": "Commands enum の肥大化",
+      "description": "Commands enum は現在 10 バリアント（Index, Search, Update, Status, Context, Clean, Embed, Config, Export, Import）あり、#[allow(clippy::large_enum_variant)] が既に付与されている（main.rs L16）。diff 追加で 11 バリアントになるが、clap の derive マクロの慣例範囲内であり大きな問題ではない。ただし output/mod.rs L177 のコメントにもあるように、フォーマッタが増え続ける場合は trait-based リファクタリングの検討時期が近づく。",
+      "suggestion": "diff 追加は問題ないが、今後さらにサブコマンドが増える場合は Commands を機能グループ別にネスト（Search 系のサブコマンド化等）する検討を開始すること。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "category": "コード再利用",
+      "description": "context.rs の collect_related_context() (L87-108) と merge_related_results() (L111-186) は diff サブコマンドでも類似のロジック（複数ファイルの関連検索 + マージ）が必要。ただし diff では union ではなく intersection/difference の集合演算が主目的であるため、直接再利用はできない。",
+      "suggestion": "共通部分（RelatedSearchEngine のセットアップ、インデックスの存在チェック等）は共通ヘルパー関数に抽出することを検討。ただし初回実装では diff モジュール内に自己完結させ、重複が顕在化した時点でリファクタリングする YAGNI 原則に従うのが適切。"
+    },
+    {
+      "id": "NH-2",
+      "category": "依存関係",
+      "description": "diff サブコマンドの実装には新たな外部 crate 依存は不要。既存の tantivy, rusqlite, clap, serde_json, colored で全て実装可能。Cargo.toml への変更は不要。",
+      "suggestion": "特にアクション不要。新依存が不要である点は設計の良さを示す。"
+    },
+    {
+      "id": "NH-3",
+      "category": "テスト戦略",
+      "description": "既存テストへの破壊的影響はない（新サブコマンド追加は既存の enum マッチを壊さない）。ただし、新規テストとして以下が必要: (1) CLI引数パーステスト（cli_args.rs に追加）、(2) 集合演算ロジックのユニットテスト、(3) E2Eテスト（インデックス作成→diff実行→出力検証）。",
+      "suggestion": "tests/cli_args.rs にdiff サブコマンドの引数テスト群を追加。diff固有の集合演算ロジックには #[cfg(test)] mod tests をモジュール内に記述。E2Eテストは tests/e2e_related_search.rs のパターンを参考に tests/e2e_diff.rs として新規作成。"
+    },
+    {
+      "id": "NH-4",
+      "category": "将来拡張性",
+      "description": "diff の結果に confidence/risk レベル（共通ファイル数に基づくコンフリクトリスク指標）を付加すると、CI/CD パイプラインでの自動判定に活用できる可能性がある。",
+      "suggestion": "初回実装では共通ファイルリストの出力のみとし、リスクスコアは将来の拡張として Issue 化を検討。"
+    }
+  ],
+  "summary": "Issue #92 の diff サブコマンド追加は、既存アーキテクチャに対して低リスクな拡張である。主な影響範囲は以下の5箇所: (1) src/main.rs の Commands enum に Diff バリアントとマッチアーム追加、(2) src/cli/mod.rs にモジュール宣言追加、(3) src/cli/diff.rs を新規作成（メインロジック）、(4) src/output/ の human.rs / json.rs / path.rs に diff 用フォーマッタ追加および mod.rs に DiffResult 型と format_diff_results() 追加、(5) tests/ に CLI引数テスト・E2Eテスト追加。既存機能への破壊的影響はなく、新たな外部依存も不要。RelatedSearchEngine::find_related() の2回呼び出しによるパフォーマンスは、reader/store を共有する設計（context.rs の既存パターン踏襲）により最小化可能。最も注意すべき点は、context.rs のエラーハンドリング（寛容なスキップ）と diff のエラーハンドリング（厳密な検証）の設計差異を明確にすること、および normalize_path() による同一ファイル判定の正確性確保である。"
+}

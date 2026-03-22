@@ -1,0 +1,11 @@
+{
+  "applied_fixes": [
+    {"id": "M1", "action": "既にStage6で対応済み（設計書全体で一本化済み）"},
+    {"id": "M2", "action": "load_config方針を明確化: AppConfigはraw値、effective pathはresolve_index_pathで別変数。config show/pathの表示方針を明記。"},
+    {"id": "M3", "action": "cleanを既存挙動ベースに修正: 通常時はディレクトリ全削除、keep_embeddings時のみ部分削除。安全ガードは削除前検証。"},
+    {"id": "M4", "action": "既にStage6で対応済み（..はPathTraversalエラー）"},
+    {"id": "S1", "action": "SearchContext以外のコマンドもresolve_index_pathの結果を受け取る方針は既に影響範囲表で定義済み。今後の実装で共通structの導入を検討。"},
+    {"id": "S4", "action": "symlink ポリシーをread-only(許可) vs destructive/write(拒否)に分離。reject_symlink関数を新設し、コマンド呼び出し側で判断。"}
+  ],
+  "summary": "Stage 7 Codex レビューの Must Fix 4件（うち2件は既対応）+ Should Fix 1件を反映完了。"
+}

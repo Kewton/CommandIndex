@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: 並行性・排他制御セクションを追加（ロック競合時はスキップしてリトライ）",
+    "M2: run_incremental() 頻繁呼び出しの負荷は Phase 1 では許容、実装方針に記載済み",
+    "M3: シグナルハンドリングセクションを追加（ctrlc crate + AtomicBool）",
+    "S1: エラーハンドリングを回復可能/回復不能に分類",
+    "S4: Watch サブコマンドのCLIパーステストをテスト方針に追加",
+    "S5: watch 側のフィルタリングは拡張子チェックと .commandindex/ 除外のみに留める方針を明記"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/93"
+}

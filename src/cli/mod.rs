@@ -1,6 +1,7 @@
 pub mod clean;
 pub mod config;
 pub mod context;
+pub mod diff;
 pub mod embed;
 pub mod export;
 pub mod impact;
@@ -9,6 +10,7 @@ pub mod index;
 pub mod search;
 pub mod status;
 pub mod stdin;
+pub mod watch;
 pub mod workspace;
 
 /// Common file path validation for CLI handlers.

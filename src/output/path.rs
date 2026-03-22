@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
+    DiffResult, OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
     WorkspaceSearchResult,
 };
 
@@ -64,32 +64,16 @@ pub fn format_related_path(
     Ok(())
 }
 
-/// impact 結果をpath形式で出力する（union, max スコア降順, strip_control_chars）
+/// impact 結果をpath形式で出力する（重複除去）
 pub fn format_impact_path(
     result: &crate::output::ImpactResult,
     writer: &mut dyn Write,
 ) -> Result<(), OutputError> {
-    // Collect all impacted paths with max score
-    let mut path_scores: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
-    for per_file in &result.impact {
-        for rel in &per_file.related {
-            let entry = path_scores.entry(rel.path.clone()).or_insert(0.0);
-            if rel.score > *entry {
-                *entry = rel.score;
-            }
+    let mut seen = std::collections::HashSet::new();
+    for file in &result.impacted_files {
+        if seen.insert(&file.file_path) {
+            writeln!(writer, "{}", file.file_path)?;
         }
-    }
-
-    // Sort by max score descending
-    let mut paths: Vec<(String, f32)> = path_scores.into_iter().collect();
-    paths.sort_by(|a, b| {
-        b.1.partial_cmp(&a.1)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| a.0.cmp(&b.0))
-    });
-
-    for (path, _) in paths {
-        writeln!(writer, "{}", crate::output::strip_control_chars(&path))?;
     }
     Ok(())
 }
@@ -105,6 +89,14 @@ pub fn format_symbol_path(
         if seen.insert(entry.clone()) {
             writeln!(writer, "{entry}")?;
         }
+    }
+    Ok(())
+}
+
+/// Diff結果をpath形式で出力する（overlapのみ）
+pub fn format_diff_path(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    for path in &result.overlap {
+        writeln!(writer, "{}", path)?;
     }
     Ok(())
 }

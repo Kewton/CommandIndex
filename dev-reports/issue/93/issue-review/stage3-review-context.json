@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "並行性の問題",
+      "description": "tantivy は IndexWriter 生成時にディレクトリロック（.tantivy-writer.lock）を取得する。watch 実行中に別プロセスで update/index を実行すると排他ロック取得に失敗する。",
+      "suggestion": "ドキュメントで「watch 実行中の update/index 同時実行は非対応」と明記し、ロック取得失敗時は watch 側がスキップしてリトライする設計とする。"
+    },
+    {
+      "id": "M2",
+      "category": "リソース管理",
+      "description": "run_incremental() は毎回 tantivy IndexWriter（50MB ヒープ）、SQLite接続、全ファイルスキャンをフルに実行する。頻繁呼び出しで負荷が高くなる。",
+      "suggestion": "Phase 1 では run_incremental() 呼び出しで許容し、デバウンスのデフォルトを適切に設定する。"
+    },
+    {
+      "id": "M3",
+      "category": "シグナルハンドリング",
+      "description": "現在 Ctrl+C ハンドリングがない。watch は長時間実行のため、notify watcher の停止、tantivy writer のクローズが適切に行われないとインデックス破損やロックファイル残留のリスク。",
+      "suggestion": "ctrlc crate で SIGINT をキャッチし、AtomicBool フラグでループを停止するグレースフルシャットダウンを実装する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "エラーハンドリング",
+      "description": "IndexError を回復可能と回復不能に分類すべき。IndexCorrupted や SchemaVersionMismatch はリトライしても回復しない。",
+      "suggestion": "回復不能エラーの場合は watch ループを終了、回復可能エラーのみ継続する。"
+    },
+    {
+      "id": "S2",
+      "category": "既存コードへの影響",
+      "description": "Commands enum への Watch バリアント追加は既存に影響しないが、run_incremental() 等の pub 可視性を確認する必要がある。",
+      "suggestion": "可視性の確認と新モジュール追加時の mod.rs 更新を忘れないこと。"
+    },
+    {
+      "id": "S3",
+      "category": "依存関係",
+      "description": "notify crate 追加によるビルド時間増加とクロスプラットフォーム動作確認が必要。",
+      "suggestion": "notify = \"6\" を使用し、大規模リポジトリ向けのガイドを記載。"
+    },
+    {
+      "id": "S4",
+      "category": "テストへの影響",
+      "description": "tests/cli_args.rs に Watch サブコマンドのパーステストを追加する必要がある。",
+      "suggestion": "Watch サブコマンドのパーステストと E2E テストを追加する。"
+    },
+    {
+      "id": "S5",
+      "category": "IgnoreFilter の再利用",
+      "description": "watch 側のフィルタリングと run_incremental() 内のフィルタリングで二重処理になる可能性。",
+      "suggestion": "watch 側は拡張子チェックと .commandindex/ 除外のみに留め、詳細な ignore 判定は run_incremental() に委ねる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "ユーザビリティ",
+      "description": "watch モード起動時にインデックス状態を表示すると正常動作を確認しやすい。",
+      "suggestion": "起動メッセージに監視対象ディレクトリとファイル数を表示。"
+    },
+    {
+      "id": "N2",
+      "category": "パフォーマンス",
+      "description": "with_embedding 時の外部API レートリミットリスク。",
+      "suggestion": "embedding 生成のデバウンス間隔を別途長くするオプションを検討。"
+    },
+    {
+      "id": "N3",
+      "category": "運用性",
+      "description": "ログ出力量の制御。",
+      "suggestion": "--verbose / --quiet オプションの追加を検討。"
+    }
+  ],
+  "summary": "既存コマンドのコードパスに直接影響を与えない純粋な機能追加でテスト破壊リスクは低い。重要課題3点: (1) tantivy排他ロックによる同時実行競合、(2) run_incremental()頻繁呼び出しの負荷、(3) グレースフルシャットダウン。"
+}
