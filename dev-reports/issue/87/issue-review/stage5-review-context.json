@@ -1,0 +1,32 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "run_related_search 内部 limit の具体値を明確化",
+      "description": "Issue方針では「内部では大きめのlimitで取得し、マージ後にCLI limitを適用」とされている。context.rs では limit=1000 をハードコードしている (L96)。search --related でも同じ値を使うのか、あるいは limit * 5 等の倍率方式にするのかが未確定。context.rs と異なる方式を採用すると、同じ入力でも context コマンドと search --related で結果が異なる可能性がある。",
+      "suggestion": "context.rs と同じ limit=1000 のハードコード方式を採用し、マージ後に effective_limit で切り詰める方式に統一する。Stage 3 N2 で言及されているが、具体的な値が未確定のため実装方針に明記すべき。"
+    },
+    {
+      "id": "S2",
+      "title": "後方互換性テストの具体的な検証内容を精緻化",
+      "description": "Stage 1 S3 で「単一ファイル指定時の既存動作が変わらないこと」が後方互換テストとして挙げられたが、Option<String> から Option<Vec<String>> への変更により clap のパース挙動が微妙に変わる可能性がある。具体的には、`--related file.rs` が Vec![\"file.rs\"] としてパースされることの確認と、`--related` の後に続く位置引数との境界処理（num_args(1..) の場合、次のオプションまで全てを値として取り込む可能性）のテストが必要。",
+      "suggestion": "テスト方針に以下を追加: (1) `--related file.rs --format json` が正常にパースされること（num_args が --format を値として取り込まないこと）、(2) `--related file1.rs file2.rs --limit 5` が正常にパースされること。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "collect_related_context の再利用方式の検討",
+      "description": "merge_related_results を pub(crate) にする方針は Stage 3 M4 で確定しているが、collect_related_context 自体も再利用候補である。search.rs の run_related_search 内で collect_related_context を直接呼べば、find_related ループと graceful skip のロジックを重複実装する必要がなくなる。ただし collect_related_context は IndexReaderWrapper と SymbolStore を引数に取るため、run_related_search 内でこれらを先に生成する必要がある点は変わらない。",
+      "suggestion": "merge_related_results だけでなく collect_related_context も pub(crate) にし、run_related_search から直接呼び出す方式を検討する。これにより graceful skip ロジックの重複を完全に排除できる。"
+    },
+    {
+      "id": "N2",
+      "title": "エラーメッセージ中の複数ファイル表示の上限",
+      "description": "Stage 3 S4 で「No related files found for: file1, file2, ...」形式のメッセージが提案されているが、ファイル数が多い場合（数十ファイル）にエラーメッセージが非常に長くなる可能性がある。",
+      "suggestion": "表示件数に上限（例: 最初の5件 + 残り件数）を設けるか、ファイル数が多い場合は件数のみ表示する方式を検討。"
+    }
+  ],
+  "summary": "2回目通常レビュー完了。Stage 1-4 で指摘された must_fix 項目（M1-M5: clap定義変更、main.rsパターンマッチ修正、run_related_searchシグネチャ変更、マージロジック共通化、graceful skip）は全てIssue本文の実装方針に反映済みであり、1回目レビューの指摘は適切に対応されている。コード自体はまだ未変更（実装前の計画段階）だが、計画の整合性・網羅性に重大な問題はない。新たな must_fix はなし。should_fix として、内部 limit の具体値統一（S1）と num_args(1..) のパース境界テスト（S2）の2点を追加提案。受け入れ基準（複数ファイル指定、unionマージ、スコア最大値、graceful skip、出力フォーマット対応、後方互換）は漏れなくカバーされている。技術的に実装方針に問題はなく、context.rs の既存マージロジック再利用により安全に実装可能と判断する。"
+}

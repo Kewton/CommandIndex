@@ -1,0 +1,25 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "S1", "action": "テスト方針にconflictsテストケースを追加"},
+    {"id": "S2", "action": "テスト方針に複数ファイルE2Eテストケース追記済み（Stage2で対応済み）"},
+    {"id": "S3", "action": "実装方針に入力検証（空文字チェック・長さ制限）を追加"},
+    {"id": "S4", "action": "実装方針に出力メッセージ調整を追加"},
+    {"id": "N2", "action": "実装方針にlimitパラメータの扱いを追加"},
+    {"id": "N3", "action": "注意事項にCLIヘルプ更新を追記"},
+    {"id": "影響範囲表", "action": "影響範囲セクションを新設し、変更要/不要ファイルを明示"}
+  ],
+  "skipped_items": [
+    {"id": "M1-M5", "reason": "Stage 1-2で既に実装方針として反映済み"},
+    {"id": "N1", "reason": "変更不要（既にpub(crate)）"},
+    {"id": "N4", "reason": "マージロジック共通化で対応（ドキュメント追加はスコープ外）"},
+    {"id": "N5", "reason": "変更不要"},
+    {"id": "N6", "reason": "変更不要"}
+  ],
+  "issue_updated": true,
+  "must_fix_count_stage1": 2,
+  "must_fix_count_stage3": 5,
+  "total_must_fix": 5,
+  "summary": "Stage 3の影響範囲レビュー結果を反映。影響範囲セクションを新設し変更要/不要を明示。入力検証・出力メッセージ・limitパラメータの扱いを実装方針に追加。"
+}

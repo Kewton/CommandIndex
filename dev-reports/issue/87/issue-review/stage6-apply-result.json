@@ -1,0 +1,16 @@
+{
+  "stage": 6,
+  "action": "apply_review",
+  "reviewer": "Claude opus (Codex代替)",
+  "applied_items": [
+    {"id": "S1", "action": "内部limit=1000のハードコード方式を実装方針に明記"},
+    {"id": "S2", "action": "num_args(1..)のパース境界テストをテスト方針に追加"},
+    {"id": "N1", "action": "collect_related_contextもpub(crate)にする方針を実装方針に反映"}
+  ],
+  "skipped_items": [
+    {"id": "N2", "reason": "実装規模「小」のスコープ内で対応可能な範囲で実装時判断"}
+  ],
+  "must_fix_count": 0,
+  "issue_updated": true,
+  "summary": "Stage 5のMust Fix 0件。Should Fix 2件（内部limit具体値、パース境界テスト）をIssue本文に反映。"
+}

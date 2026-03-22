@@ -1,0 +1,17 @@
+{
+  "stage": "5-6",
+  "applied_items": [
+    {"source": "Stage5-S1", "action": "validate_file_pathsの配置先をcli/mod.rsに確定"},
+    {"source": "Stage7-M1", "action": "normalize_pathとvalidate_file_pathsの防御層関係を明記"},
+    {"source": "Stage7-S1", "action": "validate_file_paths配置先をcli/mod.rsに確定（Stage5-S1と同一）"},
+    {"source": "Stage7-S3", "action": "同一コミットでの導入を明記"}
+  ],
+  "skipped_items": [
+    {"source": "Stage5-S2", "reason": "パターンマッチの詳細は実装時に判断"},
+    {"source": "Stage7-S2", "reason": "サブコマンド名同名ファイルのテストは実装時に追加検討"},
+    {"source": "Stage7-S4", "reason": "CLIローカルツールのためターミナルインジェクションは低リスク"},
+    {"source": "Stage7-N1-N4", "reason": "nice_to_haveは実装時に判断"}
+  ],
+  "must_fix_count": 0,
+  "summary": "Stage 5-7のレビュー結果を設計方針書に反映。validate_file_paths配置先確定、防御層の明確化。"
+}

@@ -1,0 +1,21 @@
+{
+  "stage": "1-4",
+  "action": "apply_review_batch",
+  "applied_items": [
+    {"source": "Stage1-M1", "action": "DRY改善: 共通バリデーション関数validate_file_pathsを設計に追加（5.4セクション）"},
+    {"source": "Stage1-S2", "action": "ファイル数上限チェック（max 100）を入力検証に追加"},
+    {"source": "Stage1-S3", "action": "パストラバーサル防止をrun_related_searchにも適用する設計を追加"},
+    {"source": "Stage4-M1", "action": "パストラバーサル防止の具体的な検証項目（..禁止、絶対パス禁止、\\禁止）を明記"},
+    {"source": "Stage4-S1", "action": "DoS対策をセキュリティ設計に反映（スコープ外→対応予定）"},
+    {"source": "Stage4-S3", "action": "pub(crate)化時のsafety contractをdocコメントで明記する設計を追加"}
+  ],
+  "skipped_items": [
+    {"source": "Stage1-N1", "reason": "YAGNI: マージ戦略拡張性は現時点不要"},
+    {"source": "Stage1-N2", "reason": "実装時にconst定数化を検討（設計方針書レベルでは不要）"},
+    {"source": "Stage2-M1-M4", "reason": "実装前の計画段階のため、設計方針書自体の誤りではない"},
+    {"source": "Stage3-N3", "reason": "JSON出力のtarget_filesメタデータは現スコープ外"},
+    {"source": "Stage4-S2", "reason": "normalize_pathの..処理改善は別Issue対応"}
+  ],
+  "must_fix_total": 3,
+  "summary": "Stage 1-4のレビュー結果を設計方針書に一括反映。主な改善: 入力検証の共通化（5.4セクション新設）、セキュリティ設計の強化（パストラバーサル・DoS対策）、pub(crate)化のsafety contract明記。"
+}

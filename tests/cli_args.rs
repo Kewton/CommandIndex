@@ -18,7 +18,8 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("config"))
         .stdout(predicate::str::contains("export"))
         .stdout(predicate::str::contains("import"))
-        .stdout(predicate::str::contains("watch"));
+        .stdout(predicate::str::contains("watch"))
+        .stdout(predicate::str::contains("diff"));
 }
 
 #[test]
@@ -569,4 +570,73 @@ fn watch_accepts_with_embedding_option() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("Watch error"));
+}
+
+// --- --related multiple files tests ---
+
+#[test]
+fn search_related_multiple_files() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--related", "file1.rs", "file2.rs"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_single_file_backward_compat() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "--related", "file.rs"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_with_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "--related",
+            "file1.rs",
+            "file2.rs",
+            "--format",
+            "json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_with_limit() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "--related",
+            "file1.rs",
+            "file2.rs",
+            "--limit",
+            "5",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_related_multiple_conflicts_with_symbol() {
+    common::cmd()
+        .args(["search", "--related", "a.rs", "b.rs", "--symbol", "foo"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 }

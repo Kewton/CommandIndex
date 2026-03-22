@@ -1,0 +1,35 @@
+{
+  "stage": 5,
+  "review_type": "設計原則 + 整合性",
+  "reviewer": "Claude Opus 4.6",
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "validate_file_paths の配置場所が未確定",
+      "description": "設計方針書 5.4 では validate_file_paths を 'cli/search.rs または cli/mod.rs に配置' と記載しているが、具体的な配置先が確定していない。cli/search.rs に配置すると context.rs から参照する際にモジュール間の依存方向が context -> search となり、search が context に依存する現在の設計（context::collect_related_context を search から呼ぶ）と循環的な意味的結合が生じる。cli/mod.rs に配置するのが適切だが、明確に決定すべき。",
+      "suggestion": "validate_file_paths を cli/mod.rs（または cli/validation.rs のような専用モジュール）に配置することを設計方針書で明記する。両方向の依存を回避し、単一責任原則を維持できる。"
+    },
+    {
+      "id": "S2",
+      "title": "run_related_search の現行シグネチャ(&str)と設計方針書(&[String])の不整合が大きい",
+      "description": "設計方針書 5.2 では run_related_search(file_paths: &[String], ...) だが、現行コード (search.rs L269) は run_related_search(file_path: &str, ...) であり、main.rs L312-313 では Some(f) => run_related_search(&f, ...) と &String（Deref で &str）を渡している。変更後は main.rs 側で Some(ref files) => run_related_search(files, ...) と &Vec<String> を渡す設計だが、main.rs のパターンマッチが (None, None, Some(ref files), None) に変わることで、related フィールドの型変更が query/symbol/semantic との整合性に影響しないか確認が必要。現行の4-tuple パターンマッチ（L283）の構造自体は維持されるため問題ないが、設計方針書に main.rs の変更差分をもう少し具体的に記載すると実装時の混乱を防げる。",
+      "suggestion": "設計方針書 5.1 の main.rs 変更にて、4-tuple パターンマッチの全体構造（query, symbol, related, semantic の組み合わせ）が維持されることを明記し、related のみ型が変わる点を強調する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "context.rs の collect_related_context と merge_related_results のユニットテスト追加の検討",
+      "description": "pub(crate) 化により search.rs からも呼び出されるようになるため、これらの関数の単体テストが重要性を増す。設計方針書のテスト戦略（セクション10）では CLI パーステストと E2E テストのみ記載されており、context.rs のマージロジック自体のユニットテストへの言及がない。現状 context.rs にはテストモジュールがなく、マージのエッジケース（全ファイルが FileNotFound の場合、重複ファイルパスの指定、スコア 0.0 のマージ等）が E2E テストでしかカバーされない。",
+      "suggestion": "テスト戦略に context.rs の merge_related_results のユニットテスト追加を検討項目として記載する。特にスコア最大値採用・RelationType union・target_files 除外のロジックは単体テストで検証すると安全性が高まる。"
+    },
+    {
+      "id": "N2",
+      "title": "設計方針書のセクション番号に欠番がある（5.3 と 5.4 の順序逆転）",
+      "description": "設計方針書では 5.1 (main.rs) → 5.2 (search.rs) → 5.4 (入力検証) → 5.3 (context.rs) の順で記載されている。5.4 が 5.3 より先に出現しており、セクション番号が逆転している。1回目レビューで 5.4 が追加された際に挿入位置が調整されなかったと思われる。",
+      "suggestion": "5.3 と 5.4 の番号を入れ替えるか、5.4 を 5.3 の後に移動して番号を振り直す。可読性の問題のみで機能影響はない。"
+    }
+  ],
+  "summary": "2回目レビュー（設計原則 + 整合性）を実施した。1回目の must_fix 指摘（パストラバーサル防止の共通化、ファイル数上限チェック、pub(crate)化の safety contract 明記）は全て設計方針書に適切に反映されており、must_fix に該当する新たな問題は検出されなかった。should_fix として2件を指摘: (1) validate_file_paths の配置場所が未確定であり、モジュール間の依存方向を考慮して cli/mod.rs への配置を推奨、(2) main.rs のパターンマッチ変更の全体像を設計方針書にもう少し具体的に記載すべき点。nice_to_have として2件: (1) pub(crate) 化に伴うマージロジックのユニットテスト追加の検討、(2) セクション番号の順序逆転の修正。全体として設計方針書は1回目レビューの指摘を適切に吸収しており、SOLID/KISS/YAGNI/DRY の各原則に対する重大な違反は見られない。設計の整合性も良好で、実装に進めて問題ない品質レベルに達している。"
+}

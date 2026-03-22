@@ -38,6 +38,9 @@ commandindex status
 
 # インデックスの削除
 commandindex clean
+
+# 2ファイルの影響範囲を比較（コンフリクトリスク検出）
+commandindex diff src/auth/jwt.rs src/auth/middleware.rs --format json
 ```
 
 > **注意:** v0.0.0 時点ではコマンドは未実装です。Phase 1 以降で順次実装されます。
