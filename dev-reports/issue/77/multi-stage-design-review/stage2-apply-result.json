@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["M1: 定数参照の方針を明記（CLI層は commandindex_dir() ヘルパー使用）", "M2: StatusOptions ではなく verify: bool 引数追加に変更（CleanOptions パターン準拠）", "S1: エラー型に std::error::Error + From 実装の明記", "S2: Commands enum の doc comment を英語に統一", "S4: run() 戻り値を ExportResult/ImportResult に統一"]}

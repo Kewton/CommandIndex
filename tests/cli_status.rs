@@ -67,7 +67,7 @@ fn compute_dir_size_nested() {
 fn run_directory_not_found() {
     let mut buf = Cursor::new(Vec::new());
     let path = PathBuf::from("/nonexistent/path/that/does/not/exist");
-    let result = run(&path, StatusFormat::Human, &mut buf);
+    let result = run(&path, StatusFormat::Human, false, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("Directory not found"));
@@ -77,7 +77,7 @@ fn run_directory_not_found() {
 fn run_not_initialized() {
     let dir = tempfile::tempdir().expect("create temp dir");
     let mut buf = Cursor::new(Vec::new());
-    let result = run(dir.path(), StatusFormat::Human, &mut buf);
+    let result = run(dir.path(), StatusFormat::Human, false, &mut buf);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("not initialized"));
@@ -99,7 +99,7 @@ fn run_human_format() {
     setup_commandindex_dir(dir.path());
 
     let mut buf = Cursor::new(Vec::new());
-    run(dir.path(), StatusFormat::Human, &mut buf).expect("run should succeed");
+    run(dir.path(), StatusFormat::Human, false, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     assert!(output.contains("CommandIndex Status"));
@@ -118,7 +118,7 @@ fn run_json_format() {
     setup_commandindex_dir(dir.path());
 
     let mut buf = Cursor::new(Vec::new());
-    run(dir.path(), StatusFormat::Json, &mut buf).expect("run should succeed");
+    run(dir.path(), StatusFormat::Json, false, &mut buf).expect("run should succeed");
 
     let output = String::from_utf8(buf.into_inner()).expect("valid utf8");
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid json");
