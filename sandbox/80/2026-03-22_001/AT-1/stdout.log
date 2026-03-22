@@ -1,0 +1,12 @@
+
+running 7 tests
+test e2e_status_verify_with_team_config ... ok
+test e2e_team_config_full_flow ... ok
+test e2e_config_priority ... ok
+test e2e_config_show_api_key_masked ... ok
+test e2e_status_detail ... ok
+test e2e_status_json_detail ... ok
+test e2e_export_import_search_flow ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.66s
+

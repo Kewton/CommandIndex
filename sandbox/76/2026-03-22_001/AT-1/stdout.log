@@ -1,0 +1,20 @@
+[index]
+languages = []
+
+[search]
+default_limit = 10
+snippet_lines = 5
+snippet_chars = 200
+
+[embedding]
+provider = "ollama"
+model = "nomic-embed-text"
+endpoint = "http://localhost:11434"
+api_key = "(not set)"
+
+[rerank]
+model = "llama3"
+top_candidates = 20
+endpoint = "http://localhost:11434"
+api_key = "(not set)"
+timeout_secs = 30
