@@ -1,0 +1,19 @@
+{
+  "stage": 5,
+  "type": "通常レビュー2回目（Codex）",
+  "must_fix": [
+    {"id": "M1", "title": "RRF片側ヒット時の仕様が標準式と不整合", "description": "標準RRFでは未出現ランキングの寄与は0。現仕様はmax+1で減点。", "suggestion": "absent rankingの寄与を0に修正。rank は1-based固定。"},
+    {"id": "M2", "title": "ハイブリッド側のストレージ前提が既存実装とずれ", "description": "embeddings.dbではなくsymbols.db内のembeddingsテーブルを使う既存実装に統一すべき。", "suggestion": "SymbolStore::open()/count_embeddings()/search_similar()を使う方針に統一。"},
+    {"id": "M3", "title": "フィルタ適用位置が未定義", "description": "semantic側のtag/path/typeフィルタ適用が未記載。非一致結果がRRFで混入する可能性。", "suggestion": "semantic側もenrich後にフィルタ適用してからrrf_merge()に渡す方針を明記。"},
+    {"id": "M4", "title": "エラーハンドリングがenrich段階まで網羅できていない", "description": "enrich_semantic_to_search_results()やsearch_by_exact_path()の失敗時の扱いが未定義。", "suggestion": "外部依存の一時障害→BM25フォールバック、ローカルindex/schema corruption→fail-fast。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "no_semanticをSearchOptionsに入れると責務境界がにじむ"},
+    {"id": "S2", "title": "try_hybrid_search()の引数が重複気味"},
+    {"id": "S3", "title": "score意味差分がJSON出力でAPI利用者に伝わらない"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "フォールバック時のstderr出力条件の具体化"}
+  ],
+  "summary": "rrf_merge片側ヒット仕様、ストレージ前提、フィルタ適用位置、enrich段階エラー分類の4件が未解決。"
+}

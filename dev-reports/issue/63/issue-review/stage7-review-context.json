@@ -1,0 +1,42 @@
+{
+  "reviewer": "Claude Opus (Codexタイムアウトのため代替)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "SearchError型拡張",
+      "description": "SearchErrorにEmbedding/NoEmbeddingsバリアント追加時、Display/source/From<EmbeddingError>実装が必要。",
+      "suggestion": "2バリアント追加+Display/source/From実装。"
+    },
+    {
+      "id": "M2",
+      "category": "CLI排他制御",
+      "description": "matchパターン3→4変数化。(None,None,None,None)エラーメッセージに--semantic追加必要。",
+      "suggestion": "4変数タプルに変更、全パターン分岐更新。"
+    },
+    {
+      "id": "M3",
+      "category": "SymbolStore embedding件数チェック",
+      "description": "SymbolStoreにcount_embeddings()パブリックメソッドが未実装。",
+      "suggestion": "pub fn count_embeddings()追加。"
+    },
+    {
+      "id": "M4",
+      "category": "section_heading照合",
+      "description": "search_by_exact_path()はpath完全一致で全section返却。section_heading照合は呼び出し側実装必要。",
+      "suggestion": "run_semantic_search内でSearchResult.headingとの完全一致フィルタ実装。"
+    }
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "パフォーマンス", "description": "search_by_exact_path呼び出しバッチ化検討。"},
+    {"id": "S2", "category": "出力フォーマット", "description": "4種類目追加。5種類目でtrait化検討。"},
+    {"id": "S3", "category": "config.toml", "description": "config.toml非存在時のデフォルト動作明確化。"},
+    {"id": "S4", "category": "テスト影響", "description": "cli_args.rsテスト更新+排他制御テスト追加。"},
+    {"id": "S5", "category": "ポストフィルタ", "description": "file_typeはpathの拡張子から判定。matches_file_type()再利用。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "EmbeddingStore/SymbolStore二重管理", "description": "将来的に統合検討。"},
+    {"id": "N2", "category": "similarity閾値", "description": "最低閾値のデフォルト適用検討。"},
+    {"id": "N3", "category": "テストモック戦略", "description": "統合テストではinsert_embeddings直接挿入。"}
+  ],
+  "summary": "設計は成熟。Must Fix 4件は実装時必須の構造的課題。既存検索への影響は最小限。"
+}

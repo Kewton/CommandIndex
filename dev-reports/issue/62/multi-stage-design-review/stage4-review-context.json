@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [
+    {"title": "BLOB読み込み時のサイズ整合性バリデーション欠如", "suggestion": "search_similar()でblob.len() == dimension * 4を検証。"},
+    {"title": "insert_embeddings時の入力バリデーション不足", "suggestion": "空ベクトル・NaN/Infinity検証を追加。"}
+  ],
+  "should_fix_count": 4,
+  "nice_to_have_count": 4
+}

@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 const COMMANDINDEX_DIR: &str = ".commandindex";
 const TANTIVY_DIR: &str = "tantivy";
 const SYMBOLS_DB_FILE: &str = "symbols.db";
+const EMBEDDINGS_DB_FILE: &str = "embeddings.db";
 
 /// `.commandindex/tantivy` ディレクトリのパスを返す
 pub fn index_dir(base_path: &Path) -> PathBuf {
@@ -25,4 +26,9 @@ pub fn commandindex_dir(base_path: &Path) -> PathBuf {
 /// `.commandindex/symbols.db` のパスを返す
 pub fn symbol_db_path(base_path: &Path) -> PathBuf {
     commandindex_dir(base_path).join(SYMBOLS_DB_FILE)
+}
+
+/// `.commandindex/embeddings.db` のパスを返す
+pub fn embeddings_db_path(base_path: &Path) -> PathBuf {
+    commandindex_dir(base_path).join(EMBEDDINGS_DB_FILE)
 }

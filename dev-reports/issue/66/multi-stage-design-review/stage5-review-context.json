@@ -1,0 +1,13 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "API設計", "description": "2.2の保存経路定義が現行APIと一致していない。SymbolStoreの書込元を「embed (via insert_embeddings)」としているが、embed/index --with-embeddingはEmbeddingStoreにしか書き込まない。", "suggestion": "2.2を「embed/index --with-embeddingはEmbeddingStoreに保存、SymbolStoreへの書込は本Issueのテストfixture専用」と明確に書き換える。"},
+    {"id": "M2", "category": "エラーハンドリング", "description": "ヘルパーAPI設計がfn(失敗を返さない)形になっており、unwrap()前提。テスト失敗時の原因切り分けが粗くなる。", "suggestion": "ヘルパーはResult<..., Box<dyn Error>>を返す設計にし、各テストでexpect(\"...\")する形にする。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "1ファイルにAPI層とCLI層が混在。セクション単位でモジュール分けを追記すべき。"},
+    {"id": "S2", "description": "Semantic Searchフィルタのテスト対象APIが曖昧。apply_semantic_filtersは非公開。"},
+    {"id": "S3", "description": "CLI層テストの成功/失敗契約（終了コード、stderr確認有無、結果順序）が未整理。"},
+    {"id": "S4", "description": "create_test_config()は全テスト共通ではなく、CLIでprovider解決が必要なテストだけが使う補助ヘルパーと位置付けるべき。"}
+  ],
+  "summary": "Must Fix 2件: SymbolStore書込元の記述不一致、ヘルパーのエラーハンドリング不足。"
+}

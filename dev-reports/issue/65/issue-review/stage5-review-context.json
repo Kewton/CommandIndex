@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "実装箇所の不整合",
+      "description": "Issue は src/search/hybrid.rs の hybrid_search() の返却前に挿入としているが、現行実装では検索オーケストレーションは src/cli/search.rs:109-139 の run() と src/cli/search.rs:342-469 の try_hybrid_search() にある。--semantic 単体経路は src/cli/search.rs:221-285 の run_semantic_search() で別実装。このままだと --rerank の適用位置が1経路に閉じ、全検索モードで動作する受け入れ基準を満たせない。",
+      "suggestion": "適用位置を src/cli/search.rs ベースに修正し、run() / run_semantic_search() の両方からrerank処理を呼び出す設計に変更。"
+    },
+    {
+      "id": "M2",
+      "category": "結果型の差異",
+      "description": "BM25/Hybrid は SearchResult、Semantic 単体は SemanticSearchResult を使い分けている。このままでは --semantic 経路で同じ Rerank 実装を流用できない。",
+      "suggestion": "共通の候補型に正規化してから rerank するか、SemanticSearchResult 側にも同等の再順位付け経路を明示する。"
+    },
+    {
+      "id": "M3",
+      "category": "性能要件の矛盾",
+      "description": "top-50 を 5 秒以内を目安にしつつ、候補ごと逐次実行・個別 10 秒タイムアウト・全体タイムアウトなしとしている。逐次 50 件では要件を満たす保証がなく、遅延時の最悪時間も制御できない。",
+      "suggestion": "性能要件を現実的に下げるか、候補数デフォルトを縮小するか、全体タイムアウト/早期打ち切りを設計に含める。"
+    },
+    {
+      "id": "M4",
+      "category": "候補本文の定義不足",
+      "description": "Cross-Encoder に渡す document_text が未定義。SearchResult には path, heading, body, tags, line_start がありどこまで連結するか、長文時の truncate 規則、見出しのみヒットした候補の扱いが未記述。",
+      "suggestion": "document_text の組み立て規則（例: heading + body を連結、最大8192文字で truncate）を受け入れ基準に追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "Cohere APIバージョン",
+      "description": "Cohere を POST /v1/rerank としているが、公式では v2 API、POST /v2/rerank が案内されている。",
+      "suggestion": "API バージョンと推奨モデル名を明記し直す。"
+    },
+    {
+      "id": "S2",
+      "category": "Ollama rerankerモデルの実現性",
+      "description": "bge-reranker-v2-m3 を /api/generate に投げて 0-10 点を返させる案は、reranker モデルが生成 API で安定して単一数値を返す前提が保証されていない。",
+      "suggestion": "初期実装を Ollama の汎用生成モデルベースにするのか、Cohere を先行実装にするのか明記。"
+    },
+    {
+      "id": "S3",
+      "category": "--rerank-top のCLI仕様",
+      "description": "--rerank-top は --rerank なしでも指定可能で無視とあるが、誤設定を静かに飲み込む形になる。",
+      "suggestion": "--rerank-top は requires = rerank にして clap エラーにする方が一貫的。"
+    },
+    {
+      "id": "S4",
+      "category": "Graceful degradation詳細",
+      "description": "部分失敗時に score=0 とする案はあるが、元順位の保持、0点群の tie-break、全件失敗時の元順序返却が未定義。",
+      "suggestion": "部分失敗・全件失敗・タイムアウト時の安定順序を acceptance criteria に追加。"
+    },
+    {
+      "id": "S5",
+      "category": "設定構造の型設計",
+      "description": "RerankConfig は provider を String にしているが、現行 embedding 設定は enum ベース。provider を文字列のままにすると無効値が実行時まで落ちない。",
+      "suggestion": "ProviderType 相当の enum、endpoint、api_key の扱い、環境変数優先順位をそろえる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "デバッグ用スコア併記",
+      "description": "JSON 出力で rerank 前後のスコアを併記できると検証性が上がる。",
+      "suggestion": "JSON のみ original_score と rerank_score を分けて出力する案。"
+    },
+    {
+      "id": "N2",
+      "category": "外部送信の明示",
+      "description": "Cohere 利用時はクエリと候補本文を外部 API に送る旨を help/config コメントに入れるとよい。",
+      "suggestion": "help テキストに外部送信の注意を追記。"
+    },
+    {
+      "id": "N3",
+      "category": "評価基盤",
+      "description": "NDCG/MRR などのオフライン検証方針があると次の改善につながる。",
+      "suggestion": "将来の比較基盤を一言入れておく。"
+    }
+  ],
+  "summary": "実装経路の不整合と性能前提の矛盾が残っており、そのまま実装すると手戻りが出る。1) 適用位置を src/cli/search.rs ベースに修正、2) BM25/Hybrid/Semantic を共通候補型に正規化する設計を追加、3) 逐次 50 件/5 秒の矛盾を解消、4) document_text の組み立てと truncate 規則を acceptance criteria に追加、の順で締めるのがよい。"
+}

@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "action": "added", "detail": "Embedding格納セクション追加（SQLite embeddings.db方針）"},
+    {"id": "M2", "action": "added", "detail": "config.toml基盤をこのIssue内で新規構築する方針を明記"},
+    {"id": "M3", "action": "added", "detail": "EmbeddingError enum定義をアーキテクチャセクションに追加"},
+    {"id": "M4", "action": "added", "detail": "HTTPクライアント方針セクション追加（reqwest::blocking）"},
+    {"id": "S1", "action": "added", "detail": "コードファイルのembedding粒度を明確化"},
+    {"id": "S2", "action": "added", "detail": "キャッシュのトレードオフを明記"},
+    {"id": "S3", "action": "added", "detail": "embedサブコマンドの前提条件を明記"},
+    {"id": "S4", "action": "added", "detail": "cleanコマンドのembedding独立格納方針を明記"},
+    {"id": "S5", "action": "added", "detail": "受け入れ基準にembedding検証基準を追加"},
+    {"id": "N3", "action": "added", "detail": "テスト戦略セクションを追加"}
+  ],
+  "issue_updated": true
+}

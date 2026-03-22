@@ -1,7 +1,9 @@
 use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
-use crate::output::{OutputError, RelatedSearchResult, SymbolSearchResult, parse_tags};
+use crate::output::{
+    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult, parse_tags,
+};
 
 /// JSONL形式で検索結果を出力する
 pub fn format_json(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
@@ -15,6 +17,27 @@ pub fn format_json(results: &[SearchResult], writer: &mut dyn Write) -> Result<(
             "tags": tags,
             "line_start": result.line_start,
             "score": result.score,
+        });
+        serde_json::to_writer(&mut *writer, &json_value)?;
+        writeln!(writer)?;
+    }
+    Ok(())
+}
+
+/// セマンティック検索結果をJSONL形式で出力する
+pub fn format_semantic_json(
+    results: &[SemanticSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for result in results {
+        let tags: Vec<&str> = parse_tags(&result.tags);
+        let json_value = serde_json::json!({
+            "path": result.path,
+            "heading": result.heading,
+            "similarity": result.similarity,
+            "body": result.body,
+            "tags": tags,
+            "heading_level": result.heading_level,
         });
         serde_json::to_writer(&mut *writer, &json_value)?;
         writeln!(writer)?;

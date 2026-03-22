@@ -1,0 +1,6 @@
+{"path":"../../src/auth/handler.md","relations":["markdown_link","path_similarity"],"score":1.399999976158142}
+{"path":"api-spec","relations":["markdown_link"],"score":1.0}
+{"path":"docs/api-spec.md","relations":[{"tag_match":["auth"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"src/auth/handler.md","relations":[{"tag_match":["auth"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"docs/security.md","relations":[{"tag_match":["security"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"docs/auth/flows.md","relations":[{"tag_match":["auth"]},"directory_proximity"],"score":0.699999988079071}

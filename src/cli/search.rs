@@ -3,7 +3,9 @@ use std::path::Path;
 
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
-use crate::output::{self, OutputError, OutputFormat, SymbolSearchResult};
+use crate::output::{
+    self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+};
 
 #[derive(Debug)]
 pub enum SearchError {
@@ -15,6 +17,8 @@ pub enum SearchError {
     InvalidArgument(String),
     SchemaVersionMismatch,
     RelatedSearch(crate::search::related::RelatedSearchError),
+    Embedding(crate::embedding::EmbeddingError),
+    NoEmbeddings,
 }
 
 impl fmt::Display for SearchError {
@@ -38,6 +42,18 @@ impl fmt::Display for SearchError {
                 f,
                 "Index schema version mismatch. Run `commandindex clean` then `commandindex index` to rebuild."
             ),
+            SearchError::Embedding(e) => match e {
+                crate::embedding::EmbeddingError::NetworkError(_) => {
+                    write!(
+                        f,
+                        "Embedding error: {e}\nHint: Is Ollama running? Try `ollama serve`"
+                    )
+                }
+                _ => write!(f, "Embedding error: {e}"),
+            },
+            SearchError::NoEmbeddings => {
+                write!(f, "No embeddings found. Run `commandindex embed` first.")
+            }
         }
     }
 }
@@ -53,6 +69,8 @@ impl std::error::Error for SearchError {
             SearchError::InvalidArgument(_) => None,
             SearchError::SchemaVersionMismatch => None,
             SearchError::RelatedSearch(e) => Some(e),
+            SearchError::Embedding(e) => Some(e),
+            SearchError::NoEmbeddings => None,
         }
     }
 }
@@ -84,24 +102,85 @@ impl From<SymbolStoreError> for SearchError {
     }
 }
 
+impl From<crate::embedding::EmbeddingError> for SearchError {
+    fn from(e: crate::embedding::EmbeddingError) -> Self {
+        SearchError::Embedding(e)
+    }
+}
+
 pub fn run(
     options: &SearchOptions,
     filters: &SearchFilters,
     format: OutputFormat,
+    snippet_config: SnippetConfig,
+    rerank: bool,
+    rerank_top: Option<usize>,
 ) -> Result<(), SearchError> {
     let tantivy_dir = crate::indexer::index_dir(Path::new("."));
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
-    let results = reader.search_with_options(options, filters)?;
-    if results.is_empty() {
+
+    // rerank有効時、検索前にlimitを拡大して候補を多く取得
+    let original_limit = options.limit;
+    let rerank_top_resolved = rerank_top.unwrap_or_else(|| {
+        // CLI未指定時はconfig.toml → デフォルト20の順で解決
+        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+        crate::embedding::Config::load(&commandindex_dir)
+            .ok()
+            .flatten()
+            .and_then(|c| c.rerank)
+            .map(|r| r.top_candidates)
+            .unwrap_or(20)
+    });
+    let effective_options = if rerank {
+        let mut opts = options.clone();
+        opts.limit = std::cmp::max(options.limit, rerank_top_resolved);
+        opts
+    } else {
+        options.clone()
+    };
+
+    // BM25検索実行
+    let results = reader.search_with_options(&effective_options, filters)?;
+
+    // ハイブリッド判定: no_semanticでなく、heading指定がない場合にハイブリッド統合
+    let use_hybrid = !effective_options.no_semantic && effective_options.heading.is_none();
+
+    let final_results = if use_hybrid {
+        try_hybrid_search(results, &effective_options, filters)?
+    } else {
+        results
+    };
+
+    // Reranking適用
+    let final_results = if rerank {
+        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+        let reranked = try_rerank(
+            final_results,
+            &effective_options.query,
+            rerank_top_resolved,
+            &commandindex_dir,
+        );
+        reranked.into_iter().take(original_limit).collect()
+    } else {
+        final_results
+    };
+    if final_results.is_empty() {
         eprintln!("No results found.");
         return Ok(());
     }
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_results(&results, format, &mut handle)?;
+    match format {
+        OutputFormat::Human => {
+            output::human::format_human(&final_results, &mut handle, snippet_config)?;
+        }
+        _ => {
+            output::format_results(&final_results, format, &mut handle)?;
+        }
+    }
     Ok(())
 }
 
@@ -184,6 +263,345 @@ pub fn run_related_search(
     Ok(())
 }
 
+pub fn run_semantic_search(
+    query: &str,
+    limit: usize,
+    format: OutputFormat,
+    tag: Option<&str>,
+    filters: &SearchFilters,
+) -> Result<(), SearchError> {
+    if query.is_empty() {
+        return Err(SearchError::InvalidArgument(
+            "Semantic search query cannot be empty".to_string(),
+        ));
+    }
+
+    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    if !tantivy_dir.exists() {
+        return Err(SearchError::IndexNotFound);
+    }
+
+    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    if !db_path.exists() {
+        return Err(SearchError::SymbolDbNotFound);
+    }
+
+    // Load embedding config
+    let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+    let config = crate::embedding::Config::load(&commandindex_dir)?;
+    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
+    let provider = crate::embedding::create_provider(&embedding_config)?;
+
+    // Check embeddings exist
+    let store = SymbolStore::open(&db_path)?;
+    if store.count_embeddings()? == 0 {
+        return Err(SearchError::NoEmbeddings);
+    }
+
+    // Generate query embedding
+    let query_texts = [query.to_string()];
+    let query_embeddings = provider.embed(&query_texts)?;
+    let query_embedding = query_embeddings.first().ok_or_else(|| {
+        SearchError::InvalidArgument("Failed to generate query embedding".to_string())
+    })?;
+
+    // Search similar with oversampling
+    let similar_results = store.search_similar(query_embedding, limit.saturating_mul(5))?;
+
+    // Enrich with metadata from tantivy
+    let reader = IndexReaderWrapper::open(&tantivy_dir)?;
+    let enriched = enrich_with_metadata(&similar_results, &reader)?;
+
+    // Apply filters and truncate to limit
+    let final_results: Vec<SemanticSearchResult> = apply_semantic_filters(enriched, tag, filters)
+        .into_iter()
+        .take(limit)
+        .collect();
+
+    if final_results.is_empty() {
+        eprintln!("No results found.");
+        return Ok(());
+    }
+
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+    output::format_semantic_results(&final_results, format, &mut handle)?;
+    Ok(())
+}
+
+fn enrich_with_metadata(
+    similar_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    reader: &IndexReaderWrapper,
+) -> Result<Vec<SemanticSearchResult>, SearchError> {
+    use std::collections::HashMap;
+
+    // Group by file_path
+    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+        HashMap::new();
+    for result in similar_results {
+        groups.entry(&result.file_path).or_default().push(result);
+    }
+
+    let mut enriched = Vec::new();
+
+    for (file_path, items) in &groups {
+        let sections = reader.search_by_exact_path(file_path)?;
+
+        for item in items {
+            // Find matching section by heading
+            let matched = sections.iter().find(|s| s.heading == item.section_heading);
+
+            if let Some(section) = matched {
+                enriched.push(SemanticSearchResult {
+                    path: section.path.clone(),
+                    heading: section.heading.clone(),
+                    similarity: item.similarity,
+                    body: section.body.clone(),
+                    tags: section.tags.clone(),
+                    heading_level: section.heading_level,
+                });
+            } else {
+                // Fallback: use the first section or create a minimal result
+                enriched.push(SemanticSearchResult {
+                    path: item.file_path.clone(),
+                    heading: item.section_heading.clone(),
+                    similarity: item.similarity,
+                    body: String::new(),
+                    tags: String::new(),
+                    heading_level: 0,
+                });
+            }
+        }
+    }
+
+    // Sort by similarity descending
+    enriched.sort_by(|a, b| {
+        b.similarity
+            .partial_cmp(&a.similarity)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    Ok(enriched)
+}
+
+/// ハイブリッド検索を試行し、BM25結果とセマンティック結果をRRFで統合する。
+/// 外部依存の一時的障害時はBM25結果をそのまま返す（graceful degradation）。
+fn try_hybrid_search(
+    bm25_results: Vec<crate::indexer::reader::SearchResult>,
+    options: &SearchOptions,
+    filters: &SearchFilters,
+) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
+    use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
+
+    // 1. SymbolStore を開く
+    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let store = match crate::indexer::symbol_store::SymbolStore::open(&db_path) {
+        Ok(s) => s,
+        Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
+            return Err(SearchError::SchemaVersionMismatch);
+        }
+        Err(_) => {
+            eprintln!("[hybrid] Embedding database not available, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+
+    // 2. Embeddingが存在するか確認
+    match store.count_embeddings() {
+        Ok(0) => {
+            eprintln!("[hybrid] No embeddings found, using BM25 only.");
+            return Ok(bm25_results);
+        }
+        Err(_) => {
+            eprintln!("[hybrid] Failed to check embeddings, using BM25 only.");
+            return Ok(bm25_results);
+        }
+        Ok(_) => {}
+    }
+
+    // 3. EmbeddingConfig読み込み → provider生成
+    let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
+    let config = match crate::embedding::Config::load(&commandindex_dir) {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!("[hybrid] Failed to load embedding config, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
+    let provider = match crate::embedding::create_provider(&embedding_config) {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("[hybrid] Failed to create embedding provider, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+
+    // 4. クエリ埋め込み生成
+    let query_texts = [options.query.clone()];
+    let query_embeddings = match provider.embed(&query_texts) {
+        Ok(e) => e,
+        Err(_) => {
+            eprintln!("[hybrid] Failed to generate query embedding, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+    let query_embedding = match query_embeddings.first() {
+        Some(e) => e,
+        None => {
+            eprintln!("[hybrid] Empty query embedding result, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+
+    // 5. 類似検索（オーバーサンプリング付き）
+    let similar_results = match store.search_similar(
+        query_embedding,
+        options.limit.saturating_mul(HYBRID_OVERSAMPLING_FACTOR),
+    ) {
+        Ok(r) => r,
+        Err(_) => {
+            eprintln!("[hybrid] Similarity search failed, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+
+    // 6. セマンティック結果をSearchResult型に変換
+    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let reader = match IndexReaderWrapper::open(&tantivy_dir) {
+        Ok(r) => r,
+        Err(_) => {
+            eprintln!("[hybrid] Failed to open index reader, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+    let semantic_search_results = match enrich_semantic_to_search_results(&similar_results, &reader)
+    {
+        Ok(r) => r,
+        Err(_) => {
+            eprintln!("[hybrid] Failed to enrich semantic results, using BM25 only.");
+            return Ok(bm25_results);
+        }
+    };
+
+    // 7. フィルタ適用（tag/path/file_type）
+    let filtered_semantic: Vec<crate::indexer::reader::SearchResult> = semantic_search_results
+        .into_iter()
+        .filter(|r| {
+            if let Some(ref prefix) = filters.path_prefix
+                && !r.path.starts_with(prefix.as_str())
+            {
+                return false;
+            }
+            if let Some(ref file_type) = filters.file_type
+                && !crate::indexer::reader::matches_file_type(&r.path, file_type)
+            {
+                return false;
+            }
+            if let Some(ref tag) = options.tag
+                && !r
+                    .tags
+                    .split_whitespace()
+                    .any(|t| t.eq_ignore_ascii_case(tag))
+            {
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    // 8. RRFマージ
+    Ok(rrf_merge(&bm25_results, &filtered_semantic, options.limit))
+}
+
+/// セマンティック検索結果をSearchResult型に変換する（ハイブリッド検索用）
+/// tantivyからメタデータを取得し、section_headingでマッチングする。
+fn enrich_semantic_to_search_results(
+    semantic_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    reader: &IndexReaderWrapper,
+) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
+    use std::collections::HashMap;
+
+    // Group by file_path
+    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+        HashMap::new();
+    for result in semantic_results {
+        groups.entry(&result.file_path).or_default().push(result);
+    }
+
+    let mut enriched = Vec::new();
+
+    for (file_path, items) in &groups {
+        let sections = reader.search_by_exact_path(file_path)?;
+
+        for item in items {
+            let matched = sections.iter().find(|s| s.heading == item.section_heading);
+
+            if let Some(section) = matched {
+                enriched.push(crate::indexer::reader::SearchResult {
+                    path: section.path.clone(),
+                    heading: section.heading.clone(),
+                    body: section.body.clone(),
+                    tags: section.tags.clone(),
+                    heading_level: section.heading_level,
+                    line_start: section.line_start,
+                    score: 0.0, // RRFマージで上書きされる
+                });
+            } else {
+                // Fallback: minimal result
+                enriched.push(crate::indexer::reader::SearchResult {
+                    path: item.file_path.clone(),
+                    heading: item.section_heading.clone(),
+                    body: String::new(),
+                    tags: String::new(),
+                    heading_level: 0,
+                    line_start: 0,
+                    score: 0.0,
+                });
+            }
+        }
+    }
+
+    Ok(enriched)
+}
+
+fn apply_semantic_filters(
+    results: Vec<SemanticSearchResult>,
+    tag: Option<&str>,
+    filters: &SearchFilters,
+) -> Vec<SemanticSearchResult> {
+    results
+        .into_iter()
+        .filter(|r| {
+            // path_prefix filter
+            if let Some(ref prefix) = filters.path_prefix
+                && !r.path.starts_with(prefix.as_str())
+            {
+                return false;
+            }
+
+            // file_type filter
+            if let Some(ref file_type) = filters.file_type
+                && !crate::indexer::reader::matches_file_type(&r.path, file_type)
+            {
+                return false;
+            }
+
+            // tag filter
+            if let Some(tag_value) = tag
+                && !r
+                    .tags
+                    .split_whitespace()
+                    .any(|t| t.eq_ignore_ascii_case(tag_value))
+            {
+                return false;
+            }
+
+            true
+        })
+        .collect()
+}
+
 fn build_symbol_tree(
     store: &SymbolStore,
     symbols: &[SymbolInfo],
@@ -219,4 +637,84 @@ fn build_symbol_tree(
         });
     }
     Ok(results)
+}
+
+/// Reranking を試行する。失敗時はeprintlnで警告を出し、元の結果をそのまま返す。
+fn try_rerank(
+    results: Vec<crate::indexer::reader::SearchResult>,
+    query: &str,
+    rerank_top: usize,
+    commandindex_dir: &Path,
+) -> Vec<crate::indexer::reader::SearchResult> {
+    // 1. Config読み込み
+    let rerank_config = match crate::embedding::Config::load(commandindex_dir) {
+        Ok(Some(config)) => config.rerank.unwrap_or_default(),
+        Ok(None) => crate::rerank::RerankConfig::default(),
+        Err(e) => {
+            eprintln!("[rerank] Failed to load config: {e}");
+            return results;
+        }
+    };
+
+    // 2. Provider生成
+    let provider = match crate::rerank::ollama::create_rerank_provider(&rerank_config) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("[rerank] Failed to create provider: {e}");
+            return results;
+        }
+    };
+
+    // 3. 候補を RerankCandidate に変換（上位 rerank_top 件）
+    let candidates: Vec<crate::rerank::RerankCandidate> = results
+        .iter()
+        .take(rerank_top)
+        .enumerate()
+        .map(|(i, r)| crate::rerank::RerankCandidate {
+            document_text: crate::rerank::build_document_text(&r.heading, &r.body),
+            original_index: i,
+        })
+        .collect();
+
+    // 4. Rerank実行
+    let rerank_results = match provider.rerank(query, &candidates) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[rerank] Reranking failed: {e}");
+            return results;
+        }
+    };
+
+    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexは警告+スキップ）
+    let mut reranked: Vec<crate::indexer::reader::SearchResult> = rerank_results
+        .iter()
+        .filter_map(|rr| {
+            if rr.index >= results.len() {
+                eprintln!(
+                    "[rerank] Warning: provider returned out-of-range index {}, skipping",
+                    rr.index
+                );
+                return None;
+            }
+            results.get(rr.index).map(|sr| {
+                let mut new_sr = sr.clone();
+                new_sr.score = rr.score;
+                new_sr
+            })
+        })
+        .collect();
+
+    // rerank対象外の結果を末尾に追加
+    let reranked_indices: std::collections::HashSet<usize> = rerank_results
+        .iter()
+        .filter(|r| r.index < results.len())
+        .map(|r| r.index)
+        .collect();
+    for (i, r) in results.iter().enumerate() {
+        if !reranked_indices.contains(&i) {
+            reranked.push(r.clone());
+        }
+    }
+
+    reranked
 }

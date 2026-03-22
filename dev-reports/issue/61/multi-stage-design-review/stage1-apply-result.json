@@ -1,0 +1,1 @@
+{"stage": 1, "applied": ["M1: dimension()遅延初期化", "M2: EmbeddingError/EmbeddingStoreError分離", "M3: Optionsパターン採用", "S1: ProviderType enum", "S3: Config独立配置コメント追加", "S4: 環境変数api_key対応"]}

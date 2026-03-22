@@ -1,0 +1,17 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "(path, heading)識別キーのユニーク性保証", "description": "embeddingsテーブルは(file_path, section_heading)でINSERT OR REPLACE。同名見出しは上書きされる。識別キーの制約を明記すべき。", "suggestion": "同名見出しを許容しない制約をIssueに明記するか、line_start等の追加キーを検討。"},
+    {"id": "M2", "title": "query + --headingの既存挙動維持が未定義", "description": "--semanticは--headingとconflictだがqueryは--headingを受け付ける。ハイブリッド化時の--heading扱いが未定義。", "suggestion": "hybrid時もheadingフィルタを最終結果に適用するか、query+--heading時はBM25のみフォールバックかを明記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "embedding存在判定条件とフォールバック境界が曖昧", "description": "DB不在、件数0、設定不正、API失敗等の区別がない。", "suggestion": "count_embeddings()==0のみフォールバック、provider初期化/API失敗はエラーとして境界を明確化。"},
+    {"id": "S2", "title": "RRFの候補取得深さ未定義", "description": "各検索器から何件取得してRRF計算するかが未定義。", "suggestion": "BM25/semanticともにRRF前にN倍oversamplingする方針を追加。"},
+    {"id": "S3", "title": "--no-semanticの適用対象が曖昧", "description": "query以外のモードで指定された場合の扱いが不明。", "suggestion": "--no-semanticはqueryモード専用とし、--symbol/--related/--semanticとconflict。"},
+    {"id": "S4", "title": "JSON出力のscore意味変更の明示", "description": "hybrid時のscoreはRRFスコアだが明記されていない。", "suggestion": "受け入れ基準にJSON出力のscore意味変更を追記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "テスト観点の追記"},
+    {"id": "N2", "title": "RRF同点時の安定順序"}
+  ],
+  "summary": "1回目指摘は整理済みだが、(path,heading)識別キーのユニーク性とquery+--heading挙動の2点が未解決。"
+}

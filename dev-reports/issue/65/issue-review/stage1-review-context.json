@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "技術的実現性",
+      "description": "Issueでは Ollama を Cross-Encoder (Reranker) プロバイダーとして使用する前提だが、Ollama の公式 API には /api/rerank エンドポイントが存在しない（/api/embed のみ）。bge-reranker-v2-m3 のような Cross-Encoder モデルを Ollama 経由で利用する場合、/api/generate でプロンプトベースのスコアリングを行うか、または別のサービング手段（vLLM, TEI 等）が必要になる。",
+      "suggestion": "Rerankingに使用する具体的なAPIエンドポイントとリクエスト/レスポンス形式を明記する。選択肢は: (1) Ollama /api/generate でペアワイズスコアリングプロンプトを送る方式、(2) Hugging Face TEI (Text Embeddings Inference) の /rerank エンドポイントを利用、(3) Jina Reranker API。方式によって実装難度とパフォーマンスが大きく異なるため、Issueで確定させるべき。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準の不足",
+      "description": "Rerankingは既存のハイブリッド検索フロー（run関数内の try_hybrid_search）に統合される必要があるが、統合ポイントが不明確。--rerank がハイブリッド検索の後段に適用されるのか、--semantic 専用検索にも適用可能なのかが記載されていない。",
+      "suggestion": "以下を明記する: (1) --rerank は通常クエリ検索（ハイブリッド）の後段にのみ適用される、(2) --semantic 検索時にも --rerank は使えるか、(3) --no-semantic --rerank の組み合わせ（BM25のみ→Rerank）は許可するか。"
+    },
+    {
+      "id": "M3",
+      "category": "設定構造の整合性",
+      "description": "Issueでは config.toml に [rerank] セクションを新設する提案だが、既存の Config 構造体は Config { embedding: Option<EmbeddingConfig> } である。Config 構造体に rerank: Option<RerankConfig> フィールドを追加する必要があり、これは明記すべき設計判断。",
+      "suggestion": "Config構造体の変更を明記: Config { embedding: Option<EmbeddingConfig>, rerank: Option<RerankConfig> }。RerankConfig の構造を定義し、EmbeddingConfig との関係を明示する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "パフォーマンス・ユーザー体験",
+      "description": "Cross-Encoder方式では top-50 件に対してそれぞれ (query, document) ペアで API リクエストを送る必要があり、レイテンシの見積もりと許容基準がIssueに記載されていない。",
+      "suggestion": "想定レイテンシの目安を記載する。バッチリクエスト可否も確認し、パフォーマンス要件を受け入れ基準に追加する。"
+    },
+    {
+      "id": "S2",
+      "category": "Graceful Degradation",
+      "description": "Reranking でも既存パターンに合わせた障害時動作が必要だが、エラーで停止するのかフォールバックするのかが曖昧。",
+      "suggestion": "「Rerankモデルが利用不可の場合、eprintln で警告を出力し、Reranking前の検索結果をそのまま返す（graceful degradation）」と明記する。"
+    },
+    {
+      "id": "S3",
+      "category": "CLI設計",
+      "description": "--rerank-top と config.toml の top_candidates が重複。優先順位のルールが不明。",
+      "suggestion": "優先順位を明示: CLI引数 > config.toml > デフォルト値（50）。"
+    },
+    {
+      "id": "S4",
+      "category": "テスト方針",
+      "description": "Cross-Encoder は外部サービス依存のため、テスト方針が記載されていない。",
+      "suggestion": "テスト方針を記載: (1) RerankProvider トレイトと MockRerankProvider でユニットテスト、(2) graceful degradation テスト。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "将来拡張性",
+      "description": "Cohere Rerank API はオプションとして記載されているが、今回のスコープに含めるかどうかが不明確。",
+      "suggestion": "本 Issue のスコープを Ollama のみに限定し、Cohere は別 Issue として切り出す旨を明記する。"
+    },
+    {
+      "id": "N2",
+      "category": "検索フローの詳細",
+      "description": "Reranking 対象のドキュメントテキストとして何を使うかが曖昧。",
+      "suggestion": "Cross-Encoder に渡すドキュメントテキストの構築方法を明記する（例: heading + body の連結）。"
+    },
+    {
+      "id": "N3",
+      "category": "デフォルト値",
+      "description": "rerank-top のデフォルト50件が妥当かの根拠が薄い。",
+      "suggestion": "rerank-top のデフォルト値は limit の倍数にする方が柔軟。"
+    },
+    {
+      "id": "N4",
+      "category": "モジュール構成",
+      "description": "rerank モジュールの配置先が記載されていない。",
+      "suggestion": "モジュール配置案を追記: src/search/rerank.rs + src/rerank/ 等。"
+    }
+  ],
+  "summary": "Issue #65 はハイブリッド検索の後段にCross-Encoder Rerankingを追加する機能提案であり、方向性は妥当。しかし、Ollama が Cross-Encoder / Reranker 用の専用 API エンドポイントを持たない点が未解決であり、具体的な API 呼び出し方式を確定させる必要がある。また、ハイブリッド検索フローとの統合ポイント、Config構造体の拡張方針、Graceful Degradation の動作仕様を明確にすべき。"
+}

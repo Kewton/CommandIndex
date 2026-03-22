@@ -1,0 +1,36 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テストへの影響",
+      "description": "Ollamaが必要なテスト（シナリオ1, 9等）のCI実行戦略が不明確。",
+      "suggestion": "Ollamaが必要なテストには#[ignore]を付与するか、環境変数で条件付き実行にする。"
+    },
+    {
+      "id": "S2",
+      "category": "テストへの影響",
+      "description": "13件の新規テスト追加でテスト実行時間が増加する可能性。",
+      "suggestion": "共通setup関数を用意し、index構築を最小限に抑える。"
+    },
+    {
+      "id": "S3",
+      "category": "既存機能への影響",
+      "description": "SymbolStore::insert_embeddingsのシグネチャ変更時にE2Eテストも壊れる。",
+      "suggestion": "テスト用ヘルパー関数にembedding挿入ユーティリティを追加し影響を1箇所に集約する。"
+    },
+    {
+      "id": "S4",
+      "category": "テストへの影響",
+      "description": "既存e2e_embedding.rsとの命名・責務分離が不明確。",
+      "suggestion": "新規ファイル名をe2e_semantic_hybrid.rs等にし、既存との重複を回避。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "テスト品質", "description": "semantic検索用ヘルパー関数の追加"},
+    {"id": "N2", "category": "依存関係", "description": "新規dev-dependencies不要の確認"},
+    {"id": "N3", "category": "テスト品質", "description": "conflicts_with検証はcli_args.rsに追加する方が適切"},
+    {"id": "N4", "category": "パフォーマンス", "description": "CI設定の変更は不要"}
+  ],
+  "summary": "プロダクションコード変更なし、低リスク。注意点: (1)Ollama依存テストのCI対応、(2)既存テストとの責務重複回避、(3)ヘルパー関数の追加。Must Fix 0件。"
+}

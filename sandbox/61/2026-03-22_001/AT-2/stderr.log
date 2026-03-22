@@ -1,0 +1,6 @@
+Warning: embedding generation failed for docs/api-spec.md: Model not found: nomic-embed-text
+Warning: embedding generation failed for docs/auth/flows.md: Model not found: nomic-embed-text
+Warning: embedding generation failed for docs/auth/design.md: Model not found: nomic-embed-text
+Warning: embedding generation failed for docs/isolated.md: Model not found: nomic-embed-text
+Warning: embedding generation failed for docs/security.md: Model not found: nomic-embed-text
+Warning: embedding generation failed for src/auth/handler.md: Model not found: nomic-embed-text

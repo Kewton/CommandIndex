@@ -1,0 +1,12 @@
+{
+  "critical": [],
+  "warnings": [
+    {"file": "tests/e2e_semantic_hybrid.rs", "line": 515, "severity": "high", "category": "bug", "description": "test_hybrid_auto_switchがsymbols.dbにembedding挿入していない。hybrid動作を検証できない。", "suggestion": "SymbolStore::insert_embeddings()でfixture投入する。"},
+    {"file": "tests/e2e_semantic_hybrid.rs", "line": 537, "severity": "high", "category": "bug", "description": "test_hybrid_bm25_fallbackがsymbols.dbにembedding挿入していない。BM25フォールバック動作を検証できない。", "suggestion": "symbols.dbにfixture投入してからOllama停止でテストする。"},
+    {"file": "tests/e2e_semantic_hybrid.rs", "line": 201, "severity": "medium", "category": "bug", "description": "test_semantic_search_filterがフィルタ動作をテストしていない。top_k truncationのみ。", "suggestion": "テスト名をtest_semantic_search_top_kに変更する。"},
+    {"file": "tests/e2e_semantic_hybrid.rs", "line": 354, "severity": "low", "category": "bug", "description": "to_str().unwrap()がパニック可能。", "suggestion": "expect()に変更。"},
+    {"file": "tests/e2e_semantic_hybrid.rs", "line": 516, "severity": "low", "category": "bug", "description": "同上。", "suggestion": "expect()に変更。"}
+  ],
+  "summary": "critical 0件。high 2件は#[ignore]テストのembedding準備不足。medium 1件はテスト名の不一致。",
+  "requires_fix": false
+}

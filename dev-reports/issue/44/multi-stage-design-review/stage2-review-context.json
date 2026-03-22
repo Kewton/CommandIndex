@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"id": "M1", "title": "tests/output_format.rs の use 文に SnippetConfig 追加が未記載"},
+    {"id": "M2", "title": "main.rs の destructuring パターンに snippet_lines/snippet_chars 追加が未明示"},
+    {"id": "M3", "title": "cli/search.rs の import 文に SnippetConfig の use 追加が未記載"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "output/human.rs の import 文に SnippetConfig の use 追加が未記載"},
+    {"id": "S2", "title": "symbol/related モードで snippet オプション指定時の挙動（サイレント無視）の明記"},
+    {"id": "S3", "title": "SnippetConfig の公開パス commandindex::output::SnippetConfig の明記"}
+  ],
+  "summary": "Must fix 3件: import文・destructuringパターンの変更漏れ。設計の核心部分は既存コードと矛盾なし"
+}

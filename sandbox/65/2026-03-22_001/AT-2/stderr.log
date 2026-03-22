@@ -1,0 +1,2 @@
+[hybrid] No embeddings found, using BM25 only.
+[rerank] Reranking failed: Model not found: llama3

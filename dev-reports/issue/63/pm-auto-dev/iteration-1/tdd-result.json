@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "tests_passed": true,
+  "clippy_passed": true,
+  "fmt_passed": true,
+  "files_changed": [
+    "src/indexer/symbol_store.rs",
+    "src/indexer/reader.rs",
+    "src/cli/search.rs",
+    "src/output/mod.rs",
+    "src/output/human.rs",
+    "src/output/json.rs",
+    "src/output/path.rs",
+    "src/main.rs",
+    "tests/cli_args.rs"
+  ],
+  "tests_added": 7,
+  "summary": "Implemented semantic search (Issue #63) with TDD approach. Added count_embeddings() to SymbolStore, made matches_file_type pub(crate), extended SearchError with Embedding/NoEmbeddings variants, added SemanticSearchResult struct and 3 output formatters (human/json/path), implemented run_semantic_search/enrich_with_metadata/apply_semantic_filters core logic, added --semantic CLI option with proper conflicts_with_all, and added 7 new tests (2 unit tests for count_embeddings, 5 CLI integration tests for --semantic conflicts and acceptance)."
+}

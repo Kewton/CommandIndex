@@ -1,0 +1,3 @@
+{"path":"docs/api-spec.md","relations":[{"tag_match":["auth"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"src/auth/handler.md","relations":[{"tag_match":["auth"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"docs/auth/design.md","relations":[{"tag_match":["auth"]},"directory_proximity"],"score":0.699999988079071}

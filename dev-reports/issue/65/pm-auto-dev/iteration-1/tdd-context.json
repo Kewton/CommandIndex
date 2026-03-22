@@ -1,0 +1,20 @@
+{
+  "issue_number": 65,
+  "title": "Reranking（検索結果の再順位付け）",
+  "design_policy": "dev-reports/design/issue-65-reranking-design-policy.md",
+  "work_plan": "dev-reports/issue/65/work-plan.md",
+  "tasks": [
+    "Task 1.1: RerankConfig・型定義 (src/rerank/mod.rs)",
+    "Task 1.2: Config構造体拡張 (src/embedding/mod.rs)",
+    "Task 1.3: lib.rs モジュール宣言",
+    "Task 2.1: OllamaRerankProvider (src/rerank/ollama.rs)",
+    "Task 2.2: try_rerank統合関数 (src/cli/search.rs)",
+    "Task 3.1: CLI引数追加 (src/main.rs)"
+  ],
+  "quality_checks": [
+    "cargo build",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test --all",
+    "cargo fmt --all -- --check"
+  ]
+}

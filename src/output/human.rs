@@ -4,12 +4,16 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SymbolSearchResult, parse_tags, strip_control_chars,
-    truncate_body,
+    OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    parse_tags, strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
-pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
+pub fn format_human(
+    results: &[SearchResult],
+    writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+) -> Result<(), OutputError> {
     for (i, result) in results.iter().enumerate() {
         if i > 0 {
             writeln!(writer)?;
@@ -24,8 +28,17 @@ pub fn format_human(results: &[SearchResult], writer: &mut dyn Write) -> Result<
         );
         writeln!(writer, "{} {}", location.green(), heading_display.bold())?;
 
-        // 本文スニペット（最大2行）
-        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        // 本文スニペット
+        let body_cleaned = strip_control_chars(&result.body);
+        let snippet = if snippet_config.lines == 0 && snippet_config.chars == 0 {
+            body_cleaned
+        } else if snippet_config.lines == 0 {
+            truncate_body(&body_cleaned, usize::MAX, snippet_config.chars)
+        } else if snippet_config.chars == 0 {
+            truncate_body(&body_cleaned, snippet_config.lines, usize::MAX)
+        } else {
+            truncate_body(&body_cleaned, snippet_config.lines, snippet_config.chars)
+        };
         for line in snippet.lines() {
             writeln!(writer, "  {line}")?;
         }
@@ -71,6 +84,43 @@ pub fn format_related_human(
             format!("(score: {score})").dimmed(),
             relations.join(", ")
         )?;
+    }
+    Ok(())
+}
+
+/// セマンティック検索結果をhuman形式で出力する
+pub fn format_semantic_human(
+    results: &[SemanticSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for (i, result) in results.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+
+        let similarity = format!("[{:.2}]", result.similarity);
+        let path = strip_control_chars(&result.path);
+        let heading = strip_control_chars(&result.heading);
+        writeln!(
+            writer,
+            "{} {} > {}",
+            similarity.green(),
+            path.green(),
+            heading.bold()
+        )?;
+
+        // Body snippet (max 2 lines)
+        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        for line in snippet.lines() {
+            writeln!(writer, "  {line}")?;
+        }
+
+        // Tags
+        let tags = parse_tags(&result.tags);
+        if !tags.is_empty() {
+            let tags_str = tags.join(", ");
+            writeln!(writer, "  {}", format!("Tags: {tags_str}").dimmed())?;
+        }
     }
     Ok(())
 }

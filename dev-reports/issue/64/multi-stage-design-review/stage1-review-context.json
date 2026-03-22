@@ -1,0 +1,20 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー（SOLID/KISS/YAGNI/DRY）",
+  "must_fix": [
+    {"id": "M1", "title": "run()のシグネチャにboolフラグ散在(SRP/KISS違反)", "description": "has_heading_filterはoptions.heading.is_some()から導出可能。no_semanticもSearchOptionsに統合すべき。"},
+    {"id": "M2", "title": "SearchResult.scoreにRRFとBM25混在(意味的曖昧性)", "description": "同じフィールドに異なるスケールの値が入る。最低限ドキュメントコメントが必要。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "rrf_merge()がEmbeddingSimilarityResultを直接受け取ると純粋関数でなくなる"},
+    {"id": "S2", "title": "should_use_hybrid()にembedding存在チェックが含まれていない"},
+    {"id": "S3", "title": "oversampling倍率が既存OVERSAMPLING_FACTOR=5と二重管理(DRY違反)"},
+    {"id": "S4", "title": "(path,heading)マージキーの正規化リスク"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "RRF k=60の定数化"},
+    {"id": "N2", "title": "セマンティック障害時のフォールバック通知"},
+    {"id": "N3", "title": "hybrid.rsモジュール配置と責務整理"}
+  ],
+  "summary": "run()のboolフラグ散在とscore混在が主要問題。rrf_merge()は純粋関数として設計すべき。"
+}

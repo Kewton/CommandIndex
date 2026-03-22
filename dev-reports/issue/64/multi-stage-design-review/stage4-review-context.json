@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [
+    {"id": "M1", "title": "config.tomlに平文APIキー保存可能(既存問題)", "description": "ファイルパーミッションチェックがない。本Issue固有ではないが記録。"},
+    {"id": "M2", "title": "エンドポイントURLのバリデーション不足(既存問題)", "description": "SSRFリスクとHTTP経由APIキー漏洩リスク。本Issue固有ではないが記録。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "APIエラーレスポンスボディの無制限出力"},
+    {"id": "S2", "title": "normalize_pathの'..'コンポーネント除去が不完全"},
+    {"id": "S3", "title": "テストコード内のunsafe env::set_var/remove_var"}
+  ],
+  "summary": "セキュリティ面の指摘は既存問題が中心。本Issue固有の新規セキュリティリスクはなし。"
+}

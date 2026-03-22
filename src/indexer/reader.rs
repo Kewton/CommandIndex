@@ -16,6 +16,7 @@ pub struct SearchOptions {
     pub tag: Option<String>,
     pub heading: Option<String>,
     pub limit: usize,
+    pub no_semantic: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -99,6 +100,7 @@ impl IndexReaderWrapper {
             tag: None,
             heading: None,
             limit,
+            no_semantic: false,
         };
         self.search_with_options(&options, &SearchFilters::default())
     }
@@ -228,7 +230,7 @@ impl IndexReaderWrapper {
     }
 }
 
-fn matches_file_type(path: &str, file_type: &str) -> bool {
+pub(crate) fn matches_file_type(path: &str, file_type: &str) -> bool {
     use crate::indexer::manifest::FileType;
     use std::path::Path;
 

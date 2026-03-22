@@ -1,0 +1,17 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "RRF片側ヒット時の仕様を修正。未出現側の寄与を0に変更（標準RRF準拠）。rankは1-based固定。rrf_merge()のドキュメントコメントに明記。"},
+    {"id": "M2", "action": "ストレージ前提をsymbols.db内embeddingsテーブルに統一。SymbolStore::open/count_embeddings/search_similarを使う方針に変更。stderrメッセージ設計に注意事項追記。"},
+    {"id": "M3", "action": "try_hybrid_search()の手順にStep7としてapply_semantic_filters()によるtag/path/file_typeフィルタ適用を追加。セマンティック側もフィルタ後にrrf_merge()に渡す。"},
+    {"id": "M4", "action": "エラーハンドリングセクションを大幅更新。エラー分類表を新設（外部依存一時障害→フォールバック、ローカルindex/schema破損→fail-fast）。enrich段階の失敗時も追加。"}
+  ],
+  "applied_should_fix": [
+    {"id": "S2", "action": "try_hybrid_search()の引数をoptionsとfiltersに統合。個別のquery/limit/tag引数を削除。"}
+  ],
+  "not_applied": [
+    {"id": "S1", "reason": "no_semanticのSearchOptions配置はKISS優先で現状維持。将来リファクタリング時に対応可能。"},
+    {"id": "S3", "reason": "JSON出力のscore_kind追加は将来Issue。現時点はドキュメントコメントで対応。"}
+  ],
+  "must_fix_remaining": 0
+}

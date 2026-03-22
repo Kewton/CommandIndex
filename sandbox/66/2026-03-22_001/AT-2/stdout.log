@@ -1,0 +1,17 @@
+
+running 12 tests
+test test_hybrid_auto_switch ... ignored
+test test_hybrid_bm25_fallback ... ignored
+test test_rrf_merge_integration ... ok
+test test_semantic_search_top_k ... ok
+test test_semantic_search_basic ... ok
+test test_embedding_insert_and_count ... ok
+test test_rerank_top_accepted_via_cli ... ok
+test test_rerank_fallback_via_cli ... ok
+test test_embed_without_ollama_fails ... ok
+test test_context_with_embeddings ... ok
+test test_hybrid_no_embeddings ... ok
+test test_hybrid_no_semantic ... ok
+
+test result: ok. 10 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 4.42s
+

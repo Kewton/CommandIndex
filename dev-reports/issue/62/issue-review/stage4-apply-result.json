@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "status": "noted_for_design",
+  "applied_items": [
+    "スキーマバージョンv2→v3変更は既存clean→indexワークフローで対応済みを確認",
+    "delete_by_file()の拡張は同一トランザクション内で実施",
+    "create_tables()にIF NOT EXISTSでembeddingsテーブル追加",
+    "エンディアンはLE固定(to_le_bytes/from_le_bytes)",
+    "BLOBサイズバリデーション(dimension * 4)を追加"
+  ],
+  "must_fix_count": 3,
+  "should_fix_count": 4,
+  "nice_to_have_count": 2,
+  "skip_stage5_8": false,
+  "note": "Must Fix 3件あり、Stage 5-8は実施する"
+}

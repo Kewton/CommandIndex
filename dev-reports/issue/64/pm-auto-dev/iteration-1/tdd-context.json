@@ -1,0 +1,15 @@
+{
+  "issue_number": 64,
+  "title": "Hybrid Retrieval（BM25 + Semantic統合検索）",
+  "design_policy": "dev-reports/design/issue-64-hybrid-retrieval-design-policy.md",
+  "work_plan": "dev-reports/issue/64/work-plan.md",
+  "tasks": [
+    "Task 1.1: SearchOptions拡張 (no_semantic: bool追加)",
+    "Task 1.2: RRFスコア統合アルゴリズム (src/search/hybrid.rs新規)",
+    "Task 2.1: --no-semantic CLIオプション追加",
+    "Task 3.1: enrich_semantic_to_search_results関数",
+    "Task 3.2: try_hybrid_search関数",
+    "Task 3.3: run()関数のハイブリッド統合",
+    "Task 4.1: 既存テスト修正"
+  ]
+}

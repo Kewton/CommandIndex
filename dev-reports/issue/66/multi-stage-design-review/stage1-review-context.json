@@ -1,0 +1,14 @@
+{
+  "stage": "設計原則レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "SRP", "description": "11件のテストを1ファイルに集約。ライブラリAPI層とCLI層は責務が異なる。", "suggestion": "tests/e2e_library_api.rsとtests/e2e_cli_semantic.rsの2ファイルに分離する。"},
+    {"id": "M2", "category": "DRY", "description": "既存common/mod.rsのヘルパーとの重複分析がされていない。", "suggestion": "既存ヘルパーを棚卸しし、拡張で対応できる部分は新規作成を避ける。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "KISS", "description": "2系統DBのテストデータ投入フローが不明確。"},
+    {"id": "S2", "category": "OCP", "description": "固定ベクトルがハードコードされると拡張に弱い。"},
+    {"id": "S3", "category": "SRP", "description": "setup_semantic_test_dir()とcreate_test_config()の呼び出し関係が曖昧。"},
+    {"id": "S4", "category": "KISS", "description": "除外テストのcli_args.rs具体的テスト関数名が不明確。"}
+  ],
+  "summary": "Must Fix 2件: SRP違反（1ファイル集約）、DRY（既存ヘルパー重複精査不足）"
+}

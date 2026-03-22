@@ -1,0 +1,9 @@
+{
+  "stage": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "category": "一時ファイル管理", "description": "tempfile::tempdir()による安全なランダムディレクトリ名生成を使用すること。"},
+    {"id": "S2", "category": "外部サービス接続", "description": "Ollama接続先を環境変数で制御可能にする。"}
+  ],
+  "summary": "Must Fix 0件。テストコードのみの追加でセキュリティリスクは低い。"
+}

@@ -1,0 +1,18 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1-M2-M3", "action": "added", "detail": "モジュール構成セクションに影響ファイル一覧を追加"},
+    {"id": "M4", "action": "added", "detail": "lib.rsへのembeddingモジュール宣言を明記"},
+    {"id": "M5", "action": "added", "detail": "依存関係の追加セクションを新設"},
+    {"id": "M6", "action": "added", "detail": "indexer/mod.rsへのembeddings_db_path()追加を明記"},
+    {"id": "S1", "action": "added", "detail": "エラーハンドリングセクションを新設"},
+    {"id": "S3", "action": "confirmed", "detail": "embeddings.dbを独立ファイルとする設計を確認"},
+    {"id": "S4", "action": "added", "detail": "manifest::compute_file_hash()の再利用を明記"},
+    {"id": "S5", "action": "added", "detail": "既存テスト後方互換性の受け入れ基準を追加"},
+    {"id": "impact_table", "action": "added", "detail": "影響を受けるファイル一覧セクションを追加"}
+  ],
+  "issue_updated": true,
+  "must_fix_remaining": 0,
+  "skip_stage5_8": false
+}

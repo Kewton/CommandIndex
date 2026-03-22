@@ -1,0 +1,48 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能への影響",
+      "description": "ライブラリAPI層でHybrid自動切替・BM25フォールバック・Rerank適用を直接検証できる公開APIが現行実装にない。テスト追加だけでは済まず、既存コードの責務分割や公開面の変更が必要になる可能性がある。",
+      "suggestion": "受け入れ基準を「公開APIで直接検証できる範囲」と「CLI/E2Eでしか検証できない範囲」に分けるか、先にハイブリッド/rerank判定ロジックをライブラリ層へ抽出する前提をIssueに明記する。"
+    },
+    {
+      "id": "M2",
+      "category": "テストへの影響",
+      "description": "シナリオ13は「ライブラリAPI層」と整理されているが、実際はcontextコマンドの正常動作確認でありCLIテスト。分類の不整合。",
+      "suggestion": "シナリオ13をCLI層テストとして扱うか、contextの内部ロジックを直接叩くライブラリテストに落とすかを明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テストへの影響",
+      "description": "シナリオ2(embed Ollama停止時)は失敗系テストでありCIで安定再現可能。#[ignore]にする必要はない。",
+      "suggestion": "通常テスト化を検討する。"
+    },
+    {
+      "id": "S2",
+      "category": "パフォーマンスへの影響",
+      "description": "共通fixture生成の粒度を誤ると既存E2E群より重くなる可能性。",
+      "suggestion": "重いindex構築を最小限のデータセット数に絞る方針を具体化する。"
+    },
+    {
+      "id": "S3",
+      "category": "依存関係への影響",
+      "description": "ライブラリAPI層検証のため本体側への新規公開API追加が必要になる可能性が明示されていない。",
+      "suggestion": "基本は既存dev-dependenciesのみ使用し、本体crateの新規公開API追加は必要時のみ別Issueで扱う旨を記載する。"
+    },
+    {
+      "id": "S4",
+      "category": "テストへの影響",
+      "description": "tests/common/mod.rsにconfig.toml生成責務まで持たせると設定仕様変更の影響集中点になる。",
+      "suggestion": "config.tomlヘルパーは用途別に分け、semantic/hybrid用の最小構成だけにする。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "新規ファイル冒頭コメントで責務境界を明記する"},
+    {"id": "N2", "description": "新規dev-dependencies不要の確認"},
+    {"id": "N3", "description": "テストデータ数を最小限に抑え、順位差が明確なベクトルを使用する"}
+  ],
+  "summary": "Must Fix 2件。Hybrid自動切替・Reranking等のライブラリAPI層検証は現行コード構造と噛み合っておらず、テスト追加だけでは完結せず本体コードの責務分割に波及する可能性がある。シナリオ13のテスト分類不整合も修正が必要。"
+}

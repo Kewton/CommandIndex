@@ -1,0 +1,5 @@
+error: the argument '--semantic <SEMANTIC>' cannot be used with '--related <RELATED>'
+
+Usage: commandindex search --semantic <SEMANTIC> [QUERY]
+
+For more information, try '--help'.

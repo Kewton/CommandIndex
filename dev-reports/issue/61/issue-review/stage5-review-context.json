@@ -1,0 +1,9 @@
+{
+  "stage": 5,
+  "status": "skipped",
+  "reason": "Codex authentication error: access token could not be refreshed",
+  "must_fix": [],
+  "should_fix": [],
+  "nice_to_have": [],
+  "summary": "Stage 5 skipped due to Codex authentication failure"
+}

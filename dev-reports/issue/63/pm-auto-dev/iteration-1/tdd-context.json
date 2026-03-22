@@ -1,0 +1,18 @@
+{
+  "issue_number": 63,
+  "title": "Semantic Search（意味検索）",
+  "design_policy": "dev-reports/design/issue-63-semantic-search-design-policy.md",
+  "work_plan": "dev-reports/issue/63/work-plan.md",
+  "tasks": [
+    "Task 1.1: count_embeddings() - src/indexer/symbol_store.rs",
+    "Task 1.2: matches_file_type pub(crate) - src/indexer/reader.rs",
+    "Task 1.3: SearchError拡張 - src/cli/search.rs",
+    "Task 1.4: SemanticSearchResult + format - src/output/*.rs",
+    "Task 2.1: enrich_with_metadata() - src/cli/search.rs",
+    "Task 2.2: apply_semantic_filters() - src/cli/search.rs",
+    "Task 2.3: run_semantic_search() - src/cli/search.rs",
+    "Task 3.1: main.rs --semantic追加",
+    "Task 3.2: tests/cli_args.rs更新",
+    "Task 4.1: tests/semantic_search.rs新規"
+  ]
+}

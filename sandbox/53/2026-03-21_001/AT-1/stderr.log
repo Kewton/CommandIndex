@@ -1,0 +1,2 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running tests/e2e_related_search.rs (target/debug/deps/e2e_related_search-41780577fe4a210a)

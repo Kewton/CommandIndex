@@ -1,187 +1,24 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>UAT Summary - CommandIndex - 2026-03-20</title>
+<html><head><meta charset="utf-8"><title>UAT Summary - Phase 4</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 2rem; background: #f8f9fa; }
-  h1 { color: #1a1a2e; border-bottom: 3px solid #16213e; padding-bottom: 0.5rem; }
-  h2 { color: #16213e; margin-top: 2rem; }
-  .summary { display: flex; gap: 1rem; margin: 1rem 0; }
-  .card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; text-align: center; }
-  .card.pass { border-left: 4px solid #27ae60; }
-  .card.total { border-left: 4px solid #2980b9; }
-  .card h3 { margin: 0; font-size: 2rem; }
-  .card p { margin: 0.5rem 0 0; color: #666; }
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem 0; }
-  th { background: #16213e; color: white; padding: 0.75rem; text-align: left; }
-  td { padding: 0.75rem; border-bottom: 1px solid #eee; }
-  .pass-badge { background: #27ae60; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; }
-  .fail-badge { background: #e74c3c; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; }
-  .issue-section { margin: 2rem 0; }
-  .timestamp { color: #999; font-size: 0.9rem; }
-  .report-link { color: #2980b9; font-size: 0.85rem; }
-  .run-badge { display: inline-block; background: #ecf0f1; color: #555; border-radius: 4px; padding: 1px 7px; font-size: 0.78rem; margin-left: 6px; }
-</style>
-</head>
-<body>
-<h1>UAT Summary Report</h1>
-<p class="timestamp">最終更新: 2026-03-20 | プロジェクト: CommandIndex | ブランチ: develop</p>
-
+body{font-family:sans-serif;max-width:900px;margin:0 auto;padding:20px}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ddd;padding:8px;text-align:left}
+th{background:#f4f4f4}
+.pass{color:#2e7d32;font-weight:bold}
+h1{color:#1a237e}
+.summary{background:#e8f5e9;padding:15px;border-radius:5px;margin-bottom:20px}
+</style></head><body>
+<h1>UAT Summary - Phase 4: Context Retrieval</h1>
 <div class="summary">
-  <div class="card total"><h3>67</h3><p>テスト項目 (累計)</p></div>
-  <div class="card pass"><h3>67</h3><p>PASS</p></div>
-  <div class="card"><h3>0</h3><p>FAIL</p></div>
-  <div class="card pass"><h3>100%</h3><p>合格率</p></div>
+<p><strong>Date:</strong> 2026-03-21</p>
+<p><strong>Result:</strong> <span class="pass">ALL PASS</span></p>
 </div>
-
-<h2>Issue別結果</h2>
 <table>
-<tr><th>Issue</th><th>タイトル</th><th>テスト数</th><th>PASS</th><th>FAIL</th><th>結果</th><th>レポート</th></tr>
-<tr><td>#3</td><td>Markdown パーサー</td><td>8</td><td>8</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#4</td><td>tantivy インデックス基盤</td><td>8</td><td>8</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#5</td><td>.cmindexignore パーサー</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#6</td><td>インデックス状態管理</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#7</td><td>インデックス構築</td><td>8</td><td>8</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#8</td><td>出力フォーマット</td><td>6</td><td>6</td><td>0</td><td><span class="pass-badge">PASS</span></td><td>—</td></tr>
-<tr><td>#9</td><td>search command</td><td>13</td><td>13</td><td>0</td><td><span class="pass-badge">PASS</span></td><td><a class="report-link" href="9/2026-03-20_001/report.html">report.html <span class="run-badge">2026-03-20_001</span></a></td></tr>
-<tr><td>#10</td><td>status command</td><td>7</td><td>7</td><td>0</td><td><span class="pass-badge">PASS</span></td><td><a class="report-link" href="10/2026-03-20_001/report.html">report.html <span class="run-badge">2026-03-20_001</span></a></td></tr>
-<tr><td>#11</td><td>clean command</td><td>5</td><td>5</td><td>0</td><td><span class="pass-badge">PASS</span></td><td><a class="report-link" href="11/2026-03-20_001/report.html">report.html <span class="run-badge">2026-03-20_001</span></a></td></tr>
+<tr><th>Issue</th><th>Title</th><th>Tests</th><th>Result</th></tr>
+<tr><td>#51</td><td>Markdownリンク解析・リンクインデックス構築</td><td>7</td><td class="pass">ALL PASS</td></tr>
+<tr><td>#50</td><td>--related 検索オプション実装</td><td>9</td><td class="pass">ALL PASS</td></tr>
+<tr><td>#52</td><td>Context Pack 生成</td><td>7</td><td class="pass">ALL PASS</td></tr>
+<tr><td>#53</td><td>Phase 4 E2E 統合テスト</td><td>5</td><td class="pass">ALL PASS</td></tr>
 </table>
-
-<div class="issue-section">
-<h2>Issue #3: Markdown パーサー (8/8 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-3-1</td><td>.mdファイル再帰列挙</td><td>指定ディレクトリ配下の.mdを再帰的に列挙できる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-2</td><td>heading単位分割</td><td>#〜######対応</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-3</td><td>frontmatterパース</td><td>YAML frontmatterを正しくパースできる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-4</td><td>tag抽出</td><td>frontmatter内のtags抽出</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-5</td><td>リンク抽出</td><td>[[]]と[]()を抽出</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-6</td><td>frontmatter無しファイル</td><td>エラーにならない</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-7</td><td>空ファイル・heading無し</td><td>エラーにならない</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-3-8</td><td>品質チェック</td><td>clippy/fmt/test全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-<div class="issue-section">
-<h2>Issue #4: tantivy インデックス基盤 (8/8 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-4-1</td><td>スキーマ定義</td><td>tantivy スキーマが定義されている</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-2</td><td>linderaトークナイザー統合</td><td>tantivy に組み込まれている</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-3</td><td>ドキュメント追加</td><td>インデックスに追加できる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-4</td><td>インデックス読取</td><td>読み取りができる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-5</td><td>日本語検索</td><td>正しく動作する</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-6</td><td>英語検索</td><td>正しく動作する</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-7</td><td>ディスク保存</td><td>.commandindex/tantivy/に保存される</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-4-8</td><td>品質チェック</td><td>clippy/fmt/test全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-<div class="issue-section">
-<h2>Issue #5: .cmindexignore パーサー (6/6 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-5-1</td><td>globパターン読込</td><td>.cmindexignoreをパースできる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-5-2</td><td>除外判定</td><td>パターン一致ファイルを除外</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-5-3</td><td>デフォルトルール</td><td>ファイル不在時にデフォルト適用</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-5-4</td><td>コメント・空行</td><td>#始まりと空行を無視</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-5-5</td><td>不正パターン</td><td>警告スキップで他ルール適用</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-5-6</td><td>品質チェック</td><td>clippy/fmt/test全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-<div class="issue-section">
-<h2>Issue #6: インデックス状態管理 (6/6 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-6-1</td><td>state.json読み書き</td><td>.commandindex/に読み書きできる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-6-2</td><td>manifest.json読み書き</td><td>.commandindex/に読み書きできる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-6-3</td><td>スキーマバージョン検知</td><td>不一致を検知できる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-6-4</td><td>SHA-256ハッシュ計算</td><td>ファイルハッシュを計算できる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-6-5</td><td>インデックス未作成判定</td><td>state.json不在で未作成と判定</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-6-6</td><td>品質チェック</td><td>clippy/fmt/test全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-<div class="issue-section">
-<h2>Issue #7: インデックス構築 (8/8 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-7-1</td><td>Markdownファイルのインデックス構築</td><td>commandindex index がエラーなく完了</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-2</td><td>.commandindex/tantivy/ にインデックス保存</td><td>tantivy ディレクトリにファイルが生成される</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-3</td><td>manifest.json 生成</td><td>manifest.json が有効なJSONとして存在する</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-4</td><td>state.json 生成</td><td>state.json が有効なJSONとして存在する</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-5</td><td>.cmindexignore ルール適用</td><td>除外対象ファイルがインデックスに含まれない</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-6</td><td>処理結果サマリー表示</td><td>Scanned/Indexed/Skipped/Ignored/Duration が表示される</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-7</td><td>上書き再構築</td><td>再実行でエラーなく上書き完了</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-7-8</td><td>cargo test / clippy / fmt 全パス</td><td>品質チェック全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-<div class="issue-section">
-<h2>Issue #8: 出力フォーマット (6/6 PASS)</h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>受け入れ基準</th><th>結果</th></tr>
-<tr><td>AT-8-1</td><td>--format human CLIパース確認</td><td>--format human が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-8-2</td><td>--format json CLIパース確認</td><td>--format json が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-8-3</td><td>--format path CLIパース確認</td><td>--format path が正しくパースされる</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-8-4</td><td>デフォルトフォーマット確認</td><td>--format 未指定で正しく動作する</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-8-5</td><td>フォーマッターユニットテスト全パス</td><td>output_format関連テスト全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-8-6</td><td>cargo test / clippy / fmt 全パス</td><td>品質チェック全パス</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-</div>
-
-
-<div class="issue-section">
-<h2>Issue #9: search command (13/13 PASS) <span class="run-badge">2026-03-20_001</span></h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>結果</th></tr>
-<tr><td>AT-9-01</td><td>Search Japanese text</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-02</td><td>Search English text</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-03</td><td>--tag filter</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-04</td><td>--path filter (path prefix)</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-05</td><td>--type filter</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-06</td><td>--heading filter</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-07</td><td>--format json</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-08</td><td>--format path</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-09</td><td>--limit 1</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-10</td><td>Multiple flags combined</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-11</td><td>No index (empty dir)</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-12</td><td>Zero results</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-9-13</td><td>cargo test/clippy/fmt</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-<p style="margin-top:0.5rem;"><a class="report-link" href="9/2026-03-20_001/report.html">Full report &rarr;</a></p>
-</div>
-
-<div class="issue-section">
-<h2>Issue #10: status command (7/7 PASS) <span class="run-badge">2026-03-20_001</span></h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>結果</th></tr>
-<tr><td>AT-10-01</td><td>Index exists - status shows info</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-02</td><td>No index - guidance message</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-03</td><td>--path option works</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-04</td><td>--path nonexistent directory</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-05</td><td>--format json output</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-06</td><td>--format path error</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-10-07</td><td>cargo test/clippy/fmt</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-<p style="margin-top:0.5rem;"><a class="report-link" href="10/2026-03-20_001/report.html">Full report &rarr;</a></p>
-</div>
-
-<div class="issue-section">
-<h2>Issue #11: clean command (5/5 PASS) <span class="run-badge">2026-03-20_001</span></h2>
-<table>
-<tr><th>ID</th><th>テスト項目</th><th>結果</th></tr>
-<tr><td>AT-11-01</td><td>Index directory is deleted</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-11-02</td><td>Confirmation message after deletion</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-11-03</td><td>No index exists - no error</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-11-04</td><td>--path option works</td><td><span class="pass-badge">PASS</span></td></tr>
-<tr><td>AT-11-05</td><td>cargo test/clippy/fmt</td><td><span class="pass-badge">PASS</span></td></tr>
-</table>
-<p style="margin-top:0.5rem;"><a class="report-link" href="11/2026-03-20_001/report.html">Full report &rarr;</a></p>
-</div>
-
-</body>
-</html>
+</body></html>

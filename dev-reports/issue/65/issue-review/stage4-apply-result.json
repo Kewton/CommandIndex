@@ -1,0 +1,6 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": ["M1", "M2", "M3", "M4", "M5", "S1", "S2", "S5"],
+  "summary": "Stage 3 影響範囲レビューの指摘を反映。--rerank と --symbol/--related の排他制約明記、実装ガイドセクション追加（変更箇所・モジュール構成・API方式・スコア扱い）、CLI引数パーステスト詳細追加。"
+}

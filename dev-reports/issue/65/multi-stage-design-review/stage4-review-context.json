@@ -1,0 +1,1 @@
+{"stage":4,"type":"セキュリティレビュー","must_fix_count":2,"should_fix_count":3,"nice_to_have_count":3,"key_findings":["SEC-001: プロンプトインジェクション対策(デリミタ分離)","SEC-002: API Key平文保存警告","SEC-003: エラーメッセージのレスポンスボディ漏洩","SEC-004: 非localhostHTTP通信警告","SEC-005: build_document_textのUTF-8安全切り詰め"]}

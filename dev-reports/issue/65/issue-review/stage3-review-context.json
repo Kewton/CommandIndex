@@ -1,0 +1,93 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "CLI引数定義",
+      "description": "src/main.rs の Commands::Search に --rerank (bool) と --rerank-top (usize) オプションを追加する必要がある。Issueの適用対象では全検索モードで動作するとあるが、--symbol, --related は通常の検索結果と異なる型を返すため conflicts_with にすべき。",
+      "suggestion": "--rerank は --symbol, --related と conflicts_with にする。ハイブリッド、--semantic、--no-semantic では動作可能。"
+    },
+    {
+      "id": "M2",
+      "category": "Config構造体拡張",
+      "description": "src/embedding/mod.rs の Config 構造体に rerank: Option<RerankConfig> フィールドが必要。既存テスト(config parse)にrerankセクション有無のケースを追加すべき。",
+      "suggestion": "Config に pub rerank: Option<RerankConfig> を追加。既存の config.toml に [rerank] セクションがなくても None となるため後方互換性は保たれる。"
+    },
+    {
+      "id": "M3",
+      "category": "検索フロー変更",
+      "description": "src/cli/search.rs の run() 関数と try_hybrid_search() がReranking挿入の主要変更点。run() の署名変更が必須。",
+      "suggestion": "run() に rerank/rerank_top パラメータを追加し、final_results 取得後に rerank 処理を挿入する。"
+    },
+    {
+      "id": "M4",
+      "category": "新モジュール追加",
+      "description": "src/search/mod.rs に Reranking モジュールを追加する必要がある。",
+      "suggestion": "src/search/rerank.rs を新規作成し、src/search/mod.rs に pub mod rerank; を追加。"
+    },
+    {
+      "id": "M5",
+      "category": "Ollama API呼び出し",
+      "description": "Rerankingは /api/generate を使用するが、既存 Embedding は /api/embed を使用。異なるAPI形式への対応が必要。",
+      "suggestion": "Rerankモジュール内で独自のリクエスト/レスポンス構造体を定義。既存のユーティリティ関数は再利用可能。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "既存テスト影響",
+      "description": "tests/cli_args.rs の search_with_all_options_accepted は既存テストは壊れないが、新オプションのテストケース追加が必要。",
+      "suggestion": "--rerank と --rerank-top のテストケース、--rerank と --symbol の競合テストを追加。"
+    },
+    {
+      "id": "S2",
+      "category": "出力フォーマット影響",
+      "description": "Reranking後のスコアをSearchResult.scoreに上書きするのか別フィールドにするか設計が必要。",
+      "suggestion": "SearchResult.score を rerank 後のスコアで上書きするのが最もシンプル。"
+    },
+    {
+      "id": "S3",
+      "category": "Graceful Degradation",
+      "description": "try_hybrid_search() のパターンに合わせた try_rerank() が必要。",
+      "suggestion": "各ステップでエラー時は eprintln で警告出力後、入力結果をそのまま返す。"
+    },
+    {
+      "id": "S4",
+      "category": "SearchError拡張",
+      "description": "Graceful Degradationパターンを取る場合、SearchError への追加は不要。",
+      "suggestion": "SearchError への追加は不要。内部で吸収する設計。"
+    },
+    {
+      "id": "S5",
+      "category": "パフォーマンス影響",
+      "description": "各候補にLLM呼び出しを行うため、--rerank-top のデフォルト値が検索レイテンシに直結する。",
+      "suggestion": "--rerank-top のデフォルト値は控えめに設定。バッチ呼び出しの検討。"
+    },
+    {
+      "id": "S6",
+      "category": "依存関係",
+      "description": "Cargo.toml の依存関係変更は不要。既存の reqwest と serde_json で対応可能。",
+      "suggestion": "可能な限り既存依存で実装する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "モジュール構成",
+      "description": "src/search/rerank.rs を追加するだけで lib.rs の変更は不要。",
+      "suggestion": "src/search/mod.rs に pub mod rerank; を追加するだけで良い。"
+    },
+    {
+      "id": "N2",
+      "category": "テスト用MockReranker",
+      "description": "既存の MockProvider パターンに倣った MockReranker が有用。",
+      "suggestion": "src/search/rerank.rs に #[cfg(test)] pub struct MockReranker を定義。"
+    },
+    {
+      "id": "N3",
+      "category": "Status表示",
+      "description": "commandindex status にReranking設定表示は将来の拡張。",
+      "suggestion": "Phase 1では対応不要。"
+    }
+  ],
+  "summary": "影響範囲は主に5箇所: (1) CLI引数定義 src/main.rs, (2) Config構造体 src/embedding/mod.rs, (3) 検索フロー src/cli/search.rs, (4) 新モジュール src/search/rerank.rs, (5) src/search/mod.rs。既存テストは壊れないが新オプションのテスト追加が必要。Cargo.toml の依存追加は不要。最大リスクはパフォーマンス面でCross-Encoderの逐次呼び出しがボトルネック。"
+}

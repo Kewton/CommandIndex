@@ -1,0 +1,1 @@
+{"stage":1,"type":"設計原則レビュー","must_fix_count":3,"should_fix_count":4,"nice_to_have_count":3,"key_findings":["M1: RerankError/EmbeddingError重複(DRY)","M2: ProviderType enum重複(DRY)","M3: cohere.rs空スケルトン不要(YAGNI)","S1: 逐次HTTP根拠不明(KISS)","S2: try_hybrid_search肥大化リスク(SRP)","S3: RerankProviderトレイト最小化(ISP)","S4: スコア上書き情報損失(KISS)"]}

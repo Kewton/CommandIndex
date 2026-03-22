@@ -1,0 +1,1 @@
+{"stage":6,"action":"apply_review","applied_items":["M1: Config配置の将来分離検討を追記","M2: RerankProviderType enum削除、providerフィールド削除(YAGNI)","M3: エラーハンドリング責務分担をトレイトdocに明記","M4: RerankResultの契約(index範囲、重複、未返却)を明記","S1: provider_name()削除(Debug traitで代替)","S2: documents引数を&[RerankCandidate]に変更","S3: HTTP共通ユーティリティ将来切り出しを明記"],"summary":"Stage 5 Codexレビューの指摘を設計方針書に反映。API設計の明確化とYAGNI原則の徹底。"}

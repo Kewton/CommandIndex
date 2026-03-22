@@ -1,0 +1,20 @@
+{
+  "stage": "1-4",
+  "applied_fixes": [
+    {"source": "Stage1-M1", "action": "run()シグネチャ変更なしに変更。no_semanticをSearchOptionsに統合。has_heading_filter削除（options.heading.is_none()で内部導出）。判断8として記録。"},
+    {"source": "Stage1-M2", "action": "SearchResult.scoreのドキュメントコメント方針を判断1に追記。"},
+    {"source": "Stage1-S1", "action": "rrf_merge()を純粋関数に変更。入力を&[SearchResult]に統一。セマンティック結果は事前エンリッチ。判断7として記録。"},
+    {"source": "Stage1-S2", "action": "should_use_hybrid()を廃止。run()内部でoptions.no_semantic/options.heading.is_some()を直接チェック。"},
+    {"source": "Stage1-S3", "action": "HYBRID_OVERSAMPLING_FACTOR定数を定義。既存OVERSAMPLING_FACTORとの目的の違いをコメントで明記。"},
+    {"source": "Stage2-M1", "action": "run()シグネチャ変更なし。SearchOptionsにno_semantic追加。"},
+    {"source": "Stage2-M2", "action": "rrf_merge()の入力を&[SearchResult]に統一。enrich_semantic_to_search_results()を新設。"},
+    {"source": "Stage2-M3", "action": "CLIオプション設計セクションに--no-semanticのclap定義を明記。"},
+    {"source": "Stage2-M4", "action": "score意味変更を判断1に明記。"},
+    {"source": "Stage3-M1", "action": "E2Eテスト影響確認セクションを新設。stderrメッセージの既存テストとの衝突回避方針を記載。"},
+    {"source": "Stage3-S1", "action": "間接的影響セクションにsrc/cli/context.rsを追加。"},
+    {"source": "Stage3-S3", "action": "indexer/reader.rsの影響をレイヤー構成表と影響範囲に正確に記載。"},
+    {"source": "Stage4", "action": "セキュリティ指摘はすべて既存問題。本Issue固有リスクなしと明記。"}
+  ],
+  "must_fix_total": 7,
+  "must_fix_applied": 7
+}

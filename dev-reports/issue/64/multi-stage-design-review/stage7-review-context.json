@@ -1,0 +1,14 @@
+{
+  "stage": 7,
+  "type": "整合性・影響分析レビュー2回目（Codex）",
+  "must_fix": [
+    {"id": "M1", "title": "埋め込みストレージ前提が設計書と現行コードで不一致", "description": "embed/indexはembeddings.dbを更新するが、検索系はSymbolStore(symbols.db)を読む。設計書はsymbols.db前提だが実際のデータフローと不一致。", "suggestion": "既存コードの保存先/検索先の対応関係を正確に把握して設計書を修正。"},
+    {"id": "M2", "title": "auto-hybridによる通常searchの外部送信を『新規リスクなし』としている", "description": "通常search<query>が自動的にembedding providerへHTTP送信する経路が新たに発生。", "suggestion": "セキュリティ章を修正し、通常検索での外部送信リスクを明示。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SearchOptions変更のテスト影響取りこぼし（indexer_tantivy.rs等）"},
+    {"id": "S2", "title": "出力互換性評価不足（score意味変化のJSON契約影響）"},
+    {"id": "S3", "title": "fallback/E2Eテスト戦略の分岐網羅不足"}
+  ],
+  "summary": "埋め込みストレージの保存先/検索先の不整合と、auto-hybridによる外部送信リスクが未対応。"
+}

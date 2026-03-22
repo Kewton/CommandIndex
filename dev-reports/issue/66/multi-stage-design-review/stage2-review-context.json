@@ -1,0 +1,12 @@
+{
+  "stage": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "整合性", "description": "try_rerankはsrc/cli/search.rs内の非公開関数。テストから直接呼べない。", "suggestion": "CLI経由（commandindex search --rerank）で間接テストに方針変更する。"},
+    {"id": "M2", "category": "整合性", "description": "SymbolStore::open_in_memory()は#[cfg(test)]で統合テストから利用不可。", "suggestion": "SymbolStore::open(&tmpdir_path)を使い、tempfileで一時ディレクトリを作成する。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "整合性", "description": "search_similarの次元フィルタ挙動をテスト設計に反映すべき。"},
+    {"id": "S2", "category": "整合性", "description": "SymbolStore::open()後にcreate_tables()の明示呼び出しが必要。"}
+  ],
+  "summary": "Must Fix 2件: try_rerank非公開（CLI経由テストに変更）、open_in_memory利用不可（ファイルベース使用）"
+}

@@ -1,0 +1,14 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "整合性", "description": "公開APIパスが不正確。commandindex::indexer::SymbolStoreではなくcommandindex::indexer::symbol_store::SymbolStoreが正しい。", "suggestion": "use文をcommandindex::indexer::symbol_store::{SymbolStore, EmbeddingInfo}に修正する。"},
+    {"id": "M2", "category": "整合性", "description": "5.2ではResult返却を定義しているが、6.1のサンプルではResultなしのシグネチャに戻っている。", "suggestion": "6.1のサンプルも5.2に合わせてResult返却に統一する。"},
+    {"id": "M3", "category": "整合性", "description": "BM25フォールバックを「Ollama依存」と分類しているが実際はOllama停止時のテスト。分類が曖昧。", "suggestion": "「環境依存テスト」に表現を修正し、前提条件を明確化する。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "APIパス誤認が残るとsrc/への不要な変更に波及する余地あり。"},
+    {"id": "S2", "description": "tests/common/mod.rsに変更はないが依存することを明示すべき。"},
+    {"id": "S3", "description": "config.tomlでendpoint=localhost:11434まで明示すべき。"},
+    {"id": "S4", "description": "フィクスチャ図にembeddings.dbが出てこない。"}
+  ],
+  "summary": "Must Fix 3件: 公開APIパス修正、Result返却の文書内統一、BM25フォールバック分類修正。"
+}

@@ -1,0 +1,67 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "CLI定義（排他制御）",
+      "description": "main.rsのSearch enumに--semanticオプション追加時、conflicts_with_allの設定が必要。既存--relatedのconflicts_with_allにもsemanticを追加が必要。",
+      "suggestion": "--semantic: conflicts_with_all=[query, symbol, related, heading]。既存--relatedにもsemantic追加。matchパターン4変数化。"
+    },
+    {
+      "id": "M2",
+      "category": "SearchError型",
+      "description": "SearchError enumにsemantic検索固有のエラーバリアント（EmbeddingError、NoEmbeddings等）が不足。",
+      "suggestion": "Embedding/EmbeddingStore/NoEmbeddingsバリアント追加+From実装。"
+    },
+    {
+      "id": "M3",
+      "category": "出力フォーマット",
+      "description": "SemanticSearchResult構造体とformat_semantic_results関数が必要。human.rs/json.rs/path.rsそれぞれに対応関数追加。",
+      "suggestion": "既存パターンに沿って4種類目として追加。"
+    },
+    {
+      "id": "M4",
+      "category": "SymbolStore依存",
+      "description": "SymbolStore.search_similar()（symbols.db）を使用し、embeddings.db（embedding/store.rs）は使用しない設計判断の明記が必要。",
+      "suggestion": "Issueの仕様通りSymbolStoreを使う。コード内コメントで明記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "パフォーマンス",
+      "description": "search_similar()の線形スキャン方式。大規模時のメモリ消費・応答時間。",
+      "suggestion": "現段階では十分。ANN導入可能性をコメント記載。"
+    },
+    {
+      "id": "S2",
+      "category": "テストへの影響",
+      "description": "tests/cli_args.rsの既存テスト（search_requires_query_or_symbol等）がエラーメッセージ変更で壊れる可能性。",
+      "suggestion": "テスト更新+新規conflictテスト追加。"
+    },
+    {
+      "id": "S3",
+      "category": "ポストフィルタ設計",
+      "description": "file_pathに複数セクションがある場合のsection_heading照合が必要。インデックスにないセクションの挙動も定義要。",
+      "suggestion": "section_headingマッチング＋見つからない場合のフォールバック定義。"
+    },
+    {
+      "id": "S4",
+      "category": "Ollama未起動時のエラー",
+      "description": "NetworkError時の専用案内メッセージが必要。",
+      "suggestion": "SearchError側でNetworkErrorキャッチ時にOllama起動案内を表示。"
+    },
+    {
+      "id": "S5",
+      "category": "既存検索への非影響確認",
+      "description": "matchパターン3変数→4変数の網羅性変更。",
+      "suggestion": "4変数タプルの慎重な設計＋既存パターンの動作確認テスト。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "出力フォーマットリファクタリング", "description": "4種類目追加。次の追加時にtrait-basedリファクタ検討。"},
+    {"id": "N2", "category": "EmbeddingStore二重管理", "description": "embeddings.dbとsymbols.dbの責務明確化。"},
+    {"id": "N3", "category": "新規クレート依存", "description": "追加不要。確認済み。"},
+    {"id": "N4", "category": "E2Eテスト", "description": "Ollama依存のE2Eテストはモック化or#[ignore]で対応。"}
+  ],
+  "summary": "影響範囲は主に4ファイル: main.rs, cli/search.rs, output/mod.rs+各形式, tests/cli_args.rs。既存検索ロジックへの直接影響なし。新規クレート不要。注意点はmatchパターン網羅性とSearchError型拡張。"
+}

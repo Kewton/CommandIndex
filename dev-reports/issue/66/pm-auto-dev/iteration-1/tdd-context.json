@@ -1,0 +1,12 @@
+{
+  "issue_number": 66,
+  "title": "Phase 5 E2E統合テスト（Semantic Search・Hybrid・Rerank検証）",
+  "design_policy": "dev-reports/design/issue-66-e2e-tests-design-policy.md",
+  "work_plan": "dev-reports/issue/66/work-plan.md",
+  "test_file": "tests/e2e_semantic_hybrid.rs",
+  "production_code_changes": "none",
+  "key_apis": [
+    "commandindex::indexer::symbol_store::{SymbolStore, EmbeddingInfo}",
+    "commandindex::search::hybrid::rrf_merge"
+  ]
+}

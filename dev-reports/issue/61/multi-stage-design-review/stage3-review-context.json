@@ -1,0 +1,15 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "ProviderType enum定義とDefault/ファクトリの型不整合", "suggestion": "Default実装とcreate_providerでProviderType enum使用に統一"},
+    {"id": "MF-2", "title": "main.rsのrun()/clean::run()呼び出し3箇所のOptions追加", "suggestion": "main.rsの変更は設計書に既にコード例あり（6.5節）"},
+    {"id": "MF-3", "title": "clean keep_embeddings時のconfig.toml扱いが未定義", "suggestion": "keep_embeddings時はconfig.tomlも保持する設計を明記"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "reqwest依存によるビルド時間増大"},
+    {"id": "SF-2", "title": "clean.rs選択的削除時のsymlinkチェック粒度"},
+    {"id": "SF-3", "title": "IndexErrorへの新バリアント追加によるmatch更新"},
+    {"id": "SF-4", "title": "embeddings.dbのWAL/SHMファイル管理"},
+    {"id": "SF-5", "title": "dimension()の&selfとinterior mutabilityの矛盾"}
+  ],
+  "summary": "影響範囲は中程度。既存テスト21ファイルはCLI経由のため直接的影響なし。"
+}
