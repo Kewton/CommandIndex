@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "CLIインターフェース設計がサブコマンド構成と不整合",
+      "detail": "Issueでは `commandindex index --export` / `commandindex index --import` と既存の `index` サブコマンドにフラグを追加する形を提案しているが、既存の `Index` サブコマンドは `--path` と `--with-embedding` のみを持つインデックス構築用コマンドであり、エクスポート/インポートはインデックス構築とは本質的に異なる操作である。--export/--import を index のフラグにすると、--path や --with-embedding との排他制御が必要になり、clap定義が複雑化する。",
+      "suggestion": "エクスポート/インポートは独立したサブコマンド `commandindex export <OUTPUT_PATH>` / `commandindex import <INPUT_PATH>` として設計するか、`commandindex index export` / `commandindex index import` のようにネストしたサブコマンドにする方が既存のCLI設計パターンと整合する。"
+    },
+    {
+      "id": "M2",
+      "title": "state.jsonにコミットハッシュのフィールドが存在しない",
+      "detail": "Issueでは「state.json にエクスポート時のメタデータ（コミットハッシュ、タイムスタンプ）を追加」と記載しているが、現在の IndexState 構造体には git_commit_hash フィールドが存在しない。追加時の後方互換性への影響を考慮する必要がある。",
+      "suggestion": "IndexState にオプショナルフィールド `#[serde(default)] pub git_commit_hash: Option<String>` を追加するか、エクスポート専用のメタデータファイル（export_meta.json）をアーカイブ内に別途含める設計を明記すべき。"
+    },
+    {
+      "id": "M3",
+      "title": "セキュリティ: tar展開時のパストラバーサル対策が未記載",
+      "detail": "信頼できないソースからのtar.gzアーカイブをインポートする場合、パストラバーサル攻撃が成立する可能性がある。受け入れ基準にセキュリティ要件が含まれていない。",
+      "suggestion": "受け入れ基準に「インポート時、アーカイブ内の全エントリが展開先ディレクトリ内に収まることを検証し、パストラバーサルを検出した場合はエラーで中断する」を追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存インデックスがある場合のインポート動作が未定義",
+      "detail": "インポート先に既に .commandindex/ が存在する場合の挙動が未記載。",
+      "suggestion": "「既存インデックスがある場合は警告を表示し、--force フラグがなければ中断する」を追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "index_root パスの不整合問題が未考慮",
+      "detail": "state.json の index_root にはインデックス作成時の絶対パスが保存されるが、インポート先では異なるパスになる。",
+      "suggestion": "インポート時に index_root をインポート先のパスに自動書き換える処理を仕様に含めるべき。"
+    },
+    {
+      "id": "S3",
+      "title": "symbols.db と embeddings.db のポータビリティ考慮不足",
+      "detail": "SQLiteデータベースファイル内のファイルパスが相対パスか絶対パスかによってポータビリティが変わる。",
+      "suggestion": "エクスポート対象ファイル一覧と各ファイル内のパスが相対パスであることの前提条件を明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "--verify の検証範囲が曖昧",
+      "detail": "「manifest.json とファイルシステムの一致確認」が具体的に何を指すか不明確。",
+      "suggestion": "各チェック項目を具体的に定義する。例: (1) state.json の schema_version 確認、(2) tantivy ディレクトリの存在と読み取り可能性、(3) manifest.json に記載されたファイルの存在確認、(4) symbols.db の schema_version 確認。"
+    },
+    {
+      "id": "S5",
+      "title": "tar.gz の依存クレート選定が未検討",
+      "detail": "Cargo.toml に tar/flate2 等の圧縮関連クレートが含まれていない。",
+      "suggestion": "使用予定のクレート（tar + flate2）を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "エクスポートファイルのバージョニング",
+      "detail": "将来のスキーマ変更に備え、エクスポートファイル自体にフォーマットバージョンを含めると便利。",
+      "suggestion": "アーカイブ内に export_meta.json を含め、export_format_version, commandindex_version 等を記録する。"
+    },
+    {
+      "id": "N2",
+      "title": "差分インポートとの連携",
+      "detail": "インポート後に commandindex update で差分更新できるかどうかが未記載。",
+      "suggestion": "インポート後に差分更新が正常動作することを確認する旨を追記する。"
+    },
+    {
+      "id": "N3",
+      "title": "エクスポート/インポートの進捗表示",
+      "detail": "大規模リポジトリでは圧縮・展開に時間がかかる可能性がある。",
+      "suggestion": "初期実装ではサイズ表示のみとし、将来的にプログレスバーを追加する。"
+    },
+    {
+      "id": "N4",
+      "title": "config.local.toml の除外",
+      "detail": "エクスポート時に個人設定やAPIキーを含む可能性のある config.local.toml を含めるべきでない。",
+      "suggestion": "エクスポート対象から config.local.toml を明示的に除外する旨を記載する。"
+    }
+  ],
+  "summary": "Issue #77 は大規模リポジトリでのオンボーディング効率化という明確な価値を持つ良いFeatureリクエストである。ただし、(1) CLIインターフェース設計の不整合、(2) state.jsonへのコミットハッシュフィールド追加方針、(3) tar展開時のセキュリティ対策の3点が必須修正。加えて、index_rootの環境間差異、既存インデックスの上書きポリシー、--verifyの検証範囲、依存クレートの選定等の明確化が推奨される。"
+}

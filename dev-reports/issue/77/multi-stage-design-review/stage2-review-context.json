@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "COMMANDINDEX_DIR/INDEX_DIR_NAME 定数の重複 — 参照先統一が必要"},
+    {"id": "M2", "title": "Status run() シグネチャ変更 — StatusOptions に format を含めるか CleanOptions パターンに合わせるか"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "ExportError/ImportError に std::error::Error + From 実装の明記"},
+    {"id": "S2", "title": "Commands enum の doc comment を英語に統一"},
+    {"id": "S3", "title": "import_index.rs の命名根拠明記（import は Rust 2024 で予約語でない）"},
+    {"id": "S4", "title": "run() 戻り値を ExportResult/ImportResult 構造体に統一"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "snapshot.rs の indexer 配下配置は合理的"},
+    {"id": "N2", "title": "テストファイル命名を cli_export.rs/cli_import.rs に"},
+    {"id": "N3", "title": "verify の Status 同居は YAGNI 的に妥当"}
+  ],
+  "must_fix_count": 2
+}

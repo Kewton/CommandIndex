@@ -1,0 +1,20 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "M1", "action": "tantivy インデックスの export/import 後の整合性検証を受け入れ基準に追加"},
+    {"id": "M2", "action": "SQLite内のパスが相対パスであることの注記を追加"},
+    {"id": "M3", "action": "セキュリティ要件にエントリごとのパス検証方法と悪意あるアーカイブのテストケースを追記"},
+    {"id": "M4", "action": "実装上の注意点に cli_args.rs テスト更新を追記"},
+    {"id": "S1", "action": "StatusOptions 構造体導入の方針を実装注意点に追記"},
+    {"id": "S2", "action": "export_format_version の互換性チェックを受け入れ基準に追加"},
+    {"id": "S3", "action": "cli/mod.rs へのモジュール追加を実装注意点に追記"},
+    {"id": "S4", "action": "ストリーミングAPIの使用をエクスポートフォーマットセクションに追記"},
+    {"id": "S5", "action": "明確なエラーメッセージ表示を既存インデックス保護セクションに追記"},
+    {"id": "N3", "action": "embeddings.db をデフォルト除外、--with-embeddings フラグを追加"}
+  ],
+  "deferred": [
+    {"id": "N1", "reason": "tar/flate2 のトランジティブ依存情報は依存クレートセクションに注記追加"},
+    {"id": "N2", "reason": "クロスコンパイル影響なしの注記を依存クレートセクションに追加"}
+  ],
+  "issue_updated": true
+}

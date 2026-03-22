@@ -8,7 +8,6 @@ use clap::ValueEnum;
 use serde::Serialize;
 use walkdir::WalkDir;
 
-use crate::embedding::Config;
 use crate::embedding::store::EmbeddingStore;
 use crate::indexer::manifest::{FileType, Manifest};
 use crate::indexer::state::{IndexState, StateError};
@@ -30,6 +29,7 @@ pub enum StatusFormat {
 pub struct StatusOptions {
     pub detail: bool,
     pub coverage: bool,
+    pub verify: bool,
     pub format: StatusFormat,
 }
 
@@ -38,6 +38,7 @@ impl Default for StatusOptions {
         Self {
             detail: false,
             coverage: false,
+            verify: false,
             format: StatusFormat::Human,
         }
     }
@@ -106,6 +107,38 @@ pub struct StorageBreakdown {
     pub embeddings_db_bytes: u64,
     pub other_bytes: u64,
     pub total_bytes: u64,
+}
+
+/// Verify severity level
+#[derive(Debug, Serialize)]
+pub enum VerifySeverity {
+    Error,
+    Warning,
+}
+
+/// A single verify issue
+#[derive(Debug, Serialize)]
+pub struct VerifyIssue {
+    pub component: String,
+    pub severity: VerifySeverity,
+    pub message: String,
+}
+
+/// Integrity verification result
+#[derive(Debug, Serialize)]
+pub struct VerifyResult {
+    pub state_valid: bool,
+    pub tantivy_valid: bool,
+    pub manifest_valid: bool,
+    pub symbols_valid: bool,
+    pub issues: Vec<VerifyIssue>,
+}
+
+impl VerifyResult {
+    /// Overall pass/fail
+    pub fn is_ok(&self) -> bool {
+        self.state_valid && self.tantivy_valid && self.manifest_valid && self.symbols_valid
+    }
 }
 
 /// status コマンドの出力情報
@@ -233,25 +266,24 @@ fn get_embedding_file_count(base_path: &Path) -> u64 {
     }
 }
 
-/// config.toml から embedding モデル名を取得する
-fn get_embedding_model(commandindex_dir: &Path) -> Option<String> {
-    match Config::load(commandindex_dir) {
-        Ok(Some(config)) => config.embedding.map(|e| e.model),
-        _ => None,
+/// config から embedding モデル名を取得する
+fn get_embedding_model(base_path: &Path) -> Option<String> {
+    match crate::config::load_config(base_path) {
+        Ok(config) => Some(config.embedding.model),
+        Err(_) => None,
     }
 }
 
 /// CoverageInfo を収集する
 fn collect_coverage_info(
     base_path: &Path,
-    commandindex_dir: &Path,
     state: &IndexState,
 ) -> CoverageInfo {
     let discoverable_files = count_discoverable_files(base_path);
     let indexed_files = state.total_files;
     let skipped_files = discoverable_files.saturating_sub(indexed_files);
     let embedding_file_count = get_embedding_file_count(base_path);
-    let embedding_model = get_embedding_model(commandindex_dir);
+    let embedding_model = get_embedding_model(base_path);
 
     CoverageInfo {
         discoverable_files,
@@ -285,6 +317,103 @@ fn compute_storage_breakdown(base_path: &Path) -> StorageBreakdown {
     }
 }
 
+/// Run integrity verification on the index
+fn run_verify(path: &Path) -> VerifyResult {
+    let ci_dir = crate::indexer::commandindex_dir(path);
+    let mut issues = Vec::new();
+
+    // 1. state.json check
+    let state_valid = match IndexState::load(&ci_dir) {
+        Ok(state) => match state.check_schema_version() {
+            Ok(()) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "state".to_string(),
+                    severity: VerifySeverity::Error,
+                    message: format!("Schema version check failed: {e}"),
+                });
+                false
+            }
+        },
+        Err(e) => {
+            issues.push(VerifyIssue {
+                component: "state".to_string(),
+                severity: VerifySeverity::Error,
+                message: format!("Failed to load state.json: {e}"),
+            });
+            false
+        }
+    };
+
+    // 2. tantivy/ directory check
+    let tantivy_dir = ci_dir.join("tantivy");
+    let tantivy_valid = if tantivy_dir.is_dir() {
+        match tantivy::Index::open_in_dir(&tantivy_dir) {
+            Ok(_) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "tantivy".to_string(),
+                    severity: VerifySeverity::Error,
+                    message: format!("Failed to open tantivy index: {e}"),
+                });
+                false
+            }
+        }
+    } else {
+        issues.push(VerifyIssue {
+            component: "tantivy".to_string(),
+            severity: VerifySeverity::Error,
+            message: "tantivy/ directory not found".to_string(),
+        });
+        false
+    };
+
+    // 3. manifest.json check
+    let manifest_valid = match Manifest::load(&ci_dir) {
+        Ok(_) => true,
+        Err(e) => {
+            issues.push(VerifyIssue {
+                component: "manifest".to_string(),
+                severity: VerifySeverity::Warning,
+                message: format!("Failed to load manifest.json: {e}"),
+            });
+            false
+        }
+    };
+
+    // 4. symbols.db check
+    let symbols_db_path = crate::indexer::symbol_db_path(path);
+    let symbols_valid = if symbols_db_path.exists() {
+        match SymbolStore::open(&symbols_db_path) {
+            Ok(_) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "symbols".to_string(),
+                    severity: VerifySeverity::Warning,
+                    message: format!("Failed to open symbols.db: {e}"),
+                });
+                false
+            }
+        }
+    } else {
+        // symbols.db is optional
+        issues.push(VerifyIssue {
+            component: "symbols".to_string(),
+            severity: VerifySeverity::Warning,
+            message: "symbols.db not found".to_string(),
+        });
+        false
+    };
+
+    VerifyResult {
+        state_valid,
+        tantivy_valid,
+        manifest_valid,
+        symbols_valid,
+        issues,
+    }
+}
+
 /// status コマンドのメインロジック
 pub fn run(
     path: &Path,
@@ -310,7 +439,7 @@ pub fn run(
 
     // Collect extended info based on options
     let coverage = if options.detail || options.coverage {
-        Some(collect_coverage_info(path, &commandindex_dir, &state))
+        Some(collect_coverage_info(path, &state))
     } else {
         None
     };
@@ -453,11 +582,51 @@ pub fn run(
                 )
                 .ok();
             }
+
+            // Verify section
+            if options.verify {
+                let result = run_verify(path);
+                writeln!(writer).ok();
+                if result.is_ok() {
+                    writeln!(writer, "Verify: OK").ok();
+                } else {
+                    writeln!(writer, "Verify: FAILED").ok();
+                    for issue in &result.issues {
+                        let severity = match issue.severity {
+                            VerifySeverity::Error => "ERROR",
+                            VerifySeverity::Warning => "WARNING",
+                        };
+                        writeln!(
+                            writer,
+                            "  [{severity}] {}: {}",
+                            issue.component, issue.message
+                        )
+                        .ok();
+                    }
+                }
+            }
         }
         StatusFormat::Json => {
-            let json = serde_json::to_string_pretty(&info)
-                .map_err(|e| StatusError::State(StateError::Json(e)))?;
-            writeln!(writer, "{json}").ok();
+            if options.verify {
+                let verify_result = run_verify(path);
+                #[derive(Serialize)]
+                struct StatusWithVerify {
+                    #[serde(flatten)]
+                    info: StatusInfo,
+                    verify: VerifyResult,
+                }
+                let combined = StatusWithVerify {
+                    info,
+                    verify: verify_result,
+                };
+                let json = serde_json::to_string_pretty(&combined)
+                    .map_err(|e| StatusError::State(StateError::Json(e)))?;
+                writeln!(writer, "{json}").ok();
+            } else {
+                let json = serde_json::to_string_pretty(&info)
+                    .map_err(|e| StatusError::State(StateError::Json(e)))?;
+                writeln!(writer, "{json}").ok();
+            }
         }
     }
 

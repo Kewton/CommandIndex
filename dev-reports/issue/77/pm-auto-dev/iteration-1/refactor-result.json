@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "changes": [
+    "current_git_hash 関数を export.rs/import_index.rs から snapshot.rs に統合（DRY）",
+    "status.rs のハードコードパスを commandindex_dir() に統一（一貫性）"
+  ]
+}
