@@ -1,0 +1,46 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "config show でシークレットが露出する仕様穴がある",
+      "description": "commandindex config show で有効設定を表示する際、環境変数由来または設定ファイル由来の api_key を平文表示する危険がある。既存の Debug 実装はマスクしているが、config show の出力仕様にはその配慮が書かれていない。",
+      "suggestion": "受け入れ基準とCLI仕様に「config show は api_key 等の秘匿値を必ずマスクする」を明記すべき。"
+    },
+    {
+      "id": "M2",
+      "title": "旧 .commandindex/config.toml の移行時挙動が未確定",
+      "description": "新 commandindex.toml が未作成のまま旧ファイルだけ残っているケースで、設定が無視されるのか deprecated fallback として読むのかが未定義。既存ユーザーの動作が突然変わる可能性がある。",
+      "suggestion": "Phase 1 では旧 .commandindex/config.toml を deprecated fallback として読みつつ警告を出すか、breaking change として明示するかを受け入れ基準に入れるべき。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "設定ファイル検出のベースパス説明が実際のCLI構造と完全には一致していない",
+      "description": "index/update/embed/clean は --path を持つが、search には --path がなくカレントディレクトリ固定。設定検出のベースパスが曖昧。",
+      "suggestion": "search 系は Phase 1 では current directory 基準であることを明記するか、別Issueで search に --path を追加すると切り分けるべき。"
+    },
+    {
+      "id": "S2",
+      "title": "config path の表示対象に旧設定ファイルを含めるかが未定義",
+      "description": "旧 .commandindex/config.toml を警告対象にするなら、config path で deprecated path を表示するのか無視するのかが未記載。",
+      "suggestion": "config path の仕様に旧ファイルの扱いを追記すべき。"
+    },
+    {
+      "id": "S3",
+      "title": "受け入れ基準に config show のフォーマット差分が反映されていない",
+      "description": "CLI仕様では --format toml|json|human まで踏み込んでいるが、受け入れ基準は TOML のみ。",
+      "suggestion": "Phase 1 のスコープを TOML のみに絞るならCLI仕様から json|human を外すべき。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "設定ファイル名の定数化対象を本体コードにも広げる",
+      "description": "テスト側だけでなく本体側も clean.rs や新 config モジュール、警告表示で同じファイル名を複数箇所で扱う。",
+      "suggestion": "TEAM_CONFIG_FILE, LOCAL_CONFIG_FILE, LEGACY_CONFIG_FILE のような定数を定義する方針を追記。"
+    }
+  ],
+  "summary": "1回目レビューの主要指摘は概ね反映済み。2回目の主な懸念は config show のシークレット露出リスクと、旧 .commandindex/config.toml の移行時挙動が未確定な点。設定検出のベースパス説明は search の挙動と完全一致していない。",
+  "reviewer": "Codex (gpt-5.4 medium)"
+}

@@ -32,12 +32,17 @@ fn clean_keep_embeddings_preserves_embeddings_db() {
         .assert()
         .success();
 
-    // Create a dummy embeddings.db and config.toml in .commandindex/
+    // Create a dummy embeddings.db, config.toml, and config.local.toml in .commandindex/
     let commandindex_dir = dir.path().join(".commandindex");
     std::fs::write(commandindex_dir.join("embeddings.db"), "dummy").unwrap();
     std::fs::write(
         commandindex_dir.join("config.toml"),
         "[embedding]\nprovider = \"ollama\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        commandindex_dir.join("config.local.toml"),
+        "[embedding]\napi_key = \"sk-test\"\n",
     )
     .unwrap();
 
@@ -53,9 +58,10 @@ fn clean_keep_embeddings_preserves_embeddings_db() {
         .success()
         .stdout(predicate::str::contains("embeddings preserved"));
 
-    // Verify embeddings.db and config.toml are preserved
+    // Verify embeddings.db, config.toml, and config.local.toml are preserved
     assert!(commandindex_dir.join("embeddings.db").exists());
     assert!(commandindex_dir.join("config.toml").exists());
+    assert!(commandindex_dir.join("config.local.toml").exists());
 
     // Verify tantivy, manifest.json, state.json are removed
     assert!(!commandindex_dir.join("tantivy").exists());

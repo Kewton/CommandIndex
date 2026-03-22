@@ -13,6 +13,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum Commands {
     /// Build search index from repository
     Index {
@@ -59,15 +60,15 @@ enum Commands {
         /// Filter by heading
         #[arg(long)]
         heading: Option<String>,
-        /// Maximum number of results (1-1000)
-        #[arg(long, default_value_t = 20)]
-        limit: usize,
-        /// Number of snippet lines (0 = unlimited)
-        #[arg(long, default_value_t = 2)]
-        snippet_lines: usize,
-        /// Number of snippet characters for single-line body (0 = unlimited)
-        #[arg(long, default_value_t = 120)]
-        snippet_chars: usize,
+        /// Maximum number of results (default: from config or 20)
+        #[arg(long)]
+        limit: Option<usize>,
+        /// Number of snippet lines (default: from config or 2)
+        #[arg(long)]
+        snippet_lines: Option<usize>,
+        /// Number of snippet characters for single-line body (default: from config or 120)
+        #[arg(long)]
+        snippet_chars: Option<usize>,
         /// Enable LLM-based reranking of search results
         #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
         rerank: bool,
@@ -122,6 +123,19 @@ enum Commands {
         #[arg(long, default_value = ".")]
         path: PathBuf,
     },
+    /// Show or manage configuration
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum ConfigCommands {
+    /// Show current effective config (secrets masked)
+    Show,
+    /// Show loaded config file paths
+    Path,
 }
 
 fn main() {
@@ -170,9 +184,27 @@ fn main() {
             rerank,
             rerank_top,
         } => {
+            // Resolve optional args with config defaults
+            let config = commandindex::config::load_config(std::path::Path::new("."));
+            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &config
+            {
+                Ok(cfg) => (
+                    limit.unwrap_or(cfg.search.default_limit).min(1000),
+                    snippet_lines.unwrap_or(cfg.search.snippet_lines),
+                    snippet_chars.unwrap_or(cfg.search.snippet_chars),
+                ),
+                Err(e) => {
+                    eprintln!("Warning: failed to load config, using defaults: {e}");
+                    (
+                        limit.unwrap_or(20).min(1000),
+                        snippet_lines.unwrap_or(2),
+                        snippet_chars.unwrap_or(120),
+                    )
+                }
+            };
             let snippet_config = commandindex::output::SnippetConfig {
-                lines: snippet_lines,
-                chars: snippet_chars,
+                lines: effective_snippet_lines,
+                chars: effective_snippet_chars,
             };
             let result = match (query, symbol, related, semantic) {
                 (Some(q), None, None, None) => {
@@ -180,7 +212,7 @@ fn main() {
                         query: q,
                         tag,
                         heading,
-                        limit: limit.min(1000),
+                        limit: effective_limit,
                         no_semantic,
                     };
                     let filters = commandindex::indexer::reader::SearchFilters {
@@ -190,10 +222,10 @@ fn main() {
                     commandindex::cli::search::run(&options, &filters, format, snippet_config, rerank, rerank_top)
                 }
                 (None, Some(s), None, None) => {
-                    commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)
+                    commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
                 }
                 (None, None, Some(f), None) => {
-                    commandindex::cli::search::run_related_search(&f, limit.min(1000), format)
+                    commandindex::cli::search::run_related_search(&f, effective_limit, format)
                 }
                 (None, None, None, Some(q)) => {
                     let filters = commandindex::indexer::reader::SearchFilters {
@@ -202,7 +234,7 @@ fn main() {
                     };
                     commandindex::cli::search::run_semantic_search(
                         &q,
-                        limit.min(1000),
+                        effective_limit,
                         format,
                         tag.as_deref(),
                         &filters,
@@ -311,6 +343,22 @@ fn main() {
                 eprintln!("Error: {e}");
                 1
             }
+        },
+        Commands::Config { command } => match command {
+            ConfigCommands::Show => match commandindex::cli::config::run_show() {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            },
+            ConfigCommands::Path => match commandindex::cli::config::run_path() {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            },
         },
     };
 

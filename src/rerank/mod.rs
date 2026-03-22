@@ -24,7 +24,7 @@ fn default_timeout_secs() -> u64 {
     30
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct RerankConfig {
     #[serde(default = "default_rerank_model")]
     pub model: String,
@@ -36,6 +36,18 @@ pub struct RerankConfig {
     pub api_key: Option<String>,
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
+}
+
+impl fmt::Debug for RerankConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RerankConfig")
+            .field("model", &self.model)
+            .field("top_candidates", &self.top_candidates)
+            .field("endpoint", &self.endpoint)
+            .field("api_key", &self.api_key.as_ref().map(|_| "***"))
+            .field("timeout_secs", &self.timeout_secs)
+            .finish()
+    }
 }
 
 impl Default for RerankConfig {
@@ -183,6 +195,24 @@ mod tests {
         let wrapper: Wrapper = toml::from_str(toml_str).unwrap();
         assert_eq!(wrapper.rerank.model, "llama3");
         assert_eq!(wrapper.rerank.top_candidates, 20);
+    }
+
+    #[test]
+    fn test_rerank_config_debug_masks_api_key() {
+        let config = RerankConfig {
+            api_key: Some("sk-secret-rerank-key".to_string()),
+            ..RerankConfig::default()
+        };
+        let debug_str = format!("{config:?}");
+        assert!(!debug_str.contains("sk-secret-rerank-key"));
+        assert!(debug_str.contains("***"));
+    }
+
+    #[test]
+    fn test_rerank_config_debug_no_api_key() {
+        let config = RerankConfig::default();
+        let debug_str = format!("{config:?}");
+        assert!(debug_str.contains("None"));
     }
 
     #[test]

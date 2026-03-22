@@ -1,0 +1,20 @@
+{
+  "stage": 1,
+  "focus": "SOLID/KISS/YAGNI/DRY",
+  "must_fix": [
+    {"id": "M1", "title": "AppConfig has mixed responsibilities: data + I/O + merge + view", "principle": "SRP/OCP", "suggestion": "Extract ConfigLoader for file discovery/reading/merging. AppConfig should be plain data."},
+    {"id": "M2", "title": "RawConfig duplicates field definitions from EmbeddingConfig/RerankConfig", "principle": "DRY", "suggestion": "Add compile-time or test-time check that Raw and final structs stay in sync."}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "Config::load called 4 times independently in search.rs", "principle": "DRY/KISS", "suggestion": "Load once at top of each CLI handler and pass down."},
+    {"id": "S2", "title": "RerankConfig.provider is Option<String> instead of typed enum", "principle": "Type Safety", "suggestion": "Remove provider from RawRerankConfig since only Ollama is supported."},
+    {"id": "S3", "title": "No abstraction for config loading makes testing harder", "principle": "DI/Testability", "suggestion": "Accept sources as parameter for testability."},
+    {"id": "S4", "title": "AppConfigView duplicates structure for masking", "principle": "DRY", "suggestion": "Use custom Serialize or MaskedField wrapper."}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "ConfigSourceKind::Default is unused", "principle": "YAGNI"},
+    {"id": "N2", "title": "IndexConfig with only languages feels premature", "principle": "YAGNI"},
+    {"id": "N3", "title": "SearchConfig defaults lose discoverability from CLI help", "principle": "KISS"},
+    {"id": "N4", "title": "EmbeddingError and RerankError have near-identical variants", "principle": "DRY"}
+  ]
+}
