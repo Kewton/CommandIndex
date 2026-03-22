@@ -1,0 +1,48 @@
+{
+  "critical": [
+    {
+      "file": "src/output/mod.rs",
+      "line": 218,
+      "severity": "high",
+      "category": "security",
+      "description": "`strip_control_chars()` preserves newline characters, and path validation does not reject them. A crafted file path containing `\\n` can therefore inject extra lines into `human`/`path` output and any other display path that relies on this helper, which defeats the intended terminal-injection mitigation.",
+      "suggestion": "Treat file paths as single-line data: reject `\\r`/`\\n` during validation, or strip all control characters including newlines before rendering paths and warnings."
+    }
+  ],
+  "warnings": [
+    {
+      "file": "src/cli/stdin.rs",
+      "line": 73,
+      "severity": "medium",
+      "category": "security",
+      "description": "Invalid-path warnings echo the original path via `StdinError::InvalidPath` without removing terminal control characters other than NUL. An attacker can pass ANSI escape sequences in stdin and have them written to stderr.",
+      "suggestion": "Sanitize paths for display in `InvalidPath` messages the same way as other user-facing error messages, or reject all control characters up front."
+    },
+    {
+      "file": "src/cli/impact.rs",
+      "line": 188,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`aggregate_impact()` hard-caps each `find_related()` call at 1000 results but still reports `summary.total_impacted` and `overlap` as if they were complete. Repositories with more than 1000 related files for an input will silently produce undercounted summaries and missed overlaps.",
+      "suggestion": "Remove the fixed internal cap for summary/overlap computation, or document and surface truncation explicitly in the output/error path."
+    },
+    {
+      "file": "src/cli/impact.rs",
+      "line": 225,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`FileNotIndexed` and `FileNotFound` errors from `find_related()` are converted into empty per-file results with no warning. This silently hides partial failures and makes the command appear successful while omitting data.",
+      "suggestion": "Emit a warning per skipped file, or propagate a structured partial-failure status so users can distinguish 'no related files' from 'file could not be analyzed'."
+    },
+    {
+      "file": "src/output/path.rs",
+      "line": 85,
+      "severity": "low",
+      "category": "bug",
+      "description": "`format_impact_path()` sorts only by floating-point score and uses `Ordering::Equal` for ties. Because the source data comes from a `HashMap`, equal-score paths can appear in nondeterministic order across runs, which can make CLI output and tests flaky.",
+      "suggestion": "Add a deterministic secondary key such as path lexicographic order when scores are equal."
+    }
+  ],
+  "summary": "1 high-severity security issue and 4 additional warnings were found. The main risks are terminal output injection through unsanitized path strings, silent data loss in impact aggregation due to the fixed 1000-result cap, and hidden partial failures when per-file related lookup cannot be completed.",
+  "requires_fix": true
+}

@@ -1,0 +1,27 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "description": "find_related(file, 1000) では 1000 件を超える関連結果がある場合に total_impacted と overlap が欠落する",
+      "location": "Section 2, Section 4.1",
+      "reason": "実用上1000件超の related は極めて稀。INTERNAL_FETCH_LIMIT=1000 は十分な値。設計書に制限事項として明記する。"
+    },
+    {
+      "id": "M2",
+      "description": "path 出力の union 後のスコア降順の代表値定義がない",
+      "location": "Section 5.3",
+      "reason": "同一 path が複数入力から出た場合、max スコアを代表値とする。設計書に明記する。"
+    }
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "パス検証ロジックの DRY 違反"},
+    {"id": "S2", "description": "aggregate_impact の単一責務が弱い"},
+    {"id": "S3", "description": "per-file の索引不整合ケースの扱いが未定義"},
+    {"id": "S4", "description": "JSON出力への strip_control_chars は過剰"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "RelationType に Serialize/Display を共通化"},
+    {"id": "N2", "description": "ImpactPerFile.related が 0 件の表示を定義"}
+  ],
+  "summary": "API 設計に 2 点穴: find_related 上限と path ソート基準。DRY/SOLID 観点でも改善余地。"
+}

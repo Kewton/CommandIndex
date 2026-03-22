@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "tests_passed": true,
+  "clippy_clean": true,
+  "summary": "Issue #90 impact subcommand fully implemented. Data model replaced (ImpactResult with changed_files/impact/overlap/summary). aggregate_impact rewritten with per-file results, overlap detection (files in 2+ input files), and summary statistics. --limit now applies per-file to related[]. JSON output uses serde Serialize derive. Human output shows per-file grouping + Overlap section + Summary line. Path output uses union with max score descending. MAX_INPUT_FILES check added to validate_and_normalize. UTF-8 truncation bug fixed in stdin.rs. All 609+ tests pass, clippy zero warnings, fmt clean.",
+  "changes": {
+    "src/output/mod.rs": "Replaced ImpactResult/ImpactFileResult with ImpactResult/ImpactPerFile/ImpactRelatedFile/ImpactSummary",
+    "src/cli/impact.rs": "Rewrote aggregate_impact with INTERNAL_FETCH_LIMIT=1000, per-file results, overlap detection, summary. Added MAX_INPUT_FILES check to validate_and_normalize",
+    "src/output/json.rs": "Simplified format_impact_json to use serde_json::to_writer_pretty with Serialize derive",
+    "src/output/human.rs": "Rewrote format_impact_human with per-file grouping, Overlap section, Summary line",
+    "src/output/path.rs": "Rewrote format_impact_path with union output, max score descending, strip_control_chars",
+    "src/cli/stdin.rs": "Fixed UTF-8 truncation panic in StdinError::InvalidPath Display using chars().take(100)",
+    "tests/output_format.rs": "Updated make_impact_result and all impact tests for new data model",
+    "tests/e2e_impact.rs": "Updated all E2E tests for new JSON fields. Added overlap detection, summary statistics, and --limit per-file tests"
+  }
+}

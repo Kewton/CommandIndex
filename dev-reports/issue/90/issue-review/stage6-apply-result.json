@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "applied_items": ["M1", "M2", "S1", "S2", "S3"],
+  "changes": [
+    "--limit の適用ルールセクション追加（入力ファイルごとの related 件数上限、summary/overlap は limit 前基準）",
+    "入力ファイルの除外ルールセクション追加",
+    "出力形式別の仕様テーブル追加（json/human/path それぞれの出力内容を明記）",
+    "エラー・Warning の扱いセクション追加",
+    "受け入れ基準に入力除外、limit 仕様、human の overlap+summary 表示を追加"
+  ],
+  "skipped_items": ["N1", "N2", "N3"],
+  "reason": "N1はエラー・Warning セクションで対応済み、N2-N3は実装詳細"
+}

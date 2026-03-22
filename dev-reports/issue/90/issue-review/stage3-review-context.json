@@ -1,0 +1,44 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "description": "Performance concern: aggregate_impact calls find_related() with limit=1000 for each input file (up to 500). Worst case 500x1000=500,000 intermediate results in HashMap.",
+      "location": "src/cli/impact.rs:174-201",
+      "reason": "Memory and CPU concern for large git diff outputs. Consider documenting expected scale or adding progressive limit."
+    },
+    {
+      "id": "S2",
+      "description": "Duplicate validation logic: validate_file_paths (cli/mod.rs) vs validate_file_path (cli/stdin.rs) with different error types and slightly different checks",
+      "location": "src/cli/mod.rs:14-66, src/cli/stdin.rs:106-143",
+      "reason": "Maintenance risk from two overlapping validation functions. Bug fix in one might not propagate to the other."
+    },
+    {
+      "id": "S3",
+      "description": "E2E test impact_excludes_input_files_from_results checks wrong JSON field name (f['path'] vs 'file_path')",
+      "location": "tests/e2e_impact.rs:225-233",
+      "reason": "Test assertion is vacuously true. Same issue as Stage 1 S3."
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "description": "Impact JSON uses pretty-printed format while other subcommands use compact JSONL",
+      "location": "src/output/json.rs:127",
+      "reason": "Minor UX inconsistency across subcommands."
+    },
+    {
+      "id": "N2",
+      "description": "relation_type_to_string duplicates mapping logic found in human.rs and json.rs",
+      "location": "src/cli/impact.rs:239-247",
+      "reason": "Three places map RelationType to strings. A centralized Display impl would reduce divergence."
+    },
+    {
+      "id": "N3",
+      "description": "ImpactResult derives Serialize but format_impact_json manually constructs JSON",
+      "location": "src/output/json.rs:110-130",
+      "reason": "Unused Serialize derive. Either use it or remove it."
+    }
+  ],
+  "summary": "LOW RISK to existing functionality. Changes are purely additive. No existing tests broken. Main concerns: (1) E2E test field name bug (S3, same as Stage 1), (2) duplicate validation logic, (3) performance at scale. No new dependencies."
+}

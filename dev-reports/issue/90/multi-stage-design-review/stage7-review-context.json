@@ -1,0 +1,25 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "description": "find_related の limit=1000 で summary/overlap を保証できるか不明確",
+      "reason": "実用上は十分だが、設計書で制限事項として明記。将来必要なら Search 層 API 拡張を検討。"
+    },
+    {
+      "id": "M2",
+      "description": "find_related 個別失敗の warning 継続方針が既存 fail-fast と不整合",
+      "reason": "FileNotFound/FileNotIndexed のみ warning 継続、それ以外の ReaderError/SymbolStoreError は fail-fast を維持する方針に修正。"
+    }
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "影響を受けない既存機能の記述が強すぎる"},
+    {"id": "S2", "description": "出力順序テスト観点が不足"},
+    {"id": "S3", "description": "JSON に strip_control_chars は過剰、serde escape に委ねるべき"},
+    {"id": "S4", "description": "validate_and_normalize の上限判定順序を stdin と揃える"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "path formatter 間の sanitize 一貫性"},
+    {"id": "N2", "description": "UTF-8 truncation 修正のテスト追記"}
+  ],
+  "summary": "find_related の limit=1000 制約と fail-fast 方針の不整合が主な残件。JSON sanitize は serde に委ねる方が適切。"
+}

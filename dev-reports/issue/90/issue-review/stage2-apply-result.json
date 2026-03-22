@@ -1,0 +1,11 @@
+{
+  "stage": 2,
+  "applied_items": ["M1", "S1", "S2", "S3", "N4"],
+  "changes": [
+    "出力形式に path を追加（human / json / path）",
+    "実装上の注意点セクションを追加（JSON出力仕様、overlap、summary、E2Eテスト、CLIヘルプ）",
+    "受け入れ基準を具体化（overlap配列、summary構成、E2Eテスト要件）"
+  ],
+  "skipped_items": ["N1", "N2", "N3"],
+  "reason": "N1-N3はE2Eテストと実装の詳細であり、受け入れ基準に既に含めた"
+}
