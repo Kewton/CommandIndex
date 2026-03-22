@@ -17,7 +17,8 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("context"))
         .stdout(predicate::str::contains("config"))
         .stdout(predicate::str::contains("export"))
-        .stdout(predicate::str::contains("import"));
+        .stdout(predicate::str::contains("import"))
+        .stdout(predicate::str::contains("diff"));
 }
 
 #[test]

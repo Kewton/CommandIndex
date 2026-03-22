@@ -124,6 +124,20 @@ enum Commands {
         #[arg(long)]
         keep_embeddings: bool,
     },
+    /// Compare related files between two files (conflict detection)
+    Diff {
+        /// Two files to compare
+        #[arg(required = true, num_args = 2)]
+        files: Vec<String>,
+
+        /// Output format
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+
+        /// Maximum related files per input file
+        #[arg(long, default_value = "100", value_parser = clap::value_parser!(u64).range(1..=10000))]
+        limit: u64,
+    },
     /// Generate AI-oriented context pack for specified files
     Context {
         /// Target file paths (multiple allowed)
@@ -413,6 +427,17 @@ fn main() {
                 }
             }
         }
+        Commands::Diff {
+            files,
+            format,
+            limit,
+        } => match commandindex::cli::diff::run_diff(&files, limit as usize, format) {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Context {
             files,
             max_files,

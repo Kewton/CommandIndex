@@ -1,6 +1,7 @@
 pub mod clean;
 pub mod config;
 pub mod context;
+pub mod diff;
 pub mod embed;
 pub mod export;
 pub mod import_index;

@@ -4,8 +4,8 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
-    WorkspaceSearchResult, parse_tags, strip_control_chars, truncate_body,
+    DiffResult, OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig,
+    SymbolSearchResult, WorkspaceSearchResult, parse_tags, strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
@@ -196,6 +196,45 @@ pub fn format_symbol_human(
                 "    [{child_kind}] {child_name} (line {}-{})",
                 child.line_start, child.line_end
             )?;
+        }
+    }
+    Ok(())
+}
+
+/// Diff結果をhuman形式で出力する
+pub fn format_diff_human(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    let file_a = strip_control_chars(&result.file_a);
+    let file_b = strip_control_chars(&result.file_b);
+
+    writeln!(writer, "=== Diff: {} vs {} ===", file_a, file_b)?;
+    writeln!(writer)?;
+
+    writeln!(writer, "Only in {}:", file_a)?;
+    if result.only_a.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.only_a {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
+        }
+    }
+    writeln!(writer)?;
+
+    writeln!(writer, "Only in {}:", file_b)?;
+    if result.only_b.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.only_b {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
+        }
+    }
+    writeln!(writer)?;
+
+    writeln!(writer, "Overlap ({} files):", result.overlap.len())?;
+    if result.overlap.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.overlap {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
         }
     }
     Ok(())
