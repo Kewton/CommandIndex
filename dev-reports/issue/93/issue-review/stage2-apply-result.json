@@ -1,0 +1,19 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: インデックス未構築時のエラーハンドリングを受け入れ基準とエラーハンドリングセクションに追加",
+    "M2: 対象拡張子以外のフィルタリングを受け入れ基準と実装方針に追加",
+    "M3: run_incremental() をそのまま呼び出す方式を明記",
+    "S1: --daemon をスコープ外に変更（別Issueで対応）",
+    "S2: エラーリカバリ方針を追加（エラーハンドリングセクション）",
+    "S3: --path を既存と同じ意味（リポジトリルート指定）に統一",
+    "S4: ログ出力の受け入れ基準を追加",
+    "S5: --debounce オプション追加",
+    "N1: --index-path 統合をスコープ外と明記",
+    "N2: テスト方針セクションを追加",
+    "N4: --with-embedding オプション対応を追加"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/93"
+}

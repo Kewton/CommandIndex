@@ -183,6 +183,18 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Watch for file changes and auto-update index
+    Watch {
+        /// Target directory to watch
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+        /// Debounce interval in seconds
+        #[arg(long, default_value = "1")]
+        debounce: u64,
+        /// Generate embeddings during update
+        #[arg(long)]
+        with_embedding: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -720,6 +732,18 @@ fn main() {
                     eprintln!("Error: {e}");
                     1
                 }
+            }
+        }
+        Commands::Watch {
+            path,
+            debounce,
+            with_embedding,
+        } => {
+            if let Err(e) = commandindex::cli::watch::run(&path, debounce, with_embedding) {
+                eprintln!("Watch error: {e}");
+                1
+            } else {
+                0
             }
         }
     };

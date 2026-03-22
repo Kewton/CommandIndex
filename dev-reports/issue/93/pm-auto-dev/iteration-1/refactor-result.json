@@ -1,0 +1,30 @@
+{
+  "status": "completed",
+  "codex_warnings_addressed": [
+    {
+      "warning": "notify callback discards watcher-side errors",
+      "fix": "Added error channel (err_tx/err_rx) to propagate watcher errors to main loop. Watcher errors now cause watch to exit with WatchError::Notify.",
+      "status": "fixed"
+    },
+    {
+      "warning": "unbounded mpsc::channel for events",
+      "fix": "Acknowledged as low risk for local CLI tool. Events are drained with try_recv() in each loop iteration. Switching to sync_channel could block the notify callback thread, causing worse behavior. Documented as known limitation.",
+      "status": "accepted_risk"
+    },
+    {
+      "warning": "max_wait overflow with large debounce_secs",
+      "fix": "Changed debounce_secs * 5 to debounce_secs.saturating_mul(5) to prevent overflow.",
+      "status": "fixed"
+    },
+    {
+      "warning": "ctrlc::set_handler global registration limitation",
+      "fix": "Acknowledged. This is a CLI tool where run() is called once per process invocation. Test isolation is handled by not calling run() in unit tests. Documented as known limitation.",
+      "status": "accepted_risk"
+    }
+  ],
+  "quality_checks": {
+    "clippy": "0 warnings",
+    "test": "all pass (237 lib + 48 cli + all integration)",
+    "fmt": "no diff"
+  }
+}

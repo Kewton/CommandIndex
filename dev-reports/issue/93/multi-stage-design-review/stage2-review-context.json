@@ -1,0 +1,1 @@
+{"stage": 2, "focus": "整合性", "must_fix_count": 4, "should_fix_count": 4, "nice_to_have_count": 3, "must_fix_ids": ["M1:Cargo.toml依存追加", "M2:pathオプションshort削除", "M3:mod.rs宣言", "M4:Commands enum追加"]}
