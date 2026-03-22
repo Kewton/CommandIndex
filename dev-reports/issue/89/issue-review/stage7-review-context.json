@@ -1,0 +1,57 @@
+{
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "既存機能への影響",
+      "description": "impact / search --related-stdin の集約ロジックと context の既存ロジックが微妙にずれるリスク。TagMatch の union、入力ファイル除外、スコア最大値採用は既に context.rs に実装がある。",
+      "suggestion": "集約ロジックは共通化前提で影響範囲に含め、context と impact / related-stdin が同じ union ルールを使うことを明記。"
+    },
+    {
+      "id": "S2",
+      "category": "テストへの影響",
+      "description": "tests/output_format.rs は現状 SearchResult / WorkspaceSearchResult のみ対象。ImpactResult 追加後の formatter 網羅がない。",
+      "suggestion": "tests/output_format.rs への影響も明記し、ImpactResult 用の formatter 単体テストを追加対象に含める。"
+    },
+    {
+      "id": "S3",
+      "category": "パフォーマンスへの影響",
+      "description": "impact の JSON スキーマは impacted_by を持つため、単なる union よりメモリ使用量が増える。入力500件で同一ファイルが多数の入力に関連するケースでは impacted_by の保持コストが支配的になる可能性。",
+      "suggestion": "impacted_by の順序、重複排除、最大保持件数を決めておく。"
+    },
+    {
+      "id": "S4",
+      "category": "依存関係への影響",
+      "description": "std::io::IsTerminal を使うことで実質的に Rust ツールチェーン下限依存が増える。Cargo.toml には MSRV の明示がない。",
+      "suggestion": "必要な Rust バージョン前提を Issue か開発ドキュメントに記載。"
+    },
+    {
+      "id": "S5",
+      "category": "既存機能への影響",
+      "description": "stdin 入力仕様で「バックスラッシュは / に正規化（context.rs と同じ制約）」とあるが、現行 context.rs はバックスラッシュを禁止している。曖昧。",
+      "suggestion": "バックスラッシュを禁止するのか正規化するのかを統一し、共通ユーティリティ化する前提で影響範囲に含める。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "テストへの影響",
+      "description": "impact は新規サブコマンドなので、tests/e2e_context_pack.rs と同様のヘルパーを共通化するとテスト重複を抑えられる。",
+      "suggestion": "tests/common/mod.rs に JSON object / JSONL パース補助を追加。"
+    },
+    {
+      "id": "N2",
+      "category": "パフォーマンスへの影響",
+      "description": "正規化後に dedup することまで明示されていない。a/b.rs と ./a/b.rs を別物扱いすると不要な重複クエリが発生。",
+      "suggestion": "正規化後のパスでユニーク化することを補足。"
+    },
+    {
+      "id": "N3",
+      "category": "依存関係への影響",
+      "description": "stdin専用エラー型を SearchError にだけ載せるか、共通CLIエラーとして切り出すかを先に決めておくと依存関係の見通しがよくなる。",
+      "suggestion": "共通CLIエラー型の設計方針を決める。"
+    }
+  ],
+  "summary": "Issueは仕様が明確になった一方で、影響範囲は CLI追加だけでは済まず、既存 search の排他モデル、related/context の集約ロジック、出力フォーマッタ、既存テスト期待値まで波及する。最大のリスクは --related-stdin による既存 search 挙動の回帰と、500件入力時の線形クエリ増加による性能劣化。Must Fix は0件。"
+}

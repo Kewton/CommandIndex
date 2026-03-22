@@ -18,6 +18,7 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("config"))
         .stdout(predicate::str::contains("export"))
         .stdout(predicate::str::contains("import"))
+        .stdout(predicate::str::contains("impact"))
         .stdout(predicate::str::contains("watch"))
         .stdout(predicate::str::contains("diff"));
 }
@@ -440,6 +441,80 @@ fn search_workspace_with_repo_accepted() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("Workspace error"));
+}
+
+#[test]
+fn impact_help_shows_usage() {
+    common::cmd()
+        .args(["impact", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("impact"))
+        .stdout(predicate::str::contains("format"))
+        .stdout(predicate::str::contains("limit"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_related() {
+    common::cmd()
+        .args(["search", "--related", "file.rs", "--related-stdin"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_query() {
+    common::cmd()
+        .args(["search", "query", "--related-stdin"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_symbol() {
+    common::cmd()
+        .args(["search", "--symbol", "name", "--related-stdin"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_semantic() {
+    common::cmd()
+        .args(["search", "--semantic", "query", "--related-stdin"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_tag() {
+    common::cmd()
+        .args(["search", "--related-stdin", "--tag", "auth"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_no_semantic() {
+    common::cmd()
+        .args(["search", "--related-stdin", "--no-semantic"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+#[test]
+fn search_related_stdin_conflicts_with_rerank() {
+    common::cmd()
+        .args(["search", "--related-stdin", "--rerank"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 }
 
 #[test]

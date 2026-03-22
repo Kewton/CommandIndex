@@ -439,8 +439,6 @@ fn run_related_search_multi(
 #[test]
 fn related_search_multiple_files_merged() {
     let dir = setup_linked_docs();
-    // a.md links to b.md and c.md; b.md links to a.md
-    // Searching for both a.md and b.md should give a union of their related files
     let results = run_related_search_multi(dir.path(), &["docs/a.md", "docs/b.md"], &[]);
     assert!(
         !results.is_empty(),
@@ -448,12 +446,10 @@ fn related_search_multiple_files_merged() {
     );
 
     let paths = result_paths(&results);
-    // c.md should appear (linked from a.md)
     assert!(
         paths.iter().any(|p| p.contains("c.md")),
         "c.md should be in merged results, got: {paths:?}"
     );
-    // docs/a.md and docs/b.md (normalized target paths) should be excluded
     assert!(
         !paths.contains(&"docs/a.md"),
         "docs/a.md (target) should be excluded from results, got: {paths:?}"
@@ -467,7 +463,6 @@ fn related_search_multiple_files_merged() {
 #[test]
 fn related_search_single_file_backward_compat() {
     let dir = setup_linked_docs();
-    // Single file should still work the same as before
     let results = run_related_search_multi(dir.path(), &["docs/a.md"], &[]);
     assert!(!results.is_empty(), "single file search should still work");
     let paths = result_paths(&results);
@@ -480,7 +475,6 @@ fn related_search_single_file_backward_compat() {
 #[test]
 fn related_search_partial_missing_graceful() {
     let dir = setup_linked_docs();
-    // One valid file + one nonexistent file: should gracefully return results from valid file
     let results = run_related_search_multi(dir.path(), &["docs/a.md", "nonexistent.md"], &[]);
     assert!(
         !results.is_empty(),
@@ -515,7 +509,6 @@ fn related_search_all_missing_multiple() {
 fn related_search_multiple_files_json_format() {
     let dir = setup_linked_docs();
     let results = run_related_search_multi(dir.path(), &["docs/a.md", "docs/b.md"], &[]);
-    // Verify JSON structure
     for result in &results {
         assert!(result.get("score").is_some(), "should have score");
         assert!(result.get("relations").is_some(), "should have relations");
@@ -547,4 +540,79 @@ fn related_search_multiple_files_path_format() {
             "path format should only show paths"
         );
     }
+}
+
+// --- --related-stdin tests ---
+
+#[test]
+fn related_stdin_finds_related_files() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "should find related files via --related-stdin"
+    );
+    let paths = result_paths(&results);
+    assert!(
+        paths.iter().any(|p| p.contains("b.md")),
+        "b.md should be related to a.md via stdin, got: {paths:?}"
+    );
+}
+
+#[test]
+fn related_stdin_multiple_files_merges() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\ndocs/b.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "should find related files from multiple stdin inputs"
+    );
+}
+
+#[test]
+fn related_stdin_no_index_error() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(dir.path().join("test.md"), "# Test\n").unwrap();
+    common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("test.md\n")
+        .assert()
+        .failure()
+        .stderr(predicates::prelude::predicate::str::contains("not found"));
+}
+
+#[test]
+fn related_stdin_respects_limit() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args([
+            "search",
+            "--related-stdin",
+            "--format",
+            "json",
+            "--limit",
+            "1",
+        ])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(results.len() <= 1, "should respect limit=1");
 }

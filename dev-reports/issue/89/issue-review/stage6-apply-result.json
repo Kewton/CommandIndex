@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "impact の機能定義を修正。RelatedSearchEngine が双方向集計であることを明記し、「関連ファイルの集約分析」に改訂。将来的な --reverse-only オプションで拡張する方針を記載"},
+    {"id": "M2", "action": "search --related-stdin の複数入力時の集約ルールを明記（union + 最大スコア採用、impacted_by は含まない）"},
+    {"id": "S1", "action": "--related-stdin を採用する理由を明記（bool フラグとして既存排他モデルを最小限の変更で拡張）"},
+    {"id": "S2", "action": "relation_types を既存の snake_case 命名規約に合わせるよう修正"},
+    {"id": "S3", "action": "stdin 入力仕様にパスバリデーション追加（相対パスのみ、.. 禁止、バックスラッシュ正規化）"},
+    {"id": "S4", "action": "エッジケースの挙動テーブル追加（空stdin、有効パス0件、関連結果0件）"},
+    {"id": "S5", "action": "impact の引数形を明記（引数 or stdin、引数優先、TTY時エラー）"}
+  ],
+  "issue_updated": true
+}

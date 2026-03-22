@@ -257,7 +257,8 @@ pub fn run(path: &Path, debounce_secs: u64, with_embedding: bool) -> Result<(), 
             debouncer.reset();
             println!("[watch] Change detected, running incremental update ...");
             let options = IndexOptions { with_embedding };
-            match crate::cli::index::run_incremental(&base_dir, &options) {
+            let commandindex_dir = base_dir.join(".commandindex");
+            match crate::cli::index::run_incremental(&base_dir, &commandindex_dir, &options) {
                 Ok(summary) => {
                     println!(
                         "[watch] Update done: +{} ~{} -{} (unchanged {}, skipped {}) in {:.2}s",

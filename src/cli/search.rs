@@ -64,6 +64,7 @@ pub enum SearchError {
     NoEmbeddings,
     Config(String),
     Workspace(crate::config::workspace::WorkspaceConfigError),
+    Stdin(crate::cli::stdin::StdinError),
 }
 
 impl fmt::Display for SearchError {
@@ -101,6 +102,7 @@ impl fmt::Display for SearchError {
             }
             SearchError::Config(msg) => write!(f, "Config error: {msg}"),
             SearchError::Workspace(e) => write!(f, "Workspace error: {e}"),
+            SearchError::Stdin(e) => write!(f, "{e}"),
         }
     }
 }
@@ -120,6 +122,7 @@ impl std::error::Error for SearchError {
             SearchError::NoEmbeddings => None,
             SearchError::Config(_) => None,
             SearchError::Workspace(e) => Some(e),
+            SearchError::Stdin(e) => Some(e),
         }
     }
 }
@@ -166,6 +169,12 @@ impl From<ConfigError> for SearchError {
 impl From<crate::config::workspace::WorkspaceConfigError> for SearchError {
     fn from(e: crate::config::workspace::WorkspaceConfigError) -> Self {
         SearchError::Workspace(e)
+    }
+}
+
+impl From<crate::cli::stdin::StdinError> for SearchError {
+    fn from(e: crate::cli::stdin::StdinError) -> Self {
+        SearchError::Stdin(e)
     }
 }
 
@@ -333,6 +342,54 @@ pub fn run_related_search(
         return Ok(());
     }
 
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+    output::format_related_results(&results, format, &mut handle)?;
+    Ok(())
+}
+
+/// stdin からの複数ファイル関連検索
+pub fn run_related_search_from_stdin(
+    limit: usize,
+    format: OutputFormat,
+) -> Result<(), SearchError> {
+    let files = crate::cli::stdin::read_file_paths_from_stdin(500)?;
+
+    // 存在チェック + warning
+    let (valid_files, warnings) = crate::cli::stdin::filter_existing_files(&files);
+    for w in &warnings {
+        eprintln!("Warning: {w}");
+    }
+    if valid_files.is_empty() {
+        return Err(SearchError::Stdin(
+            crate::cli::stdin::StdinError::NoValidPaths,
+        ));
+    }
+
+    // インデックス確認
+    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    if !tantivy_dir.exists() {
+        return Err(SearchError::IndexNotFound);
+    }
+
+    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    if !db_path.exists() {
+        return Err(SearchError::SymbolDbNotFound);
+    }
+
+    let reader = IndexReaderWrapper::open(&tantivy_dir)?;
+    let store = SymbolStore::open(&db_path)?;
+
+    // 集約（context.rs の merge_related_results と同じロジック）
+    let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
+    let results = crate::cli::context::collect_and_merge_related(&engine, &valid_files, limit)?;
+
+    if results.is_empty() {
+        eprintln!("No related files found.");
+        return Ok(());
+    }
+
+    // 既存の format_related_results で出力
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_related_results(&results, format, &mut handle)?;
