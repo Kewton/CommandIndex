@@ -1,0 +1,5 @@
+error: the argument '--related <RELATED>' cannot be used with '--symbol <SYMBOL>'
+
+Usage: commandindex search --related <RELATED> [QUERY]
+
+For more information, try '--help'.

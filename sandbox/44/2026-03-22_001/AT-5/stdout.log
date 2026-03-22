@@ -1,0 +1,11 @@
+{"body":"See [[api-spec]] for API details.
+Check [handler](../../src/auth/handler.md) for implementation.
+This is a long document with many lines to test snippet display.
+Line 4 of the document.
+Line 5 of the document.
+Line 6 of the document.
+Line 7 of the document.
+Line 8 of the document.
+Line 9 of the document.
+Line 10 of the document.","heading":"Auth Design","heading_level":1,"line_start":4,"path":"docs/auth/design.md","score":0.9927009344100952,"tags":["auth","security"]}
+{"body":"Authentication flows documentation.","heading":"Auth Flows","heading_level":1,"line_start":4,"path":"docs/auth/flows.md","score":0.9927009344100952,"tags":["auth"]}

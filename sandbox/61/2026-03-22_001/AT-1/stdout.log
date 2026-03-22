@@ -1,0 +1,7 @@
+Generate embeddings for indexed sections
+
+Usage: commandindex embed [OPTIONS]
+
+Options:
+      --path <PATH>  Target directory [default: .]
+  -h, --help         Print help

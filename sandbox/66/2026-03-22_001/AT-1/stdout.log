@@ -1,0 +1,13 @@
+
+running 8 tests
+test update_with_embedding_help_shows_option ... ok
+test help_shows_embed_subcommand ... ok
+test embed_help_shows_usage ... ok
+test clean_keep_embeddings_help_shows_option ... ok
+test index_with_embedding_help_shows_option ... ok
+test embed_without_index_shows_error ... ok
+test clean_without_keep_embeddings_removes_everything ... ok
+test clean_keep_embeddings_preserves_embeddings_db ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.56s
+

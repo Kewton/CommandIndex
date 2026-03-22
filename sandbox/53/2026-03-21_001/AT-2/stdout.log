@@ -1,0 +1,15 @@
+
+running 10 tests
+test context_pack_empty_context_for_isolated_file ... ok
+test context_pack_includes_target_files ... ok
+test context_pack_no_self_reference ... ok
+test context_pack_entry_fields_are_enriched ... ok
+test context_pack_summary_fields ... ok
+test context_pack_outputs_valid_json ... ok
+test context_pack_includes_related_context ... ok
+test context_pack_max_files_limits_output ... ok
+test context_pack_multiple_files ... ok
+test context_pack_max_tokens_limits_output ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.71s
+

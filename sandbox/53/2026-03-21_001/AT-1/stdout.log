@@ -1,0 +1,20 @@
+
+running 15 tests
+test related_search_no_index ... ok
+test related_search_conflicts_with_query ... ok
+test related_search_conflicts_with_symbol ... ok
+test related_search_json_format_has_score_and_relations ... ok
+test related_conflicts_with_tag ... ok
+test related_tag_match_detects_shared_tags ... ok
+test related_search_respects_limit ... ok
+test related_directory_proximity_boosts_score ... ok
+test related_search_no_results_for_unlinked_file ... ok
+test related_search_path_format ... ok
+test related_full_flow_verifies_relation_types ... ok
+test related_search_nonexistent_file ... ok
+test related_search_human_format ... ok
+test related_import_dependency_detects_ts_imports ... ok
+test related_search_finds_linked_files ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.69s
+

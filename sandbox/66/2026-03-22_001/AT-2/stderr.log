@@ -1,0 +1,3 @@
+   Compiling commandindex v0.0.4 (/Users/maenokota/share/work/github_kewton/commandindex-develop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.51s
+     Running tests/e2e_semantic_hybrid.rs (target/debug/deps/e2e_semantic_hybrid-25ebe8e8dc158642)

@@ -1,0 +1,8 @@
+docs/auth/design.md:4 [# Auth Design]
+  See [[api-spec]] for API details.
+  Check [handler](../../src/auth/handler.md) for implementation....
+  Tags: auth, security
+
+docs/auth/flows.md:4 [# Auth Flows]
+  Authentication flows documentation.
+  Tags: auth

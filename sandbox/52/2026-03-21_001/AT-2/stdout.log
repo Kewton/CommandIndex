@@ -1,0 +1,44 @@
+{
+  "target_files": [
+    "docs/auth/design.md",
+    "docs/api-spec.md"
+  ],
+  "context": [
+    {
+      "path": "../../src/auth/handler.md",
+      "relation": "linked",
+      "score": 1.4
+    },
+    {
+      "path": "api-spec",
+      "relation": "linked",
+      "score": 1.0
+    },
+    {
+      "path": "docs/auth/flows.md",
+      "relation": "tag_match",
+      "score": 0.9,
+      "heading": "Auth Flows",
+      "snippet": "Authentication flows."
+    },
+    {
+      "path": "docs/security.md",
+      "relation": "tag_match",
+      "score": 0.9,
+      "heading": "Security Guide",
+      "snippet": "Security guidelines."
+    },
+    {
+      "path": "src/auth/handler.md",
+      "relation": "tag_match",
+      "score": 0.9,
+      "heading": "Handler",
+      "snippet": "Handler implementation docs."
+    }
+  ],
+  "summary": {
+    "total_related": 5,
+    "included": 5,
+    "estimated_tokens": 17
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "target_files": [
+    "docs/auth/design.md"
+  ],
+  "context": [
+    {
+      "path": "../../src/auth/handler.md",
+      "relation": "linked",
+      "score": 1.4
+    },
+    {
+      "path": "api-spec",
+      "relation": "linked",
+      "score": 1.0
+    }
+  ],
+  "summary": {
+    "total_related": 6,
+    "included": 2,
+    "estimated_tokens": 0
+  }
+}
