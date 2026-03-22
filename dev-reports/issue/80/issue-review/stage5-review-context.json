@@ -1,0 +1,6 @@
+{
+  "stage": 5,
+  "type": "normal-review-2nd",
+  "status": "skipped",
+  "reason": "1回目レビュー（Stage 1-4）のMust Fix対応がスコープ縮小のみで、コード変更を伴う指摘が0件のため2回目レビューをスキップ"
+}

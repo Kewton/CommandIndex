@@ -329,7 +329,7 @@ fn main() {
                     1
                 }
             }
-        },
+        }
         Commands::Context {
             files,
             max_files,

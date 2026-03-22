@@ -275,10 +275,7 @@ fn get_embedding_model(base_path: &Path) -> Option<String> {
 }
 
 /// CoverageInfo を収集する
-fn collect_coverage_info(
-    base_path: &Path,
-    state: &IndexState,
-) -> CoverageInfo {
+fn collect_coverage_info(base_path: &Path, state: &IndexState) -> CoverageInfo {
     let discoverable_files = count_discoverable_files(base_path);
     let indexed_files = state.total_files;
     let skipped_files = discoverable_files.saturating_sub(indexed_files);
