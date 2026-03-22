@@ -1,6 +1,7 @@
 use std::fmt;
 use std::path::Path;
 
+use crate::config::{AppConfig, ConfigError, load_config};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
 use crate::output::{
@@ -19,6 +20,7 @@ pub enum SearchError {
     RelatedSearch(crate::search::related::RelatedSearchError),
     Embedding(crate::embedding::EmbeddingError),
     NoEmbeddings,
+    Config(String),
 }
 
 impl fmt::Display for SearchError {
@@ -54,6 +56,7 @@ impl fmt::Display for SearchError {
             SearchError::NoEmbeddings => {
                 write!(f, "No embeddings found. Run `commandindex embed` first.")
             }
+            SearchError::Config(msg) => write!(f, "Config error: {msg}"),
         }
     }
 }
@@ -71,6 +74,7 @@ impl std::error::Error for SearchError {
             SearchError::RelatedSearch(e) => Some(e),
             SearchError::Embedding(e) => Some(e),
             SearchError::NoEmbeddings => None,
+            SearchError::Config(_) => None,
         }
     }
 }
@@ -108,6 +112,12 @@ impl From<crate::embedding::EmbeddingError> for SearchError {
     }
 }
 
+impl From<ConfigError> for SearchError {
+    fn from(e: ConfigError) -> Self {
+        SearchError::Config(e.to_string())
+    }
+}
+
 pub fn run(
     options: &SearchOptions,
     filters: &SearchFilters,
@@ -122,18 +132,12 @@ pub fn run(
     }
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
+    // Load config once
+    let config = load_config(Path::new("."))?;
+
     // rerank有効時、検索前にlimitを拡大して候補を多く取得
     let original_limit = options.limit;
-    let rerank_top_resolved = rerank_top.unwrap_or_else(|| {
-        // CLI未指定時はconfig.toml → デフォルト20の順で解決
-        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
-        crate::embedding::Config::load(&commandindex_dir)
-            .ok()
-            .flatten()
-            .and_then(|c| c.rerank)
-            .map(|r| r.top_candidates)
-            .unwrap_or(20)
-    });
+    let rerank_top_resolved = rerank_top.unwrap_or(config.rerank.top_candidates);
     let effective_options = if rerank {
         let mut opts = options.clone();
         opts.limit = std::cmp::max(options.limit, rerank_top_resolved);
@@ -149,19 +153,18 @@ pub fn run(
     let use_hybrid = !effective_options.no_semantic && effective_options.heading.is_none();
 
     let final_results = if use_hybrid {
-        try_hybrid_search(results, &effective_options, filters)?
+        try_hybrid_search(results, &effective_options, filters, &config)?
     } else {
         results
     };
 
     // Reranking適用
     let final_results = if rerank {
-        let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
         let reranked = try_rerank(
             final_results,
             &effective_options.query,
             rerank_top_resolved,
-            &commandindex_dir,
+            &config,
         );
         reranked.into_iter().take(original_limit).collect()
     } else {
@@ -286,11 +289,9 @@ pub fn run_semantic_search(
         return Err(SearchError::SymbolDbNotFound);
     }
 
-    // Load embedding config
-    let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
-    let config = crate::embedding::Config::load(&commandindex_dir)?;
-    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
-    let provider = crate::embedding::create_provider(&embedding_config)?;
+    // Load embedding config via new config system
+    let config = load_config(Path::new("."))?;
+    let provider = crate::embedding::create_provider(&config.embedding)?;
 
     // Check embeddings exist
     let store = SymbolStore::open(&db_path)?;
@@ -390,6 +391,7 @@ fn try_hybrid_search(
     bm25_results: Vec<crate::indexer::reader::SearchResult>,
     options: &SearchOptions,
     filters: &SearchFilters,
+    config: &AppConfig,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
 
@@ -420,16 +422,7 @@ fn try_hybrid_search(
     }
 
     // 3. EmbeddingConfig読み込み → provider生成
-    let commandindex_dir = crate::indexer::commandindex_dir(Path::new("."));
-    let config = match crate::embedding::Config::load(&commandindex_dir) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("[hybrid] Failed to load embedding config, using BM25 only.");
-            return Ok(bm25_results);
-        }
-    };
-    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
-    let provider = match crate::embedding::create_provider(&embedding_config) {
+    let provider = match crate::embedding::create_provider(&config.embedding) {
         Ok(p) => p,
         Err(_) => {
             eprintln!("[hybrid] Failed to create embedding provider, using BM25 only.");
@@ -644,20 +637,13 @@ fn try_rerank(
     results: Vec<crate::indexer::reader::SearchResult>,
     query: &str,
     rerank_top: usize,
-    commandindex_dir: &Path,
+    config: &AppConfig,
 ) -> Vec<crate::indexer::reader::SearchResult> {
-    // 1. Config読み込み
-    let rerank_config = match crate::embedding::Config::load(commandindex_dir) {
-        Ok(Some(config)) => config.rerank.unwrap_or_default(),
-        Ok(None) => crate::rerank::RerankConfig::default(),
-        Err(e) => {
-            eprintln!("[rerank] Failed to load config: {e}");
-            return results;
-        }
-    };
+    // 1. Use config's rerank settings
+    let rerank_config = &config.rerank;
 
     // 2. Provider生成
-    let provider = match crate::rerank::ollama::create_rerank_provider(&rerank_config) {
+    let provider = match crate::rerank::ollama::create_rerank_provider(rerank_config) {
         Ok(p) => p,
         Err(e) => {
             eprintln!("[rerank] Failed to create provider: {e}");

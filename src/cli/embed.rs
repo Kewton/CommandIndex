@@ -2,8 +2,9 @@ use std::fmt;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use crate::config::{ConfigError, load_config};
 use crate::embedding::store::{EmbeddingStore, EmbeddingStoreError};
-use crate::embedding::{Config, EmbeddingError, create_provider};
+use crate::embedding::{EmbeddingError, create_provider};
 use crate::indexer::manifest::{Manifest, ManifestError};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 
@@ -19,6 +20,7 @@ pub enum EmbedError {
     Manifest(ManifestError),
     Reader(ReaderError),
     Io(std::io::Error),
+    Config(String),
 }
 
 impl fmt::Display for EmbedError {
@@ -33,6 +35,7 @@ impl fmt::Display for EmbedError {
             Self::Manifest(e) => write!(f, "Manifest error: {e}"),
             Self::Reader(e) => write!(f, "Reader error: {e}"),
             Self::Io(e) => write!(f, "IO error: {e}"),
+            Self::Config(msg) => write!(f, "Config error: {msg}"),
         }
     }
 }
@@ -46,6 +49,7 @@ impl std::error::Error for EmbedError {
             Self::Manifest(e) => Some(e),
             Self::Reader(e) => Some(e),
             Self::Io(e) => Some(e),
+            Self::Config(_) => None,
         }
     }
 }
@@ -80,6 +84,12 @@ impl From<std::io::Error> for EmbedError {
     }
 }
 
+impl From<ConfigError> for EmbedError {
+    fn from(e: ConfigError) -> Self {
+        Self::Config(e.to_string())
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
@@ -106,12 +116,11 @@ pub fn run(path: &Path) -> Result<EmbedSummary, EmbedError> {
         return Err(EmbedError::IndexNotFound);
     }
 
-    // 2. Load config (default if no config.toml)
-    let config = Config::load(&commandindex_dir)?;
-    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
+    // 2. Load config via new config system
+    let app_config = load_config(path)?;
 
     // 3. Create provider
-    let provider = create_provider(&embedding_config)?;
+    let provider = create_provider(&app_config.embedding)?;
 
     // 4. Load manifest
     let manifest = Manifest::load(&commandindex_dir)?;

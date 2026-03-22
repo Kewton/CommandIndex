@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: 6箇所の呼び出しサイト移行は実装方針に既に記載済み（Stage 2で対応済み）",
+    "M2: clean.rs のハードコード参照更新を実装方針と受け入れ基準に追加",
+    "M3: EmbeddingConfig/RerankConfig は現在のモジュールに残す設計方針を明記",
+    "M4: E2Eテストの更新を実装方針と受け入れ基準に追加",
+    "S1: CLI引数をOption<usize>にする方針を「CLI引数と設定ファイルの優先関係」セクションに追加",
+    "S3: エラー型の整理方針を実装方針に追加",
+    "S4: 既存設定ファイルからの移行セクションを新設（.commandindex/config.toml廃止、警告表示）",
+    "S5: CLIサブコマンドのテスト追加を実装方針に追加",
+    "N1: Config::load() の呼び出し最適化を実装方針に追加"
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/76"
+}

@@ -3,10 +3,8 @@ pub mod openai;
 pub mod store;
 
 use std::fmt;
-use std::fs;
-use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
 // EmbeddingProvider trait
@@ -68,7 +66,7 @@ impl std::error::Error for EmbeddingError {}
 // ---------------------------------------------------------------------------
 
 /// プロバイダー種別
-#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ProviderType {
     #[default]
@@ -128,32 +126,6 @@ impl EmbeddingConfig {
         std::env::var("COMMANDINDEX_OPENAI_API_KEY")
             .ok()
             .or_else(|| self.api_key.clone())
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Config (top-level config.toml)
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub embedding: Option<EmbeddingConfig>,
-    pub rerank: Option<crate::rerank::RerankConfig>,
-}
-
-impl Config {
-    /// `.commandindex/config.toml` を読み込む。存在しない場合はNone。
-    pub fn load(commandindex_dir: &Path) -> Result<Option<Self>, EmbeddingError> {
-        let config_path = commandindex_dir.join("config.toml");
-        if !config_path.exists() {
-            return Ok(None);
-        }
-        let content = fs::read_to_string(&config_path)
-            .map_err(|e| EmbeddingError::ConfigError(format!("Failed to read config.toml: {e}")))?;
-        let config: Config = toml::from_str(&content).map_err(|e| {
-            EmbeddingError::ConfigError(format!("Failed to parse config.toml: {e}"))
-        })?;
-        Ok(Some(config))
     }
 }
 
@@ -262,7 +234,6 @@ impl EmbeddingProvider for MockProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     // --- ProviderType / EmbeddingConfig defaults ---
 
@@ -300,19 +271,17 @@ mod tests {
         assert!(debug_str.contains("None"));
     }
 
-    // --- TOML parsing ---
+    // --- TOML parsing (EmbeddingConfig directly) ---
 
     #[test]
-    fn test_config_parse_full_toml() {
+    fn test_embedding_config_toml_parse() {
         let toml_str = r#"
-[embedding]
 provider = "openai"
 model = "text-embedding-3-small"
 endpoint = "https://api.openai.com"
 api_key = "sk-test"
 "#;
-        let config: Config = toml::from_str(toml_str).unwrap();
-        let emb = config.embedding.unwrap();
+        let emb: EmbeddingConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(emb.provider, ProviderType::OpenAi);
         assert_eq!(emb.model, "text-embedding-3-small");
         assert_eq!(emb.endpoint, "https://api.openai.com");
@@ -320,95 +289,15 @@ api_key = "sk-test"
     }
 
     #[test]
-    fn test_config_parse_minimal_toml() {
+    fn test_embedding_config_toml_minimal() {
         let toml_str = r#"
-[embedding]
 provider = "ollama"
 "#;
-        let config: Config = toml::from_str(toml_str).unwrap();
-        let emb = config.embedding.unwrap();
+        let emb: EmbeddingConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(emb.provider, ProviderType::Ollama);
         assert_eq!(emb.model, "nomic-embed-text");
         assert_eq!(emb.endpoint, "http://localhost:11434");
         assert!(emb.api_key.is_none());
-    }
-
-    #[test]
-    fn test_config_parse_no_embedding_section() {
-        let toml_str = "";
-        let config: Config = toml::from_str(toml_str).unwrap();
-        assert!(config.embedding.is_none());
-        assert!(config.rerank.is_none());
-    }
-
-    #[test]
-    fn test_config_parse_with_rerank_section() {
-        let toml_str = r#"
-[embedding]
-provider = "ollama"
-
-[rerank]
-model = "gemma2"
-top_candidates = 30
-endpoint = "http://localhost:11434"
-timeout_secs = 60
-"#;
-        let config: Config = toml::from_str(toml_str).unwrap();
-        let rerank = config.rerank.unwrap();
-        assert_eq!(rerank.model, "gemma2");
-        assert_eq!(rerank.top_candidates, 30);
-        assert_eq!(rerank.endpoint, "http://localhost:11434");
-        assert_eq!(rerank.timeout_secs, 60);
-        assert!(rerank.api_key.is_none());
-    }
-
-    #[test]
-    fn test_config_parse_rerank_defaults() {
-        let toml_str = r#"
-[rerank]
-"#;
-        let config: Config = toml::from_str(toml_str).unwrap();
-        let rerank = config.rerank.unwrap();
-        assert_eq!(rerank.model, "llama3");
-        assert_eq!(rerank.top_candidates, 20);
-        assert_eq!(rerank.endpoint, "http://localhost:11434");
-        assert_eq!(rerank.timeout_secs, 30);
-    }
-
-    // --- Config::load ---
-
-    #[test]
-    fn test_config_load_nonexistent_returns_none() {
-        let tmp = TempDir::new().unwrap();
-        let result = Config::load(tmp.path()).unwrap();
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_config_load_valid_file() {
-        let tmp = TempDir::new().unwrap();
-        let config_path = tmp.path().join("config.toml");
-        fs::write(
-            &config_path,
-            r#"
-[embedding]
-provider = "ollama"
-model = "nomic-embed-text"
-"#,
-        )
-        .unwrap();
-        let config = Config::load(tmp.path()).unwrap().unwrap();
-        let emb = config.embedding.unwrap();
-        assert_eq!(emb.provider, ProviderType::Ollama);
-    }
-
-    #[test]
-    fn test_config_load_invalid_toml() {
-        let tmp = TempDir::new().unwrap();
-        let config_path = tmp.path().join("config.toml");
-        fs::write(&config_path, "not valid toml {{{{").unwrap();
-        let result = Config::load(tmp.path());
-        assert!(result.is_err());
     }
 
     // --- resolve_api_key ---

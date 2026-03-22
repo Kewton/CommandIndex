@@ -1,0 +1,27 @@
+{
+  "stages": "1-4",
+  "action": "apply_review_to_design_policy",
+  "must_fix_total": 13,
+  "applied_items": [
+    "Stage1-M1: AppConfig から I/O 分離 → load_config() を公開関数に分離、AppConfig は純粋データ構造に",
+    "Stage1-M2: RawConfig の DRY 問題 → テストでフィールド同期のラウンドトリップ検証を追加",
+    "Stage2-M1: RawRerankConfig.provider 削除（既存 RerankConfig に無いフィールド）",
+    "Stage2-M2: Config::load 呼び出し箇所の正確な行番号を追記（L130, L291, L424, L650）",
+    "Stage2-M3: clean.rs の保持対象を具体的に列挙（embeddings.db, config.toml, config.local.toml）",
+    "Stage2-M4: thiserror 不使用に確定、手動 Display + Error 実装に統一",
+    "Stage3-M1: RawRerankConfig.provider 削除済み（Stage2-M1 と同じ）",
+    "Stage3-M2: thiserror 不使用確定済み（Stage2-M4 と同じ）",
+    "Stage3-M3: search.rs の private 関数への &AppConfig 引き回し設計を Section 5.3 に追加",
+    "Stage3-M4: clean.rs の保持対象ファイルを具体的に列挙済み（Stage2-M3 と同じ）",
+    "Stage4-M1: RerankConfig に Custom Debug 実装（api_key マスク）を追加",
+    "Stage4-M2: OpenAiProvider に Custom Debug 実装（api_key マスク）を追加",
+    "Stage4-M3: チーム設定での api_key 禁止バリデーション validate_no_secrets() を追加",
+    "追加: AppConfig から Serialize を削除（api_key 露出防止）",
+    "追加: ConfigSourceKind::Default を削除（YAGNI）",
+    "追加: CLI help テキストにデフォルト値を明示",
+    "追加: エラー伝播の From<ConfigError> 実装方針を追加",
+    "追加: ProviderType に Serialize 追加の方針を明記（view model で文字列化に変更）",
+    "追加: テスト移行計画を追加",
+    "追加: cli_args.rs の help 出力テスト更新を追記"
+  ]
+}

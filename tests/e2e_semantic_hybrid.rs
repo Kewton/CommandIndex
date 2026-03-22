@@ -76,7 +76,8 @@ fn insert_test_embeddings(
     Ok(())
 }
 
-/// Create a minimal config.toml for embedding configuration.
+/// Create a minimal commandindex.toml for embedding configuration.
+/// Placed at the repo root (parent of .commandindex/).
 fn create_test_config(commandindex_dir: &std::path::Path) -> Result<(), Box<dyn Error>> {
     let config_content = "\
 [embedding]
@@ -85,7 +86,11 @@ model = \"nomic-embed-text\"
 endpoint = \"http://localhost:11434\"
 dimension = 4
 ";
-    fs::write(commandindex_dir.join("config.toml"), config_content)?;
+    // commandindex_dir is .commandindex/, so parent is the repo root
+    let base_path = commandindex_dir
+        .parent()
+        .expect("commandindex_dir should have parent");
+    fs::write(base_path.join("commandindex.toml"), config_content)?;
     Ok(())
 }
 

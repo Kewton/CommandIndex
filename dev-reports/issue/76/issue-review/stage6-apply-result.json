@@ -1,0 +1,14 @@
+{
+  "stage": 6,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: config show の秘匿値マスク表示を CLI仕様・実装方針・受け入れ基準に追加",
+    "M2: 旧 .commandindex/config.toml を deprecated fallback として読み込み維持する方針を明記。優先順位に追加（レベル4）",
+    "S1: 設定ファイル検出のベースパスをコマンド別に明記（--path持つコマンド vs search/config）",
+    "S2: config path で旧ファイルを [deprecated] 注記付きで表示する仕様を追加",
+    "S3: --format オプションは Phase 1 スコープ外と明記、CLI仕様から json/human を除外",
+    "N1: 設定ファイル名の定数化（TEAM_CONFIG_FILE, LOCAL_CONFIG_FILE, LEGACY_CONFIG_FILE）を実装方針・受け入れ基準に追加"
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/76"
+}

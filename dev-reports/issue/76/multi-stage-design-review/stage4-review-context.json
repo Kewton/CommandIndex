@@ -1,0 +1,21 @@
+{
+  "stage": 4,
+  "focus": "セキュリティ",
+  "must_fix": [
+    {"id": "M1", "title": "RerankConfig derives Debug without masking api_key", "severity": "high", "suggestion": "Custom Debug impl that masks api_key with '***'."},
+    {"id": "M2", "title": "OpenAiProvider derives Debug exposing api_key", "severity": "high", "suggestion": "Custom Debug impl for OpenAiProvider."},
+    {"id": "M3", "title": "Team config commandindex.toml may contain api_key committed to git", "severity": "high", "suggestion": "Validate that api_key is rejected in commandindex.toml, only allowed in config.local.toml or env vars."}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "config.local.toml not explicitly in .gitignore", "severity": "medium", "suggestion": "Add *.local.toml to .gitignore as safety net."},
+    {"id": "S2", "title": "No file size limit on config reads", "severity": "low", "suggestion": "Reject files > 1MB."},
+    {"id": "S3", "title": "AppConfig Serialize could expose api_key", "severity": "medium", "suggestion": "Remove Serialize from AppConfig, use #[serde(skip)] on api_key."},
+    {"id": "S4", "title": "No deny_unknown_fields on RawConfig structs", "severity": "low", "suggestion": "Add deny_unknown_fields or warn on unknown fields."}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "Secret<String> wrapper type for api_key fields"},
+    {"id": "N2", "title": "File permission checks on config.local.toml"},
+    {"id": "N3", "title": "TOML parse errors may leak content snippets"},
+    {"id": "N4", "title": "No unsafe blocks needed (positive)"}
+  ]
+}

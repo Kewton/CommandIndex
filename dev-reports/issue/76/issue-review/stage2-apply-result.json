@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: 既存 embedding::Config の移行計画を実装方針に追加（対象箇所6箇所を明記）",
+    "M2: マージ仕様セクションを新設（フィールドレベルマージ、具体例付き）",
+    "M3: 環境変数オーバーライドのスコープをPhase 1では COMMANDINDEX_OPENAI_API_KEY のみに限定",
+    "S1: [index] languages はPhase 1では読み込みのみ、インデクサー反映は別Issueと明記",
+    "S2: CLI引数と設定ファイルの優先関係セクションを追加",
+    "S3: 設定ファイルの検出方法セクションを追加（--path引数ベース）",
+    "S4: 専用エラー型 ConfigError を実装方針と受け入れ基準に追加",
+    "N1: .gitignore確認を受け入れ基準に追加",
+    "N2: config show の --format オプションを CLI連携に追加",
+    "N3: config path の仕様を明確化"
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/76"
+}
