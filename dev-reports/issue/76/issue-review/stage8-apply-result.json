@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: clean --keep-embeddings の保持対象を LOCAL_CONFIG_FILE, LEGACY_CONFIG_FILE に更新。ルートの commandindex.toml は対象外と明記。回帰テストも追加",
+    "M2: deprecated 警告を stderr に統一、使用した場合のみ1回出力。新旧両方存在時の挙動も明記。受け入れ基準に追加",
+    "M3: Serialize 対応と config show 用 view model を実装方針に追加。EmbeddingConfig/RerankConfig に Serialize 追加を受け入れ基準に追加",
+    "S1: 各コマンドのベースパス別設定検出テストを追加",
+    "S2: CLI引数優先順位テスト3パターンを受け入れ基準に追加",
+    "S3: E2Eテスト3系統（新設定のみ、ローカル上書き、レガシーfallback）を受け入れ基準に追加",
+    "S4: config を唯一の設定読込入口にする原則を実装方針に追加"
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/76"
+}

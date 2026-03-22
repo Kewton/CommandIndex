@@ -5,7 +5,7 @@ use colored::Colorize;
 use crate::indexer::reader::SearchResult;
 use crate::output::{
     OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
-    parse_tags, strip_control_chars, truncate_body,
+    WorkspaceSearchResult, parse_tags, strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
@@ -21,6 +21,54 @@ pub fn format_human(
 
         // パス:行番号 [見出し]
         let location = format!("{}:{}", result.path, result.line_start);
+        let heading_display = format!(
+            "[{} {}]",
+            "#".repeat(result.heading_level as usize),
+            strip_control_chars(&result.heading)
+        );
+        writeln!(writer, "{} {}", location.green(), heading_display.bold())?;
+
+        // 本文スニペット
+        let body_cleaned = strip_control_chars(&result.body);
+        let snippet = if snippet_config.lines == 0 && snippet_config.chars == 0 {
+            body_cleaned
+        } else if snippet_config.lines == 0 {
+            truncate_body(&body_cleaned, usize::MAX, snippet_config.chars)
+        } else if snippet_config.chars == 0 {
+            truncate_body(&body_cleaned, snippet_config.lines, usize::MAX)
+        } else {
+            truncate_body(&body_cleaned, snippet_config.lines, snippet_config.chars)
+        };
+        for line in snippet.lines() {
+            writeln!(writer, "  {line}")?;
+        }
+
+        // タグ（存在する場合のみ）
+        let tags = parse_tags(&result.tags);
+        if !tags.is_empty() {
+            let tags_str = tags.join(", ");
+            writeln!(writer, "  {}", format!("Tags: {tags_str}").dimmed())?;
+        }
+    }
+    Ok(())
+}
+
+/// ワークスペース横断検索結果をhuman形式で出力する
+pub fn format_workspace_human(
+    results: &[WorkspaceSearchResult],
+    writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+) -> Result<(), OutputError> {
+    for (i, ws_result) in results.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+
+        let result = &ws_result.result;
+        let repo = strip_control_chars(&ws_result.repository);
+
+        // [alias] パス:行番号 [見出し]
+        let location = format!("[{}] {}:{}", repo, result.path, result.line_start);
         let heading_display = format!(
             "[{} {}]",
             "#".repeat(result.heading_level as usize),

@@ -42,13 +42,22 @@ struct OpenAiEmbeddingData {
 // ---------------------------------------------------------------------------
 
 /// Embedding provider for OpenAI API (and compatible endpoints like Azure OpenAI).
-#[derive(Debug)]
 pub struct OpenAiProvider {
     api_key: String,
     model: String,
     endpoint: String,
     client: reqwest::blocking::Client,
     cached_dimension: OnceLock<usize>,
+}
+
+impl std::fmt::Debug for OpenAiProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OpenAiProvider")
+            .field("api_key", &"***")
+            .field("model", &self.model)
+            .field("endpoint", &self.endpoint)
+            .finish()
+    }
 }
 
 impl OpenAiProvider {
@@ -160,6 +169,19 @@ impl EmbeddingProvider for OpenAiProvider {
 mod tests {
     use super::*;
     use crate::embedding::{EmbeddingConfig, ProviderType};
+
+    #[test]
+    fn test_openai_provider_debug_masks_api_key() {
+        let provider = OpenAiProvider::new(
+            "sk-super-secret-key-12345",
+            "text-embedding-3-small",
+            "https://api.openai.com",
+        );
+        let debug_str = format!("{provider:?}");
+        assert!(!debug_str.contains("sk-super-secret-key-12345"));
+        assert!(debug_str.contains("***"));
+        assert!(debug_str.contains("text-embedding-3-small"));
+    }
 
     #[test]
     fn test_from_config_no_api_key_fails() {

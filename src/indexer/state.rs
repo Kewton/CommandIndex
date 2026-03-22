@@ -59,6 +59,8 @@ pub struct IndexState {
     pub total_files: u64,
     pub total_sections: u64,
     pub index_root: PathBuf,
+    #[serde(default)]
+    pub last_commit_hash: Option<String>,
 }
 
 impl IndexState {
@@ -73,6 +75,7 @@ impl IndexState {
             total_files: 0,
             total_sections: 0,
             index_root,
+            last_commit_hash: None,
         }
     }
 

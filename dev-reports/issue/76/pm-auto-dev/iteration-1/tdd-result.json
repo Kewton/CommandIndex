@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: config module types (constants, ConfigError, RawConfig, AppConfig, views)",
+    "Task 1.2: merge logic and loader (read_toml, validate_no_secrets, merge_raw, resolve_config, load_config)",
+    "Task 1.3: Serialize/Debug on existing types (ProviderType Serialize, RerankConfig Debug mask, OpenAiProvider Debug mask)",
+    "Task 2.1: embedding::Config deletion and migration (search.rs, embed.rs, index.rs)",
+    "Task 2.2: clean.rs preserved files update (LEGACY_CONFIG_FILE constant, config.local.toml added)",
+    "Task 3.1: config CLI subcommands (config show, config path)",
+    "Task 3.2: search args Option-ized (--limit, --snippet-lines, --snippet-chars)",
+    "Task 4.1: e2e test updates (e2e_embedding.rs, e2e_semantic_hybrid.rs)",
+    "Task 4.2: cli_args.rs tests (config show/path, help, legacy deprecated)",
+    "Task 4.3: config module unit tests (merge, load, validate, view, roundtrip)"
+  ],
+  "tests_added": 30,
+  "tests_passing": true,
+  "clippy_clean": true,
+  "fmt_clean": true,
+  "total_tests": 433,
+  "summary": "Implemented hierarchical config resolution (commandindex.toml > config.local.toml > legacy config.toml) with security validation (api_key rejected in team config), masked debug/view output, CLI config show/path subcommands, and Option-ized search args. All 433 tests pass, clippy clean, fmt clean."
+}

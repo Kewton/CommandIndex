@@ -1,0 +1,7 @@
+{
+  "status": "all_passed",
+  "passed_count": 14,
+  "failed_count": 0,
+  "added_tests": ["import_git_commit_hash_mismatch_shows_warning"],
+  "summary": "全14件の受け入れ基準をパス。AC-7のテストを1件追加。"
+}

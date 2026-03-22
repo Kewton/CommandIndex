@@ -1,0 +1,24 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "status.rs run() シグネチャ変更による既存5箇所の破壊的変更"},
+    {"id": "M2", "title": "import 後の index_root 書き換えと update コマンドの整合性"},
+    {"id": "M3", "title": "tantivy ドキュメント内 path が相対パスであることのバリデーション"},
+    {"id": "M4", "title": "symbols.db 内パスが相対パスであることの保証"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "cli_args.rs help テストに export/import アサーション追加"},
+    {"id": "S2", "title": "flate2 の pure Rust バックエンド確認"},
+    {"id": "S3", "title": "embeddings.db のモデル互換性チェック"},
+    {"id": "S4", "title": "export 後の clean/index による陳腐化検出"},
+    {"id": "S5", "title": "clean コマンドの削除対象に export 成果物が未考慮"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "バイナリサイズ before/after 比較"},
+    {"id": "N2", "title": "進捗表示の将来対応"},
+    {"id": "N3", "title": "SymbolStore スキーマバージョン不整合のハンドリング"},
+    {"id": "N4", "title": "snapshot.rs の indexer 配下配置の妥当性"}
+  ],
+  "must_fix_count": 4
+}

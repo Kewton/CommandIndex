@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Config構造体の命名・配置場所の衝突",
+      "description": "現在 embedding::Config が src/embedding/mod.rs に存在し、embedding と rerank の両セクションを管理している。Issueでは src/config/mod.rs に新しい Config モジュールを作成するとしているが、既存の embedding::Config との関係（移行手順、互換性、既存の6箇所の Config::load 呼び出しの書き換え）が明記されていない。既存コードでは crate::embedding::Config::load() が cli/search.rs(4箇所)、cli/embed.rs(1箇所)、cli/index.rs(1箇所) で使用されている。",
+      "suggestion": "Issueの実装方針に「既存 embedding::Config を config モジュールへ移行し、embedding::Config は削除する」「全呼び出し箇所(cli/search.rs, cli/embed.rs, cli/index.rs)のインポートパスを更新する」といった移行ステップを明記すべき。"
+    },
+    {
+      "id": "M2",
+      "title": "マージロジックの仕様が不明確",
+      "description": "4段階の優先順位（環境変数 > config.local.toml > commandindex.toml > デフォルト）を提案しているが、マージの粒度が未定義。フィールドレベルのマージかセクションレベルのマージかを明記する必要がある。",
+      "suggestion": "「フィールドレベルでマージする（Option::None のフィールドは下位優先度の値を維持）」と明記し、マージの具体例を1つ追加すべき。"
+    },
+    {
+      "id": "M3",
+      "title": "環境変数オーバーライドの範囲が不明確",
+      "description": "現在の環境変数は COMMANDINDEX_OPENAI_API_KEY のみ。Issueでは COMMANDINDEX_* と記載しているが、どの設定項目を環境変数で上書き可能にするのかが未定義。全項目対応とするとスコープが大きく膨らむ。",
+      "suggestion": "Phase 1として既存の COMMANDINDEX_OPENAI_API_KEY のみをサポートし、環境変数の網羅的対応は将来Issueに分離するか、対応する環境変数名の一覧を明記すべき。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "[index] languages セクションの利用箇所が不在",
+      "description": "現在のインデクサーはファイル拡張子ベースで FileType を判定しており、言語フィルタ設定を受け取る仕組みが存在しない。",
+      "suggestion": "受け入れ基準に「[index] languages 設定でインデックス対象言語を制限できること」を追加するか、Phase 1 では設定ファイルの読み込みのみとし言語フィルタ適用は別Issueとして分離する。"
+    },
+    {
+      "id": "S2",
+      "title": "[search] default_limit / snippet_lines / snippet_chars の反映方法が不明",
+      "description": "現在 search の limit/snippet_lines/snippet_chars は CLI引数で指定されており、設定ファイルからのデフォルト値上書きが未実装。CLI引数と設定ファイルの優先関係が明記されていない。",
+      "suggestion": "「CLI引数が明示的に指定された場合はCLI引数を優先、未指定時は設定ファイルの値を使用」という優先順位を明記すべき。"
+    },
+    {
+      "id": "S3",
+      "title": "commandindex.toml の配置場所の検出方法が未記載",
+      "description": "「リポジトリルートに配置」とあるが、検出方法が未記載。既存コードでは --path 引数ベースのディレクトリを使用。",
+      "suggestion": "--path 引数ベースのディレクトリをリポジトリルートとして扱う方針を明記すべき。"
+    },
+    {
+      "id": "S4",
+      "title": "エラー型の設計方針が不足",
+      "description": "新 config モジュールでは embedding 以外の設定も扱うため、embedding モジュールのエラー型に依存し続けるのは不適切。",
+      "suggestion": "新 config モジュール用の専用エラー型 ConfigError enum を定義する方針を追加すべき。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "config.local.toml の .gitignore 追加への言及",
+      "description": ".commandindex/ 自体が gitignore されているなら問題ないが、明示的に言及しておくべき。",
+      "suggestion": "受け入れ基準に確認項目を追加。"
+    },
+    {
+      "id": "N2",
+      "title": "commandindex config show の出力形式",
+      "description": "出力形式（TOML/JSON/human）が未定義。",
+      "suggestion": "config show も --format オプションをサポートすることを検討。"
+    },
+    {
+      "id": "N3",
+      "title": "config path サブコマンドの詳細仕様",
+      "description": "何を表示するかが不明確。",
+      "suggestion": "「読み込まれた設定ファイルのパスを優先順位順に表示する」等の仕様を追加。"
+    },
+    {
+      "id": "N4",
+      "title": "マージ用中間構造体の設計",
+      "description": "フィールドレベルマージには全フィールド Option<T> の中間構造体が必要になる可能性がある。",
+      "suggestion": "実装方針にマージ戦略の詳細を記載しておくと設計フェーズがスムーズになる。"
+    }
+  ],
+  "summary": "Issue #76 は既存コードベースとの方向性は概ね整合。Must Fix 3件: (1) 既存 embedding::Config との移行計画欠落、(2) マージ粒度未定義、(3) 環境変数スコープ未定義。Should Fix として設定値の消費先との紐付け不足あり。"
+}

@@ -1,0 +1,3 @@
+   Compiling commandindex v0.0.5 (/Users/maenokota/share/work/github_kewton/commandindex-develop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.47s
+     Running tests/e2e_team_workflow.rs (target/debug/deps/e2e_team_workflow-d75db5187b5b0dc3)

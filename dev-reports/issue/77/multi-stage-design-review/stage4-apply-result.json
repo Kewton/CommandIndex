@@ -1,0 +1,1 @@
+{"stage": 4, "applied": ["M1: シンボリックリンク/ハードリンク拒否を validate_entry_type() として追加", "M2: canonicalize 記述を削除、文字列レベル+components()検証に一本化", "M3: 圧縮爆弾対策（サイズ上限1GB, エントリ数上限10000）を追加", "S1: ExportMeta から index_root 削除、state.json はサニタイズしてパック", "S3: ExportMeta に #[serde(deny_unknown_fields)] 追加"]}

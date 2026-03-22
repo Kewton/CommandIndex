@@ -1,0 +1,760 @@
+
+running 208 tests
+test cli::embed::tests::test_embed_error_from_embedding_error ... ok
+test cli::embed::tests::test_embed_error_from_store_error ... ok
+test cli::embed::tests::test_embed_error_from_io_error ... ok
+test cli::embed::tests::test_embed_error_source_index_not_found ... ok
+test cli::embed::tests::test_embed_error_display_store ... ok
+test cli::embed::tests::test_embed_error_display_index_not_found ... ok
+test cli::embed::tests::test_embed_error_display_io ... ok
+test cli::embed::tests::test_embed_error_display_embedding ... ok
+test cli::index::tests::test_code_file_heading_level_is_zero ... ok
+test cli::index::tests::test_index_error_from_code_parse_error ... ok
+test cli::index::tests::test_index_error_display_code_parse ... ok
+test cli::embed::tests::test_embed_error_source_io ... ok
+test cli::index::tests::test_index_error_display_symbol_store ... ok
+test cli::index::tests::test_convert_symbol_large_line_numbers ... ok
+test cli::index::tests::test_convert_symbol_normal ... ok
+test cli::index::tests::test_index_error_from_symbol_store_error ... ok
+test cli::index::tests::test_index_error_from_symbol_store_schema_version_mismatch ... ok
+test cli::index::tests::test_is_indexable_link_accepts_relative_with_anchor ... ok
+test cli::index::tests::test_is_indexable_link_local_file ... ok
+test cli::embed::tests::test_run_index_not_found ... ok
+test cli::index::tests::test_is_indexable_link_rejects_anchor_only ... ok
+test cli::index::tests::test_is_indexable_link_accepts_max_length ... ok
+test cli::index::tests::test_is_indexable_link_rejects_other_protocol ... ok
+test cli::index::tests::test_is_indexable_link_rejects_too_long ... ok
+test cli::index::tests::test_is_indexable_link_rejects_https ... ok
+test cli::index::tests::test_is_indexable_link_wikilink ... ok
+test cli::index::tests::test_is_indexable_link_rejects_http ... ok
+test cli::index::tests::test_is_indexable_link_rejects_mailto ... ok
+test cli::status::git_info::tests::test_determine_recommendation_needs_update ... ok
+test cli::status::git_info::tests::test_determine_recommendation_none ... ok
+test cli::status::git_info::tests::test_determine_recommendation_up_to_date ... ok
+test cli::status::git_info::tests::test_validate_commit_hash_invalid ... ok
+test cli::status::git_info::tests::test_validate_commit_hash_valid ... ok
+test cli::workspace::tests::test_run_workspace_search_missing_config ... ok
+test cli::workspace::tests::test_run_workspace_status_missing_config ... ok
+test cli::workspace::tests::test_run_workspace_update_missing_config ... ok
+test config::tests::test_config_error_display_read ... ok
+test config::tests::test_config_error_display_secret ... ok
+test config::tests::test_merge_raw_both_none ... ok
+test config::tests::test_merge_raw_higher_wins ... ok
+test config::tests::test_raw_config_default_is_all_none ... ok
+test config::tests::test_merge_raw_rerank_fields ... ok
+test config::tests::test_resolve_config_defaults ... ok
+test config::tests::test_load_config_no_files_returns_defaults ... ok
+test config::tests::test_resolve_config_with_values ... ok
+test config::tests::test_to_masked_view_masks_api_keys ... ok
+test config::tests::test_to_masked_view_no_api_keys ... ok
+test config::tests::test_validate_no_secrets_clean ... ok
+test config::tests::test_validate_no_secrets_embedding_api_key_rejected ... ok
+test config::tests::test_validate_no_secrets_rerank_api_key_rejected ... ok
+test config::tests::test_load_config_invalid_toml ... ok
+test embedding::ollama::tests::test_truncate_text_short ... ok
+test config::tests::test_view_model_serializes_to_toml ... ok
+test embedding::openai::tests::test_from_config_no_api_key_fails ... ok
+test config::tests::test_toml_roundtrip_all_fields ... ok
+test config::tests::test_load_config_team_with_api_key_rejected ... ok
+test config::tests::test_load_config_team_config_only ... ok
+test config::tests::test_load_config_legacy_ignored_when_team_exists ... ok
+test config::tests::test_load_config_local_overrides_team ... ok
+test embedding::openai::tests::test_truncate_text_short ... ok
+test config::tests::test_load_config_legacy_fallback ... ok
+test embedding::ollama::tests::test_truncate_text_long ... ok
+test embedding::openai::tests::test_truncate_text_long ... ok
+test embedding::store::tests::test_f32_blob_roundtrip ... ok
+test cli::workspace::tests::test_run_workspace_search_repo_filter_not_found ... ok
+test embedding::tests::test_create_provider_openai_without_api_key_fails ... ok
+test embedding::tests::test_embedding_config_debug_no_api_key ... ok
+test embedding::tests::test_embedding_config_debug_masks_api_key ... ok
+test embedding::tests::test_embedding_config_default ... ok
+test embedding::tests::test_embedding_config_toml_minimal ... ok
+test embedding::tests::test_embedding_config_toml_parse ... ok
+test embedding::tests::test_embedding_error_display ... ok
+test embedding::tests::test_mock_provider_dimension ... ok
+test embedding::tests::test_mock_provider_embed ... ok
+test embedding::tests::test_create_provider_ollama ... ok
+test embedding::tests::test_create_provider_openai_with_api_key ... ok
+test embedding::ollama::tests::test_from_config ... ok
+test embedding::ollama::tests::test_dimension_unknown_model ... ok
+test embedding::tests::test_mock_provider_names ... ok
+test embedding::tests::test_provider_type_default_is_ollama ... ok
+test embedding::openai::tests::test_dimension_unknown_model ... ok
+test embedding::openai::tests::test_from_config_with_api_key ... ok
+test embedding::openai::tests::test_openai_provider_debug_masks_api_key ... ok
+test embedding::tests::test_resolve_api_key_env_var_priority ... ok
+test embedding::tests::test_resolve_api_key_from_config ... ok
+test embedding::tests::test_resolve_api_key_none ... ok
+test embedding::ollama::tests::test_dimension_known_models ... ok
+test embedding::openai::tests::test_dimension_known_models ... ok
+test embedding::store::tests::test_open_creates_db_file ... ok
+test indexer::manifest::tests::file_type_all_extensions_contains_all ... ok
+test indexer::manifest::tests::file_type_default_is_markdown ... ok
+test indexer::manifest::tests::file_type_from_extension_md ... ok
+test indexer::manifest::tests::file_entry_serde_backward_compat ... ok
+test indexer::manifest::tests::file_type_from_extension_py ... ok
+test indexer::manifest::tests::file_entry_roundtrip_serde ... ok
+test indexer::manifest::tests::file_entry_serde_with_file_type ... ok
+test indexer::manifest::tests::file_type_from_extension_ts ... ok
+test indexer::manifest::tests::file_type_from_extension_tsx ... ok
+test indexer::manifest::tests::file_type_from_extension_unknown ... ok
+test indexer::manifest::tests::file_type_is_code ... ok
+test indexer::manifest::tests::from_type_filter_code_returns_none ... ok
+test indexer::manifest::tests::from_type_filter_empty_returns_none ... ok
+test indexer::manifest::tests::from_type_filter_invalid_returns_none ... ok
+test indexer::manifest::tests::from_type_filter_markdown ... ok
+test indexer::manifest::tests::from_type_filter_md_alias ... ok
+test indexer::manifest::tests::from_type_filter_py_alias ... ok
+test indexer::manifest::tests::from_type_filter_python ... ok
+test indexer::manifest::tests::from_type_filter_ts_alias ... ok
+test indexer::manifest::tests::from_type_filter_typescript ... ok
+test indexer::manifest::tests::valid_type_filter_names_contains_expected ... ok
+test indexer::snapshot::tests::export_meta_deny_unknown_fields ... ok
+test indexer::snapshot::tests::export_meta_none_git_hash ... ok
+test indexer::snapshot::tests::export_meta_roundtrip ... ok
+test indexer::symbol_store::tests::test_blob_to_embedding_invalid_size ... ok
+test indexer::symbol_store::tests::test_cosine_similarity_basic ... ok
+test indexer::symbol_store::tests::test_cosine_similarity_zero_vector ... ok
+test indexer::snapshot::tests::export_meta_save_and_load ... ok
+test indexer::symbol_store::tests::test_embedding_blob_roundtrip ... ok
+test embedding::store::tests::test_has_current_embedding_true ... ok
+test embedding::store::tests::test_open_and_create_tables ... ok
+test embedding::store::tests::test_upsert_different_headings_are_separate ... ok
+test embedding::store::tests::test_has_current_embedding_false_different_hash ... ok
+test embedding::store::tests::test_count_after_inserts ... ok
+test embedding::store::tests::test_create_tables_idempotent ... ok
+test embedding::store::tests::test_find_by_path_empty ... ok
+test indexer::symbol_store::tests::test_count_all_empty ... ok
+test embedding::store::tests::test_has_current_embedding_false_no_record ... ok
+test indexer::symbol_store::tests::test_create_embeddings_table ... ok
+test indexer::symbol_store::tests::test_count_all_after_insert ... ok
+test indexer::symbol_store::tests::test_find_imports_by_source_empty ... ok
+test indexer::symbol_store::tests::test_count_embeddings_empty ... ok
+test embedding::store::tests::test_upsert_replaces_on_duplicate ... ok
+test indexer::symbol_store::tests::test_find_imports_by_source ... ok
+test embedding::store::tests::test_count_empty ... ok
+test embedding::store::tests::test_upsert_and_find_by_path ... ok
+test indexer::symbol_store::tests::test_find_file_links_by_target_empty ... ok
+test embedding::store::tests::test_delete_by_path ... ok
+test indexer::symbol_store::tests::test_create_tables_idempotent ... ok
+test rerank::ollama::tests::test_build_prompt_contains_query_and_document ... ok
+test rerank::ollama::tests::test_build_prompt_format ... ok
+test rerank::ollama::tests::test_parse_score_clamp_high ... ok
+test rerank::ollama::tests::test_parse_score_clamp_negative ... ok
+test indexer::symbol_store::tests::test_open_creates_db_file ... ok
+test embedding::store::tests::test_count_distinct_files_with_data ... ok
+test rerank::ollama::tests::test_parse_score_empty ... ok
+test rerank::ollama::tests::test_parse_score_float ... ok
+test rerank::ollama::tests::test_parse_score_fraction_format ... ok
+test embedding::store::tests::test_count_distinct_files_empty ... ok
+test rerank::ollama::tests::test_parse_score_integer ... ok
+test rerank::ollama::tests::test_parse_score_labeled_format ... ok
+test rerank::ollama::tests::test_parse_score_invalid ... ok
+test rerank::ollama::tests::test_parse_score_labeled_float ... ok
+test rerank::ollama::tests::test_parse_score_with_text_after ... ok
+test rerank::ollama::tests::test_parse_score_with_whitespace ... ok
+test rerank::tests::test_build_document_text_empty_heading ... ok
+test rerank::tests::test_build_document_text_japanese ... ok
+test rerank::tests::test_build_document_text_normal ... ok
+test rerank::tests::test_build_document_text_japanese_truncate ... ok
+test rerank::tests::test_rerank_config_debug_masks_api_key ... ok
+test rerank::tests::test_rerank_config_debug_no_api_key ... ok
+test rerank::tests::test_build_document_text_truncate_long_text ... ok
+test rerank::tests::test_rerank_config_defaults ... ok
+test search::hybrid::tests::test_rrf_both_rankings ... ok
+test indexer::symbol_store::tests::test_delete_by_file_removes_file_links ... ok
+test search::hybrid::tests::test_rrf_empty_results ... ok
+test search::hybrid::tests::test_rrf_multiple_all_same_result ... ok
+test search::hybrid::tests::test_rrf_bm25_only ... ok
+test rerank::tests::test_rerank_error_display ... ok
+test rerank::tests::test_rerank_config_toml_defaults ... ok
+test search::hybrid::tests::test_rrf_limit ... ok
+test search::hybrid::tests::test_rrf_multiple_empty_lists_mixed ... ok
+test search::hybrid::tests::test_rrf_multiple_limit_smaller_than_results ... ok
+test search::hybrid::tests::test_rrf_multiple_score_accumulation_across_lists ... ok
+test search::hybrid::tests::test_rrf_multiple_single_list ... ok
+test search::hybrid::tests::test_rrf_multiple_three_lists ... ok
+test search::hybrid::tests::test_rrf_multiple_zero_lists ... ok
+test search::hybrid::tests::test_rrf_semantic_only ... ok
+test search::hybrid::tests::test_rrf_stable_sort ... ok
+test search::related::tests::test_normalize_path_backslash ... ok
+test search::related::tests::test_normalize_path_basic ... ok
+test search::related::tests::test_normalize_path_too_long ... ok
+test search::related::tests::test_normalize_path_dotdot ... ok
+test indexer::symbol_store::tests::test_count_embeddings_with_data ... ok
+test search::related::tests::test_path_segment_similarity ... ok
+test search::related::tests::test_path_proximity_same_dir ... ok
+test search::related::tests::test_normalize_path_empty ... ok
+test indexer::symbol_store::tests::test_delete_by_file_removes_symbols ... ok
+test indexer::symbol_store::tests::test_embedding_unique_constraint ... ok
+test indexer::symbol_store::tests::test_insert_and_find_file_links_by_source ... ok
+test indexer::symbol_store::tests::test_delete_by_file_removes_embeddings ... ok
+test indexer::symbol_store::tests::test_delete_by_file_cascade_with_embeddings ... ok
+test indexer::symbol_store::tests::test_delete_by_file_cascade ... ok
+test indexer::symbol_store::tests::test_insert_and_find_by_name ... ok
+test embedding::store::tests::test_schema_version_check ... ok
+test indexer::symbol_store::tests::test_find_file_links_by_source_empty ... ok
+test indexer::symbol_store::tests::test_delete_by_file_removes_dependencies ... ok
+test indexer::symbol_store::tests::test_find_nonexistent_returns_empty ... ok
+test indexer::symbol_store::tests::test_insert_file_links_empty ... ok
+test indexer::symbol_store::tests::test_insert_embedding_validation ... ok
+test indexer::symbol_store::tests::test_find_file_links_by_target ... ok
+test indexer::symbol_store::tests::test_file_links_table_created ... ok
+test indexer::symbol_store::tests::test_insert_and_search_embeddings ... ok
+test indexer::symbol_store::tests::test_open_and_create_tables ... ok
+test indexer::symbol_store::tests::test_schema_version_v3 ... ok
+test indexer::symbol_store::tests::test_insert_and_find_dependencies ... ok
+test indexer::symbol_store::tests::test_search_similar_empty ... ok
+test indexer::symbol_store::tests::test_insert_and_find_by_file ... ok
+test indexer::symbol_store::tests::test_schema_version_check ... ok
+
+test result: ok. 208 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 44 tests
+test search_limit_is_optional ... ok
+test config_path_runs_successfully ... ok
+test search_query_and_symbol_conflict ... ok
+test search_with_all_options_accepted ... ok
+test search_rerank_conflicts_with_symbol ... ok
+test help_flag_shows_usage ... ok
+test search_semantic_and_symbol_conflict ... ok
+test search_rerank_conflicts_with_related ... ok
+test search_semantic_and_query_conflict ... ok
+test no_args_shows_error ... ok
+test search_rerank_top_requires_rerank ... ok
+test search_with_rerank_accepted ... ok
+test config_help_shows_subcommands ... ok
+test search_requires_query_or_symbol ... ok
+test search_with_explicit_limit_accepted ... ok
+test search_repo_without_workspace_fails ... ok
+test search_semantic_option_accepted ... ok
+test search_type_invalid_value_rejected ... ok
+test search_rerank_conflicts_with_semantic ... ok
+test search_semantic_and_heading_conflict ... ok
+test search_symbol_option_accepted ... ok
+test config_path_with_team_config ... ok
+test search_semantic_and_related_conflict ... ok
+test config_show_runs_successfully ... ok
+test config_path_legacy_shows_deprecated ... ok
+test config_show_with_team_config ... ok
+test search_with_rerank_and_rerank_top_accepted ... ok
+test search_workspace_conflicts_with_symbol ... ok
+test test_no_semantic_conflicts_with_semantic ... ok
+test search_workspace_option_accepted ... ok
+test status_workspace_option_accepted ... ok
+test search_workspace_conflicts_with_related ... ok
+test test_no_semantic_conflicts_with_related ... ok
+test test_no_semantic_accepted ... ok
+test test_no_semantic_conflicts_with_symbol ... ok
+test search_workspace_conflicts_with_semantic ... ok
+test search_workspace_with_repo_accepted ... ok
+test search_without_index_shows_error ... ok
+test unknown_subcommand_shows_error ... ok
+test update_without_index_shows_error ... ok
+test version_flag_shows_version ... ok
+test update_workspace_option_accepted ... ok
+test search_type_valid_values_accepted ... ok
+test index_subcommand_accepts_path_option ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.33s
+
+
+running 5 tests
+test clean_with_no_index_succeeds ... ok
+test clean_default_path_is_current_dir ... ok
+test clean_removes_commandindex_directory ... ok
+test clean_with_path_option ... ok
+test clean_then_reindex_succeeds ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.68s
+
+
+running 6 tests
+test export_not_initialized ... ok
+test export_sanitizes_index_root ... ok
+test export_excludes_embeddings_by_default ... ok
+test export_excludes_config_local_toml ... ok
+test export_includes_embeddings_when_requested ... ok
+test export_basic ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.58s
+
+
+running 9 tests
+test import_archive_not_found ... ok
+test import_rejects_symlink_entry ... ok
+test import_rejects_path_traversal_parent_dir ... ok
+test import_rejects_incompatible_version ... ok
+test import_git_commit_hash_mismatch_shows_warning ... ok
+test import_basic ... ok
+test import_existing_index_without_force ... ok
+test import_existing_index_with_force ... ok
+test import_state_json_index_root_rewritten ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.54s
+
+
+running 11 tests
+test index_nonexistent_path ... ok
+test index_empty_directory ... ok
+test index_creates_manifest ... ok
+test index_creates_tantivy_index ... ok
+test index_creates_commandindex_dir ... ok
+test index_creates_state ... ok
+test index_with_path_option ... ok
+test index_applies_cmindexignore ... ok
+test index_displays_summary ... ok
+test index_multiple_files_with_subdirectories ... ok
+test index_rebuilds_on_existing ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.78s
+
+
+running 26 tests
+test format_size_bytes ... ok
+test format_size_kilobytes ... ok
+test format_size_gigabytes ... ok
+test format_size_megabytes ... ok
+test run_directory_not_found ... ok
+test run_not_initialized ... ok
+test compute_dir_size_empty_dir ... ok
+test compute_dir_size_nested ... ok
+test test_state_backward_compat ... ok
+test compute_dir_size_with_files ... ok
+test run_human_format ... ok
+test run_coverage_only_json ... ok
+test run_embedding_count_no_db ... ok
+test run_json_format ... ok
+test run_default_json_no_extra_fields ... ok
+test run_coverage_only_human ... ok
+test status_cli_detail_coverage_conflict ... ok
+test status_cli_directory_not_found ... ok
+test status_cli_not_initialized ... ok
+test run_detail_json ... ok
+test run_storage_breakdown ... ok
+test run_detail_human ... ok
+test status_cli_human_format ... ok
+test status_cli_json_format ... ok
+test status_cli_coverage_flag ... ok
+test status_cli_detail_flag ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.32s
+
+
+running 13 tests
+test diff_result_is_empty ... ok
+test to_relative_path_string_works ... ok
+test detect_changes_detects_deleted_files ... ok
+test detect_changes_detects_added_files ... ok
+test load_or_default_returns_empty_on_not_found ... ok
+test detect_changes_detects_modified_files ... ok
+test detect_changes_skips_unchanged_files ... ok
+test load_or_default_propagates_other_errors ... ok
+test detect_changes_with_empty_manifest ... ok
+test detect_changes_mixed_added_modified_deleted ... ok
+test scan_files_filters_by_extension ... ok
+test scan_files_applies_ignore_filter ... ok
+test roundtrip_index_then_detect_changes ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.34s
+
+
+running 12 tests
+test e2e_code_index_creates_symbols_db ... ok
+test e2e_code_status_shows_file_types ... ok
+test e2e_code_index_manifest_contains_code_files ... ok
+test e2e_code_search_markdown_still_works ... ok
+test e2e_code_search_typescript ... ok
+test e2e_code_search_python ... ok
+test e2e_code_empty_file_skipped ... ok
+test e2e_code_search_type_filter ... ok
+test e2e_code_update_delete_code_file ... ok
+test e2e_code_clean_and_reindex ... ok
+test e2e_code_update_add_code_file ... ok
+test e2e_code_update_modify_code_file ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.16s
+
+
+running 10 tests
+test context_pack_empty_context_for_isolated_file ... ok
+test context_pack_outputs_valid_json ... ok
+test context_pack_summary_fields ... ok
+test context_pack_entry_fields_are_enriched ... ok
+test context_pack_includes_target_files ... ok
+test context_pack_max_files_limits_output ... ok
+test context_pack_includes_related_context ... ok
+test context_pack_no_self_reference ... ok
+test context_pack_multiple_files ... ok
+test context_pack_max_tokens_limits_output ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.27s
+
+
+running 8 tests
+test embed_help_shows_usage ... ok
+test update_with_embedding_help_shows_option ... ok
+test index_with_embedding_help_shows_option ... ok
+test help_shows_embed_subcommand ... ok
+test embed_without_index_shows_error ... ok
+test clean_keep_embeddings_help_shows_option ... ok
+test clean_keep_embeddings_preserves_embeddings_db ... ok
+test clean_without_keep_embeddings_removes_everything ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s
+
+
+running 2 tests
+test e2e_export_import_cli ... ok
+test e2e_export_import_search ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.84s
+
+
+running 8 tests
+test e2e_search_without_index ... ok
+test e2e_status_after_index ... ok
+test e2e_ignore_excludes_from_search ... ok
+test e2e_japanese_search ... ok
+test e2e_search_no_results ... ok
+test e2e_full_flow ... ok
+test e2e_output_formats ... ok
+test e2e_filter_combination ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.13s
+
+
+running 9 tests
+test e2e_phase3_symbol_search_without_index ... ok
+test e2e_phase3_import_dependency_whitebox ... ok
+test e2e_phase3_python_symbol_search ... ok
+test e2e_phase3_symbol_type_simultaneous ... ok
+test e2e_phase3_full_flow_ts_symbol_status_clean ... ok
+test e2e_phase3_tsx_file_e2e ... ok
+test e2e_phase3_update_symbol_reflect ... ok
+test e2e_phase3_type_python_filter ... ok
+test e2e_phase3_mixed_content_type_filter ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.82s
+
+
+running 15 tests
+test related_search_no_index ... ok
+test related_import_dependency_detects_ts_imports ... ok
+test related_conflicts_with_tag ... ok
+test related_search_conflicts_with_query ... ok
+test related_search_conflicts_with_symbol ... ok
+test related_tag_match_detects_shared_tags ... ok
+test related_search_no_results_for_unlinked_file ... ok
+test related_search_human_format ... ok
+test related_search_path_format ... ok
+test related_search_nonexistent_file ... ok
+test related_directory_proximity_boosts_score ... ok
+test related_full_flow_verifies_relation_types ... ok
+test related_search_json_format_has_score_and_relations ... ok
+test related_search_respects_limit ... ok
+test related_search_finds_linked_files ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.08s
+
+
+running 12 tests
+test test_hybrid_auto_switch ... ignored
+test test_hybrid_bm25_fallback ... ignored
+test test_rrf_merge_integration ... ok
+test test_embedding_insert_and_count ... ok
+test test_semantic_search_top_k ... ok
+test test_semantic_search_basic ... ok
+test test_rerank_top_accepted_via_cli ... ok
+test test_embed_without_ollama_fails ... ok
+test test_hybrid_no_semantic ... ok
+test test_hybrid_no_embeddings ... ok
+test test_rerank_fallback_via_cli ... ok
+test test_context_with_embeddings ... ok
+
+test result: ok. 10 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 3.53s
+
+
+running 8 tests
+test symbol_search_class_shows_children ... ok
+test symbol_search_not_found ... ok
+test symbol_search_human_format ... ok
+test symbol_search_path_format ... ok
+test symbol_search_partial_match ... ok
+test symbol_search_case_insensitive ... ok
+test symbol_search_finds_class_by_name ... ok
+test symbol_search_finds_function_by_name ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.89s
+
+
+running 7 tests
+test e2e_config_show_api_key_masked ... ok
+test e2e_team_config_full_flow ... ok
+test e2e_config_priority ... ok
+test e2e_status_verify_with_team_config ... ok
+test e2e_status_detail ... ok
+test e2e_status_json_detail ... ok
+test e2e_export_import_search_flow ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.37s
+
+
+running 7 tests
+test e2e_update_no_index_shows_error ... ok
+test e2e_update_no_changes ... ok
+test e2e_update_status_after_add ... ok
+test e2e_update_cmindexignore ... ok
+test e2e_update_delete_file ... ok
+test e2e_update_add_new_file ... ok
+test e2e_update_modify_file ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.97s
+
+
+running 4 tests
+test verify_without_flag_no_verify_output ... ok
+test verify_normal_index ... ok
+test verify_corrupted_index ... ok
+test verify_json_format ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.54s
+
+
+running 11 tests
+test test_workspace_search_nonexistent_config ... ok
+test test_search_without_workspace_unchanged ... ok
+test test_workspace_search_partial_repo_failure ... ok
+test test_workspace_search_repo_filter_not_found ... ok
+test test_workspace_status_json ... ok
+test test_workspace_status_human ... ok
+test test_workspace_search_with_repo_filter ... ok
+test test_workspace_search_json_format ... ok
+test test_workspace_search_path_format ... ok
+test test_workspace_search_cross_repo ... ok
+test test_workspace_update ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.84s
+
+
+running 16 tests
+test test_comment_lines_ignored ... ok
+test test_empty_lines_ignored ... ok
+test test_empty_content ... ok
+test test_invalid_pattern_skipped ... ok
+test test_only_comments_and_blanks ... ok
+test test_directory_pattern_with_trailing_slash ... ok
+test test_custom_patterns ... ok
+test test_default_ignores_node_modules ... ok
+test test_default_ignores_git ... ok
+test test_default_ignores_min_js ... ok
+test test_default_ignores_target ... ok
+test test_default_ignores_lock_files ... ok
+test test_default_allows_normal_files ... ok
+test test_from_file_not_exists_uses_defaults ... ok
+test test_default_ignores_commandindex ... ok
+test test_from_file_exists ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+test update_no_index_shows_error ... ok
+test update_skips_unchanged_files ... ok
+test update_manifest_updated ... ok
+test update_state_no_underflow ... ok
+test update_state_updated ... ok
+test update_adds_new_files ... ok
+test update_removes_deleted_files ... ok
+test update_modifies_existing_files ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.54s
+
+
+running 21 tests
+test manifest_remove_by_path_removes_entry ... ok
+test manifest_remove_by_path_nonexistent_is_noop ... ok
+test manifest_upsert_entry_adds_new ... ok
+test manifest_upsert_entry_updates_existing ... ok
+test test_manifest_find_by_path ... ok
+test test_manifest_add_entry ... ok
+test test_manifest_new ... ok
+test test_state_check_schema_version_mismatch ... ok
+test test_state_check_schema_version_ok ... ok
+test test_state_new ... ok
+test test_compute_file_hash_nonexistent ... ok
+test test_manifest_load_nonexistent ... ok
+test test_state_load_nonexistent ... ok
+test test_state_exists_false ... ok
+test test_compute_file_hash_deterministic ... ok
+test test_compute_file_hash ... ok
+test test_compute_file_hash_different_content ... ok
+test test_state_exists_true ... ok
+test test_manifest_save_and_load ... ok
+test test_state_save_and_load ... ok
+test test_state_touch_updates_timestamp ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 21 tests
+test test_schema_creation ... ok
+test test_create_index_in_ram ... ok
+test test_create_index_on_disk ... ok
+test test_add_and_commit_section ... ok
+test test_search_japanese ... ok
+test test_search_result_fields ... ok
+test test_search_english ... ok
+test test_search_by_tags ... ok
+test test_search_no_results ... ok
+test test_commandindex_tantivy_path ... ok
+test test_disk_index_write_and_read ... ok
+test test_search_with_options_heading_filter ... ok
+test test_search_with_options_file_type_filter ... ok
+test delete_by_path_removes_single_section ... ok
+test test_search_with_options_combined_filters ... ok
+test test_search_with_options_path_prefix_filter ... ok
+test test_search_with_options_delegates_from_search ... ok
+test test_search_with_options_tag_filter ... ok
+test test_search_with_options_limit ... ok
+test delete_by_path_does_not_affect_other_paths ... ok
+test delete_by_path_removes_multiple_sections ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
+
+
+running 21 tests
+test test_format_empty_results ... ok
+test test_human_format_no_tags ... ok
+test test_human_format_snippet_truncation ... ok
+test test_human_format_long_single_line ... ok
+test test_human_format_basic ... ok
+test test_human_format_with_tags ... ok
+test test_json_format_empty_tags ... ok
+test test_json_format_score ... ok
+test test_json_format_basic ... ok
+test test_path_format_basic ... ok
+test test_json_format_tags_array ... ok
+test test_path_format_dedup ... ok
+test test_snippet_custom_chars ... ok
+test test_snippet_custom_lines ... ok
+test test_snippet_chars_zero_unlimited ... ok
+test test_snippet_default_unchanged ... ok
+test test_snippet_lines_zero_unlimited ... ok
+test test_workspace_human_contains_repo_prefix ... ok
+test test_workspace_path_different_repos_same_path_not_deduped ... ok
+test test_workspace_path_same_repo_same_path_deduped ... ok
+test test_workspace_json_contains_repository_field ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 17 tests
+test test_empty_file ... ok
+test test_line_start_without_frontmatter ... ok
+test test_empty_frontmatter ... ok
+test test_markdown_links ... ok
+test test_mixed_links ... ok
+test test_heading_without_space_is_not_heading ... ok
+test test_no_frontmatter ... ok
+test test_no_headings ... ok
+test test_parse_all_heading_levels ... ok
+test test_parse_heading_levels ... ok
+test test_section_multiline_body ... ok
+test test_wiki_links ... ok
+test test_frontmatter_with_tags ... ok
+test test_frontmatter_without_tags ... ok
+test test_line_start_with_frontmatter ... ok
+test test_parse_empty_directory ... ok
+test test_parse_directory ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 13 tests
+test test_parse_empty_file ... ok
+test test_parse_import_statement ... ok
+test test_file_path_preserved ... ok
+test test_parse_from_import_statement ... ok
+test test_multiple_top_level_functions ... ok
+test test_is_exported_always_false ... ok
+test test_parse_nested_class ... ok
+test test_line_numbers_1_indexed ... ok
+test test_nested_function_inside_function ... ok
+test test_parse_simple_function ... ok
+test test_parse_syntax_error ... ok
+test test_parse_class_with_methods ... ok
+test test_parse_code_file_py_dispatch ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 17 tests
+test test_parse_code_file_unsupported_extension ... ok
+test test_parse_empty_file ... ok
+test test_file_path_is_preserved ... ok
+test test_multiple_imports ... ok
+test test_line_numbers_are_1_indexed ... ok
+test test_nested_function_inside_function ... ok
+test test_parse_imports ... ok
+test test_parse_arrow_function ... ok
+test test_parse_exported_arrow_function ... ok
+test test_parse_exported_function ... ok
+test test_parse_exported_class ... ok
+test test_parse_code_file_ts_dispatch ... ok
+test test_parse_class_with_methods ... ok
+test test_parse_simple_function ... ok
+test test_parse_syntax_error_file ... ok
+test test_tsx_parser ... ok
+test test_parse_code_file_tsx_dispatch ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 31 tests
+test test_expand_path_backtick_rejected ... ok
+test test_expand_path_dollar_sign_rejected ... ok
+test test_expand_path_relative ... ok
+test test_expand_path_absolute ... ok
+test test_expand_path_tilde_user_rejected ... ok
+test test_expand_path_tilde_only ... ok
+test test_expand_path_tilde_with_subpath ... ok
+test test_load_workspace_config_file_not_found ... ok
+test test_max_alias_length_is_64 ... ok
+test test_max_config_file_size_is_1mb ... ok
+test test_max_repositories_is_50 ... ok
+test test_resolve_repositories_tilde_path ... ok
+test test_validate_alias_empty ... ok
+test test_validate_alias_control_characters ... ok
+test test_validate_alias_max_length_ok ... ok
+test test_validate_alias_special_characters ... ok
+test test_validate_alias_too_long ... ok
+test test_validate_alias_valid ... ok
+test test_load_workspace_config_file_too_large ... ok
+test test_load_workspace_config_invalid_workspace_name ... ok
+test test_load_workspace_config_invalid_toml ... ok
+test test_load_workspace_config_normal ... ok
+test test_resolve_repositories_absolute_path ... ok
+test test_resolve_repositories_alias_defaults_to_dir_name ... ok
+test test_resolve_repositories_nonexistent_path_warning ... ok
+test test_resolve_repositories_index_not_found_warning ... ok
+test test_resolve_repositories_duplicate_path ... ok
+test test_resolve_repositories_duplicate_alias ... ok
+test test_resolve_repositories_symlink_warning ... ok
+test test_resolve_repositories_relative_path ... ok
+test test_resolve_repositories_too_many ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

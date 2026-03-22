@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "type": "apply-review",
+  "applied_fixes": [
+    "M1: シナリオ6（マルチリポジトリ検索）をスコープから除外。8→7シナリオに変更",
+    "M2: 設定優先順位を3段階に限定（環境変数オーバーライド未実装を明記）",
+    "S1: 既存テスト数を正確な値に修正（cli_export: 6, cli_import: 9）",
+    "S2: export/importのcurrent_dir切替必要性を追記",
+    "S3: シナリオ1の検証方法を具体化（config showで確認）",
+    "N2: テスト独立性をtempfile::tempdir()使用と明記",
+    "N3: 既存テストとの関係セクションを追加"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/80"
+}

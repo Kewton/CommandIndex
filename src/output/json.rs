@@ -2,7 +2,8 @@ use std::io::Write;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult, parse_tags,
+    OutputError, RelatedSearchResult, SemanticSearchResult, SymbolSearchResult,
+    WorkspaceSearchResult, parse_tags,
 };
 
 /// JSONL形式で検索結果を出力する
@@ -15,6 +16,30 @@ pub fn format_json(results: &[SearchResult], writer: &mut dyn Write) -> Result<(
             "heading_level": result.heading_level,
             "body": result.body,
             "tags": tags,
+            "line_start": result.line_start,
+            "score": result.score,
+        });
+        serde_json::to_writer(&mut *writer, &json_value)?;
+        writeln!(writer)?;
+    }
+    Ok(())
+}
+
+/// ワークスペース横断検索結果をJSONL形式で出力する
+pub fn format_workspace_json(
+    results: &[WorkspaceSearchResult],
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    for ws_result in results {
+        let result = &ws_result.result;
+        let tags: Vec<&str> = parse_tags(&result.tags);
+        let json_value = serde_json::json!({
+            "repository": ws_result.repository,
+            "path": result.path,
+            "heading": result.heading,
+            "body": result.body,
+            "tags": tags,
+            "heading_level": result.heading_level,
             "line_start": result.line_start,
             "score": result.score,
         });

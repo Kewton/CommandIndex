@@ -2,6 +2,7 @@ pub mod diff;
 pub mod manifest;
 pub mod reader;
 pub mod schema;
+pub mod snapshot;
 pub mod state;
 pub mod symbol_store;
 pub mod writer;

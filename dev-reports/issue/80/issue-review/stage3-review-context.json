@@ -1,0 +1,57 @@
+{
+  "stage": 3,
+  "type": "impact-analysis",
+  "reviewer": "Claude (opus)",
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "マージコンフリクト残存",
+      "description": "git statusにコンフリクト残存の可能性",
+      "note": "Stage 2反映前の状態で検出。実際には会話冒頭で解決済み。対応不要。"
+    },
+    {
+      "id": "MF-2",
+      "title": "既存テストとの重複・競合",
+      "description": "シナリオ4-7は既存テストと実質同等のテストが存在する可能性。Issue #80は「チーム機能連携」の観点に限定し差別化する必要がある。",
+      "suggestion": "既存テストが個別機能テスト、Issue #80がチーム運用シナリオ全体フローという位置づけを明確にする。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "テスト実行時間の増加",
+      "description": "7シナリオ追加でCI時間30-50秒増加見込み。テストファイルは1つにまとめてバイナリ数を増やさない。",
+      "suggestion": "tests/e2e_team_workflow.rs等にまとめる。"
+    },
+    {
+      "id": "SF-2",
+      "title": "テストヘルパー不足",
+      "description": "config show、commandindex.toml設定、config.local.toml用のヘルパーが未整備。",
+      "suggestion": "tests/common/mod.rsにヘルパーを追加する。"
+    },
+    {
+      "id": "SF-3",
+      "title": "Git初期化ヘルパー未整備",
+      "description": "staleness情報やgit_commit_hash取得にGitリポジトリが必要。init_git_repoヘルパーが必要。",
+      "suggestion": "tests/common/mod.rsにinit_git_repo()を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "依存関係への影響なし",
+      "description": "新規crate追加不要。"
+    },
+    {
+      "id": "NH-2",
+      "title": "並列実行安全性",
+      "description": "環境変数操作を避け、current_dirで分離する。"
+    },
+    {
+      "id": "NH-3",
+      "title": "テスト命名規則",
+      "description": "e2e_team_*.rsのような命名推奨。"
+    }
+  ],
+  "summary": "主要リスク: (1)既存テストとの重複(差別化必要), (2)テストヘルパー不足(config/git init用), (3)テスト実行時間増加(30-50秒)。依存関係への影響なし。"
+}

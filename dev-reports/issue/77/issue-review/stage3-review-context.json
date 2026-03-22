@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "tantivy インデックスの export/import 後の整合性検証が必要",
+      "detail": "tantivy の meta.json やセグメントファイルが export/import 後に正常にオープンできるかの検証が必須。",
+      "suggestion": "統合テストを追加し、export → import 後に tantivy インデックスが開けること・検索が動作することを検証する。"
+    },
+    {
+      "id": "M2",
+      "title": "symbols.db / embeddings.db 内のパス整合性",
+      "detail": "SQLite 内のファイルパスは相対パスで格納されているが、index_root 書き換えのみで全検索ロジックが正常動作するか検証が必要。",
+      "suggestion": "index_root の書き換えのみで動作する設計方針をドキュメント化し、統合テストで検証する。"
+    },
+    {
+      "id": "M3",
+      "title": "パストラバーサル防止の実装",
+      "detail": "tar クレートの Archive::unpack はデフォルトでパストラバーサルを防止しない。エントリごとのパス検証が必要。",
+      "suggestion": "エントリごとに path().starts_with(target_dir) をチェックし、悪意あるアーカイブのテストケースも追加する。"
+    },
+    {
+      "id": "M4",
+      "title": "cli_args.rs テストへの新サブコマンド検証追加",
+      "detail": "help_flag_shows_usage テストに export/import の存在検証を追加すべき。",
+      "suggestion": "テストに .stdout(predicate::str::contains(\"export\")) と import の検証を追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "status --verify と既存 StatusFormat への影響",
+      "detail": "run() の関数シグネチャ変更で既存テスト (cli_status.rs 11個) の修正が発生する可能性。",
+      "suggestion": "StatusOptions 構造体を導入し後方互換性を保つ設計を推奨。"
+    },
+    {
+      "id": "S2",
+      "title": "export_meta.json のバージョン互換性チェック",
+      "detail": "将来のバージョンアップ時に古いエクスポートをインポートできるよう設計が必要。",
+      "suggestion": "export_schema_version フィールドを設け、import 時にバージョン互換性チェックを実施。"
+    },
+    {
+      "id": "S3",
+      "title": "cli/mod.rs へのモジュール宣言追加",
+      "detail": "export.rs / import.rs を追加する場合、mod.rs への宣言追加が必要。",
+      "suggestion": "アルファベット順で追加。"
+    },
+    {
+      "id": "S4",
+      "title": "大規模インデックスのメモリ使用量",
+      "detail": "tar/gzip のストリーミング API を使用してメモリ使用量を抑制すべき。",
+      "suggestion": "ストリーミング圧縮/展開を使用する設計にする。"
+    },
+    {
+      "id": "S5",
+      "title": "--force フラグなしでの既存インデックス保護",
+      "detail": "import 前に既存インデックスの存在チェックとエラーメッセージが必要。",
+      "suggestion": "IndexState::exists() でチェックし、明確なエラーメッセージで中断。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "tar/flate2 は既にトランジティブ依存として存在",
+      "detail": "lindera-dictionary の build-dependencies として既に依存ツリーに存在。バイナリサイズへの影響は最小限。",
+      "suggestion": "Cargo.toml に tar = \"0.4\" と flate2 = \"1\" を追加。"
+    },
+    {
+      "id": "N2",
+      "title": "クロスコンパイルへの影響なし",
+      "detail": "tar/flate2 は純 Rust クレートでありC依存がないため問題なし。",
+      "suggestion": "特に対応不要。"
+    },
+    {
+      "id": "N3",
+      "title": "embeddings.db の export 可否オプション",
+      "detail": "embeddings.db はモデル依存データであり、異なる環境では意味をなさない可能性がある。",
+      "suggestion": "デフォルトでは embeddings.db を含めず、--with-embeddings フラグで明示的に含める設計を推奨。"
+    }
+  ],
+  "summary": "新規サブコマンド追加が中心で既存機能への影響は低い。最も注意が必要なのは tantivy インデックスの整合性、パストラバーサル防止、index_root 書き換えの3点。依存クレートは既にトランジティブに存在しており、CI/CDへの影響は最小限。"
+}

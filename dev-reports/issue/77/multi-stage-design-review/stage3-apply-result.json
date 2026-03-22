@@ -1,0 +1,1 @@
+{"stage": 3, "applied": ["M1: status.rs run() は verify: bool 引数追加（テスト修正は4箇所のみ）", "M2: import 後の update 整合性を統合テストで検証する旨を追記", "M3: export 前に tantivy 内パスが相対パスであることのバリデーション追加", "M4: export 前に symbols.db 内パスが相対パスであることのバリデーション追加", "S5: export 成果物は .commandindex/ 外に出力するため clean に影響なし"]}

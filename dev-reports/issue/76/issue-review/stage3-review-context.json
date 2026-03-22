@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "embedding::Config の削除は6箇所の呼び出しサイトに破壊的変更を引き起こす",
+      "description": "crate::embedding::Config::load() は src/cli/search.rs (4箇所)、src/cli/embed.rs (1箇所)、src/cli/index.rs (1箇所) で直接呼び出されている。一括移行が必要。",
+      "suggestion": "新 config::AppConfig を作成し全6箇所を1コミットで変更するか、段階的に移行する。"
+    },
+    {
+      "id": "M2",
+      "title": "clean.rs での config.toml ハードコード参照の更新が必要",
+      "description": "src/cli/clean.rs L67, L94 で config.toml をハードコードで参照。新設定ファイル名との追従が必要。",
+      "suggestion": "clean.rs の保存対象ファイルリストに commandindex.toml と config.local.toml を追加。"
+    },
+    {
+      "id": "M3",
+      "title": "EmbeddingConfig と RerankConfig の所有権移動による API 境界変更",
+      "description": "新 AppConfig がこれらを包含する場合、循環依存に注意が必要。",
+      "suggestion": "EmbeddingConfig, RerankConfig は現在のモジュールに残し、AppConfig は参照する設計にする。"
+    },
+    {
+      "id": "M4",
+      "title": "テストの config.toml 参照が破壊される",
+      "description": "tests/e2e_embedding.rs と tests/e2e_semantic_hybrid.rs で .commandindex/config.toml をハードコードで作成・検証している。",
+      "suggestion": "テストを新しい設定ファイルパスに更新し、設定ファイル名を定数化。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "CLI デフォルト値と Config 値の優先順位ロジック",
+      "description": "clap の default_value_t と config からの値の優先順位が複雑。CLIで明示指定されたかどうかを判別できないと config 値が無視される。",
+      "suggestion": "clap の default_value_t を使わず Option<usize> にして、None の場合に config → ハードコードデフォルトの順でフォールバック。"
+    },
+    {
+      "id": "S2",
+      "title": "環境変数の命名規則とプレフィックスの設計",
+      "description": "既存の COMMANDINDEX_OPENAI_API_KEY との互換性と新しい命名規則の統一が必要。",
+      "suggestion": "COMMANDINDEX_ プレフィックスで統一し、TOML のキーパスに対応させる。"
+    },
+    {
+      "id": "S3",
+      "title": "新エラー型と既存 EmbeddingError::ConfigError の名前衝突",
+      "description": "新 config::ConfigError と既存 EmbeddingError::ConfigError(String) の関係を整理する必要あり。",
+      "suggestion": "config::ConfigError を新設し、EmbeddingError::ConfigError は From 変換で生成する形にリファクタリング。"
+    },
+    {
+      "id": "S4",
+      "title": "既存 .commandindex/config.toml との関係の明確化",
+      "description": "commandindex.toml（ルート）と既存の .commandindex/config.toml の関係が曖昧。",
+      "suggestion": ".commandindex/config.toml は廃止して commandindex.toml に統合するマイグレーションパスを設ける。"
+    },
+    {
+      "id": "S5",
+      "title": "config show / config path サブコマンドのテスト追加",
+      "description": "Commands enum への追加とテストカバレッジが必要。",
+      "suggestion": "cli_args.rs テストに config show / config path のテストを追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Config::load() の呼び出し回数削減",
+      "description": "search.rs 内で最大4回呼ばれる可能性がある。config パラメータの引き回しにリファクタリングすべき。",
+      "suggestion": "AppConfig::load() の結果を1回だけ生成し各関数に引数として渡す。"
+    },
+    {
+      "id": "N2",
+      "title": "設定バリデーションの追加",
+      "description": "AppConfig に validate() メソッドを追加してフィールド値の妥当性をチェック。",
+      "suggestion": "load 直後にバリデーションを呼び出す設計にする。"
+    }
+  ],
+  "summary": "影響は中規模。最大リスクは embedding::Config の移行（6箇所の呼び出しサイト + clean.rs + 2つの E2E テスト）。CLI デフォルト値との優先順位ロジックは設計上の注意点。新規クレート追加は不要。Rustのコンパイル時チェックにより移行漏れリスクは低いが、E2Eテストと clean.rs のハードコード参照は見落としやすい。"
+}

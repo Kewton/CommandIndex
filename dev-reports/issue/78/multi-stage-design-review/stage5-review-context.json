@@ -1,0 +1,15 @@
+{
+  "must_fix": [
+    {"id": "M1", "principle": "SRP/正確性", "description": "expand_path()のチルダ展開にoff-by-oneバグ。'~'単体でパニック、'~user'形式で誤動作。", "suggestion": "path=='~'はhome返却、'~/'はhome.join、'~user'はエラー拒否。strip_prefix使用推奨。"},
+    {"id": "M2", "principle": "ISP/SRP", "description": "run()新シグネチャが現実のコード(SearchOptions/SearchFilters/rerank等6引数)と乖離。", "suggestion": "完全なシグネチャを記載: run(ctx, options, filters, format, snippet_config, rerank, rerank_top)。"},
+    {"id": "M3", "principle": "DRY", "description": "run_workspace_searchにバラした引数を渡す設計がSearchOptions構築ロジックのDRY違反。", "suggestion": "main.rsでSearchOptions/SearchFiltersを構築後、構造化された引数でrun_workspace_searchに渡す。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "rrf_merge_multipleのキー衝突問題（同名ファイル+見出し）。マージ前にpathにalias prefix付与を明記。"},
+    {"id": "S2", "description": "validate関数にI/O副作用（eprintln）がある。WorkspaceWarning返却のみにし出力はオーケストレーション層で。"},
+    {"id": "S3", "description": "rrf_merge_multiple後のrepositoryマッピングが不明瞭。マージ前にWorkspaceSearchResultに変換すべき。"},
+    {"id": "S4", "description": "validate_resolved_path()のoriginal!=resolved比較が常にtrueになる。"},
+    {"id": "S5", "description": "Phase 1でsymbol_db_path/embeddings_db_pathは不要（YAGNI）。"}
+  ],
+  "summary": "Must Fix 3件: expand_pathバグ、run()シグネチャ乖離、引数DRY違反。"
+}

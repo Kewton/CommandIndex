@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "state.json に last_commit_at_index フィールドが存在しない",
+      "detail": "Issue の Staleness セクションでは Last commit at index: abc1234 および Commits since last index を表示する想定だが、現在の IndexState 構造体（src/indexer/state.rs）には Git コミットハッシュを保持するフィールドが存在しない。staleness 計算には「インデックス作成時のコミットハッシュ」が必要であり、state.json のスキーマ変更が必要になる。schema_version のバンプ（1 → 2）を伴い、既存インデックスとの後方互換性に影響する。",
+      "suggestion": "IndexState に last_commit_hash: Option<String> フィールドを追加し、#[serde(default)] で後方互換を保つ方針を Issue に明記する。schema_version のバンプ要否と、旧バージョンからのマイグレーション戦略（clean 再構築 or graceful degradation）を受け入れ基準に含める。"
+    },
+    {
+      "id": "MF-2",
+      "title": "Embedding カバレッジの「ファイル単位」カウント API が存在しない",
+      "detail": "EmbeddingStore には count() しかなく、DISTINCT section_path のカウント（= ファイル数）を取得する API がない。1ファイルに複数セクションの embedding がある場合、count() はファイル数と一致しない。",
+      "suggestion": "EmbeddingStore に count_distinct_files() -> Result<u64, EmbeddingStoreError> メソッドを追加する方針を実装方針に記載する。"
+    },
+    {
+      "id": "MF-3",
+      "title": "git2 crate が依存関係に含まれておらず、Git 情報取得方針が曖昧",
+      "detail": "git2 crate or git コマンドで取得 としているが、Cargo.toml に git2 は含まれていない。git コマンドの直接呼び出しは環境依存となる。",
+      "suggestion": "git コマンド（std::process::Command）方式を採用し、git 未インストール時の graceful degradation（staleness セクションをスキップ）を受け入れ基準に追加する。"
+    },
+    {
+      "id": "MF-4",
+      "title": "Skipped files の定義・データソースが不明確",
+      "detail": "現在のインデックス処理では「スキャン対象の全ファイル数」は保存されておらず、manifest.json にはインデックス済みファイルのみが記録される。.cmindexignore によるスキップ数を status 実行時に再計算するにはファイルシステムの再走査が必要。",
+      "suggestion": "Total files が何を指すか明確にし、status 実行時にファイルシステムを walkdir で再走査して算出する方針を明記する。パフォーマンスへの影響も考慮する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "既存の --format オプションとの命名不整合",
+      "detail": "既存の status コマンドは --format human|json を持つ（StatusFormat enum）。Issue では --format json を新規提案しているが、これは既に実装済み。",
+      "suggestion": "既存の --format json が既に実装済みであることを Issue に明記し、受け入れ基準を「--format json の出力に拡張情報が含まれる」に修正する。"
+    },
+    {
+      "id": "SF-2",
+      "title": "--detail フラグと --coverage フラグの排他性・組み合わせが未定義",
+      "detail": "--detail、--coverage、--format json の3つのオプションの組み合わせ時の挙動が未定義。",
+      "suggestion": "--detail は全情報表示、--coverage は Coverage セクションのみ表示と明確にし、同時指定時の挙動を定義する。"
+    },
+    {
+      "id": "SF-3",
+      "title": "Storage 内訳の項目がコードベースのディレクトリ構造と不整合",
+      "detail": "Issue では tantivy index / symbols.db / embeddings を想定。コードベースでは .commandindex/tantivy/、.commandindex/symbols.db、.commandindex/embeddings.db が存在する。",
+      "suggestion": "Storage 内訳の項目を tantivy/、symbols.db、embeddings.db、その他（state.json, manifest.json, config.toml）と明確にする。"
+    },
+    {
+      "id": "SF-4",
+      "title": "Embedding モデル名の表示データソースが未定義",
+      "detail": "使用中のモデル名は config.toml（EmbeddingConfig.model）から取得する必要があるが、config.toml が存在しない場合のフォールバック表示が未定義。",
+      "suggestion": "config.toml が存在しない場合は Model: (not configured) と表示する方針を追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "--check オプション（CI用）の検討",
+      "detail": "CI/CD でインデックスの鮮度チェックを自動化する場合、--check で staleness が閾値を超えたら非ゼロ終了コードを返す機能があると便利。",
+      "suggestion": "将来の拡張として --check オプションを記載する。"
+    },
+    {
+      "id": "NH-2",
+      "title": "Embedding カバレッジのモデル別内訳",
+      "detail": "複数モデルで embedding を生成した場合、モデル別のカバレッジ内訳があると運用上有用。",
+      "suggestion": "Phase 1 ではモデル名の表示のみとし、モデル別内訳は将来 Issue として分離する。"
+    },
+    {
+      "id": "NH-3",
+      "title": "FileType に未対応の言語が追加された場合の拡張性",
+      "detail": "現在 FileType は Markdown/TypeScript/Python の3種類のみ。将来の言語追加時にフィールド追加が必要。",
+      "suggestion": "FileTypeCounts を HashMap<FileType, u64> に変更するか検討する。"
+    }
+  ],
+  "summary": "Issue #79 は既存の status コマンド基盤の上に妥当な拡張を提案しており、方向性は適切。ただし、staleness 機能に必要な Git コミットハッシュの永続化（state.json スキーマ変更）、Embedding カバレッジのファイル単位カウント API の不在、Git 情報取得手段の未決定、Skipped files のデータソース未定義の4点が実装前に解決必須の課題。また、既存の --format json が既に部分実装済みである点や、新規 CLI オプション間の排他性定義も明確化が必要。"
+}

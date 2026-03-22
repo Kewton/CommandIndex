@@ -1,0 +1,22 @@
+{
+  "must_fix": [
+    {"id": "M1", "principle": "SRP", "description": "WorkspaceConfigをsrc/cli/workspace.rsに配置する設計は、設定の読込・バリデーション（Config層の責務）と横断検索オーケストレーション（CLI層の責務）が1ファイルに混在する。", "suggestion": "WorkspaceConfig, WorkspaceConfigErrorをsrc/config/workspace.rsに分離し、横断検索オーケストレーションロジックのみsrc/cli/workspace.rsに残す。"},
+    {"id": "M2", "principle": "DRY", "description": "SearchContext導入後もmain.rsの既存config読込パスが残ると重複する。", "suggestion": "main.rsのconfig読込をSearchContext経由に統一する。"},
+    {"id": "M3", "principle": "DRY/API設計", "description": "rrf_mergeとrrf_merge_cross_repoが本質的に同じアルゴリズムの重複実装になる。", "suggestion": "汎用的なrrf_merge_multiple(ranked_lists: &[Vec<SearchResult>], limit: usize)を作り、既存rrf_mergeもラッパーとして再実装する。"},
+    {"id": "M4", "principle": "OCP", "description": "SearchResult.repository追加は11箇所以上の修正を要する。compositionパターンで既存コードへの影響をゼロにできる。", "suggestion": "SearchResultはそのまま維持し、WorkspaceSearchResult { repository: String, result: SearchResult }をcompositionで定義する。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "principle": "KISS", "description": "WorkspaceConfigErrorにエラーと警告が混在。RepositoryNotFound/IndexNotFoundは警告であるべき。", "suggestion": "警告バリアントをWorkspaceWarningに分離。"},
+    {"id": "S2", "principle": "DRY", "description": "SearchContext導入後のパス解決ロジック呼び出し統一が未記載。", "suggestion": "移行手順を設計方針書に明記。"},
+    {"id": "S3", "principle": "KISS", "description": "デフォルトファイル名探索ロジックが未定義。", "suggestion": "Phase 1は--workspace必須、将来探索は明記。"},
+    {"id": "S4", "principle": "エラーハンドリング", "description": "WorkspaceConfigErrorのDisplay/Error trait実装が未記載。", "suggestion": "既存パターンに合わせてtrait実装を明記。"},
+    {"id": "S5", "principle": "OCP", "description": "conflicts_withがPhase 1制約であることが不明確。", "suggestion": "コメントで将来解除可能であることを明示。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "principle": "YAGNI", "description": "リポ数上限50の根拠不明。20程度が妥当。"},
+    {"id": "N2", "principle": "KISS", "description": "パス重複チェックを警告に留める。"},
+    {"id": "N3", "principle": "DRY", "description": "for_each_repo()汎用イテレータで共通化。"},
+    {"id": "N4", "principle": "KISS", "description": "SearchContextにconfigを含めるかbase_pathのみにするか中途半端。"}
+  ],
+  "summary": "Must Fix 4件: (1)WorkspaceConfigの配置SRP違反、(2)config読込DRY違反リスク、(3)rrf_merge重複実装、(4)SearchResult.repository追加のOCP違反→compositionパターン推奨。"
+}

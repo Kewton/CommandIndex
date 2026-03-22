@@ -1,0 +1,21 @@
+{
+  "issue_number": 79,
+  "title": "[Feature] チーム向けstatusコマンド拡張（インデックスカバレッジ・統計）",
+  "design_policy": "dev-reports/design/issue-79-status-extension-design-policy.md",
+  "work_plan": "dev-reports/issue/79/work-plan.md",
+  "implementation_order": [
+    "Task 1.1: IndexState に last_commit_hash フィールド追加",
+    "Task 1.2: EmbeddingStore に count_distinct_files() 追加",
+    "Task 1.3: StatusOptions 構造体の定義 + run() シグネチャ変更",
+    "Task 1.4: status.rs ディレクトリモジュール化 + git_info.rs 作成",
+    "Task 3.5: index.rs に last_commit_hash 設定フロー追加",
+    "Task 2.1: CoverageInfo の実装",
+    "Task 2.2: StorageBreakdown の実装",
+    "Task 2.3: StatusInfo 拡張",
+    "Task 3.1: main.rs CLIオプション追加",
+    "Task 3.2: run() の条件分岐",
+    "Task 3.3: Human フォーマット出力の拡張",
+    "Task 3.4: JSON フォーマット出力の拡張",
+    "Task 4.1-4.3: テスト修正・追加"
+  ]
+}

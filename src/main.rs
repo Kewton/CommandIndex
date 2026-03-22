@@ -13,6 +13,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum Commands {
     /// Build search index from repository
     Index {
@@ -28,13 +29,13 @@ enum Commands {
         /// Search query (full-text search)
         query: Option<String>,
         /// Search by symbol name (function, class, method)
-        #[arg(long, conflicts_with_all = ["query", "semantic"])]
+        #[arg(long, conflicts_with_all = ["query", "semantic", "workspace"])]
         symbol: Option<String>,
         /// Search for related files
-        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace"])]
         related: Option<String>,
         /// Semantic search query (embedding-based similarity search)
-        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading"])]
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
         /// Disable hybrid (BM25 + Semantic) search, use BM25 only
         #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
@@ -59,21 +60,27 @@ enum Commands {
         /// Filter by heading
         #[arg(long)]
         heading: Option<String>,
-        /// Maximum number of results (1-1000)
-        #[arg(long, default_value_t = 20)]
-        limit: usize,
-        /// Number of snippet lines (0 = unlimited)
-        #[arg(long, default_value_t = 2)]
-        snippet_lines: usize,
-        /// Number of snippet characters for single-line body (0 = unlimited)
-        #[arg(long, default_value_t = 120)]
-        snippet_chars: usize,
+        /// Maximum number of results (default: from config or 20)
+        #[arg(long)]
+        limit: Option<usize>,
+        /// Number of snippet lines (default: from config or 2)
+        #[arg(long)]
+        snippet_lines: Option<usize>,
+        /// Number of snippet characters for single-line body (default: from config or 120)
+        #[arg(long)]
+        snippet_chars: Option<usize>,
         /// Enable LLM-based reranking of search results
         #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
         rerank: bool,
         /// Number of top candidates to rerank (requires --rerank)
         #[arg(long, requires = "rerank")]
         rerank_top: Option<usize>,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
+        /// Filter by repository alias
+        #[arg(long, requires = "workspace")]
+        repo: Option<String>,
     },
     /// Incrementally update the index
     Update {
@@ -83,6 +90,9 @@ enum Commands {
         /// Generate embeddings during update
         #[arg(long)]
         with_embedding: bool,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
     },
     /// Show index status
     Status {
@@ -92,6 +102,18 @@ enum Commands {
         /// Output format (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
+        /// Workspace config file path
+        #[arg(long)]
+        workspace: Option<String>,
+        /// Show detailed statistics (coverage, staleness, storage)
+        #[arg(long, conflicts_with = "coverage")]
+        detail: bool,
+        /// Show coverage statistics only
+        #[arg(long, conflicts_with = "detail")]
+        coverage: bool,
+        /// Verify index integrity
+        #[arg(long)]
+        verify: bool,
     },
     /// Remove index and prepare for rebuild
     Clean {
@@ -122,6 +144,35 @@ enum Commands {
         #[arg(long, default_value = ".")]
         path: PathBuf,
     },
+    /// Show or manage configuration
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommands,
+    },
+    /// Export index as portable tar.gz archive
+    Export {
+        /// Output file path (.tar.gz)
+        output: PathBuf,
+        /// Include embedding database
+        #[arg(long)]
+        with_embeddings: bool,
+    },
+    /// Import index from tar.gz archive
+    Import {
+        /// Input archive file path (.tar.gz)
+        input: PathBuf,
+        /// Overwrite existing index
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum ConfigCommands {
+    /// Show current effective config (secrets masked)
+    Show,
+    /// Show loaded config file paths
+    Path,
 }
 
 fn main() {
@@ -169,95 +220,196 @@ fn main() {
             snippet_chars,
             rerank,
             rerank_top,
+            workspace,
+            repo,
         } => {
+            // Build SearchContext for config resolution
+            let ctx = commandindex::cli::search::SearchContext::from_current_dir().ok();
+            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &ctx {
+                Some(c) => (
+                    limit.unwrap_or(c.config.search.default_limit).min(1000),
+                    snippet_lines.unwrap_or(c.config.search.snippet_lines),
+                    snippet_chars.unwrap_or(c.config.search.snippet_chars),
+                ),
+                None => (
+                    limit.unwrap_or(20).min(1000),
+                    snippet_lines.unwrap_or(2),
+                    snippet_chars.unwrap_or(120),
+                ),
+            };
             let snippet_config = commandindex::output::SnippetConfig {
-                lines: snippet_lines,
-                chars: snippet_chars,
+                lines: effective_snippet_lines,
+                chars: effective_snippet_chars,
             };
-            let result = match (query, symbol, related, semantic) {
-                (Some(q), None, None, None) => {
-                    let options = commandindex::indexer::reader::SearchOptions {
-                        query: q,
-                        tag,
-                        heading,
-                        limit: limit.min(1000),
-                        no_semantic,
-                    };
-                    let filters = commandindex::indexer::reader::SearchFilters {
-                        path_prefix: path,
-                        file_type,
-                    };
-                    commandindex::cli::search::run(&options, &filters, format, snippet_config, rerank, rerank_top)
+
+            // Workspace横断検索分岐
+            if let Some(ws_path) = workspace {
+                let q = match query {
+                    Some(q) => q,
+                    None => {
+                        eprintln!("Error: <QUERY> is required for workspace search");
+                        process::exit(1);
+                    }
+                };
+                let options = commandindex::indexer::reader::SearchOptions {
+                    query: q,
+                    tag,
+                    heading,
+                    limit: effective_limit,
+                    no_semantic,
+                };
+                let filters = commandindex::indexer::reader::SearchFilters {
+                    path_prefix: path,
+                    file_type,
+                };
+                let result = commandindex::cli::workspace::run_workspace_search(
+                    &ws_path,
+                    repo.as_deref(),
+                    &options,
+                    &filters,
+                    format,
+                    snippet_config,
+                    rerank,
+                    rerank_top,
+                );
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
-                (None, Some(s), None, None) => {
-                    commandindex::cli::search::run_symbol_search(&s, limit.min(1000), format)
-                }
-                (None, None, Some(f), None) => {
-                    commandindex::cli::search::run_related_search(&f, limit.min(1000), format)
-                }
-                (None, None, None, Some(q)) => {
-                    let filters = commandindex::indexer::reader::SearchFilters {
-                        path_prefix: path,
-                        file_type,
-                    };
-                    commandindex::cli::search::run_semantic_search(
-                        &q,
-                        limit.min(1000),
-                        format,
-                        tag.as_deref(),
-                        &filters,
-                    )
-                }
-                (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
-                    "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
-                )),
-                _ => unreachable!("clap conflicts_with prevents this"),
-            };
-            match result {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            } else {
+                let result = match (query, symbol, related, semantic) {
+                    (Some(q), None, None, None) => {
+                        // SearchContext is required for full-text search
+                        let ctx = match ctx {
+                            Some(c) => c,
+                            None => match commandindex::cli::search::SearchContext::from_current_dir() {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    eprintln!("Error: {e}");
+                                    process::exit(1);
+                                }
+                            },
+                        };
+                        let options = commandindex::indexer::reader::SearchOptions {
+                            query: q,
+                            tag,
+                            heading,
+                            limit: effective_limit,
+                            no_semantic,
+                        };
+                        let filters = commandindex::indexer::reader::SearchFilters {
+                            path_prefix: path,
+                            file_type,
+                        };
+                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top)
+                    }
+                    (None, Some(s), None, None) => {
+                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
+                    }
+                    (None, None, Some(f), None) => {
+                        commandindex::cli::search::run_related_search(&f, effective_limit, format)
+                    }
+                    (None, None, None, Some(q)) => {
+                        let filters = commandindex::indexer::reader::SearchFilters {
+                            path_prefix: path,
+                            file_type,
+                        };
+                        commandindex::cli::search::run_semantic_search(
+                            &q,
+                            effective_limit,
+                            format,
+                            tag.as_deref(),
+                            &filters,
+                        )
+                    }
+                    (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
+                        "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
+                    )),
+                    _ => unreachable!("clap conflicts_with prevents this"),
+                };
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
             }
         }
         Commands::Update {
             path,
             with_embedding,
+            workspace,
         } => {
-            let options = commandindex::cli::index::IndexOptions { with_embedding };
-            match commandindex::cli::index::run_incremental(&path, &options) {
-                Ok(summary) => {
-                    println!("Incremental update completed:");
-                    println!(
-                        "  Added:     {} files ({} sections)",
-                        summary.added_files, summary.added_sections
-                    );
-                    println!(
-                        "  Modified:  {} files ({} sections)",
-                        summary.modified_files, summary.modified_sections
-                    );
-                    println!("  Deleted:   {} files", summary.deleted_files);
-                    println!("  Unchanged: {} files", summary.unchanged);
-                    println!("  Skipped:   {} files", summary.skipped);
-                    println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
-                    if with_embedding {
-                        println!("Embeddings generated.");
+            if let Some(ws_path) = workspace {
+                match commandindex::cli::workspace::run_workspace_update(&ws_path, with_embedding) {
+                    Ok(code) => code,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
                     }
-                    0
                 }
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            } else {
+                let options = commandindex::cli::index::IndexOptions { with_embedding };
+                match commandindex::cli::index::run_incremental(&path, &options) {
+                    Ok(summary) => {
+                        println!("Incremental update completed:");
+                        println!(
+                            "  Added:     {} files ({} sections)",
+                            summary.added_files, summary.added_sections
+                        );
+                        println!(
+                            "  Modified:  {} files ({} sections)",
+                            summary.modified_files, summary.modified_sections
+                        );
+                        println!("  Deleted:   {} files", summary.deleted_files);
+                        println!("  Unchanged: {} files", summary.unchanged);
+                        println!("  Skipped:   {} files", summary.skipped);
+                        println!("  Duration:  {:.2}s", summary.duration.as_secs_f64());
+                        if with_embedding {
+                            println!("Embeddings generated.");
+                        }
+                        0
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
                 }
             }
         }
-        Commands::Status { path, format } => {
-            match commandindex::cli::status::run(&path, format, &mut std::io::stdout()) {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("{e}");
-                    1
+        Commands::Status {
+            path,
+            format,
+            workspace,
+            detail,
+            coverage,
+            verify,
+        } => {
+            if let Some(ws_path) = workspace {
+                match commandindex::cli::workspace::run_workspace_status(&ws_path, format) {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
+                }
+            } else {
+                let options = commandindex::cli::status::StatusOptions {
+                    detail,
+                    coverage,
+                    format,
+                    verify,
+                };
+                match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("{e}");
+                        1
+                    }
                 }
             }
         }
@@ -312,6 +464,69 @@ fn main() {
                 1
             }
         },
+        Commands::Config { command } => match command {
+            ConfigCommands::Show => match commandindex::cli::config::run_show() {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            },
+            ConfigCommands::Path => match commandindex::cli::config::run_path() {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            },
+        },
+        Commands::Export {
+            output,
+            with_embeddings,
+        } => {
+            let options = commandindex::cli::export::ExportOptions { with_embeddings };
+            match commandindex::cli::export::run(std::path::Path::new("."), &output, &options) {
+                Ok(result) => {
+                    println!("Export completed:");
+                    println!("  Output: {}", result.output_path.display());
+                    println!(
+                        "  Size: {}",
+                        commandindex::cli::status::format_size(result.archive_size)
+                    );
+                    if let Some(hash) = &result.git_commit_hash {
+                        println!("  Git commit: {hash}");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
+        Commands::Import { input, force } => {
+            let options = commandindex::cli::import_index::ImportOptions { force };
+            match commandindex::cli::import_index::run(std::path::Path::new("."), &input, &options)
+            {
+                Ok(result) => {
+                    println!("Import completed:");
+                    println!("  Imported files: {}", result.imported_files);
+                    if result.git_hash_match {
+                        println!("  Git commit: matches");
+                    } else {
+                        println!("  Git commit: mismatch");
+                    }
+                    for warning in &result.warnings {
+                        println!("  Warning: {warning}");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
     };
 
     process::exit(exit_code);

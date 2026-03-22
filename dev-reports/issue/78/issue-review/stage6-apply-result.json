@@ -1,0 +1,7 @@
+{
+  "stage": 6,
+  "action": "apply_review",
+  "updated": true,
+  "changes_applied": ["M1", "M2", "M3", "S1", "S2", "S3", "S4", "S5"],
+  "summary": "Stage 5の全指摘を反映。Path::new箇所数修正、スコアマージ方式(RRFスタイル)セクション新設、context.rs影響範囲追加、Phase 1非対応サブコマンド一覧、SearchContextフィールド定義、update --workspaceエラーハンドリング、パス正規化・重複チェック追加。"
+}

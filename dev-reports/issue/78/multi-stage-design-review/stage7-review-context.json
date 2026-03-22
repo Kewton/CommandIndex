@@ -1,0 +1,15 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "API整合性", "description": "run()新シグネチャが現実の6引数(SearchOptions/SearchFilters/rerank等)と乖離。try_hybrid_searchが全引数を要求するため不足。", "suggestion": "完全なシグネチャ定義: run(ctx, options, filters, format, snippet_config, rerank, rerank_top)。"},
+    {"id": "M2", "category": "パス整合性", "description": "try_hybrid_search内のPath::new('.')3箇所への伝播方法が未記載。", "suggestion": "try_hybrid_searchにもbase_path引数追加またはSearchContext伝播を明記。"},
+    {"id": "M3", "category": "RRFマージキー衝突", "description": "rrf_merge_multipleのキー(path, heading)がマルチリポ横断時に同名ファイルで衝突。", "suggestion": "マージ前にpathにalias prefixを付与するか、WorkspaceSearchResult変換後にマージする方式を明記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "output層からcli層のWorkspaceSearchResultへの逆依存。output/mod.rsに型定義するか引数をプリミティブに。"},
+    {"id": "S2", "description": "expand_pathのエッジケース('~'単体、'~user'形式)未考慮。"},
+    {"id": "S3", "description": "validate_symlinkのI/OエラーをWorkspaceWarningに変換する方法が未定義。"},
+    {"id": "S4", "description": "main.rsのconfig解決フロー(effective_limit算出等)の移設先が未定義。"},
+    {"id": "S5", "description": "rrf_merge_multipleの具体的テストケースが不足。"}
+  ],
+  "summary": "Must Fix 3件: run()シグネチャ乖離(再指摘)、try_hybrid_search伝播未記載、RRFキー衝突。"
+}

@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "CLIインターフェースを独立サブコマンド (export/import) に変更"},
+    {"id": "M2", "action": "export_meta.json をアーカイブ内に含める設計に変更、state.jsonへの直接変更を回避"},
+    {"id": "M3", "action": "セキュリティ要件セクションを追加、受け入れ基準にパストラバーサル検出を追加"},
+    {"id": "S1", "action": "既存インデックスがある場合の動作セクションを追加、--force フラグ追加"},
+    {"id": "S2", "action": "インポート時の index_root 自動書き換えを仕様に追加"},
+    {"id": "S3", "action": "エクスポート対象ファイル一覧テーブルを追加、パス形式を明記"},
+    {"id": "S4", "action": "--verify の各チェック項目を具体的に定義"},
+    {"id": "S5", "action": "依存クレート（tar + flate2）セクションを追加"},
+    {"id": "N1", "action": "export_meta.json にフォーマットバージョンを含める設計に採用"},
+    {"id": "N4", "action": "config.local.toml の除外を明記"}
+  ],
+  "deferred": [
+    {"id": "N2", "reason": "差分インポートは将来のエンハンスメントとして別Issue化が適切"},
+    {"id": "N3", "reason": "進捗表示は初期実装のスコープ外"}
+  ],
+  "issue_updated": true
+}

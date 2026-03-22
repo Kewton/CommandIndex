@@ -1,0 +1,7 @@
+{
+  "stage": 8,
+  "action": "apply_review",
+  "updated": true,
+  "changes_applied": ["M1", "M2", "M3", "M4", "S1", "S2", "S3", "S4", "S5", "S6"],
+  "summary": "Stage 7の全指摘を反映。rrf_merge_cross_repo関数新設、セキュリティ対策セクション新設、try_hybrid_searchリファクタリング対象明記、プロダクションコードSearchResult構築箇所追記、リポ数上限50設定、Phase 1非対応にconfig/clean追加、進捗メッセージ、WorkspaceConfigError新設、チルダ展開HOME未設定対応。"
+}

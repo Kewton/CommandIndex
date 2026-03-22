@@ -1,0 +1,28 @@
+{
+  "status": "success",
+  "new_files": [
+    "src/indexer/snapshot.rs",
+    "src/cli/export.rs",
+    "src/cli/import_index.rs",
+    "tests/cli_export.rs",
+    "tests/cli_import.rs",
+    "tests/e2e_export_import.rs",
+    "tests/e2e_verify.rs"
+  ],
+  "modified_files": [
+    "Cargo.toml",
+    "src/indexer/mod.rs",
+    "src/cli/mod.rs",
+    "src/cli/status.rs",
+    "src/main.rs",
+    "tests/cli_args.rs",
+    "tests/cli_status.rs"
+  ],
+  "test_count": 20,
+  "quality_checks": {
+    "build": "pass",
+    "clippy": "pass (0 warnings)",
+    "test": "pass (0 failures)",
+    "fmt": "pass (no diff)"
+  }
+}

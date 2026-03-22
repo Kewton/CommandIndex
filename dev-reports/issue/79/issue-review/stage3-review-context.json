@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "IndexState への last_commit_hash 追加は既存 state.json の後方互換性を破壊する可能性",
+      "detail": "IndexState は serde の Serialize/Deserialize を derive しており、既存の state.json には last_commit_hash フィールドが存在しない。明示的に #[serde(default)] を付与しないと Option<String> でも Missing field エラーになる可能性。tests/indexer_state.rs の test_state_save_and_load は IndexState::load を使うため、保存したJSONにフィールドが増えることでアサーション粒度に影響がある。",
+      "suggestion": "last_commit_hash: Option<String> に #[serde(default)] を付与。schema_version を 1 のままにするか 2 に上げるかを明確に判断し、バージョンアップする場合は check_schema_version のロジックも修正。"
+    },
+    {
+      "id": "MF-2",
+      "title": "status コマンドの run() シグネチャ変更による既存テスト破壊リスク",
+      "detail": "現在の run() は (path, format, writer) の3引数。--detail / --coverage フラグ追加には引数追加またはオプション構造体導入が必要。tests/cli_status.rs の run_human_format、run_json_format等がこのシグネチャに依存。",
+      "suggestion": "StatusOptions 構造体を導入し run(path, options, writer) の形にする。既存テストでは StatusOptions::default() で現在と同じ動作を維持。"
+    },
+    {
+      "id": "MF-3",
+      "title": "--detail と --coverage の排他制御を CLI レイヤで確実に実装する必要がある",
+      "detail": "main.rs の Commands::Status で clap の conflicts_with を使って排他を実現する必要がある。排他が不十分だと実行時エラーや予期しない出力が発生する。",
+      "suggestion": "clap の #[arg(long, conflicts_with = \"coverage\")] を --detail に、#[arg(long, conflicts_with = \"detail\")] を --coverage に付与。tests/cli_args.rs にも排他テストを追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "StatusInfo 構造体の Serialize 出力が JSON スキーマ互換性に影響",
+      "detail": "新フィールドの追加は JSON 出力を拡張するため、外部ツールとの互換性問題になりうる。",
+      "suggestion": "新フィールドには #[serde(skip_serializing_if = \"Option::is_none\")] を付与し、--detail / --coverage 指定時のみ出力する設計にする。"
+    },
+    {
+      "id": "SF-2",
+      "title": "EmbeddingStore の count_distinct_files() のエラーハンドリング",
+      "detail": "embeddings.db が存在しない場合の防御パターンが必要。get_symbol_count() パターンを踏襲。",
+      "suggestion": "status.rs に get_embedding_file_count() ヘルパーを追加し、DB 不在時は 0 を返す。"
+    },
+    {
+      "id": "SF-3",
+      "title": "walkdir によるプロジェクトルート走査のパフォーマンスリスク",
+      "detail": "プロジェクトルート全体の走査は node_modules、.git 等で著しく遅くなる可能性がある。",
+      "suggestion": ".cmindexignore フィルタリング適用、.git / node_modules / target/ のデフォルト除外。"
+    },
+    {
+      "id": "SF-4",
+      "title": "git コマンド呼び出しのエラーハンドリング",
+      "detail": "git 未インストール / .git 不在環境での挙動考慮が必要。",
+      "suggestion": "git 情報取得は best-effort とし、失敗時は None/デフォルト値を使用。"
+    },
+    {
+      "id": "SF-5",
+      "title": "Storage 内訳表示で必要な個別ファイル/ディレクトリサイズの算出",
+      "detail": "indexer::index_dir(), symbol_db_path(), embeddings_db_path() を活用可能。",
+      "suggestion": "StorageBreakdown 構造体を StatusInfo に追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "walkdir crate は既に依存済み（追加不要）",
+      "detail": "walkdir = \"2\" が Cargo.toml に含まれており、追加の crate 依存は不要。",
+      "suggestion": "設計書に明記する。"
+    },
+    {
+      "id": "NH-2",
+      "title": "status 出力の表示品質向上",
+      "detail": "--detail 時は出力行が大幅に増えるため、視認性が低下する可能性がある。",
+      "suggestion": "セクション区切りを入れてグループ化する。"
+    },
+    {
+      "id": "NH-3",
+      "title": "E2E テストでの git 環境依存",
+      "detail": "staleness テストには git リポジトリ環境が必要。",
+      "suggestion": "テストヘルパーに git init + commit ユーティリティを追加。"
+    }
+  ],
+  "summary": "影響範囲は中程度。最大のリスクは IndexState への last_commit_hash フィールド追加による後方互換性と、status コマンドの run() シグネチャ変更による既存テスト7件の修正必要性。依存 crate の追加は不要。git コマンド呼び出しと走査はエラーハンドリングとパフォーマンスの考慮が必要。影響テストファイル: cli_status.rs、indexer_state.rs、cli_args.rs、incremental_update.rs。"
+}

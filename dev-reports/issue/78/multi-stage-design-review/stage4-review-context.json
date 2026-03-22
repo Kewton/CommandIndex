@@ -1,0 +1,15 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "パストラバーサル", "description": "canonicalize後のパスが許容範囲内かの境界チェックが未設計。.commandindex/存在チェックのみでは不十分。", "suggestion": "解決済みパスをstderrに表示してユーザー確認を促す警告を出力。allowed_rootsとの照合を検討。"},
+    {"id": "M2", "category": "パストラバーサル", "description": "チルダ以外の環境変数展開（$HOME, ${VAR}）やシェル特殊文字の扱いが未定義。コマンドインジェクションリスク。", "suggestion": "パス展開はチルダのみ。$記号やバッククォートを含むパスは拒否するバリデーション追加。"},
+    {"id": "M3", "category": "シンボリックリンク", "description": "ワークスペース設定のpath自体がシンボリックリンクの場合のチェックがworkspace層に未設計。clean.rsのSymlinkDetectedパターン未適用。", "suggestion": "symlink_metadata()でシンボリックリンクチェックを実施。clean.rsパターンを適用。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "情報漏洩", "description": "異なるアクセス権限のリポジトリが混在する場合の考慮不足。"},
+    {"id": "S2", "category": "DoS", "description": "50リポ×大量ファイルでのメモリ/mmap使用量制限がない。"},
+    {"id": "S3", "category": "入力バリデーション", "description": "alias/nameの長さ・文字種制限が未定義。制御文字によるログインジェクションリスク。"},
+    {"id": "S4", "category": "入力バリデーション", "description": "ワークスペースTOMLファイルのサイズ制限がない。"},
+    {"id": "S5", "category": "セキュリティ", "description": "ワークスペース設定にvalidate_no_secrets()相当のチェックがない。"}
+  ],
+  "summary": "Must Fix 3件: canonicalize後の境界チェック不足、シェル特殊文字のバリデーション不足、シンボリックリンクチェック未適用。"
+}

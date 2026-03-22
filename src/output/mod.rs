@@ -152,6 +152,27 @@ pub fn format_semantic_results(
     }
 }
 
+/// ワークスペース横断検索の結果ラッパー（compositionパターン）
+#[derive(Debug)]
+pub struct WorkspaceSearchResult {
+    pub repository: String,
+    pub result: SearchResult,
+}
+
+/// ワークスペース検索結果を指定フォーマットで出力する
+pub fn format_workspace_results(
+    results: &[WorkspaceSearchResult],
+    format: OutputFormat,
+    writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_workspace_human(results, writer, snippet_config),
+        OutputFormat::Json => json::format_workspace_json(results, writer),
+        OutputFormat::Path => path::format_workspace_path(results, writer),
+    }
+}
+
 /// 検索結果を指定フォーマットで出力する
 // NOTE: フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討
 pub fn format_results(

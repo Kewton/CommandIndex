@@ -1,0 +1,8 @@
+{
+  "overall": "pass",
+  "criteria_count": 9,
+  "criteria_passed": 9,
+  "criteria_failed": 0,
+  "issues_found": [],
+  "summary": "全9件の受入基準が合格。品質チェック全パス、既存互換性維持、--detail/--coverage/--format json の各組み合わせが正常動作。"
+}

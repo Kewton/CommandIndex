@@ -1,0 +1,23 @@
+{
+  "stage": 2,
+  "focus": "整合性",
+  "must_fix": [
+    {"id": "M1", "title": "RawRerankConfig has 'provider' field but actual RerankConfig does not", "suggestion": "Remove provider from RawRerankConfig or add to RerankConfig."},
+    {"id": "M2", "title": "Config::load call site count needs precise line references", "suggestion": "Clarify: L130, L291, L424, L650 in search.rs."},
+    {"id": "M3", "title": "clean.rs preservation list needs config.local.toml added", "suggestion": "Explicitly list: embeddings.db, config.toml (legacy), config.local.toml."},
+    {"id": "M4", "title": "ConfigError uses thiserror but it's not a dependency", "suggestion": "Use manual Display+Error implementations to match existing codebase patterns."}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "EmbeddingConfig Serialize could expose api_key", "suggestion": "Note that direct serialization must go through masked view model."},
+    {"id": "S2", "title": "RerankConfigView missing provider field alignment", "suggestion": "Align after resolving M1."},
+    {"id": "S3", "title": "Error propagation from ConfigError to existing error types not addressed", "suggestion": "Add From<ConfigError> to IndexError, EmbedError, SearchError."},
+    {"id": "S4", "title": "ProviderType needs Serialize derive", "suggestion": "Add Serialize to ProviderType."},
+    {"id": "S5", "title": "Import statement changes not listed", "suggestion": "Include import changes in migration plan."}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "cli/mod.rs module declaration not shown"},
+    {"id": "N2", "title": "Default values for SearchConfig not specified"},
+    {"id": "N3", "title": "Default values for IndexConfig.languages not specified"},
+    {"id": "N4", "title": "Test file paths may be incomplete"}
+  ]
+}

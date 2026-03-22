@@ -1,0 +1,23 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "既存機能への影響", "description": "rrf_mergeのキーが(path, heading)でリポ間マージ時にpath衝突が発生。リポ間用のrrf_merge_cross_repo関数をキー(repository, path, heading)で新設すべき。", "affected_files": ["src/search/hybrid.rs", "src/cli/search.rs"]},
+    {"id": "M2", "category": "セキュリティへの影響", "description": "canonicalize()でシンボリックリンク解決時に機密ディレクトリへの参照が可能。.commandindex/存在チェックでフィルタすべき。", "affected_files": ["src/cli/workspace.rs"]},
+    {"id": "M3", "category": "既存機能への影響", "description": "try_hybrid_search内のPath::new(\".\")がSearchContext導入時に修正漏れリスク。明示的に対象に含める。", "affected_files": ["src/cli/search.rs"]},
+    {"id": "M4", "category": "テストへの影響", "description": "enrich_semantic_to_search_results内のSearchResult構築箇所がテスト修正対象に含まれていない。プロダクションコード側の修正対象を明記。", "affected_files": ["src/cli/search.rs", "src/indexer/reader.rs"]}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "パフォーマンス", "description": "10+リポでmmapファイルハンドル上限に達する可能性。リポ数上限またはセマフォ制御が必要。"},
+    {"id": "S2", "category": "テスト", "description": "既存e2eテストに--workspace未指定時のリグレッション検証が不足。repositoryフィールド不在の検証が必要。"},
+    {"id": "S3", "category": "依存関係", "description": "WorkspaceConfig用エラー型の設計が未定義。ConfigErrorと分離すべき。"},
+    {"id": "S4", "category": "既存機能", "description": "config show/pathのPhase 1非対応を明示すべき。"},
+    {"id": "S5", "category": "パフォーマンス", "description": "update --workspaceの逐次実行で進捗メッセージ出力が必要。"},
+    {"id": "S6", "category": "セキュリティ", "description": "チルダ展開時のHOME未設定環境への対応が必要。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "マルチリポテスト環境構築ヘルパーの追加"},
+    {"id": "N2", "description": "--workspaceと--symbol/--relatedの組み合わせをconflicts_withで禁止"},
+    {"id": "N3", "description": "rayon追加時のCargo.lockキャッシュ影響"},
+    {"id": "N4", "description": "clean --workspaceをPhase 1非対応に追加"}
+  ],
+  "summary": "2回目影響範囲レビューで4件のMust Fix検出。rrf_mergeキー設計のリポ間衝突、シンボリックリンク経由のセキュリティリスク、try_hybrid_search内のPath::new修正漏れリスク、プロダクションコードのSearchResult構築箇所の修正対象漏れ。"
+}

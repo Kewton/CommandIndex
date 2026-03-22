@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [
+    {"id": "MF-1", "title": "last_commit_hash のバリデーション不足（^[0-9a-f]{4,40}$ で検証必須）"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "walkdir 走査の max_depth 統一"},
+    {"id": "SF-2", "title": "git コマンド stderr のエラー情報漏洩防止"},
+    {"id": "SF-3", "title": "新規フィールドへの strip_control_chars 適用"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "state.json の整合性検証強化"},
+    {"id": "NH-2", "title": "unsafe コードのテスト内使用方針の明確化"},
+    {"id": "NH-3", "title": "git コマンドのタイムアウト設定"}
+  ]
+}

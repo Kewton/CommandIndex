@@ -1,6 +1,8 @@
 use std::fmt;
 use std::path::Path;
 
+use crate::config::{LEGACY_CONFIG_FILE, LOCAL_CONFIG_FILE};
+
 #[derive(Debug)]
 pub enum CleanError {
     Io(std::io::Error),
@@ -64,7 +66,7 @@ pub fn run(path: &Path, options: &CleanOptions) -> Result<CleanResult, CleanErro
 
     if options.keep_embeddings {
         // Selective deletion: remove tantivy/, manifest.json, state.json, symbols.db
-        // but keep embeddings.db and config.toml
+        // but keep embeddings.db, config.toml, and config.local.toml
         let items_to_delete = [
             "tantivy",
             "manifest.json",
@@ -87,11 +89,11 @@ pub fn run(path: &Path, options: &CleanOptions) -> Result<CleanResult, CleanErro
             }
         }
 
-        // If nothing was deleted and no embeddings.db/config.toml exist either,
-        // it's effectively not found
+        // If nothing was deleted and no preserved files exist, it's effectively not found
         if !any_deleted
             && !commandindex_dir.join("embeddings.db").exists()
-            && !commandindex_dir.join("config.toml").exists()
+            && !commandindex_dir.join(LEGACY_CONFIG_FILE).exists()
+            && !commandindex_dir.join(LOCAL_CONFIG_FILE).exists()
         {
             return Ok(CleanResult::NotFound);
         }

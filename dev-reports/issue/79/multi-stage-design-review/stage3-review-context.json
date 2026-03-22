@@ -1,0 +1,21 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "MF-1", "title": "IndexState::new() / index/update コマンドに last_commit_hash 設定フローが欠落"},
+    {"id": "MF-2", "title": "run() シグネチャ変更の main.rs 側の具体的な変更コードが不足"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "tests/incremental_update.rs が影響テストファイル一覧に漏れ"},
+    {"id": "SF-2", "title": "tests/cli_status.rs のテスト修正の具体的コード例が不足"},
+    {"id": "SF-3", "title": "CI shallow clone 環境での git コマンド挙動が未考慮"},
+    {"id": "SF-4", "title": "JSON 出力後方互換性テストの具体的アサーション不足"},
+    {"id": "SF-5", "title": "count_distinct_files() の section_path 前提のユニットテスト不足"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "clean コマンドとの last_commit_hash の関係が未記載"},
+    {"id": "NH-2", "title": "parser::ignore::IgnoreFilter の可視性確認"},
+    {"id": "NH-3", "title": "diff_detection.rs を変更なしモジュールに明記"},
+    {"id": "NH-4", "title": "walkdir の max_depth 具体的な値が未定"}
+  ]
+}
