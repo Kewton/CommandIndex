@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.0.6 — Phase 6: Team Extension
+
+### Added
+- **チーム共有設定ファイル** (#76): commandindex.toml によるチーム統一設定（優先順位付きマージ、api_keyマスク表示、deprecatedフォールバック）
+- **インデックス共有モード** (#77): `export`/`import` サブコマンドによるtar.gz形式のインデックス共有（パストラバーサル防止、圧縮爆弾対策、アトミックスワップ）
+- **マルチリポジトリ横断検索** (#78): `--workspace`/`--repo` オプションによる複数リポジトリ横断検索（ワークスペース設定ファイル対応）
+- **`status` コマンド拡張** (#79): `--detail`/`--coverage`/`--format json`/`--verify` オプション追加
+- **Phase 6 E2E統合テスト** (#80): チーム共有設定・インデックス共有・横断検索フロー検証
+
+### Fixed
+- **CI**: reqwest を rustls-tls に切り替え、aarch64-linux クロスコンパイル修正
+
+---
+
 ## v0.0.5 — Phase 5: Semantic Extension + スニペットオプション
 
 ### Added
