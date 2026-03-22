@@ -1,0 +1,1 @@
+{"stage": 4, "focus": "セキュリティ", "must_fix_count": 2, "should_fix_count": 4, "nice_to_have_count": 3, "must_fix_ids": ["M1:TOCTOU-シンボリックリンク対策", "M2:パストラバーサル-canonicalize"]}
