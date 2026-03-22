@@ -1,0 +1,75 @@
+{
+  "review_stage": "stage7",
+  "review_type": "impact_analysis_and_security",
+  "design_document": "dev-reports/design/issue-87-design-policy.md",
+  "issue": "#87",
+  "reviewer": "Claude Opus 4.6 (1M context)",
+  "date": "2026-03-23",
+  "previous_review_fixes_applied": [
+    "path_traversal_prevention_validation",
+    "file_count_limit_max_100",
+    "pub_crate_safety_contract_doccomment",
+    "dry_improvement_common_validation_function"
+  ],
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "normalize_path が '..' セグメントを除去するだけでトラバーサルを防止できていない",
+      "description": "設計方針書 5.4 では validate_file_paths で path.contains('..') を禁止しているが、normalize_path (related.rs L69-73) は '..' セグメントを単にフィルタで除去している。validate_file_paths を通過した後に collect_related_context 内で find_related が呼ばれ、normalize_path が適用される流れなので直接の脆弱性にはならないが、設計上の整合性に問題がある。validate_file_paths をバイパスして collect_related_context を直接呼ぶ将来の呼び出し元では、normalize_path が '..' を除去してしまい、意図しないパスにマッチする可能性がある。normalize_path でも '..' を含むパスをエラーにするか、pub(crate) の doccomment で validate_file_paths 必須を明記すべき。",
+      "suggestion": "normalize_path 内で '..' セグメントを検出した場合は FileNotFound エラーを返すよう変更する。または collect_related_context の doccomment に 'Caller MUST call validate_file_paths before this function' と明記し、validate_file_paths を pub(crate) で公開して呼び出し規約を強制する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "validate_file_paths の配置場所が未確定",
+      "description": "設計方針書 5.4 では '`cli/search.rs` または `cli/mod.rs` に配置' と記載されているが、具体的な配置先が確定していない。run_context (context.rs L20-56) には既にインラインでバリデーションが存在しており、共通関数に切り出す際に context.rs 側のインラインバリデーションも置き換えなければ DRY 違反が残る。",
+      "suggestion": "validate_file_paths を cli/mod.rs に pub(crate) で配置し、run_context と run_related_search の両方から呼び出す形に統一する。context.rs の L20-56 のインラインバリデーションも共通関数呼び出しに置き換える設計にすること。"
+    },
+    {
+      "id": "S2",
+      "title": "num_args(1..) でのパース境界問題の考慮不足",
+      "description": "設計方針書では num_args(1..) について '--format 等のオプションフラグで自動的にパース境界が決まるため安全' と記載しているが、位置引数(query)との衝突は conflicts_with で防がれているものの、related の後にサブコマンドライクな値（例: '--related index'）が来た場合、clap が 'index' をサブコマンドとして解釈するケースの考慮がない。現状の clap 定義では Search サブコマンド内なのでこの問題は発生しないが、テスト戦略にこのエッジケースが含まれていない。",
+      "suggestion": "CLI パーステスト (cli_args.rs) に '--related index --format json' のようなサブコマンド名と同名のファイルパスを指定するテストケースを追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "run_related_search の現在の実装にパストラバーサル検証がない",
+      "description": "現在の run_related_search (search.rs L269-310) は単一ファイルの &str を受け取り、空文字と長さのチェックのみ行っている。設計方針書では共通バリデーション関数で '..' 禁止等を追加する予定だが、実装順序によっては一時的にセキュリティホールが生じる。複数ファイル対応と同時にバリデーション関数を導入する必要がある。",
+      "suggestion": "実装時に validate_file_paths の導入を run_related_search のシグネチャ変更と同じコミットで行い、バリデーション未適用の中間状態を作らないようにする。"
+    },
+    {
+      "id": "S4",
+      "title": "エラーメッセージにユーザー入力パスがそのまま含まれるリスク",
+      "description": "validate_file_paths の設計 (5.4) では InvalidArgument エラーにファイルパスを含める記述がある。悪意あるパス文字列（制御文字やANSIエスケープシーケンス含む）がエラーメッセージ経由でターミナルに出力されると、ターミナルインジェクションの可能性がある。ローカルCLIツールなのでリスクは低いが、防御的プログラミングの観点から検討すべき。",
+      "suggestion": "エラーメッセージに含めるパスに対して制御文字のサニタイズ（または先頭N文字に切り詰め）を行う。output モジュールにある strip_control_chars を活用可能。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "重複ファイルパス指定時の動作が未定義",
+      "description": "設計方針書では '--related file1.rs file1.rs' のように同じファイルを複数回指定した場合の動作が明示されていない。collect_related_context は各ファイルに対して find_related を呼び、merge_related_results でスコア最大値をとるので機能的には問題ないが、無駄な処理が発生する。",
+      "suggestion": "validate_file_paths で重複を排除（dedup）するか、重複を検出して警告を出す処理を追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "内部 limit=1000 のハードコード定数化",
+      "description": "設計方針書では context.rs と同じ limit=1000 を使用するとあるが、マジックナンバーとして2箇所に散在する。将来の変更時に不整合が生じる可能性がある。",
+      "suggestion": "const INTERNAL_RELATED_SEARCH_LIMIT: usize = 1000; を定義して context.rs と search.rs の両方から参照する。"
+    },
+    {
+      "id": "N3",
+      "title": "全ファイルが graceful skip された場合のユーザーフィードバック改善",
+      "description": "複数ファイル全てが FileNotFound/FileNotIndexed でスキップされた場合、結果が空になるが、ユーザーには 'No related files found' としか表示されない。全ファイルがスキップされたことをユーザーに伝えた方が問題特定が容易。",
+      "suggestion": "スキップされたファイル数をカウントし、全ファイルスキップ時に 'All N specified files were not found or not indexed' のようなメッセージを stderr に出力する。"
+    },
+    {
+      "id": "N4",
+      "title": "影響範囲表のリスク評価にヘルプテキスト変更への言及がない",
+      "description": "clap 定義を Option<String> から Option<Vec<String>> に変更すると --help 出力のフォーマットが変わる。ユーザードキュメントやREADMEとの整合性確認が影響範囲に含まれていない。",
+      "suggestion": "影響範囲表に '--help 出力の変化確認' を追加する。"
+    }
+  ],
+  "summary": "1回目レビュー指摘（パストラバーサル防止、ファイル数上限、pub(crate) safety contract、DRY改善）は設計方針書に適切に反映されている。2回目レビューでは、normalize_path と validate_file_paths の間のセキュリティ整合性問題（M1）を must_fix として検出した。normalize_path は '..' セグメントを単にフィルタ除去しており、validate_file_paths をバイパスする将来の呼び出しパスで防御が機能しなくなるリスクがある。should_fix では、validate_file_paths の配置先未確定（S1）、num_args パース境界のテスト不足（S2）、実装順序によるバリデーション空白期間の防止（S3）、エラーメッセージへのターミナルインジェクションリスク（S4）を指摘した。全体として設計品質は高く、既存コードの再利用方針やエラーハンドリングの graceful degradation 設計は適切。影響範囲も正確に把握されており、変更不要ファイルの判断も妥当。テスト戦略はE2EとCLIパースの両面をカバーしており、S2のエッジケース追加で十分な網羅性が確保できる。"
+}

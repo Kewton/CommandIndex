@@ -1,0 +1,99 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "clap定義変更: Option<String> -> Option<Vec<String>> + num_args(1..)",
+      "description": "main.rs L36 の `related: Option<String>` を `Option<Vec<String>>` に変更し、`#[arg(long, num_args(1..))]` を追加する必要がある。conflicts_with_all の定義はそのまま維持可能だが、clap の num_args と conflicts_with_all の組み合わせ動作を確認する必要がある。",
+      "suggestion": "`#[arg(long, num_args(1..), conflicts_with_all = [...])]` 形式で定義。clap 4.x では num_args と conflicts_with_all は共存可能。"
+    },
+    {
+      "id": "M2",
+      "title": "main.rs パターンマッチ修正（L312）",
+      "description": "main.rs L312 で `(None, None, Some(f), None)` のパターンマッチが `f: String` を受けている。`Option<Vec<String>>` に変更すると `f: Vec<String>` になる。`run_related_search(&f, ...)` の呼び出しをスライス渡しに変更する必要がある。",
+      "suggestion": "`(None, None, Some(ref files), None)` に変更し、`run_related_search(&files, effective_limit, format)` として呼び出す。"
+    },
+    {
+      "id": "M3",
+      "title": "run_related_search シグネチャ変更",
+      "description": "src/cli/search.rs L269 の `run_related_search(file_path: &str, ...)` を `run_related_search(file_paths: &[String], ...)` に変更する必要がある。内部実装で単一ファイル用の `engine.find_related()` をループで呼び出し、結果をマージするロジックが必要。",
+      "suggestion": "context.rs L87-108 の `collect_related_context()` と同じパターン（ファイルごとに find_related → graceful skip → merge）を採用する。"
+    },
+    {
+      "id": "M4",
+      "title": "マージロジックの共通化が必要",
+      "description": "context.rs L111-186 の `merge_related_results()` は private 関数。search --related の複数ファイル対応で同じマージロジックが必要になるため、共通化が必須。context.rs 内の merge_related_results は target_files の除外やスコア集約、RelationType の union マージを行っており、そのまま再利用可能。",
+      "suggestion": "方法1: `merge_related_results` を `pub(crate)` にして search.rs から呼び出す。方法2: `search/related.rs` にマージロジックを移動し、RelatedSearchEngine のメソッドとして提供する。方法2 のほうがドメイン的に適切。"
+    },
+    {
+      "id": "M5",
+      "title": "エラーハンドリングの統一（graceful skip）",
+      "description": "現在の run_related_search (search.rs L269-310) は単一ファイルで FileNotFound/FileNotIndexed 時にエラーを返す。複数ファイル対応後は、context.rs L98-101 のように個別ファイルの FileNotFound/FileNotIndexed をスキップし、少なくとも1ファイルが有効であれば処理を継続する必要がある。全ファイルが無効な場合のみエラーとする。",
+      "suggestion": "context.rs L96-105 のパターン（match で FileNotFound/FileNotIndexed を空Vec扱い）を採用。全ファイルが空の場合に 'No related files found' メッセージを表示。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "テスト修正: cli_args.rs の conflicts テスト",
+      "description": "cli_args.rs 内の related 関連テスト（L171-176, L238-243, L278-283, L470-477）は `--related file.rs` と単一値を渡している。Option<Vec<String>> に変更しても単一値は引き続き受け入れられるため、これらのテストは修正不要。ただし、複数値の conflicts テスト追加が望ましい（例: `--related a.rs b.rs --symbol foo` がエラーになることの確認）。",
+      "suggestion": "複数値 + conflicts のテストケースを追加: `[\"search\", \"--related\", \"a.rs\", \"b.rs\", \"--symbol\", \"foo\"]`"
+    },
+    {
+      "id": "S2",
+      "title": "テスト修正: e2e_related_search.rs",
+      "description": "e2e_related_search.rs の既存テストは全て単一ファイルの --related を使用しており、シグネチャ変更後も正常動作する（Vec<String> に単一要素が入るだけ）。ただし、複数ファイル指定のE2Eテスト追加が必要。特に以下を検証すべき: (1) 複数ファイルでマージされた結果が返る、(2) 一部ファイルが存在しない場合のgraceful skip、(3) 全ファイルが存在しない場合のエラーメッセージ。",
+      "suggestion": "新規テストケース追加: `related_search_multiple_files_merged`, `related_search_partial_missing_graceful`, `related_search_all_missing`"
+    },
+    {
+      "id": "S3",
+      "title": "入力検証の複数ファイル対応",
+      "description": "run_related_search (search.rs L274-283) の入力検証は単一 file_path を対象としている。複数ファイル対応時は各ファイルパスに対して同じ検証（空文字チェック、長さ制限）を行う必要がある。context.rs L20-56 の検証パターン（files.is_empty()、files.len() > 100、個別ファイルの検証ループ）を参考にすべき。",
+      "suggestion": "context.rs L20-56 の検証ロジックを参考に、file_paths スライスの全要素を検証。ただし related 用の検証は context より軽量でよい（パストラバーサルチェック等は不要な可能性あり）。"
+    },
+    {
+      "id": "S4",
+      "title": "出力メッセージの複数ファイル対応",
+      "description": "search.rs L303 の 'No related files found for '{file_path}'' メッセージは単一ファイル名を含む。複数ファイル対応時は表示メッセージを調整する必要がある（例: 'No related files found for the specified files' または対象ファイル一覧を表示）。",
+      "suggestion": "複数ファイルの場合: `No related files found for: file1, file2, ...` 形式に変更。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "normalize_path の pub(crate) 可視性は既に適切",
+      "description": "search/related.rs L57 の normalize_path は既に pub(crate) で宣言されており、context.rs L121 から利用されている。追加の可視性変更は不要。",
+      "suggestion": "変更不要。"
+    },
+    {
+      "id": "N2",
+      "title": "パフォーマンス考慮: 複数ファイルの逐次検索",
+      "description": "context.rs の collect_related_context はファイルごとに逐次 find_related を呼ぶ。find_related 内部では tantivy 検索と SQLite クエリが実行される。ファイル数が多い場合（数十ファイル）、インデックスリーダーとSymbolStoreの再利用により大きな問題にはならないが、limit パラメータの扱いに注意が必要。context.rs では limit=1000 で全件取得後にマージしているが、search --related では CLI の --limit が最終出力件数に適用されるべき。",
+      "suggestion": "内部的には find_related の limit を十分大きく（例: limit * 5 または 1000）とし、マージ後に CLI の limit を適用する設計が望ましい。"
+    },
+    {
+      "id": "N3",
+      "title": "CLIヘルプメッセージの更新",
+      "description": "main.rs L35 のコメント `/// Search for related files` と、search.rs L329 のエラーメッセージ `--related <FILE>` を `--related <FILE>...` に更新し、複数指定可能であることをユーザーに明示すべき。",
+      "suggestion": "`#[arg(long, num_args(1..), value_name = \"FILE\")]` として clap のヘルプ表示を改善。"
+    },
+    {
+      "id": "N4",
+      "title": "context サブコマンドとの機能重複の整理",
+      "description": "context サブコマンドは既に複数ファイルの関連検索 + マージ + エンリッチを実装している。search --related の複数ファイル対応により機能が部分的に重複する。ただし、context は ContextPack (JSON) 出力に特化し、search --related は通常の related 検索結果出力（human/json/path）であるため、用途は異なる。共通のマージロジックを共有することで整合性を保つ。",
+      "suggestion": "マージロジックの共通化で十分。context と search --related の棲み分けはドキュメントで明示するとよい。"
+    },
+    {
+      "id": "N5",
+      "title": "output/mod.rs への影響なし",
+      "description": "output/mod.rs の format_related_results (L119-129) は `&[RelatedSearchResult]` スライスを受けるため、複数ファイルの結果がマージされた後の出力は既存コードで対応可能。出力フォーマッタの変更は不要。",
+      "suggestion": "変更不要。"
+    },
+    {
+      "id": "N6",
+      "title": "Cargo.toml への影響なし",
+      "description": "依存関係の追加は不要。clap 4.x の num_args は既存の clap = { version = \"4\", features = [\"derive\"] } で利用可能。",
+      "suggestion": "変更不要。"
+    }
+  ],
+  "summary": "影響範囲は主に4ファイルに限定される。(1) main.rs: clap定義の型変更(Option<String>->Option<Vec<String>>)とパターンマッチ修正、(2) src/cli/search.rs: run_related_search のシグネチャ変更と複数ファイル対応ロジック追加、(3) src/cli/context.rs: merge_related_results の可視性変更(private->pub(crate))またはsearch/related.rsへの移動、(4) テストファイル: 既存テストは後方互換のため修正不要だが複数ファイル用の新規テスト追加が必要。output/mod.rs、search/related.rs のコアエンジン(RelatedSearchEngine)、Cargo.toml への変更は不要。context.rs に既に複数ファイル対応のマージロジックとgraceful skipパターンが実装済みであり、これを再利用することで実装コストを最小化できる。パフォーマンスリスクは低い（ファイル数に線形のSQLite/tantivy検索が増えるのみ）。他のサブコマンド（index, update, status, embed, config, export, import）への波及は一切ない。"
+}

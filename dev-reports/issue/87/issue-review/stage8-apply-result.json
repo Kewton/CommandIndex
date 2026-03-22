@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "action": "apply_review",
+  "reviewer": "Claude opus (Codex代替)",
+  "applied_items": [],
+  "skipped_items": [
+    {"id": "S1", "reason": "既にIssue実装方針の注意事項に記載済み"},
+    {"id": "S2", "reason": "テスト方針に複数ファイルテスト追加済み"},
+    {"id": "S3", "reason": "テスト方針にパース境界テスト追加済み"},
+    {"id": "N1-N4", "reason": "実装後の対応事項として保留"}
+  ],
+  "must_fix_count": 0,
+  "issue_updated": false,
+  "summary": "Stage 7のMust Fix 0件。Should Fix 3件は全て既にIssue本文に反映済みの内容と重複。追加更新不要。"
+}

@@ -32,8 +32,8 @@ enum Commands {
         #[arg(long, conflicts_with_all = ["query", "semantic", "workspace"])]
         symbol: Option<String>,
         /// Search for related files
-        #[arg(long, conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace"])]
-        related: Option<String>,
+        #[arg(long, num_args(1..), conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace"])]
+        related: Option<Vec<String>>,
         /// Semantic search query (embedding-based similarity search)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
@@ -309,8 +309,8 @@ fn main() {
                     (None, Some(s), None, None) => {
                         commandindex::cli::search::run_symbol_search(&s, effective_limit, format)
                     }
-                    (None, None, Some(f), None) => {
-                        commandindex::cli::search::run_related_search(&f, effective_limit, format)
+                    (None, None, Some(ref files), None) => {
+                        commandindex::cli::search::run_related_search(files, effective_limit, format)
                     }
                     (None, None, None, Some(q)) => {
                         let filters = commandindex::indexer::reader::SearchFilters {
