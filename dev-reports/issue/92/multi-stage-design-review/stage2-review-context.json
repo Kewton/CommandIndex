@@ -1,0 +1,99 @@
+{
+  "stage": 2,
+  "review_type": "整合性レビュー",
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "API整合性",
+      "title": "normalize_path の可視性が pub(crate) であり cli/diff.rs から直接呼び出せない",
+      "description": "設計書 4.2 節で `normalize_path(file_a)?` を cli/diff.rs から直接呼び出しているが、normalize_path は src/search/related.rs で `pub(crate)` 宣言されている。cli/diff.rs は同一クレート内なので pub(crate) でアクセス可能だが、フルパス `crate::search::related::normalize_path()` で呼び出す必要がある。設計書のコードでは use 宣言が省略されているため、実装時に `use crate::search::related::normalize_path;` を明記すべき。context.rs (L120) が `crate::search::related::normalize_path(f)` でフルパス呼び出ししている前例に合わせること。",
+      "file": "設計書 4.2節 / src/search/related.rs L57",
+      "fix": "設計書の run_diff() 冒頭に `use crate::search::related::normalize_path;` を追加するか、context.rs パターンに合わせてフルパス呼び出しに修正する"
+    },
+    {
+      "id": "M2",
+      "category": "エラー型整合性",
+      "title": "normalize_path の戻り値エラー型は RelatedSearchError であり SearchError::InvalidArgument ではない",
+      "description": "設計書 4.2 節で normalize_path() を呼び出した後に同一ファイルチェックで `SearchError::InvalidArgument` を返しているが、normalize_path() 自体の戻り値は `Result<String, RelatedSearchError>` である。SearchError には `From<RelatedSearchError>` が実装されている(search.rs L130-134)ため `?` 演算子で自動変換されるが、エラーメッセージが設計書のエラーハンドリング表(5節)と異なる。normalize_path のエラーは `SearchError::RelatedSearch(FileNotFound)` に変換され、設計書の表と一致する。ただし、設計書 4.2 節のコード上では `normalize_path(file_a)?` の戻り型が SearchError に自動変換される点を明示的にコメントすべき。",
+      "file": "設計書 4.2節・5節",
+      "fix": "設計書の疑似コードにエラー型変換の注記を追加する。実装上は `?` で自動変換されるため問題ないが、設計意図を明確にすべき"
+    },
+    {
+      "id": "M3",
+      "category": "API整合性",
+      "title": "Context サブコマンドは OutputFormat 引数を持たないが、設計書は Diff に OutputFormat を付与している",
+      "description": "設計書では Context サブコマンドとの類似性を根拠に独立サブコマンド化を判断している(3.1節)が、既存の Context サブコマンド(main.rs L127-141)には `--format` 引数が存在しない。Context は常にJSON出力のみ(context_pack::format_context_pack)。一方、設計書の Diff は `--format` を持つ。これ自体は問題ないが、設計書3.1節で「Context サブコマンド（files: Vec<String>）と同様の独立サブコマンドパターン」と記載しており、format引数の有無の差異を説明すべき。Search の run_related_search パターン(search.rs L269-310)の方がformat引数を含むため、CLI定義のモデルとしてはこちらに合わせるのが正確。",
+      "file": "設計書 3.1節 / src/main.rs L127-141",
+      "fix": "設計書の判断1の理由に「format引数は Search --related パターンを踏襲」と明記する。Context との比較は files: Vec<String> のCLI定義パターンのみに限定する"
+    },
+    {
+      "id": "M4",
+      "category": "型整合性",
+      "title": "sorted() メソッドは itertools クレートが必要だが Cargo.toml に依存が存在しない",
+      "description": "設計書 4.2 節で `paths_a.intersection(&paths_b).cloned().sorted().collect()` を使用しているが、Iterator::sorted() は標準ライブラリにはなく itertools クレートのメソッドである。Cargo.toml を確認したところ itertools は依存に含まれていない。設計書 6節(影響範囲)では「Cargo.toml: 新たな外部依存不要」と記載しているが、このコードはコンパイルエラーになる。新たな外部依存を追加するか、標準ライブラリのパターンに変更する必要がある。",
+      "file": "設計書 4.2節・6節 / Cargo.toml",
+      "fix": "sorted() を使わず、標準ライブラリの `let mut overlap: Vec<String> = paths_a.intersection(&paths_b).cloned().collect(); overlap.sort();` パターンに変更する。設計書の「Cargo.toml: 変更なし」の記述と整合させる"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "命名規約整合性",
+      "title": "run_diff の関数シグネチャが既存パターンと微妙に異なる",
+      "description": "既存パターン: run_related_search(file_path: &str, limit: usize, format: OutputFormat), run_context(files: &[String], max_files: usize, max_tokens: Option<usize>)。設計書の run_diff(files: &[String], limit: usize, format: OutputFormat) は両方の要素を混合している。files 引数が &[String] なのは context パターンと一致しており適切だが、関数名は `run_diff` で他の `run_*` パターン（run_related_search, run_symbol_search, run_semantic_search, run_context）と整合している。特に問題はないが、main.rs のマッチアーム内での呼び出しパスが `commandindex::cli::diff::run_diff()` となることを確認すべき。",
+      "file": "設計書 4.2節",
+      "fix": "main.rs のマッチアーム追加時に `commandindex::cli::diff::run_diff(&files, limit, format)` の呼び出しパスを設計書に明記する"
+    },
+    {
+      "id": "S2",
+      "category": "型整合性",
+      "title": "DiffResult に Serialize のみで Deserialize が未実装",
+      "description": "設計書の DiffResult は `#[derive(Debug, Clone, Serialize)]` だが、既存の ContextPack (output/mod.rs L225-226) も同じく `#[derive(Debug, Serialize)]` のみ。整合性は取れているが、将来 diff 結果を読み込む用途がある場合は Deserialize が必要になる。現時点では出力のみなので問題なし。",
+      "file": "設計書 4.3節 / src/output/mod.rs L225",
+      "fix": "現状は問題なし。将来の拡張時に必要に応じて Deserialize を追加"
+    },
+    {
+      "id": "S3",
+      "category": "API整合性",
+      "title": "format_diff_results の戻り値が OutputError だが、run_diff の戻り値は SearchError",
+      "description": "設計書 4.2節で `output::format_diff_results()` を呼び出しているが、この関数は `Result<(), OutputError>` を返す。run_diff は `Result<(), SearchError>` を返すため、`?` 演算子で OutputError -> SearchError の変換が必要。search.rs L124-128 に `From<OutputError> for SearchError` が実装されているため動作するが、この変換パスを設計書に明記すべき。",
+      "file": "設計書 4.2節・4.3節 / src/cli/search.rs L124-128",
+      "fix": "設計書に「OutputError は From impl により自動的に SearchError に変換される」旨を注記する"
+    },
+    {
+      "id": "S4",
+      "category": "命名規約整合性",
+      "title": "main.rs のマッチアームで exit code パターンが設計書に未記載",
+      "description": "既存の Context マッチアーム(main.rs L416-426)では `match commandindex::cli::context::run_context(...) { Ok(()) => 0, Err(e) => { eprintln!(...); 1 } }` パターンを使用している。設計書にはこの main.rs 側のマッチアーム実装が明示されていない。",
+      "file": "設計書 4.1節 / src/main.rs L416-426",
+      "fix": "設計書 4.1節または 6節に main.rs のマッチアーム疑似コードを追加する"
+    },
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "命名規約整合性",
+      "title": "Diff サブコマンドの doc comment スタイル統一",
+      "description": "設計書では `/// Compare related files between two files (conflict detection)` だが、既存パターンは短めの説明が多い（例: `/// Search the index`, `/// Show index status`）。より簡潔に `/// Compare related-file overlap between two files` でもよい。",
+      "file": "設計書 4.1節",
+      "fix": "既存の doc comment スタイルに合わせて簡潔化を検討"
+    },
+    {
+      "id": "N2",
+      "category": "型整合性",
+      "title": "DiffResult の overlap_count() メソッドが JSON 出力でのみ使用される",
+      "description": "設計書 4.3 節で DiffResult に overlap_count() メソッドを定義しているが、4.5節の JSON 出力では result.overlap.len() を直接使用している。overlap_count() メソッドの存在意義が薄い。ただし、将来の閾値判定等で有用になる可能性があるため、削除するほどではない。",
+      "file": "設計書 4.3節・4.5節",
+      "fix": "JSON出力で overlap_count() を使用するか、メソッドを削除するか統一する"
+    },
+    {
+      "id": "N3",
+      "category": "API整合性",
+      "title": "Path 形式出力で overlap のみ出力する設計判断の根拠が未記載",
+      "description": "設計書 4.6 節で Path 形式は overlap のみ出力するが、既存の format_related_path は全結果を出力する。diff の Path 出力が overlap のみなのはパイプライン利用(共通ファイル = コンフリクトリスク)を想定していると推測されるが、設計書にその根拠が明記されていない。",
+      "file": "設計書 4.6節",
+      "fix": "Path 形式で overlap のみ出力する設計根拠を設計書に追記する"
+    }
+  ],
+  "summary": "設計方針書は既存コードベースのパターンと概ね整合しているが、4件の必須修正事項がある。(M1) normalize_path の呼び出しパスを context.rs パターンに合わせてフルパス指定またはuse宣言を追加すべき。(M2) normalize_path のエラー型変換（RelatedSearchError -> SearchError）の設計意図を明確化すべき。(M3) Context サブコマンドとの比較で format 引数の差異を正確に記述すべき。(M4) sorted() は itertools クレートのメソッドであり Cargo.toml に依存がないためコンパイルエラーになる。標準ライブラリの collect+sort パターンに変更が必要。推奨修正は4件あり、main.rs マッチアームの疑似コード追加やエラー型変換パスの明記が望ましい。全体として、既存の run_related_search / collect_related_context パターンの踏襲が適切に行われており、SearchError / OutputError のエラー型階層も正しく活用されている。出力型 DiffResult の追加位置（output/mod.rs）と各フォーマッタの追加位置も既存パターンに合致している。"
+}
