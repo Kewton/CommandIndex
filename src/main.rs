@@ -412,7 +412,7 @@ fn main() {
                     }
                 }
             }
-        },
+        }
         Commands::Context {
             files,
             max_files,

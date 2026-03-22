@@ -1,0 +1,60 @@
+{
+  "stage": 1,
+  "type": "normal-review",
+  "reviewer": "Claude (opus)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "シナリオ6（マルチリポジトリ検索）は依存Issue #78が未実装で実装不可能",
+      "description": "ワークスペース・マルチリポジトリ関連のコードが一切存在しないため実装できない。受け入れ基準の「8シナリオ全てPASS」と矛盾。",
+      "suggestion": "シナリオ6をスコープから除外し、受け入れ基準を7シナリオに修正する。"
+    },
+    {
+      "id": "M2",
+      "title": "シナリオ2（設定優先順位）の環境変数オーバーライドが未実装",
+      "description": "load_config()は環境変数から設定値を読み込むロジックを持っていない。COMMANDINDEX_OPENAI_API_KEYはマスク判定にのみ使用。",
+      "suggestion": "テストシナリオ2の範囲を「config.local.toml > commandindex.toml > デフォルト」の3段階に限定する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存テスト数の記載が不正確",
+      "description": "cli_export.rsは実際6テスト、cli_import.rsは実際9テスト。",
+      "suggestion": "正確なテスト数に修正する。"
+    },
+    {
+      "id": "S2",
+      "title": "Export/ImportコマンドにCLI --pathオプションが存在しない",
+      "description": "常にカレントディレクトリを使用。E2Eテストではcurrent_dir()の切り替えが必要。",
+      "suggestion": "テストシナリオ4の実装方針にcurrent_dir切り替えの必要性を追記。"
+    },
+    {
+      "id": "S3",
+      "title": "シナリオ1の検証ポイントが不明確",
+      "description": "設定反映の検証方法が不明。config showか、検索挙動か。",
+      "suggestion": "具体的な検証方法を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "シナリオ3はE2E統合テストというより単体機能テスト",
+      "description": "config showは単独で動作。シナリオ1の一部に組み込む方が統合テストらしい。",
+      "suggestion": "シナリオ1の一部としてconfig show確認を組み込む。"
+    },
+    {
+      "id": "N2",
+      "title": "テスト独立性の具体的な基準が未定義",
+      "description": "tempfile::tempdir()での独立性確保を明記すべき。",
+      "suggestion": "具体的な独立性基準を追記。"
+    },
+    {
+      "id": "N3",
+      "title": "既存E2Eテストとの重複・統合方針が不明",
+      "description": "e2e_export_import.rs, e2e_verify.rsとの重複可能性。",
+      "suggestion": "既存テストとの関係性を明記する。"
+    }
+  ],
+  "summary": "Must Fix 2件: シナリオ6は未実装機能への依存、シナリオ2は環境変数オーバーライド未実装。Should Fix 3件: テスト数不正確、--pathオプション制約、検証ポイント不明確。"
+}

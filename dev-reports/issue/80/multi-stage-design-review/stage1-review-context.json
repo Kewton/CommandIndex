@@ -1,0 +1,18 @@
+{
+  "stage": 1,
+  "type": "design-review",
+  "reviewer": "Claude (opus)",
+  "must_fix": [
+    {"id": "MF-1", "title": "config show/export/importがcurrent_dir依存", "status": "fixed", "action": "設計方針書にcurrent_dir依存コマンド一覧を追記"},
+    {"id": "MF-2", "title": "StatusOptionsシグネチャ変更", "status": "resolved", "action": "会話冒頭でマージコンフリクト解決済み"},
+    {"id": "MF-3", "title": "export/importのcurrent_dir依存", "status": "fixed", "action": "MF-1と統合して設計方針書に追記"},
+    {"id": "MF-4", "title": "マージコンフリクト未解決", "status": "resolved", "action": "会話冒頭で解決済み"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "current_dir依存コマンド一覧の明示", "status": "fixed"},
+    {"id": "SF-2", "title": "既存テストとの重複整理", "status": "acknowledged", "action": "設計方針書に差別化方針記載済み"},
+    {"id": "SF-3", "title": "cli_status.rsコンフリクト", "status": "resolved"},
+    {"id": "SF-4", "title": "環境変数テスト干渉", "status": "acknowledged", "action": "テスト実装時に考慮"}
+  ],
+  "summary": "設計レビュー完了。Must Fix 4件中2件は既に解決済み（マージコンフリクト）、残り2件は設計方針書を更新して対応。"
+}
