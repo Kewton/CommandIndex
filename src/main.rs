@@ -193,11 +193,14 @@ fn main() {
                     snippet_lines.unwrap_or(cfg.search.snippet_lines),
                     snippet_chars.unwrap_or(cfg.search.snippet_chars),
                 ),
-                Err(_) => (
-                    limit.unwrap_or(20).min(1000),
-                    snippet_lines.unwrap_or(2),
-                    snippet_chars.unwrap_or(120),
-                ),
+                Err(e) => {
+                    eprintln!("Warning: failed to load config, using defaults: {e}");
+                    (
+                        limit.unwrap_or(20).min(1000),
+                        snippet_lines.unwrap_or(2),
+                        snippet_chars.unwrap_or(120),
+                    )
+                }
             };
             let snippet_config = commandindex::output::SnippetConfig {
                 lines: effective_snippet_lines,
