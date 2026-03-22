@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "テスト影響範囲が広く、テスト戦略を明示すべき",
+      "description": "既存のCLI/E2E/ユニットテスト多数の期待値更新に加え、--index-path、[index].path、workspace、clean safety、ignore動的除外、相対パス解決の専用テストケースが必要。",
+      "suggestion": "既存テストは後方互換確認、新規テストは --index-path、[index].path、workspace、clean safety、ignore動的除外、相対パス解決の専用ケースを追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "export/import/context/config のCLI互換性影響を明示すべき",
+      "description": "--path を持たないサブコマンドで --index-path だけ差し替える形になり、挙動差による混乱が起きやすい。",
+      "suggestion": "--path を持たないサブコマンドの usage/help と README 反映も必要事項として扱う。"
+    },
+    {
+      "id": "S2",
+      "title": "パフォーマンス影響: workspace での設定解決回数増加に注意",
+      "description": "workspace search/status/update はリポジトリ数に比例して設定ファイル確認とpath正規化が増える。",
+      "suggestion": "1 repo 1回の設定解決に寄せる設計を推奨する。"
+    },
+    {
+      "id": "S3",
+      "title": "parser/ignore.rs の変更はインデックス品質に影響しうる",
+      "description": "共有indexをrepo配下に置いたときに自己インデックスしてしまうリスク。",
+      "suggestion": "ignore変更のテストを固定する（repo内custom pathのみ除外、repo外pathは無視）。"
+    },
+    {
+      "id": "S4",
+      "title": "tantivy/SQLiteの既存制約が共有indexシナリオでより重要になる",
+      "description": "同時書き込みについてSQLite WALとtantivyのsingle-writer制約に依存。共有index前提でこの制約の影響が大きくなる。",
+      "suggestion": "依存関係影響として既存制約の仕様前提としての重要性を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "status --detail の既存cwd依存バグを合わせて修正",
+      "description": "status の詳細表示で load_config(Path::new(\".\")) 固定の既存不整合がある。",
+      "suggestion": "--index-path 対応の影響範囲として既存バグも回収対象に含める。"
+    },
+    {
+      "id": "N2",
+      "title": "export/import の index_root 表現と実パス表示の整合確認",
+      "description": "export/import は snapshot メタデータと state のパス情報を扱うため、実 index path 使用時に表示と内部保存値がずれないか確認が必要。",
+      "suggestion": "新規テストで custom index path の export/import 後も state とメッセージが矛盾しないことを確認する。"
+    }
+  ],
+  "summary": "影響範囲は広い。既存機能への主な影響は .commandindex を暗黙前提にしている全コマンドとworkspace系のパス解決。テスト影響は大きく期待値更新と新規テスト多数必要。パフォーマンスは基本的に小さいがworkspaceでは設定解決I/Oが増加。依存関係面では新規クレート追加不要だが tantivy/SQLite の既存制約が共有indexシナリオでより重要になる。"
+}

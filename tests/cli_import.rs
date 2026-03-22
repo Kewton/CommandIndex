@@ -16,7 +16,8 @@ fn setup_exported_archive() -> (tempfile::TempDir, std::path::PathBuf) {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    commandindex::cli::export::run(dir.path(), &archive_path, &options).unwrap();
+    let ci_dir = dir.path().join(".commandindex");
+    commandindex::cli::export::run(&ci_dir, &archive_path, &options).unwrap();
     (dir, archive_path)
 }
 
@@ -59,7 +60,13 @@ fn import_basic() {
     common::run_clean(source_dir.path());
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(source_dir.path(), &archive_path, &options);
+    let ci_dir_import = source_dir.path().join(".commandindex");
+    let result = commandindex::cli::import_index::run(
+        source_dir.path(),
+        &ci_dir_import,
+        &archive_path,
+        &options,
+    );
     assert!(result.is_ok(), "import should succeed: {:?}", result.err());
 
     let result = result.unwrap();
@@ -76,7 +83,13 @@ fn import_existing_index_without_force() {
 
     // Don't clean - existing index should cause error
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(source_dir.path(), &archive_path, &options);
+    let ci_dir_import = source_dir.path().join(".commandindex");
+    let result = commandindex::cli::import_index::run(
+        source_dir.path(),
+        &ci_dir_import,
+        &archive_path,
+        &options,
+    );
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("already exists"));
@@ -88,7 +101,13 @@ fn import_existing_index_with_force() {
 
     // With force, should overwrite
     let options = commandindex::cli::import_index::ImportOptions { force: true };
-    let result = commandindex::cli::import_index::run(source_dir.path(), &archive_path, &options);
+    let ci_dir_import = source_dir.path().join(".commandindex");
+    let result = commandindex::cli::import_index::run(
+        source_dir.path(),
+        &ci_dir_import,
+        &archive_path,
+        &options,
+    );
     assert!(
         result.is_ok(),
         "import --force should succeed: {:?}",
@@ -102,7 +121,9 @@ fn import_archive_not_found() {
     let fake_archive = dir.path().join("nonexistent.tar.gz");
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(dir.path(), &fake_archive, &options);
+    let ci_dir_import = dir.path().join(".commandindex");
+    let result =
+        commandindex::cli::import_index::run(dir.path(), &ci_dir_import, &fake_archive, &options);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("not found") || err_msg.contains("Archive"));
@@ -138,7 +159,9 @@ fn import_rejects_path_traversal_parent_dir() {
     encoder.finish().unwrap();
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(dir.path(), &archive_path, &options);
+    let ci_dir_import = dir.path().join(".commandindex");
+    let result =
+        commandindex::cli::import_index::run(dir.path(), &ci_dir_import, &archive_path, &options);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(
@@ -185,7 +208,9 @@ fn import_rejects_symlink_entry() {
     encoder.finish().unwrap();
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(dir.path(), &archive_path, &options);
+    let ci_dir_import = dir.path().join(".commandindex");
+    let result =
+        commandindex::cli::import_index::run(dir.path(), &ci_dir_import, &archive_path, &options);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(
@@ -220,7 +245,9 @@ fn import_rejects_incompatible_version() {
     encoder.finish().unwrap();
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(dir.path(), &archive_path, &options);
+    let ci_dir_import = dir.path().join(".commandindex");
+    let result =
+        commandindex::cli::import_index::run(dir.path(), &ci_dir_import, &archive_path, &options);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(
@@ -267,7 +294,9 @@ fn import_git_commit_hash_mismatch_shows_warning() {
     encoder.finish().unwrap();
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(dir.path(), &archive_path, &options);
+    let ci_dir_import = dir.path().join(".commandindex");
+    let result =
+        commandindex::cli::import_index::run(dir.path(), &ci_dir_import, &archive_path, &options);
     assert!(result.is_ok(), "import should succeed: {:?}", result.err());
 
     let result = result.unwrap();
@@ -297,7 +326,13 @@ fn import_state_json_index_root_rewritten() {
     let import_dir = tempfile::tempdir().expect("create import dir");
 
     let options = commandindex::cli::import_index::ImportOptions { force: false };
-    let result = commandindex::cli::import_index::run(import_dir.path(), &archive_path, &options);
+    let ci_dir_import = import_dir.path().join(".commandindex");
+    let result = commandindex::cli::import_index::run(
+        import_dir.path(),
+        &ci_dir_import,
+        &archive_path,
+        &options,
+    );
     assert!(result.is_ok(), "import should succeed: {:?}", result.err());
 
     // Read state.json and verify index_root was rewritten

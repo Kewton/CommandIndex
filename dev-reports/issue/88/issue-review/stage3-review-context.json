@@ -1,0 +1,24 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "INDEX_DIR_NAME 定数が lib.rs と indexer/mod.rs で重複", "description": "indexer/mod.rs の COMMANDINDEX_DIR を廃止し crate::INDEX_DIR_NAME に統一すべき", "suggestion": "ヘルパー関数のシグネチャを変更し直接 commandindex_dir を受け取る設計に"},
+    {"id": "M2", "title": "search/context/config が Path::new(\".\") ハードコードで --index-path を伝搬不可", "description": "10箇所以上のハードコード。Cli構造体にグローバルオプションを追加し各関数にインデックスパスを引数として渡す", "suggestion": "SearchContext等にインデックスパスパラメータを追加"},
+    {"id": "M3", "title": "workspace機能が .commandindex をハードコード", "description": "workspace横断検索で各リポジトリが異なるインデックスパスを持つケースに非対応", "suggestion": "SearchContext に index_path_override フィールドを追加"},
+    {"id": "M4", "title": "load_config が base_path から local config を探すため index-path 分離時に問題", "description": "load_config のシグネチャを拡張して index_path を受け取る必要あり", "suggestion": "local config はインデックスディレクトリ配下、team config はリポジトリルート配下を参照"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "export/import に --path/--index-path オプションがない", "suggestion": "CLI側に引数追加"},
+    {"id": "S2", "title": "Context コマンドに --path がなくカレントディレクトリ固定", "suggestion": "--path と --index-path を追加"},
+    {"id": "S3", "title": "既存テスト約20ファイルが .commandindex ハードコードに依存", "suggestion": "既存テスト維持、新規テスト追加"},
+    {"id": "S4", "title": "main.rs 出力メッセージが .commandindex/ をハードコード", "suggestion": "実際のパスを変数で出力"},
+    {"id": "S5", "title": "RawIndexConfig に path フィールド未定義", "suggestion": "path: Option<String> を追加"},
+    {"id": "S6", "title": "clean コマンドの --index-path 対応時の安全性", "suggestion": "外部ディレクトリ削除のガード検討"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "パフォーマンス影響は無視可能"},
+    {"id": "N2", "title": "新クレート追加は不要"},
+    {"id": "N3", "title": "parser/ignore.rs のデフォルト除外パターンに --index-path 対応"},
+    {"id": "N4", "title": "status --detail の get_embedding_model がカレントディレクトリ固定（既存バグ）"},
+    {"id": "N5", "title": "export/import 時の index_root パス情報との整合性"}
+  ],
+  "summary": "コードベース全体に広範な影響。最大リスクは定数重複(M1)とハードコード10箇所以上(M2)。workspace/config/export/import にも対応必要。テスト約20ファイルに影響だが後方互換テストとして維持。"
+}

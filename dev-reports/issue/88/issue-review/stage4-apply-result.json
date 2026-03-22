@@ -1,0 +1,18 @@
+{
+  "applied_fixes": [
+    {"id": "M1", "action": "INDEX_DIR_NAME定数統一を受け入れ基準と推奨実装順序に追加"},
+    {"id": "M2", "action": "Path::new(\".\")ハードコード解消を受け入れ基準に追加、ヘルパー関数シグネチャ変更を明記"},
+    {"id": "M3", "action": "workspace との相互作用セクションを追加、SearchContextのindex_path_override追加を明記"},
+    {"id": "M4", "action": "設定読み込みの分離セクションを追加、load_configシグネチャ拡張を明記"},
+    {"id": "S1", "action": "export/importのCLI引数追加は全サブコマンド対応に含む"},
+    {"id": "S2", "action": "contextの--path追加は全サブコマンド対応に含む"},
+    {"id": "S3", "action": "テスト方針（既存維持+新規追加）を受け入れ基準に追加"},
+    {"id": "S4", "action": "出力メッセージのパス対応セクションと受け入れ基準を追加"},
+    {"id": "S5", "action": "RawIndexConfig.path追加を受け入れ基準と推奨実装順序に追加"},
+    {"id": "S6", "action": "clean の安全ガードを対応サブコマンド表に明記"},
+    {"id": "N3", "action": "parser/ignore.rsの除外パターンセクションを追加"},
+    {"id": "N4", "action": "status内のget_embedding_modelのハードコード修正はM2に含む"},
+    {"id": "N5", "action": "export/importのindex_root整合性は実装時に対応"}
+  ],
+  "summary": "Stage 3 影響範囲レビューの全指摘を反映。推奨実装順序を追加し、受け入れ基準をより具体的に拡充。"
+}

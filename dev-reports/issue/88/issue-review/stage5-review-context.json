@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "--path 基準の説明が現行CLIと整合していない",
+      "description": "search の --path は既に検索フィルタ用途で使われており、context/config/export/import にはリポジトリルート指定用の --path 自体がない。Issue本文の『設定ファイルは常に --path 基準で探索』という記述だけでは実装方針が決まらない。",
+      "suggestion": "各サブコマンドごとに『設定探索の基準パス』を明示する。search は既存 --path と衝突しない形で、context/config/export/import は cwd 基準のままか別オプションを持つかを明文化する。"
+    },
+    {
+      "id": "M2",
+      "title": "[index].path の相対パス解決を cwd 基準にしている点が不正確",
+      "description": "commandindex.toml に置く設定値としては不自然で、既存の workspace 設定は設定ファイル所在基準で解決している。cwd 基準にすると実行場所によって別のインデックスを参照する不安定な仕様になる。",
+      "suggestion": "CLI --index-path の相対パスは cwd 基準、commandindex.toml の [index].path は commandindex.toml もしくは --path で指定されたリポジトリルート基準、と分けて定義する。"
+    },
+    {
+      "id": "M3",
+      "title": "workspace 対応が search に偏っており status/update と不整合",
+      "description": "workspace.rs が status --workspace / update --workspace / workspace検証時にも .commandindex を直接見ている。search だけ対応すると不整合が残る。",
+      "suggestion": "workspace スコープを search のみに限定するか、status --workspace、update --workspace、workspace解決時の index existence check まで対象に含める。"
+    },
+    {
+      "id": "M4",
+      "title": "search/context 系の実装影響範囲が受け入れ基準より広い",
+      "description": "search.rs には通常検索以外に symbol/related/semantic の各分岐でも Path::new(\".\") と固定の index path 解決が残っている。モードごとに --index-path の効き方が変わる。",
+      "suggestion": "受け入れ基準を『search の全文検索だけでなく symbol/related/semantic も含めて --index-path が一貫して効く』と書き換える。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "config サブコマンドの期待値がまだ曖昧",
+      "description": "config show / config path はどちらも load_config(Path::new(\".\")) 前提。--index-path をグローバルに通すなら、どのコマンド出力を変えるかが未定義。",
+      "suggestion": "config show で effective index.path を表示するのか、config path で探索結果に加えて effective index dir を表示するのかを明示する。"
+    },
+    {
+      "id": "S2",
+      "title": "clean の安全ガード要件が不足",
+      "description": "任意パス削除に拡張した際の条件が明文化されていない。共有ディレクトリを指せる仕様にするなら誤指定時の削除リスクが高まる。",
+      "suggestion": "symlink 拒否の継続、存在しない場合の扱い、keep_embeddings 時の保存対象、削除対象が index dir 直下に限定されることを受け入れ基準に追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "parser/ignore.rs の動的除外はテスト観点まで書くべき",
+      "description": "IgnoreFilter は静的パターンのみで設計されている。パス正規化や repo 外パス時の no-op など境界条件が未記載。",
+      "suggestion": "リポジトリ内相対パス指定時のみ除外を追加、repo 外パスは既存 .commandindex/** のみ、対応テストを追加を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "出力メッセージの対象をもう少し具体化すると実装確認しやすい",
+      "description": "clean の完了メッセージや一部テスト期待値も .commandindex/ 固定。受け入れ基準が抽象的だとメッセージ変更漏れとテスト更新漏れが起きやすい。",
+      "suggestion": "index と clean のユーザー向け完了メッセージ、およびそれに依存する CLI/E2E テストを更新対象として列挙する。"
+    }
+  ],
+  "summary": "1回目レビューの主要論点は概ね反映されているが、必須で詰めるべき点が4つある。特に --path の説明は現行CLI定義とずれており、[index].path の相対パスを cwd 基準にする案も不整合が大きい。workspace対応は search だけでは不十分で、search 内の symbol/related/semantic 分岐まで含めた一貫性を受け入れ基準に落とし込む必要がある。"
+}

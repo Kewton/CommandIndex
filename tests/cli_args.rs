@@ -8,7 +8,7 @@ fn help_flag_shows_usage() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Usage: commandindex <COMMAND>"))
+        .stdout(predicate::str::contains("Usage: commandindex"))
         .stdout(predicate::str::contains("index"))
         .stdout(predicate::str::contains("search"))
         .stdout(predicate::str::contains("update"))
