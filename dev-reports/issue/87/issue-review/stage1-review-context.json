@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "run_related_search のシグネチャ変更に伴う main.rs の呼び出し箇所修正",
+      "description": "現在 main.rs (L312) では `run_related_search(&f, effective_limit, format)` と単一の `&str` を渡している。`--related` を `Option<String>` から `Option<Vec<String>>` (num_args(1..)) に変更すると、main.rs の match パターン `(None, None, Some(f), None)` の `f` が `Vec<String>` になり、run_related_search のシグネチャも `&[String]` に変更する必要がある。この変更は main.rs のパターンマッチ部分と run_related_search の両方を同時に修正しなければコンパイルエラーになる。",
+      "suggestion": "main.rs の related フィールドを `Option<Vec<String>>` に変更し、run_related_search のシグネチャを `fn run_related_search(file_paths: &[String], limit: usize, format: OutputFormat)` に変更する。内部で context.rs の collect_related_context と merge_related_results のパターンを再利用する。"
+    },
+    {
+      "id": "M2",
+      "title": "merge_related_results の可視性変更が必要",
+      "description": "context.rs 内の `merge_related_results` と `collect_related_context` は現在 `fn`（非pub）で定義されており、context.rs モジュール外からアクセスできない。Issue の方針では context コマンドのマージロジックを --related にも適用するとしているため、search.rs から直接呼び出すか、共通モジュールに切り出す必要がある。",
+      "suggestion": "方法1: merge_related_results を pub(crate) に変更して search.rs から呼び出す。方法2: search/related.rs にマージロジックを移動して context.rs と search.rs の両方から使う。後者のほうがモジュール責務が明確。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "conflicts_with_all の整合性確認",
+      "description": "現在 --related の conflicts_with_all は ['query', 'symbol', 'semantic', 'tag', 'path', 'file_type', 'heading', 'workspace'] に設定されている (main.rs L35)。num_args(1..) に変更しても conflicts_with_all 自体は影響を受けないが、変更後も --limit との組み合わせが引き続き機能することを確認する必要がある。また、エラーメッセージ (L329) の `--related <FILE>` を `--related <FILE>...` に更新すべき。",
+      "suggestion": "エラーメッセージとヘルプテキストを複数ファイル対応に更新する。"
+    },
+    {
+      "id": "S2",
+      "title": "run_related_search のエラーハンドリングを collect_related_context と統一",
+      "description": "現在の run_related_search (search.rs L269-309) はファイルが見つからない場合に RelatedSearchError をそのまま伝播する。一方、context.rs の collect_related_context (L87-108) は FileNotFound/FileNotIndexed を graceful にスキップして空結果として扱う。複数ファイル対応では、一部のファイルが見つからなくても残りの結果を返す context.rs の方式を採用すべき。",
+      "suggestion": "run_related_search 内で collect_related_context と同じパターン（FileNotFound/FileNotIndexed をスキップ）を採用し、全ファイルがエラーの場合のみ 'No related files found' を表示する。"
+    },
+    {
+      "id": "S3",
+      "title": "テストケースに複数ファイル指定のE2Eテストを追加",
+      "description": "既存の e2e_related_search.rs には単一ファイル指定のテストのみ存在する。複数ファイル指定時のマージ動作（union、スコア最大値、重複まとめ）、後方互換（単一ファイルでも同じ結果）を検証するテストが必要。",
+      "suggestion": "以下のテストケースを追加: (1) 複数ファイル指定で union マージされること, (2) 重複ファイルのスコアが最大値で統合されること, (3) 単一ファイル指定時の既存動作が変わらないこと（後方互換）, (4) 存在しないファイルを含む複数指定で graceful にスキップされること。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "マージロジックの共通化による DRY 改善",
+      "description": "merge_related_results のロジック（union + スコア最大値 + relation_types マージ）は context.rs と search.rs の両方で使われることになる。将来的にスコアリング方式が変更された場合、2箇所の修正が必要になるリスクがある。",
+      "suggestion": "search/related.rs に `pub fn merge_related_results()` を配置し、context.rs と search.rs の両方からインポートする構成にする。"
+    },
+    {
+      "id": "N2",
+      "title": "normalize_path の一貫した適用",
+      "description": "merge_related_results 内で target_files を normalize_path で正規化して除外している (context.rs L118-121) が、filter_map で Ok のみ取得しており、正規化失敗時はサイレントにスキップされる。入力検証の段階で正規化エラーを検出する方が安全。",
+      "suggestion": "run_related_search の入力検証段階で各ファイルパスの normalize_path を呼び出し、失敗した場合は明示的なエラーメッセージを返す。"
+    },
+    {
+      "id": "N3",
+      "title": "複数ファイル指定時の上限値の検討",
+      "description": "context コマンドでは files の上限が 100 ファイル (context.rs L25-28) に設定されている。--related でも同様の上限を設けることで、大量ファイル指定によるパフォーマンス問題を防止できる。",
+      "suggestion": "run_related_search にも context.rs と同様の入力数上限チェック（例: max 100）を追加する。"
+    }
+  ],
+  "summary": "Issue #87 の実装方針は概ね妥当であり、既存の context.rs に merge_related_results の実装が既に存在するため、技術的な実現可能性は高い。主要な変更点は (1) clap 定義の Option<String> -> Option<Vec<String>> への変更、(2) run_related_search のシグネチャ変更と内部でのマージロジック適用、(3) main.rs のパターンマッチ修正の3点。must_fix として挙げた2点（呼び出し箇所の整合性確保、merge_related_results の可視性変更）は実装時に必ず対応が必要。should_fix の中ではエラーハンドリングの統一（S2）と後方互換テスト（S3）が品質担保上重要。context.rs の merge_related_results のロジックは十分にテストされた実装であり、そのまま再利用可能。受け入れ基準（複数ファイル指定、スコア最大値マージ、重複まとめ、human/json/path 対応、後方互換）は明確かつ検証可能であり、網羅性に問題はない。"
+}

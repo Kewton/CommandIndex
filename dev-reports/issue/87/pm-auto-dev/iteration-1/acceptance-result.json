@@ -1,0 +1,55 @@
+{
+  "status": "pass",
+  "criteria": [
+    {
+      "id": 1,
+      "description": "--related に複数ファイルを指定できる",
+      "status": "pass",
+      "evidence": "main.rs: clap定義が `Option<String>` → `Option<Vec<String>>` に変更、`num_args(1..)` で複数値を受付。CLI パーステスト `search_related_multiple_files` で `--related file1.rs file2.rs` が正しくパースされることを確認。E2Eテスト `related_search_multiple_files_merged` で実際に複数ファイル指定が動作することを確認。"
+    },
+    {
+      "id": 2,
+      "description": "複数ファイルの影響範囲がスコア最大値でマージされる",
+      "status": "pass",
+      "evidence": "cli/search.rs の `run_related_search` が `context::collect_related_context` を呼び出し、内部で `merge_related_results` を使用。merge_related_results は HashMap による union マージで `score.max(existing_score)` を採用（context.rs の既存テスト済みロジック）。E2Eテスト `related_search_multiple_files_merged` で union マージ結果の正しさを検証。"
+    },
+    {
+      "id": 3,
+      "description": "重複ファイルは1つにまとめられる",
+      "status": "pass",
+      "evidence": "merge_related_results は HashMap<file_path, ...> でマージするため、同一パスの結果は自動的に1エントリに統合される。target_files（入力ファイル自身）も結果から除外される。E2Eテストで target ファイルが結果に含まれないことを確認。"
+    },
+    {
+      "id": 4,
+      "description": "human / json / path 出力形式に対応",
+      "status": "pass",
+      "evidence": "output/mod.rs の `format_related_results` は変更不要でそのまま利用。E2Eテスト `related_search_multiple_files_json_format` で JSON 形式（score, relations, path フィールド確認）、`related_search_multiple_files_path_format` で path 形式を検証。CLI パーステスト `search_related_multiple_with_format` で --format オプション併用を確認。"
+    },
+    {
+      "id": 5,
+      "description": "1ファイル指定時の挙動が変わらない（後方互換）",
+      "status": "pass",
+      "evidence": "clap の `num_args(1..)` は単一値も `Vec` に格納するため後方互換あり。CLI パーステスト `search_related_single_file_backward_compat` で単一ファイル指定を確認。E2Eテスト `related_search_single_file_backward_compat` で単一ファイルでの既存動作を検証。"
+    },
+    {
+      "id": 6,
+      "description": "存在しないファイルを含む複数指定で graceful にスキップされる",
+      "status": "pass",
+      "evidence": "collect_related_context 内で FileNotFound/FileNotIndexed エラーは空 Vec を push して graceful skip。E2Eテスト `related_search_partial_missing_graceful` で有効ファイル + 存在しないファイルの混在を検証。`related_search_all_missing_multiple` で全ファイルが存在しない場合の stderr メッセージを検証。"
+    },
+    {
+      "id": 7,
+      "description": "cargo test / clippy / fmt 全パス",
+      "status": "pass",
+      "evidence": "cargo build: エラー0件。cargo clippy --all-targets -- -D warnings: 警告0件。cargo test --all: 全テストスイート passed (0 failed)。cargo fmt --all -- --check: 差分なし。"
+    }
+  ],
+  "quality_checks": {
+    "build": "pass",
+    "clippy": "pass",
+    "test": "pass",
+    "fmt": "pass"
+  },
+  "issues_found": [],
+  "summary": "Issue #87 の全受入基準 (7/7) に合格。実装は設計方針書と完全に一致しており、main.rs の clap 定義変更（num_args(1..)）、cli/search.rs のシグネチャ変更と context.rs の collect_related_context/merge_related_results 再利用、cli/mod.rs への validate_file_paths 共通関数抽出、context.rs の可視性変更が正しく行われている。search/related.rs と output/mod.rs は変更なし（設計方針書通り）。CLI パーステスト5件、E2Eテスト7件が追加され、後方互換性・複数ファイルマージ・graceful skip・出力形式を網羅的に検証している。品質チェック（build/clippy/test/fmt）も全てパス。"
+}

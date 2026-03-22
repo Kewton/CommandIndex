@@ -1,0 +1,50 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "CLIヘルプテキストの更新が必要",
+      "description": "main.rs L34 のヘルプ文字列 '/// Search for related files' は単一ファイル前提の記述。Option<Vec<String>> への変更後、ヘルプに複数ファイル指定可能であることを明示すべき。clapの --help 出力はユーザーが最初に参照するドキュメントであり、複数ファイル対応の機能が discoverable でなければ利用されない。",
+      "suggestion": "ヘルプ文字列を '/// Search for related files (multiple files allowed)' に変更する。また arg 属性に value_name = \"FILE\" を追加し、`--related <FILE>...` の形式でヘルプに表示されるようにする。"
+    },
+    {
+      "id": "S2",
+      "title": "e2e_related_search.rs のテストヘルパー関数が単一ファイル前提",
+      "description": "tests/e2e_related_search.rs L44-63 の run_related_search / run_related_search_with_args ヘルパーは引数 file: &str で単一ファイルのみを受け付ける設計。複数ファイル対応テストを追加する際、既存ヘルパーを拡張するか新ヘルパーを追加する必要がある。既存の9テストは全て単一ファイル指定であり、後方互換テストとしてそのまま維持すべきだが、複数ファイル用のヘルパーが必要。",
+      "suggestion": "run_related_search_multi(dir, files: &[&str]) ヘルパーを追加し、複数ファイルテスト用に使用する。既存テストは単一ファイルの後方互換テストとしてそのまま維持する。"
+    },
+    {
+      "id": "S3",
+      "title": "cli_args.rs の conflicts_with テストが単一値前提",
+      "description": "tests/cli_args.rs には --related と他オプション (--query, --symbol, --tag, --workspace 等) の排他テストが存在する (L173, L240, L280, L470-482)。Option<String> から Option<Vec<String>> (num_args(1..)) への変更後、これらの排他テストが引き続きパスすることを確認する必要がある。特に num_args(1..) と conflicts_with_all の組み合わせで clap の挙動が変わる可能性がある。",
+      "suggestion": "既存の排他テストに加えて、複数ファイル指定時の排他テスト (例: --related file1.rs file2.rs --tag auth) も追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "CHANGELOG.md への変更記録",
+      "description": "CHANGELOG.md は過去のリリース記録を含む。search --related の複数ファイル対応は既存CLIインターフェースの拡張であり、次回リリース時の CHANGELOG に記載すべき変更である。ただしこれは実装完了後の記載事項であり、実装段階では不要。",
+      "suggestion": "実装完了・PRマージ後、次回リリース準備時に CHANGELOG.md の Unreleased セクションに 'feat: search --related supports multiple files' を追記する。"
+    },
+    {
+      "id": "N2",
+      "title": "context コマンドとの一貫性検証テスト",
+      "description": "context コマンド (cli/context.rs) は既に複数ファイルの関連検索マージを実装している。search --related の複数ファイル結果が context コマンドの関連ファイルリストと一致することを検証するテストがあると、ロジック共通化の正しさを担保できる。ただし context コマンドは追加のエンリッチ処理を行うため完全一致は期待できず、サブセット関係の検証が妥当。",
+      "suggestion": "e2e テストで同一ファイルセットに対して search --related と context の両方を実行し、search --related の結果が context の関連ファイルリストのサブセットであることを検証する。"
+    },
+    {
+      "id": "N3",
+      "title": "CI/CD パイプラインへの影響なし（確認済み）",
+      "description": ".github/workflows/ci.yml は cargo fmt, clippy, test, build の4ジョブ構成であり、特定のテストファイルやフィーチャーフラグに依存していない。本変更による CI 設定の修正は不要。テスト追加分は cargo test --all で自動的にカバーされる。",
+      "suggestion": "CI設定変更不要。追加テストが cargo test --all で検出されることだけ確認すればよい。"
+    },
+    {
+      "id": "N4",
+      "title": "スレッドセーフティの確認（問題なし）",
+      "description": "RelatedSearchEngine は &IndexReaderWrapper と &SymbolStore の不変参照を保持する構造体であり、find_related は &self メソッド。複数ファイルのループ処理は逐次実行であり、並列化していない。IndexReaderWrapper (tantivy) と SymbolStore (rusqlite) はそれぞれ内部でスレッドセーフ性を管理している。現在の設計では並列化の必要性は低く、コンカレンシー問題はない。",
+      "suggestion": "現時点で対応不要。将来的にファイル数が多い場合のパフォーマンス改善として rayon 等の並列化を検討する場合は、SQLite の接続管理に注意が必要。"
+    }
+  ],
+  "summary": "2回目影響範囲レビュー完了。1回目レビュー (Stage 3) で特定された影響範囲 (main.rs, cli/search.rs, cli/context.rs, テストファイル) に見落としはなく、output/mod.rs, search/related.rs, Cargo.toml への変更不要という判断も正しい。新たな must_fix はなし。should_fix として3点を追加: (S1) CLIヘルプテキストの複数ファイル対応記述、(S2) e2eテストヘルパーの複数ファイル対応、(S3) cli_args排他テストの num_args(1..) との互換確認。CI/CDパイプラインへの影響なし（ci.yml 変更不要）。後方互換性リスクは num_args(1..) 指定時の clap パース挙動に限定され、Stage 5 S2 で既に指摘済みの内容と整合する。マイグレーション不要（インデックス構造・DB スキーマの変更なし）。コンカレンシー問題なし（逐次実行・不変参照のみ）。ドキュメントは CHANGELOG への記載が次回リリース時に必要だが実装段階では不要。全体として、1回目レビューの影響範囲分析は網羅的であり、実装方針に重大な漏れはないと判断する。"
+}
