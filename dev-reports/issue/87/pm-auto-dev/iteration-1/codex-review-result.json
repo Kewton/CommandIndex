@@ -1,0 +1,31 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/context.rs",
+      "line": 61,
+      "severity": "medium",
+      "category": "bug",
+      "description": "各入力ファイルの関連結果を `engine.find_related(file, 1000)` で先に 1000 件へ打ち切ってからマージしているため、複数入力で上位結果の重複が多い場合に、本来マージ後 top-N に入る候補が欠落する可能性があります。`search --limit` は 1000 まで指定できるため、結果の正確性を損ないます。",
+      "suggestion": "入力ごとの内部取得件数を固定 1000 にせず、全件取得してから最終 limit を適用するか、少なくともマージ後の top-N を欠落させない上限を使ってください。"
+    },
+    {
+      "file": "src/cli/mod.rs",
+      "line": 45,
+      "severity": "medium",
+      "category": "bug",
+      "description": "共通バリデータが `..` とバックスラッシュを一律拒否するようになったため、従来 `normalize_path` で正規化して受け付けていた `./foo`, `src\\\\main.rs`, `src/../lib.rs` のような入力が `search --related` でエラーになります。単一ファイル検索の既存互換を壊す変更です。",
+      "suggestion": "`search --related` では従来の `normalize_path` と整合する検証にするか、共通バリデータを用途別に分けて、後方互換を壊さない範囲の検証だけを適用してください。"
+    },
+    {
+      "file": "src/cli/search.rs",
+      "line": 293,
+      "severity": "low",
+      "category": "security",
+      "description": "結果なし時に `file_paths.join(\", \")` をそのまま stderr に出力しており、ファイル名に改行や ANSI エスケープなどの制御文字が含まれていた場合、端末出力を汚染できます。通常はローカル CLI の問題ですが、ログ収集やCI上では表示改ざんにつながります。",
+      "suggestion": "エラーメッセージへ埋め込む前に制御文字を除去するか、パスを安全にエスケープして出力してください。既存の `strip_control_chars` と同等のサニタイズを stderr 側にも適用すると安全です."
+    }
+  ],
+  "summary": "変更対象を潜在バグとセキュリティ観点で確認した結果、致命的なクラッシュや unsafe 起因の問題は見つかりませんでした。一方で、複数ファイル関連検索の内部 1000 件打ち切りにより結果欠落が起こり得る点、共通パス検証の導入で既存 `search --related` の許容入力を壊している点、ユーザー入力を未サニタイズで stderr に出している点は修正した方がよいです。",
+  "requires_fix": true
+}

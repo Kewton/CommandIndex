@@ -18,43 +18,7 @@ pub fn run_context(
     commandindex_dir: &Path,
 ) -> Result<(), SearchError> {
     // 入力検証
-    if files.is_empty() {
-        return Err(SearchError::InvalidArgument(
-            "At least one file is required".to_string(),
-        ));
-    }
-    if files.len() > 100 {
-        return Err(SearchError::InvalidArgument(
-            "Too many files specified (max 100)".to_string(),
-        ));
-    }
-    for f in files {
-        if f.is_empty() {
-            return Err(SearchError::InvalidArgument(
-                "File path cannot be empty".to_string(),
-            ));
-        }
-        if f.len() > 1024 {
-            return Err(SearchError::InvalidArgument(
-                "File path too long (max 1024 characters)".to_string(),
-            ));
-        }
-        if f.contains("..") {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain '..': {f}"
-            )));
-        }
-        if f.starts_with('/') || f.starts_with('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must be relative: {f}"
-            )));
-        }
-        if f.contains('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain backslashes: {f}"
-            )));
-        }
-    }
+    super::validate_file_paths(files, 100)?;
 
     // インデックスオープン
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
@@ -84,8 +48,9 @@ pub fn run_context(
     Ok(())
 }
 
-/// 各ファイルの関連検索結果を収集・マージする
-fn collect_related_context(
+/// 各ファイルの関連検索結果を収集・マージする。
+/// Caller must validate file_paths with validate_file_paths before calling.
+pub(crate) fn collect_related_context(
     files: &[String],
     reader: &IndexReaderWrapper,
     store: &SymbolStore,
@@ -108,8 +73,8 @@ fn collect_related_context(
     Ok(merge_related_results(results_per_file, files))
 }
 
-/// 複数ファイルの関連検索結果をunionマージする
-fn merge_related_results(
+/// Merges related search results from multiple files using union + max score strategy.
+pub(crate) fn merge_related_results(
     results_per_file: Vec<Vec<RelatedSearchResult>>,
     target_files: &[String],
 ) -> Vec<RelatedSearchResult> {

@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: validate_file_paths関数をcli/mod.rsに追加",
+    "Task 1.2: context.rsのrun_contextをvalidate_file_paths呼び出しに置き換え",
+    "Task 2.1: context.rsの可視性変更（pub(crate)）",
+    "Task 2.2: main.rsのclap定義変更（Option<String> → Option<Vec<String>>）",
+    "Task 2.3: run_related_searchのシグネチャ・ロジック変更",
+    "Task 3.1: CLIパーステスト追加（5件）",
+    "Task 3.2: E2Eテスト追加（6件）"
+  ],
+  "tests_added": 11,
+  "tests_total_pass": true,
+  "clippy_clean": true,
+  "fmt_clean": true,
+  "files_changed": [
+    "src/cli/mod.rs",
+    "src/cli/context.rs",
+    "src/cli/search.rs",
+    "src/main.rs",
+    "tests/cli_args.rs",
+    "tests/e2e_related_search.rs"
+  ],
+  "summary": "Issue #87の--related複数ファイル対応をTDDで実装完了。validate_file_pathsによるバリデーション共通化、clap定義のOption<Vec<String>>変更、run_related_searchの複数ファイル対応（collect_related_context再利用）、CLI引数テスト5件・E2Eテスト6件を追加。既存テスト全パス（後方互換維持）、clippy警告ゼロ、fmt差分なし。"
+}

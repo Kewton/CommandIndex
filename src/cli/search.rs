@@ -294,21 +294,12 @@ pub fn run_symbol_search(
 }
 
 pub fn run_related_search(
-    file_path: &str,
+    file_paths: &[String],
     limit: usize,
     format: OutputFormat,
     ctx: Option<&SearchContext>,
 ) -> Result<(), SearchError> {
-    if file_path.is_empty() {
-        return Err(SearchError::InvalidArgument(
-            "File path cannot be empty".to_string(),
-        ));
-    }
-    if file_path.len() > 1024 {
-        return Err(SearchError::InvalidArgument(
-            "File path too long (max 1024 characters)".to_string(),
-        ));
-    }
+    super::validate_file_paths(file_paths, 100)?;
 
     let (tantivy_dir, db_path) = if let Some(c) = ctx {
         (c.index_dir(), c.symbol_db_path())
@@ -329,11 +320,16 @@ pub fn run_related_search(
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
     let store = SymbolStore::open(&db_path)?;
 
-    let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
-    let results = engine.find_related(file_path, limit)?;
+    let mut results = super::context::collect_related_context(file_paths, &reader, &store)?;
+    results.truncate(limit);
 
     if results.is_empty() {
-        eprintln!("No related files found for '{file_path}'");
+        let files_list: String = file_paths
+            .iter()
+            .map(|p| crate::output::strip_control_chars(p))
+            .collect::<Vec<_>>()
+            .join(", ");
+        eprintln!("No related files found for: {files_list}");
         return Ok(());
     }
 

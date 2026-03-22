@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "action": "実装方針セクションに主要変更点として追加"},
+    {"id": "M2", "action": "実装方針セクションにマージロジック再利用方針を追加"},
+    {"id": "S1", "action": "注意事項にヘルプテキスト更新を追記"},
+    {"id": "S2", "action": "エラーハンドリング統一を実装方針に追加、受け入れ基準にgraceful skip追加"},
+    {"id": "S3", "action": "テスト方針セクションを新設し、具体的テストケースを記載"},
+    {"id": "N2", "action": "normalize_pathの一貫適用を注意事項に追記"}
+  ],
+  "skipped_items": [
+    {"id": "N1", "reason": "M2で対応済み（共通化方針として記載）"},
+    {"id": "N3", "reason": "スコープ外として保留（実装規模が小のため）"}
+  ],
+  "issue_updated": true,
+  "summary": "Stage 1のMust Fix 2件、Should Fix 3件を全てIssue本文に反映。実装方針セクションとテスト方針セクションを新設。"
+}
