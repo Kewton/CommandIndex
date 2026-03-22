@@ -72,6 +72,29 @@ pub(crate) fn collect_related_context(
     Ok(merge_related_results(results_per_file, files))
 }
 
+/// 外部から呼び出し可能な関連ファイル収集・マージ（search --related-stdin 用）
+pub(crate) fn collect_and_merge_related(
+    engine: &RelatedSearchEngine,
+    files: &[String],
+    limit: usize,
+) -> Result<Vec<RelatedSearchResult>, SearchError> {
+    let mut results_per_file = Vec::new();
+    for file in files {
+        match engine.find_related(file, 1000) {
+            Ok(results) => results_per_file.push(results),
+            Err(crate::search::related::RelatedSearchError::FileNotFound(_))
+            | Err(crate::search::related::RelatedSearchError::FileNotIndexed(_)) => {
+                results_per_file.push(Vec::new());
+            }
+            Err(e) => return Err(SearchError::RelatedSearch(e)),
+        }
+    }
+
+    let mut merged = merge_related_results(results_per_file, files);
+    merged.truncate(limit);
+    Ok(merged)
+}
+
 /// Merges related search results from multiple files using union + max score strategy.
 pub(crate) fn merge_related_results(
     results_per_file: Vec<Vec<RelatedSearchResult>>,

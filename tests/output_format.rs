@@ -1,6 +1,7 @@
 use commandindex::indexer::reader::SearchResult;
 use commandindex::output::{
-    OutputFormat, SnippetConfig, WorkspaceSearchResult, format_results, format_workspace_results,
+    ImpactFileResult, ImpactResult, OutputFormat, SnippetConfig, WorkspaceSearchResult,
+    format_impact_results, format_results, format_workspace_results,
 };
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
@@ -300,4 +301,91 @@ fn test_workspace_path_same_repo_same_path_deduped() {
     let lines: Vec<&str> = output.trim().lines().collect();
     assert_eq!(lines.len(), 1);
     assert!(lines[0].contains("[backend]"));
+}
+
+// --- Impact format tests ---
+
+fn make_impact_result() -> ImpactResult {
+    ImpactResult {
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![
+            ImpactFileResult {
+                file_path: "src/lib.rs".to_string(),
+                score: 0.9,
+                relation_types: vec!["import_dependency".to_string()],
+                impacted_by: vec!["src/main.rs".to_string()],
+            },
+            ImpactFileResult {
+                file_path: "src/utils.rs".to_string(),
+                score: 0.5,
+                relation_types: vec![
+                    "path_similarity".to_string(),
+                    "directory_proximity".to_string(),
+                ],
+                impacted_by: vec!["src/main.rs".to_string()],
+            },
+        ],
+        total_input_files: 1,
+        total_impacted_files: 2,
+    }
+}
+
+fn format_impact_to_string(result: &ImpactResult, format: OutputFormat) -> String {
+    colored::control::set_override(false);
+    let mut buf = Vec::new();
+    format_impact_results(result, format, &mut buf).unwrap();
+    String::from_utf8(buf).unwrap()
+}
+
+#[test]
+fn test_impact_json_format() {
+    let result = make_impact_result();
+    let output = format_impact_to_string(&result, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
+    assert_eq!(parsed["total_input_files"], 1);
+    assert_eq!(parsed["total_impacted_files"], 2);
+    assert_eq!(parsed["input_files"], serde_json::json!(["src/main.rs"]));
+    let files = parsed["impacted_files"].as_array().unwrap();
+    assert_eq!(files.len(), 2);
+    assert_eq!(files[0]["file_path"], "src/lib.rs");
+    assert_eq!(
+        files[0]["relation_types"],
+        serde_json::json!(["import_dependency"])
+    );
+    assert_eq!(files[0]["impacted_by"], serde_json::json!(["src/main.rs"]));
+}
+
+#[test]
+fn test_impact_human_format() {
+    let result = make_impact_result();
+    let output = format_impact_to_string(&result, OutputFormat::Human);
+    assert!(output.contains("Impact analysis"));
+    assert!(output.contains("1 input file"));
+    assert!(output.contains("2 impacted file"));
+    assert!(output.contains("src/lib.rs"));
+    assert!(output.contains("impacted by: src/main.rs"));
+}
+
+#[test]
+fn test_impact_path_format() {
+    let result = make_impact_result();
+    let output = format_impact_to_string(&result, OutputFormat::Path);
+    let lines: Vec<&str> = output.trim().lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0], "src/lib.rs");
+    assert_eq!(lines[1], "src/utils.rs");
+}
+
+#[test]
+fn test_impact_empty_results() {
+    let result = ImpactResult {
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![],
+        total_input_files: 1,
+        total_impacted_files: 0,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
+    assert_eq!(parsed["total_impacted_files"], 0);
+    assert!(parsed["impacted_files"].as_array().unwrap().is_empty());
 }

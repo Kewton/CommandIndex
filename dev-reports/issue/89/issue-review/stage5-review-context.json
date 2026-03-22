@@ -1,0 +1,64 @@
+{
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性・正確性",
+      "description": "impact の機能定義と実装方針が一致していない。Issue本文は impact を「逆依存方向の影響範囲分析」と説明しているが、再利用候補の RelatedSearchEngine::find_related は双方向で集計する。このままでは impact は実質的に「複数入力の related 集約」になり、説明とずれる。",
+      "suggestion": "impact を本当に逆依存分析にするなら、どの relation を逆方向のみ採用するかを明記。少なくとも import dependency は「target を import している source 側のみ」など、RelatedSearchEngine のそのまま再利用では足りない点をIssueに明記すべき。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準・出力仕様",
+      "description": "search --related-stdin の複数入力時の意味が未定義。現行の search --related は単一ファイル前提で出力はフラットな related result 一覧。stdin で複数ファイルを受けたときに、結果を union するのか、入力ごとに分けるのか、重複時にどのスコアを採用するのかが未定義。",
+      "suggestion": "search --related-stdin について、複数入力時の集約単位・重複排除ルール・スコア計算・各フォーマットの出力形を明記。impact の JSON スキーマにある impacted_by 相当を search --related-stdin にも持たせるかどうかも決める必要がある。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "実装方針",
+      "description": "search --related-stdin のCLI形状は現行の search モード設計とやや噛み合っていない。値を持たない --related-stdin フラグを追加すると、分岐と conflicts_with の定義が不自然になる。",
+      "suggestion": "--related - や --related-from stdin、または --related に stdin フォールバックを持たせる案を再比較し、なぜ --related-stdin を採るのかをIssue内で明示。main.rs の排他モデルにどう載せるかは記述した方がよい。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性・出力設計",
+      "description": "impact の JSON スキーマが既存出力規約とずれている。現行の related JSON は JSONL で relation 名も snake_case。Issueの例は CamelCase。",
+      "suggestion": "relation type の命名規約は既存と揃えるか、意図的に変える理由を明記。"
+    },
+    {
+      "id": "S3",
+      "category": "入力仕様",
+      "description": "stdin 経由のパス正規化・バリデーション方針が既存コードと揃っていない。context は .. や絶対パス、バックスラッシュを弾く。",
+      "suggestion": "stdin 入力でも「相対パスのみ」「.. 禁止」「バックスラッシュ入力はどう扱うか」を明記。context と同じ制約に寄せるなら再利用方針を記載。"
+    },
+    {
+      "id": "S4",
+      "category": "受け入れ基準",
+      "description": "空stdin・全件スキップ・関連結果ゼロ時の扱いが受け入れ基準に入っていない。",
+      "suggestion": "少なくとも「stdin が空」「有効パスが1件も残らない」「関連結果が0件」の3ケースについて、終了コードと stderr/stdout の期待値を受け入れ基準に追加。"
+    },
+    {
+      "id": "S5",
+      "category": "CLI仕様の明確性",
+      "description": "impact について「引数がなければ stdin を読む」と書かれているが、impact が受け取る引数形そのものが未定義。impact <files...> を許可するのか、stdin 専用なのかが不明。",
+      "suggestion": "impact [FILES...] を許可するのか、stdin 専用にするのかを明記。両対応にするなら、引数指定時はstdin無視なのか、併用エラーなのかも必要。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "テスト方針",
+      "description": "CLI引数レベルの排他テストも明示すると抜けが減る。",
+      "suggestion": "impact --help、search --related と --related-stdin の排他、TTY入力時失敗、空stdin失敗を tests/cli_args.rs / E2E のどちらで担保するかまで書くと実装者が迷わない。"
+    },
+    {
+      "id": "N2",
+      "category": "ユーザビリティ",
+      "description": "search --related-stdin 側の使用例もあると親切。",
+      "suggestion": "エラーメッセージ例か help 要件に search --related-stdin の使用例を含める。"
+    }
+  ],
+  "summary": "1回目の指摘のうち impact の存在意義・出力形式・入力仕様の明文化はかなり改善。一方で既存コードベースと突き合わせると、impact を逆依存分析と説明しつつ RelatedSearchEngine 再利用を前提にしている点、search --related-stdin の複数入力時の出力意味が未定義な点が、まだ実装ブレを生む主要リスク。受け入れ基準は前回より良くなっているが、空stdin・ゼロ件・CLI引数形の扱いまで閉じると実装可能なIssueになる。"
+}

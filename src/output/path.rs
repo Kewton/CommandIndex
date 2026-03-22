@@ -64,6 +64,20 @@ pub fn format_related_path(
     Ok(())
 }
 
+/// impact 結果をpath形式で出力する（重複除去）
+pub fn format_impact_path(
+    result: &crate::output::ImpactResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let mut seen = std::collections::HashSet::new();
+    for file in &result.impacted_files {
+        if seen.insert(&file.file_path) {
+            writeln!(writer, "{}", file.file_path)?;
+        }
+    }
+    Ok(())
+}
+
 /// シンボル検索結果をpath:line形式で出力する（重複除去）
 pub fn format_symbol_path(
     results: &[SymbolSearchResult],

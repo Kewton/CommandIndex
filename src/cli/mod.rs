@@ -3,10 +3,12 @@ pub mod config;
 pub mod context;
 pub mod embed;
 pub mod export;
+pub mod impact;
 pub mod import_index;
 pub mod index;
 pub mod search;
 pub mod status;
+pub mod stdin;
 pub mod workspace;
 
 /// Common file path validation for CLI handlers.

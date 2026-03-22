@@ -32,8 +32,11 @@ enum Commands {
         #[arg(long, conflicts_with_all = ["query", "semantic", "workspace"])]
         symbol: Option<String>,
         /// Search for related files
-        #[arg(long, num_args(1..), conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace"])]
+        #[arg(long, num_args(1..), conflicts_with_all = ["query", "symbol", "semantic", "tag", "path", "file_type", "heading", "workspace", "related_stdin"])]
         related: Option<Vec<String>>,
+        /// Read related file paths from stdin (one per line)
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "tag", "path", "file_type", "heading", "workspace", "no_semantic", "rerank"])]
+        related_stdin: bool,
         /// Semantic search query (embedding-based similarity search)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "heading", "workspace"])]
         semantic: Option<String>,
@@ -157,6 +160,20 @@ enum Commands {
         #[arg(long)]
         with_embeddings: bool,
     },
+    /// Analyze impact of file changes
+    Impact {
+        /// Input files (if not provided, reads from stdin)
+        #[arg()]
+        files: Vec<String>,
+
+        /// Output format (human, json, path)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+
+        /// Maximum number of impacted files to show
+        #[arg(long)]
+        limit: Option<usize>,
+    },
     /// Import index from tar.gz archive
     Import {
         /// Input archive file path (.tar.gz)
@@ -208,6 +225,7 @@ fn main() {
             query,
             symbol,
             related,
+            related_stdin,
             semantic,
             no_semantic,
             format,
@@ -279,6 +297,18 @@ fn main() {
                         1
                     }
                 }
+            } else if related_stdin {
+                let result = commandindex::cli::search::run_related_search_from_stdin(
+                    effective_limit,
+                    format,
+                );
+                match result {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        1
+                    }
+                }
             } else {
                 let result = match (query, symbol, related, semantic) {
                     (Some(q), None, None, None) => {
@@ -326,7 +356,7 @@ fn main() {
                         )
                     }
                     (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
-                        "Either <QUERY>, --symbol <NAME>, --related <FILE>, or --semantic <QUERY> is required".to_string(),
+                        "Either <QUERY>, --symbol <NAME>, --related <FILE>, --related-stdin, or --semantic <QUERY> is required".to_string(),
                     )),
                     _ => unreachable!("clap conflicts_with prevents this"),
                 };
@@ -418,6 +448,17 @@ fn main() {
             max_files,
             max_tokens,
         } => match commandindex::cli::context::run_context(&files, max_files, max_tokens) {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
+        Commands::Impact {
+            files,
+            format,
+            limit,
+        } => match commandindex::cli::impact::run_impact(&files, format, limit) {
             Ok(()) => 0,
             Err(e) => {
                 eprintln!("Error: {e}");

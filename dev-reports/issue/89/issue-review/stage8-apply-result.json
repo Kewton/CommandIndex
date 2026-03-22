@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "S5", "action": "バックスラッシュの扱いを「正規化」→「禁止」に統一（context.rs と同じ制約）"},
+    {"id": "N2", "action": "重複パスのユニーク化を「正規化後のパスで比較」に明確化"}
+  ],
+  "deferred_to_design": [
+    {"id": "S1", "reason": "集約ロジック共通化は設計フェーズで詳細化"},
+    {"id": "S2", "reason": "tests/output_format.rs のテスト追加は作業計画で対応"},
+    {"id": "S3", "reason": "impacted_by の保持コストは設計フェーズで検討"},
+    {"id": "S4", "reason": "MSRV 記載は別Issue扱い"},
+    {"id": "N3", "reason": "共通CLIエラー型の設計は設計フェーズで検討"}
+  ],
+  "issue_updated": true
+}

@@ -548,3 +548,78 @@ fn related_search_multiple_files_path_format() {
         );
     }
 }
+
+// --- --related-stdin tests ---
+
+#[test]
+fn related_stdin_finds_related_files() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "should find related files via --related-stdin"
+    );
+    let paths = result_paths(&results);
+    assert!(
+        paths.iter().any(|p| p.contains("b.md")),
+        "b.md should be related to a.md via stdin, got: {paths:?}"
+    );
+}
+
+#[test]
+fn related_stdin_multiple_files_merges() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\ndocs/b.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "should find related files from multiple stdin inputs"
+    );
+}
+
+#[test]
+fn related_stdin_no_index_error() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(dir.path().join("test.md"), "# Test\n").unwrap();
+    common::cmd()
+        .args(["search", "--related-stdin", "--format", "json"])
+        .current_dir(dir.path())
+        .write_stdin("test.md\n")
+        .assert()
+        .failure()
+        .stderr(predicates::prelude::predicate::str::contains("not found"));
+}
+
+#[test]
+fn related_stdin_respects_limit() {
+    let dir = setup_linked_docs();
+    let output = common::cmd()
+        .args([
+            "search",
+            "--related-stdin",
+            "--format",
+            "json",
+            "--limit",
+            "1",
+        ])
+        .current_dir(dir.path())
+        .write_stdin("docs/a.md\n")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let results = common::parse_jsonl(&stdout);
+    assert!(results.len() <= 1, "should respect limit=1");
+}
