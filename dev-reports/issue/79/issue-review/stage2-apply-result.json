@@ -1,0 +1,5 @@
+{
+  "applied_fixes": ["MF-1", "MF-2", "MF-3", "MF-4", "SF-1", "SF-2", "SF-3", "SF-4"],
+  "issue_updated": true,
+  "summary": "全8件の指摘（Must Fix 4件 + Should Fix 4件）を反映。MF-1: IndexState に last_commit_hash フィールド追加とserde(default)による後方互換・マイグレーション戦略を明記。MF-2: EmbeddingStore::count_distinct_files() メソッド追加方針を記載。MF-3: git コマンド（std::process::Command）方式を採用し graceful degradation を受け入れ基準に追加。MF-4: Total files の定義を walkdir 実行時走査と明確化。SF-1: --format json の受け入れ基準を拡張情報含有に修正。SF-2: --detail と --coverage の排他ルール（clap conflicts_with）を定義。SF-3: Storage 内訳を tantivy/ / symbols.db / embeddings.db / Other に修正。SF-4: config.toml 不在時の (not configured) 表示方針を追記。将来の拡張候補セクションも新設。"
+}

@@ -92,6 +92,12 @@ enum Commands {
         /// Output format (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
+        /// Show detailed statistics (coverage, staleness, storage)
+        #[arg(long, conflicts_with = "coverage")]
+        detail: bool,
+        /// Show coverage statistics only
+        #[arg(long, conflicts_with = "detail")]
+        coverage: bool,
     },
     /// Remove index and prepare for rebuild
     Clean {
@@ -252,8 +258,18 @@ fn main() {
                 }
             }
         }
-        Commands::Status { path, format } => {
-            match commandindex::cli::status::run(&path, format, &mut std::io::stdout()) {
+        Commands::Status {
+            path,
+            format,
+            detail,
+            coverage,
+        } => {
+            let options = commandindex::cli::status::StatusOptions {
+                detail,
+                coverage,
+                format,
+            };
+            match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
                 Ok(()) => 0,
                 Err(e) => {
                     eprintln!("{e}");
