@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "依存関係・共用設計",
+      "description": "aggregate_impact() は現在 src/cli/impact.rs 内の private 関数 (fn aggregate_impact) であり、search サブコマンドから直接呼び出すことができない。共用するには可視性変更（pub(crate) 化）またはモジュール再配置が必要。",
+      "suggestion": "aggregate_impact() を pub(crate) に変更するか、共通ロジック層（例: src/search/impact.rs や src/cli/common.rs）に抽出して search と impact の両方から呼び出せるようにする。同時に validate_and_normalize() も同様に共用可能にする。"
+    },
+    {
+      "id": "M2",
+      "category": "CLI引数設計・conflicts_with",
+      "description": "--changed-since は search サブコマンドの既存オプション（query, symbol, related, related_stdin, semantic, workspace）と排他制御を正しく設定する必要がある。現在の conflicts_with_all 定義は密結合しており、新オプション追加時に不整合が生じやすい構造になっている。",
+      "suggestion": "--changed-since を conflicts_with_all で query, symbol, related, related_stdin, semantic, workspace, tag, path, file_type, heading, no_semantic, rerank と排他に設定する。main.rs の match 分岐に新しいアームを追加し、(None, None, None, None) + changed_since.is_some() のケースを処理する。"
+    },
+    {
+      "id": "M3",
+      "category": "入力バリデーション・セキュリティ",
+      "description": "validate_commit_hash() は4-40文字の小文字16進数のみ許可するが、Issue仕様では「期間文字列」（例: '1week', '3days'）も受け付ける。期間文字列のバリデーションが未実装であり、git コマンドに直接渡される場合、コマンドインジェクションリスクがある。",
+      "suggestion": "期間文字列のホワイトリストバリデーション関数を新設する。例: 正規表現 ^[0-9]+(day|days|week|weeks|month|months)$ のようなパターンで検証し、git diff --name-only $(git log --since='<period>' ...) のように安全に変換する。シェルエスケープは使わず、Command API の引数として渡す。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "パフォーマンス",
+      "description": "--changed-since で git diff --name-only を実行して変更ファイル一覧を取得した後、各ファイルに対して RelatedSearchEngine::find_related() を呼ぶ。find_related() は内部で tantivy 検索 + SymbolStore クエリを複数実行するため、変更ファイル数が多い場合（例: 大規模リファクタリング後）にはN回のI/O負荷が発生する。",
+      "suggestion": "impact サブコマンドと同様に INTERNAL_FETCH_LIMIT (1000) を設定し、aggregate_impact() の既存ロジック（per-file 検索 + overlap 集約）をそのまま活用する。ファイル数上限は MAX_INPUT_FILES (500) を共用する。大量変更時にはearly warningを出力する設計も検討。"
+    },
+    {
+      "id": "S2",
+      "category": "git コマンド依存・エラーハンドリング",
+      "description": "run_git() は git コマンドの実行失敗時に Option::None を返す設計だが、--changed-since では git の存在やリポジトリの有効性が必須条件となる。None が返された場合のユーザー向けエラーメッセージが不明確になる可能性がある。",
+      "suggestion": "git_info.rs の run_git() を Result 型に変更するか、--changed-since 専用のラッパー関数を用意し「git が見つからない」「リポジトリではない」「指定コミットが存在しない」を区別してエラーメッセージを出す。"
+    },
+    {
+      "id": "S3",
+      "category": "テスト設計",
+      "description": "既存テスト tests/cli_args.rs には search サブコマンドの全オプション組み合わせテストがあるが、--changed-since 追加により conflicts_with テストが必要。また tests/e2e_impact.rs は git リポジトリを前提としないテストだが、--changed-since は git 操作を伴うため、テスト環境に git init が必要。",
+      "suggestion": "cli_args.rs に --changed-since の受理テスト・排他テストを追加する。e2e テストでは tempdir 内で git init + git add + git commit を行い、コミットハッシュを取得して --changed-since に渡すテストを設計する。"
+    },
+    {
+      "id": "S4",
+      "category": "出力整合性",
+      "description": "ImpactResult 形式で出力する場合、changed_files フィールドには --changed-since で特定した「git差分ファイル一覧」が入るが、impact サブコマンドではユーザーが明示的に指定したファイルが入る。意味的な差異（ユーザー指定 vs git自動取得）がJSON出力で区別できない。",
+      "suggestion": "ImpactResult に source フィールド（'manual' | 'git_changed_since'）を追加するか、出力に注記を入れることを検討する。少なくとも human フォーマットではヘッダーに '--changed-since <ref>' を表示して出典を明示する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "UX改善",
+      "description": "期間文字列として 'HEAD~5' や 'main' などのgit refも受け付けると利便性が高い。現在の validate_commit_hash() はコミットハッシュのみ対応している。",
+      "suggestion": "git rev-parse で任意の ref を解決する関数を用意し、ブランチ名・タグ名・HEAD~N 等も受け付けるようにする。ただしスコープが広がるため Phase 2 以降の拡張として検討。"
+    },
+    {
+      "id": "N2",
+      "category": "コード整理",
+      "description": "impact サブコマンドの relation_type_to_string() は impact.rs 内のプライベート関数だが、--changed-since でも同じ変換が必要。出力層（output モジュール）に移動すると保守性が向上する。",
+      "suggestion": "relation_type_to_string() を output::mod.rs に pub(crate) で移動し、impact.rs と新しい changed-since ハンドラの両方から参照する。"
+    },
+    {
+      "id": "N3",
+      "category": "ドキュメント・ヘルプ",
+      "description": "search サブコマンドのヘルプ文字列が既に長い（12個以上のオプション）。--changed-since の追加でさらに長くなり、ユーザビリティが低下する。",
+      "suggestion": "将来的に search サブコマンドをサブコマンドグループ化（search query / search related / search changed 等）するリファクタリングを検討する。現時点では --changed-since のヘルプ文字列を簡潔にし、使用例を含める。"
+    }
+  ],
+  "summary": "Issue #91 の --changed-since オプション実装における影響範囲を分析した。主要リスクは3点: (1) aggregate_impact() が private 関数であり共用に可視性変更が必要、(2) CLI引数の conflicts_with 設定が多数の既存オプションと絡むため慎重な設計が必要、(3) 期間文字列のバリデーション未設計によるセキュリティリスク。既存テスト（cli_args.rs 31テスト、e2e_impact.rs 15テスト）は --changed-since に直接影響されないが、新オプションの排他制御テストの追加が必要。パフォーマンスは impact サブコマンドと同様の aggregate_impact() ロジックを共用することで、既存の INTERNAL_FETCH_LIMIT / MAX_INPUT_FILES 制限を活用可能。出力は ImpactResult + format_impact_results() をそのまま再利用できるが、出典の区別のための拡張を検討すべき。全体として、既存機能への副作用リスクは低く、主な作業は (a) aggregate_impact() の共用化、(b) CLI定義の追加、(c) git差分取得ロジックの新設、(d) テスト追加の4点に集約される。"
+}

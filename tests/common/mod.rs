@@ -105,3 +105,62 @@ pub fn run_clean(path: impl AsRef<std::path::Path>) {
         .assert()
         .success();
 }
+
+/// Initialize a git repo, create a file, commit, and return the commit hash.
+/// CI-safe: uses `-c user.name` / `-c user.email` to avoid requiring global config.
+pub fn git_init_with_commit(dir: &std::path::Path) -> String {
+    use std::process::Command;
+
+    // git init
+    Command::new("git")
+        .args(["init"])
+        .current_dir(dir)
+        .output()
+        .expect("git init");
+
+    // Create a file
+    let docs = dir.join("docs");
+    std::fs::create_dir_all(&docs).unwrap();
+    std::fs::write(
+        docs.join("a.md"),
+        "---\ntags: auth\n---\n# Page A\nSee [Page B](b.md)\n",
+    )
+    .unwrap();
+    std::fs::write(
+        docs.join("b.md"),
+        "---\ntags: auth\n---\n# Page B\nSee [Page A](a.md)\n",
+    )
+    .unwrap();
+
+    // git add + commit
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir)
+        .output()
+        .expect("git add");
+
+    let output = Command::new("git")
+        .args([
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@test.com",
+            "commit",
+            "-m",
+            "initial commit",
+        ])
+        .current_dir(dir)
+        .output()
+        .expect("git commit");
+    assert!(output.status.success(), "git commit failed");
+
+    // Get commit hash
+    let hash_output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir)
+        .output()
+        .expect("git rev-parse HEAD");
+    String::from_utf8_lossy(&hash_output.stdout)
+        .trim()
+        .to_string()
+}

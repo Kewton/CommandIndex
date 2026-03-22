@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性 - 排他制御の双方向性",
+      "description": "Issue の conflicts_with_all に changed_since を排他対象として列挙しているが、既存オプション（query, symbol, related, related_stdin, semantic, workspace 等）側の conflicts_with_all にも changed_since を追加する必要がある。現状の clap 定義では既存オプション側に changed_since が含まれていないため、双方向の排他制御が漏れる。",
+      "suggestion": "受け入れ基準または実装方針に「既存オプション（query, symbol, related, related_stdin, semantic, workspace）の conflicts_with_all にも changed_since を追加する」ことを明記する。"
+    },
+    {
+      "id": "M2",
+      "category": "整合性 - aggregate_impact の公開範囲変更の影響",
+      "description": "aggregate_impact() を pub(crate) 化して共用する方針だが、現在この関数は ImpactError を返す。--changed-since は search サブコマンドから呼ばれるため、SearchError への変換が必要。Issue にはこのエラー型変換の方針が記載されていない。ImpactError と SearchError は別の enum であり、From 実装も存在しない。",
+      "suggestion": "実装方針に「ImpactError から SearchError への変換（From<ImpactError> for SearchError の実装、または changed-since 専用のエラーハンドリング）」を追記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "技術リスク - git log --since の期間文字列バリデーション",
+      "description": "validate_commit_hash() で入力がコミットハッシュか期間文字列かを判定する方針だが、期間文字列自体のバリデーションが不十分。git log --since は不正な文字列でもエラーにならず空結果を返す場合がある（例: --since 'invalid garbage'）。ユーザーに誤入力を気づかせる手段がない。",
+      "suggestion": "git log の exit code チェックに加え、変更ファイルが0件の場合に「指定期間内の変更が見つかりません。期間文字列が正しいか確認してください」のような警告メッセージを出す旨を受け入れ基準に明記する。現在の「変更ファイルがない場合に適切なメッセージ」をより具体的にする。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性 - main.rs の分岐ロジック",
+      "description": "現在の main.rs の Search コマンドは (query, symbol, related, semantic) の4つの Option をパターンマッチで分岐している。--changed-since を追加すると5つ目の分岐パスが必要になるが、Issue にはこの分岐追加の詳細（changed_since 用の新しいマッチアーム）が記載されていない。related_stdin のように分岐前に処理する方式もあるが、どちらの方針か不明確。",
+      "suggestion": "実装方針に main.rs での分岐方式を明記する。推奨: related_stdin と同様に、パターンマッチの前に if let で分岐する方式。"
+    },
+    {
+      "id": "S3",
+      "category": "受け入れ基準 - コミットハッシュ形式の動作仕様不足",
+      "description": "コミットハッシュ指定時の動作が「対応する」としか書かれていない。具体的に git diff --name-only <hash> HEAD なのか、git log --oneline <hash>..HEAD --name-only なのか、あるいは git diff --name-only <hash>~1 <hash>（そのコミット単体の変更）なのかが不明。ユーザーの期待値と乖離する可能性がある。",
+      "suggestion": "コミットハッシュ指定時は「指定コミット以降（hash..HEAD）の変更ファイルを取得する」など、具体的な git コマンド相当の意味を受け入れ基準に明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "UX - limit オプションとの組み合わせ",
+      "description": "--changed-since に --limit を適用可能かどうかが明記されていない。ImpactResult 形式で出力するなら impact の --limit と同じ挙動になるはずだが、search サブコマンドの --limit のデフォルト値（config 依存）と impact の --limit のデフォルト値（20固定）が異なる可能性がある。",
+      "suggestion": "--changed-since 時の --limit のデフォルト値と適用範囲を実装方針に記載する。"
+    },
+    {
+      "id": "N2",
+      "category": "UX - ヘルプメッセージの例示",
+      "description": "CLI インターフェースに --since の書式例（'12 hours ago', 'yesterday', 'abc1234'）が記載されているが、--help で表示されるヘルプテキストにもこれらの例を含めるとユーザビリティが向上する。",
+      "suggestion": "clap の help 属性に書式例を含める旨を記載する。例: #[arg(long, help = \"Show files changed since (e.g. '12 hours ago', 'yesterday', or commit hash)\")]"
+    }
+  ],
+  "summary": "2回目レビューでは、1回目で見落とされた2つの整合性問題を発見した。(M1) 排他制御が単方向のみで、既存オプション側への changed_since 追加が漏れている点。(M2) aggregate_impact() を search サブコマンドから呼ぶ際の ImpactError→SearchError のエラー型変換が未定義である点。should_fix として、git --since の不正文字列に対する UX 改善、main.rs の分岐方式の明確化、コミットハッシュ指定時の具体的動作仕様の3点を指摘した。全体として Issue の方針は妥当であり、上記の明確化を行えば実装に進める状態にある。"
+}

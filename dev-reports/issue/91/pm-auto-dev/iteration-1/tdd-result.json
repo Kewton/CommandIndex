@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: src/cli/git.rs 新規作成 (GitError, validate_changed_since_input, get_changed_files)",
+    "Task 1.2: src/cli/impact.rs 修正 (aggregate_impact, MAX_INPUT_FILES を pub(crate) 化)",
+    "Task 1.3: src/cli/search.rs に From<ImpactError>, From<GitError> 実装追加",
+    "Task 1.4: src/main.rs 修正 (changed_since Option<String> 追加, conflicts_with_all, デストラクチャリング, if let 分岐)",
+    "Task 1.5: src/cli/search.rs に run_changed_since_search() 追加",
+    "Task 2.1: tests/cli_args.rs に排他テスト7件追加",
+    "Task 2.2: src/cli/git.rs に単体テスト10件追加",
+    "Task 2.3: tests/e2e_changed_since.rs 新規作成 (6件) + tests/common/mod.rs に git_init_with_commit ヘルパー追加"
+  ],
+  "files_changed": [
+    "src/cli/git.rs (新規)",
+    "src/cli/mod.rs (pub mod git 追加)",
+    "src/cli/impact.rs (aggregate_impact, MAX_INPUT_FILES を pub(crate) 化)",
+    "src/cli/search.rs (From<ImpactError>, From<GitError>, run_changed_since_search 追加)",
+    "src/main.rs (changed_since オプション追加, if let 分岐追加)",
+    "tests/cli_args.rs (排他テスト7件追加)",
+    "tests/e2e_changed_since.rs (新規, E2Eテスト6件)",
+    "tests/common/mod.rs (git_init_with_commit ヘルパー追加)"
+  ],
+  "tests_added": 23,
+  "tests_passed": 484,
+  "clippy_warnings": 0,
+  "issues": []
+}

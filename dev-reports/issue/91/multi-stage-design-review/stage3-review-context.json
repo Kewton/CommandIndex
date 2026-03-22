@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "モジュール間依存・重複",
+      "description": "設計方針書 4.3 の git.rs で validate_commit_hash(since) を呼び出しているが、この関数は src/cli/status/git_info.rs に pub fn として存在する。しかし設計書にはこの関数の import 元が明示されておらず、git.rs 内に同名関数を再実装するのか、git_info.rs から呼び出すのかが不明。再実装すると DRY 違反になり、git_info.rs から呼び出す場合は use crate::cli::status::git_info::validate_commit_hash が必要だが、それが設計書に記載されていない。",
+      "suggestion": "git.rs から crate::cli::status::git_info::validate_commit_hash を use して再利用する方針を明記する。あるいは validate_commit_hash を cli/mod.rs レベルの共通ユーティリティに移動する設計変更を検討する。"
+    },
+    {
+      "id": "M2",
+      "category": "エラー型変換の不整合",
+      "description": "設計方針書 4.5 の From<ImpactError> for SearchError で ImpactError::Stdin(e) => SearchError::Stdin(e) と変換しているが、run_changed_since_search() は stdin を使用しない（Git コマンド経由でファイルリストを取得する）。にもかかわらず ImpactError の全バリアントを SearchError にマッピングしているのは、aggregate_impact() が ImpactError を返すためだが、実際に run_changed_since_search() から Stdin エラーが発生することはない。これ自体は害がないが、aggregate_impact() のシグネチャが ImpactError を返す設計が適切かを確認すべき。",
+      "suggestion": "aggregate_impact() は実際には Stdin エラーを返さない（find_related のみ使用）。設計書で aggregate_impact() が返しうる ImpactError バリアントを明記し、From 実装で到達不能なバリアントにはコメントを付けるか、aggregate_impact() 専用のエラー型を分離することを検討する。ただし現時点では影響度は低く、コメント追加で十分。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "conflicts_with_all の網羅性",
+      "description": "設計方針書 4.1 の conflicts_with_all に 'related_stdin' が含まれているが、現在の main.rs の Search 分岐ロジック（L300）では related_stdin は if let で先行分岐されるため、clap レベルでの排他と実行時分岐の二重制御になる。これは安全側だが、逆に changed_since が if let で先行分岐される場合、clap の conflicts_with_all がなくても排他は保証される。設計の意図として clap レベルでの排他を明示的に行うのは正しいが、'workspace' が conflicts_with_all に含まれていない点は確認が必要。",
+      "suggestion": "changed_since と workspace の排他制御を確認する。workspace 検索は main.rs の Search 分岐で最初に if let で処理されるため、clap レベルの排他がなくても実行時は排他されるが、ユーザーが両方指定した場合のエラーメッセージが不親切になる。conflicts_with_all に 'workspace' を追加するか、設計書で workspace との関係を明記すべき。"
+    },
+    {
+      "id": "S2",
+      "category": "既存テストへの影響",
+      "description": "cli_args.rs の search_requires_query_or_symbol テスト（L102）は、引数なし search で 'Either' or 'required' を含むエラーを期待している。--changed-since 追加後、このエラーメッセージ（main.rs L358）に --changed-since を含めるべきかどうかが設計書に記載されていない。現状のメッセージは 'Either <QUERY>, --symbol <NAME>, --related <FILE>, --related-stdin, or --semantic <QUERY> is required' だが、--changed-since も有効な検索モードであるため、ここに追加しないとユーザーが --changed-since の存在に気づけない。",
+      "suggestion": "main.rs の None 分岐のエラーメッセージに --changed-since を追加する方針を設計書に明記する。具体的には 'Either <QUERY>, --symbol <NAME>, --related <FILE>, --related-stdin, --semantic <QUERY>, or --changed-since <SINCE> is required' に変更する。既存テスト search_requires_query_or_symbol は 'Either' or 'required' で検証しているため、テスト自体は変更不要。"
+    },
+    {
+      "id": "S3",
+      "category": "filter_existing_files の使い方の差異",
+      "description": "設計方針書 4.4 の run_changed_since_search() では filter_existing_files(&files) を呼んでいるが、この関数は stdin.rs の pub(crate) fn filter_existing_files(paths: &[String]) -> (Vec<String>, Vec<String>) で、タプルの第2要素は warning 文字列リスト。設計書のコードでは warnings を eprintln で出力する処理が省略されている。impact.rs の run_impact()（L114-117）では warnings を明示的に出力している。この差異は意図的かどうか不明。",
+      "suggestion": "run_changed_since_search() でも impact.rs と同様に warnings を eprintln で出力する処理を追加する。設計書の疑似コードを修正する。"
+    },
+    {
+      "id": "S4",
+      "category": "Git コマンドの引数安全性",
+      "description": "設計方針書 4.3 の get_changed_files() で、コミットハッシュモード時に format!(\"{}..HEAD\", since) を git log の引数として渡している。since がバリデーション済み（validate_changed_since_input で先頭 '-' 拒否、validate_commit_hash で hex 文字のみ許可）であるため安全だが、vec! のリテラルとして &format!(\"{}..HEAD\", since) を直接渡すと一時変数の寿命問題（borrowed value does not live long enough）でコンパイルエラーになる可能性がある。",
+      "suggestion": "設計書の疑似コードでは vec![\"log\", ...] 内で &format!() を使っているが、Rust の借用規則上、format! で生成した String の参照を vec に入れるには事前に let で束縛する必要がある。実装時に let range = format!(\"{}..HEAD\", since); let args = vec![\"log\", \"--name-only\", \"--format=\", &range]; のように修正する。設計書は疑似コードとして許容範囲だが、実装時の注意点として記載があると良い。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "テストカバレッジ",
+      "description": "設計方針書のテスト設計（Section 8）では E2E テストとして期間文字列・コミットハッシュ・各出力形式をカバーしているが、aggregate_impact() を pub(crate) 化したことによる impact サブコマンドの既存テスト（e2e_impact.rs）への回帰テストが明示されていない。pub(crate) 化は可視性変更のみで機能変更ではないため影響は極めて低いが、CI での既存テスト全パスを確認する手順を明記すると安心。",
+      "suggestion": "設計書の品質基準（Section 9）に「既存の e2e_impact.rs テスト全パスを確認」を明記する。"
+    },
+    {
+      "id": "N2",
+      "category": "git_info.rs との責務重複",
+      "description": "git_info.rs には run_git() ヘルパー（private）が存在し、新規 git.rs でも Command::new(\"git\") パターンを使用する。設計書 Section 6 判断3 で「重複は許容範囲」と判断しているが、将来 Git 関連機能が増えた場合に共通化の機会を逃す。",
+      "suggestion": "現時点では許容範囲だが、将来の Git 機能追加時（--changed-until 等）に cli/git_common.rs への共通化を検討する旨を設計書に TODO として追記する。"
+    },
+    {
+      "id": "N3",
+      "category": "既存 search モードへの影響確認",
+      "description": "既存の search サブコマンドの 4 モード（query/symbol/related/semantic）および related-stdin モードは、main.rs の分岐構造上 changed_since の if let 分岐が追加されても影響を受けない。changed_since が Some の場合は先行分岐で処理されるため、else 以降の既存ロジックには到達しない。この点は設計書 Section 7 で「影響なし」と記載されており、コードベースの確認でも問題ない。",
+      "suggestion": "特に対応不要。設計書の記載どおり影響なし。"
+    }
+  ],
+  "summary": "影響分析レビューの結果、致命的な問題は見つからなかった。must_fix 2件はいずれも設計書の記載不足に関するもので、実装品質に直結する。M1（validate_commit_hash の再利用方針）は DRY 原則に関わる重要な判断であり、git_info.rs からの import を明示すべき。M2（From<ImpactError> の到達不能バリアント）は軽微だがコードの明瞭性に影響する。should_fix 4件のうち S2（エラーメッセージへの --changed-since 追加）と S3（warnings 出力の省略）はユーザー体験に直接影響する。既存の impact サブコマンド（e2e_impact.rs で検証済み）への影響はない。既存の search 4モードへの影響もない（if let 先行分岐により分離）。cli/mod.rs への pub mod git 追加は他モジュールへの影響なし（新規モジュール追加のみ）。全体として設計方針は堅実であり、上記の指摘を反映すれば安全に実装可能。"
+}

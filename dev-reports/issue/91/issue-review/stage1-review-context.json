@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "CLI設計・整合性",
+      "description": "Issueでは `commandindex search --changed-since` と search サブコマンドのオプションとして提案されているが、実際の search サブコマンドは既に query/symbol/related/related_stdin/semantic の5つの排他的モードを持ち、clap の conflicts_with が複雑に絡み合っている。--changed-since を search のオプションとして追加すると、既存の conflicts_with 定義と矛盾する可能性が高く、さらに main.rs の match 分岐も複雑化する。",
+      "suggestion": "impact サブコマンドと同様に、独立したサブコマンド `commandindex changed-since <period>` として実装するか、あるいは search のサブオプションとするなら conflicts_with の設計を明示的にIssueに記載すべき。impact が独立サブコマンドとして実装された前例があり、同じパターンの方が整合性が高い。"
+    },
+    {
+      "id": "M2",
+      "category": "技術的正確性",
+      "description": "Issueの実装方針で `git log --since=<期間> --name-only --format=''` を使用するとあるが、コミットハッシュ指定時は `git log abc1234..HEAD --name-only --format=''` となる。しかし、期間指定とコミットハッシュ指定では git コマンドの引数構造が全く異なるため、入力がどちらの形式かを判定するロジックが必要。この判定ロジックについてIssueに記載がない。",
+      "suggestion": "git_info.rs に既存の validate_commit_hash() 関数があるため、これを利用してコミットハッシュか期間文字列かを判定する方針を明記すべき。具体的には: (1) validate_commit_hash() が true なら commit range モード、(2) false なら --since モードとする。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "受け入れ基準",
+      "description": "受け入れ基準に「Git が利用不可能な場合のエラーハンドリング」が含まれていない。git_info.rs の run_git() は Git コマンド失敗時に None を返す設計だが、--changed-since は Git 必須機能のため、Git 不在時に明確なエラーメッセージを出す必要がある。",
+      "suggestion": "受け入れ基準に「Git リポジトリ外や Git 未インストール環境で実行した場合に、適切なエラーメッセージが表示される」を追加する。"
+    },
+    {
+      "id": "S2",
+      "category": "実装方針・出力形式",
+      "description": "Issueでは「各ファイルに対して --related 検索を実行（impact サブコマンド #90 の内部ロジックを共用）」とあるが、出力形式が impact の ImpactResult 形式なのか、related の RelatedSearchResult 形式なのかが不明確。impact は changed_files/impact/overlap/summary のリッチな構造を持ち、related は単純なファイルリストを返す。",
+      "suggestion": "impact の aggregate_impact() ロジックを共用し、ImpactResult 形式（overlap/summary 付き）で出力するのが自然。Issueにこの出力構造を明記すべき。"
+    },
+    {
+      "id": "S3",
+      "category": "受け入れ基準",
+      "description": "git log --since は Git の内部パーサーに依存しており、不正な期間文字列（例: 'invalid garbage'）を渡した場合の挙動がIssueに記載されていない。Git は不正な --since 値でも警告なしに全コミットを返す場合がある。",
+      "suggestion": "受け入れ基準に「不正な期間文字列を指定した場合のエラーハンドリング（git log の exit code チェックまたは結果の妥当性検証）」を追加する。"
+    },
+    {
+      "id": "S4",
+      "category": "セキュリティ",
+      "description": "ユーザー入力をそのまま git コマンドの引数に渡す場合、コマンドインジェクションのリスクがある。git_info.rs の run_git() は Command::new('git').args(args) を使っており、シェル経由ではないため直接的なインジェクションは防がれるが、Issueにこのセキュリティ考慮が明記されていない。",
+      "suggestion": "stdin.rs の validate_file_path() と同様に、--changed-since の入力値に対するバリデーション（最大長制限、制御文字拒否など）の方針をIssueに追記すべき。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "機能拡張性",
+      "description": "Issueでは --changed-since のみだが、将来的に --changed-until（範囲指定）のニーズが想定される。現時点でこれを実装する必要はないが、内部設計時に拡張可能性を考慮すると良い。",
+      "suggestion": "内部関数のシグネチャを `get_changed_files(since: &str, until: Option<&str>)` のように設計しておくと将来の拡張が容易。"
+    },
+    {
+      "id": "N2",
+      "category": "ユーザビリティ",
+      "description": "変更ファイルが大量にある場合（例: 数百ファイル）のパフォーマンスについてIssueに記載がない。impact サブコマンドは MAX_INPUT_FILES = 500 の制限を持っている。",
+      "suggestion": "--changed-since でも同様の上限（例: 500ファイル）を設け、超過時は警告メッセージを表示する方針を記載するとよい。"
+    },
+    {
+      "id": "N3",
+      "category": "テスト戦略",
+      "description": "受け入れ基準に cargo test が含まれているが、Git 依存の機能のため統合テストでの Git リポジトリセットアップが必要。テスト戦略の具体的な記載がない。",
+      "suggestion": "テスト方針として、(1) git コマンド実行部分のユニットテスト（モック or 実 Git リポジトリ）、(2) validate_commit_hash を利用した入力判定テスト、(3) E2E テスト（tempdir に Git リポジトリを作成）の3層を想定すると網羅的になる。"
+    }
+  ],
+  "summary": "Issue #91 は技術的に実現可能で、依存する #90 impact のロジックや既存の git_info.rs インフラを活用できる。主要な指摘は2点: (1) CLI設計として search のオプションにするか独立サブコマンドにするかの判断が未記載であり、既存の search サブコマンドの複雑な排他制御（5つの検索モード）との整合性を考慮すると独立サブコマンドの方が適切、(2) 期間指定とコミットハッシュ指定の判定ロジックが未記載だが、既存の validate_commit_hash() を活用可能。受け入れ基準には Git 不在時のエラーハンドリング、不正入力のバリデーション、出力形式の明確化を追加すべき。全体として実装規模「中」は妥当。"
+}

@@ -1,0 +1,90 @@
+{
+  "stage": 5,
+  "type": "design-principles",
+  "reviewer": "Claude Opus 4.6",
+  "review_perspectives": [
+    "SOLID/KISS/YAGNI/DRY準拠",
+    "API設計の妥当性",
+    "エラーハンドリング方針の網羅性",
+    "1回目で見落とされた問題"
+  ],
+  "must_fix": [
+    {
+      "id": "S5-M1",
+      "category": "API不整合",
+      "title": "run_changed_since_search() 内の index_dir() 呼び出しが実APIと不一致",
+      "description": "設計書 4.4 では `crate::indexer::index_dir()?` と引数なしで呼んでいるが、実際の API は `index_dir(base_path: &Path) -> PathBuf` で Path 引数が必須。さらに戻り値は PathBuf であり Result ではないため `?` は使えない。同様に `base_path.join(\"symbols.db\")` としているが、実際には `crate::indexer::symbol_db_path(base_path)` という専用関数がある。impact.rs の run_impact() では `index_dir(Path::new(\".\"))` / `symbol_db_path(Path::new(\".\"))` のパターンを使っており、設計書もこれに合わせるべき。",
+      "location": "設計書 4.4 セクション（ステップ4: インデックス・DB確認）",
+      "fix": "```rust\nlet base_path = Path::new(\".\");\nlet tantivy_dir = crate::indexer::index_dir(base_path);\nif !tantivy_dir.exists() {\n    return Err(SearchError::IndexNotFound);\n}\nlet db_path = crate::indexer::symbol_db_path(base_path);\nif !db_path.exists() {\n    return Err(SearchError::SymbolDbNotFound);\n}\nlet reader = IndexReaderWrapper::open(&tantivy_dir)?;\nlet store = SymbolStore::open(&db_path)?;\n``` impact.rs の run_impact() と完全に同じパターンにする。"
+    },
+    {
+      "id": "S5-M2",
+      "category": "DRY違反",
+      "title": "run_changed_since_search() と run_impact() でインデックスアクセスパターンが微妙に異なる",
+      "description": "設計書 4.4 の run_changed_since_search() では `map_err(|_| SearchError::IndexNotFound)` パターンで open 失敗をハンドリングしているが、実際の impact.rs の run_impact() では先に exists() チェックしてから open() し、open() の失敗は `?`（From impl経由）で変換している。2つの異なるエラーハンドリングパターンが混在すると保守性が低下する。impact.rs のパターン（exists() チェック + From impl変換）に統一すべき。",
+      "location": "設計書 4.4 セクション",
+      "fix": "impact.rs と同じ exists() 先行チェック + `?` 演算子パターンに統一する。From<ReaderError> for SearchError と From<SymbolStoreError> for SearchError は既に実装済みなので、`?` で自然に変換できる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S5-S1",
+      "category": "KISS違反",
+      "title": "validate_commit_hash() を2回呼び出す冗長な分岐",
+      "description": "設計書 4.3 の get_changed_files() 内で validate_commit_hash(since) を2回呼んでいる（1回目: since_arg 生成時、2回目: Command::new の args 組み立て時）。is_commit_hash のローカル変数に結果を保持すれば1回で済み、コードが簡潔になる。",
+      "location": "設計書 4.3 セクション",
+      "fix": "```rust\nlet is_commit_hash = validate_commit_hash(since);\nlet since_arg = if is_commit_hash {\n    format!(\"{}..HEAD\", since)\n} else {\n    format!(\"--since={}\", since)\n};\nlet args = if is_commit_hash {\n    vec![\"log\", \"--name-only\", \"--format=\", &since_arg]\n} else {\n    vec![\"log\", &since_arg, \"--name-only\", \"--format=\"]\n};\n```"
+    },
+    {
+      "id": "S5-S2",
+      "category": "エラーハンドリング網羅性",
+      "title": "GitError に NotARepository バリアントがあるが、生成される箇所がない",
+      "description": "GitError::NotARepository が定義されているが、get_changed_files() 内のどのコードパスでもこのバリアントを生成していない。git コマンドが non-zero exit した場合は全て CommandFailed になる。YAGNI の観点から不要なバリアントは削除するか、実際に git init 状態を検出して使うべき。",
+      "location": "設計書 4.3 GitError 定義",
+      "fix": "NotARepository を削除し、CommandFailed に統一する。git がリポジトリ外で実行された場合も CommandFailed で十分。From<GitError> for SearchError のマッピングからも削除する。"
+    },
+    {
+      "id": "S5-S3",
+      "category": "API設計",
+      "title": "changed_files の 500 件ハードコード上限がマジックナンバー",
+      "description": "設計書 4.4 で `changed_files.len() > 500` としているが、impact.rs では `const MAX_INPUT_FILES: usize = 500;` として定数化している。同じ意味の値が異なる場所で別の表現（定数 vs リテラル）になるのは保守性が低い。impact.rs の MAX_INPUT_FILES を共用するか、git.rs 側にも定数を定義すべき。",
+      "location": "設計書 4.4 セクション（ステップ2）",
+      "fix": "impact.rs の MAX_INPUT_FILES を pub(crate) にして共用するか、cli/git.rs に独自の定数を定義する。"
+    },
+    {
+      "id": "S5-S4",
+      "category": "エラーハンドリング網羅性",
+      "title": "git log --since に不正な日付文字列を渡した場合のエラー伝播が不明確",
+      "description": "validate_changed_since_input() は文字長・制御文字・先頭ハイフンのみ検証する。'invalid date string' のような意味的に不正な値は git log がエラーを返すが、stderr が null() で無視されるため、ユーザーにはただ 'git command failed' としか表示されない。git の --since に不正値を渡した場合の挙動（exit code 128 etc.）を考慮し、もう少し有用なエラーメッセージを検討すべき。",
+      "location": "設計書 4.3 + 4.5",
+      "fix": "GitError::CommandFailed を SearchError::InvalidArgument(\"git command failed (invalid --changed-since value?)\".into()) にマッピングし、ユーザーに原因のヒントを与える。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "S5-N1",
+      "category": "SOLID (SRP)",
+      "title": "run_changed_since_search() がファイル取得・バリデーション・インデックスアクセス・出力を全て担っている",
+      "description": "1つの関数が5つのステップ（Git取得 → 上限チェック → 存在フィルタ → インデックス検索 → 出力）を全て行っている。現時点では中程度の関数サイズなので許容範囲だが、将来の拡張（例: --since と --until の範囲指定、ブランチ指定等）を考えると、ステップを小関数に分離する余地がある。ただし現時点ではYAGNIの観点から現状維持で問題ない。",
+      "location": "設計書 4.4",
+      "fix": "将来の拡張時にリファクタリングを検討。現時点では issue として記録するのみ。"
+    },
+    {
+      "id": "S5-N2",
+      "category": "DRY",
+      "title": "filter_existing_files() の呼び出し後の warning 出力パターンが3箇所で重複",
+      "description": "impact.rs の run_impact()、search.rs の run_related_search_from_stdin()、および今回の run_changed_since_search() で filter_existing_files() + for w in &warnings { eprintln! } のパターンが繰り返されている。小さい重複だが、将来的にはフィルタ結果のログ出力を filter_existing_files() 自体に統合するか、ヘルパー関数化を検討できる。",
+      "location": "設計書 4.4 / 既存コード",
+      "fix": "別 Issue でリファクタリング対象として記録。現 Issue のスコープ外。"
+    },
+    {
+      "id": "S5-N3",
+      "category": "テスト設計",
+      "title": "E2E テストで --limit オプションとの組み合わせテストが未記載",
+      "description": "テスト設計方針（セクション8）に --limit との組み合わせテストが含まれていない。--changed-since で大量ファイルが返る場合の limit 動作確認は、回帰テストとして有用。",
+      "location": "設計書 セクション8",
+      "fix": "E2E テストケースに --limit 組み合わせを追加する。"
+    }
+  ],
+  "summary": "設計方針書は1回目レビュー（4ステージ）の指摘を適切に反映しており、全体的に高品質。ただし2点のmust_fixが残存: (1) index_dir() / symbol_db_path() の呼び出しシグネチャが実APIと不一致（引数なし・Result型として?使用しているが、実際はPath引数必須・PathBuf直接返却）、(2) インデックスアクセスのエラーハンドリングパターンがimpact.rsと不統一。should_fixとして、validate_commit_hash()の2重呼び出し、未使用のNotARepositoryバリアント、マジックナンバー500、不正日付入力時のエラーメッセージ改善を指摘。設計原則（SOLID/KISS/YAGNI/DRY）への準拠は概ね良好で、既存コードの再利用（aggregate_impact、filter_existing_files、validate_commit_hash）が適切に計画されている。"
+}
