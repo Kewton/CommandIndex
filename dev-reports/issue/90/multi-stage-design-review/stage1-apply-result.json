@@ -1,0 +1,33 @@
+{
+  "stage": "1-4",
+  "applied_items": [
+    "Stage1-M1: flat→nested data model change clarified as full rewrite",
+    "Stage1-M2: overlap detection algorithm specified in detail",
+    "Stage1-M3: ImpactSummary with derive annotations",
+    "Stage1-M4: --limit per-file semantics explicitly documented",
+    "Stage1-S1: DRY noted but deferred to implementation",
+    "Stage2-M1: field name mapping table added",
+    "Stage2-M2: aggregate_impact pseudocode added",
+    "Stage2-M3: relations format decision documented",
+    "Stage2-S3: Serialize derive strategy specified",
+    "Stage3-M1: E2E test full rewrite noted",
+    "Stage3-M2: Unit test full update noted",
+    "Stage3-M3: aggregate_impact marked as full rewrite",
+    "Stage3-M4: tests/cli_args.rs added to impact analysis",
+    "Stage4-M1: UTF-8 truncation bug fix added",
+    "Stage4-S1: control char sanitization for all output formats",
+    "Stage4-S4: MAX_INPUT_FILES for argument input"
+  ],
+  "changes": [
+    "フィールド名マッピングテーブル追加",
+    "aggregate_impact 擬似コード追加",
+    "全新型に derive(Debug, Clone, Serialize) 明記",
+    "relations を snake_case 文字列に決定",
+    "--limit 意味変更を破壊的変更として明記",
+    "影響範囲にtests/cli_args.rs、src/cli/stdin.rs追加",
+    "セキュリティ: UTF-8境界、引数ファイル数制限、全出力形式で制御文字除去",
+    "overlap テストデータ仕様追加",
+    "Serialize derive 活用による手動JSON排除方針",
+    "human出力を全面刷新として記載"
+  ]
+}

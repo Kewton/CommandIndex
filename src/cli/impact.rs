@@ -8,7 +8,9 @@ use crate::cli::stdin::{
 };
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
-use crate::output::{self, ImpactFileResult, ImpactResult, OutputError, OutputFormat};
+use crate::output::{
+    self, ImpactPerFile, ImpactRelatedFile, ImpactResult, ImpactSummary, OutputError, OutputFormat,
+};
 use crate::search::related::{RelatedSearchEngine, RelatedSearchError};
 
 const MAX_INPUT_FILES: usize = 500;
@@ -145,6 +147,12 @@ pub fn run_impact(
 
 /// 引数からのファイルリストをバリデーション + 正規化
 fn validate_and_normalize(files: &[String]) -> Result<Vec<String>, ImpactError> {
+    if files.len() > MAX_INPUT_FILES {
+        return Err(ImpactError::InvalidArgument(format!(
+            "Too many input files ({}), maximum is {MAX_INPUT_FILES}",
+            files.len()
+        )));
+    }
     let mut result = Vec::new();
     let mut seen = HashSet::new();
     for f in files {
@@ -162,76 +170,89 @@ fn validate_and_normalize(files: &[String]) -> Result<Vec<String>, ImpactError> 
     Ok(result)
 }
 
-/// 複数ファイルの関連結果を集約
+/// 内部検索の取得上限（per-file）
+const INTERNAL_FETCH_LIMIT: usize = 1000;
+
+/// 複数ファイルの関連結果を集約（Issue #90 仕様準拠）
 fn aggregate_impact(
     engine: &RelatedSearchEngine,
     files: &[String],
     limit: usize,
 ) -> Result<ImpactResult, ImpactError> {
-    let mut scores: HashMap<String, (f32, HashSet<String>, Vec<String>)> = HashMap::new();
-    // key: file_path, value: (max_score, relation_types, impacted_by)
+    let input_set: HashSet<&str> = files.iter().map(|f| f.as_str()).collect();
+    let mut per_file_results: Vec<ImpactPerFile> = Vec::new();
+    let mut overlap_map: HashMap<String, usize> = HashMap::new();
+    let mut all_impacted: HashSet<String> = HashSet::new();
 
     for file in files {
-        match engine.find_related(file, 1000) {
+        match engine.find_related(file, INTERNAL_FETCH_LIMIT) {
             Ok(results) => {
-                for r in results {
-                    let entry = scores
-                        .entry(r.file_path.clone())
-                        .or_insert_with(|| (0.0, HashSet::new(), Vec::new()));
-                    // 最大スコア採用
-                    if r.score > entry.0 {
-                        entry.0 = r.score;
-                    }
-                    // relation_types union
-                    for rt in &r.relation_types {
-                        entry.1.insert(relation_type_to_string(rt));
-                    }
-                    // impacted_by 追加
-                    if !entry.2.contains(file) {
-                        entry.2.push(file.clone());
-                    }
+                // 入力ファイルを除外
+                let filtered: Vec<_> = results
+                    .into_iter()
+                    .filter(|r| !input_set.contains(r.file_path.as_str()))
+                    .collect();
+
+                // overlap カウント + ユニーク集計（limit 前）
+                for r in &filtered {
+                    *overlap_map.entry(r.file_path.clone()).or_insert(0) += 1;
+                    all_impacted.insert(r.file_path.clone());
                 }
+
+                // limit 適用して ImpactPerFile 構築
+                let related: Vec<ImpactRelatedFile> = filtered
+                    .iter()
+                    .take(limit)
+                    .map(|r| {
+                        let relations: Vec<String> = r
+                            .relation_types
+                            .iter()
+                            .map(relation_type_to_string)
+                            .collect();
+                        ImpactRelatedFile {
+                            path: r.file_path.clone(),
+                            score: r.score,
+                            relations,
+                        }
+                    })
+                    .collect();
+
+                per_file_results.push(ImpactPerFile {
+                    file: file.clone(),
+                    related,
+                });
             }
             Err(RelatedSearchError::FileNotFound(_))
             | Err(RelatedSearchError::FileNotIndexed(_)) => {
-                // スキップ（warningは上で出力済み）
+                eprintln!("Warning: skipping {file} (not found or not indexed)");
+                per_file_results.push(ImpactPerFile {
+                    file: file.clone(),
+                    related: vec![],
+                });
             }
             Err(e) => return Err(ImpactError::RelatedSearch(e)),
         }
     }
 
-    // 入力ファイル自体を除外
-    for file in files {
-        scores.remove(file);
-    }
-
-    // スコア降順ソート & トリム
-    let mut impacted: Vec<ImpactFileResult> = scores
+    // overlap: 2つ以上の入力ファイルから参照されるファイル
+    let mut overlap: Vec<String> = overlap_map
         .into_iter()
-        .map(|(path, (score, types, by))| ImpactFileResult {
-            file_path: path,
-            score,
-            relation_types: {
-                let mut v: Vec<String> = types.into_iter().collect();
-                v.sort();
-                v
-            },
-            impacted_by: by,
-        })
+        .filter(|(_, count)| *count >= 2)
+        .map(|(path, _)| path)
         .collect();
-    impacted.sort_by(|a, b| {
-        b.score
-            .partial_cmp(&a.score)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let total_impacted = impacted.len().min(limit);
-    impacted.truncate(limit);
+    overlap.sort();
+
+    let overlap_count = overlap.len();
 
     Ok(ImpactResult {
-        input_files: files.to_vec(),
-        impacted_files: impacted,
-        total_input_files: files.len(),
-        total_impacted_files: total_impacted,
+        changed_files: files.to_vec(),
+        impact: per_file_results,
+        overlap: overlap.clone(),
+        summary: ImpactSummary {
+            changed: files.len(),
+            total_impacted: all_impacted.len(),
+            overlap_count,
+        },
     })
 }
 

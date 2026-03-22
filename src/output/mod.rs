@@ -221,22 +221,46 @@ pub(crate) fn strip_control_chars(s: &str) -> String {
         .collect()
 }
 
-/// impact サブコマンドの結果
+/// impact サブコマンドの結果（Issue #90 仕様準拠）
 #[derive(Debug, Clone, Serialize)]
 pub struct ImpactResult {
-    pub input_files: Vec<String>,
-    pub impacted_files: Vec<ImpactFileResult>,
-    pub total_input_files: usize,
-    pub total_impacted_files: usize,
+    /// 入力ファイル一覧（changed_files）
+    pub changed_files: Vec<String>,
+    /// ファイルごとの影響分析結果（impact[]）
+    pub impact: Vec<ImpactPerFile>,
+    /// 複数入力ファイルから共通して影響を受けるファイル一覧
+    pub overlap: Vec<String>,
+    /// 統計サマリー
+    pub summary: ImpactSummary,
 }
 
-/// impact の個別ファイル結果
+/// 入力ファイルごとの関連ファイル一覧
 #[derive(Debug, Clone, Serialize)]
-pub struct ImpactFileResult {
-    pub file_path: String,
+pub struct ImpactPerFile {
+    /// 入力ファイルパス
+    pub file: String,
+    /// 関連ファイル一覧（スコア降順）
+    pub related: Vec<ImpactRelatedFile>,
+}
+
+/// 関連ファイル情報
+#[derive(Debug, Clone, Serialize)]
+pub struct ImpactRelatedFile {
+    pub path: String,
     pub score: f32,
-    pub relation_types: Vec<String>,
-    pub impacted_by: Vec<String>,
+    /// snake_case 文字列（"markdown_link", "import_dependency" 等）
+    pub relations: Vec<String>,
+}
+
+/// 統計サマリー
+#[derive(Debug, Clone, Serialize)]
+pub struct ImpactSummary {
+    /// 入力ファイル数
+    pub changed: usize,
+    /// ユニーク影響ファイル総数（limit 前基準）
+    pub total_impacted: usize,
+    /// overlap 件数
+    pub overlap_count: usize,
 }
 
 /// impact 結果を指定フォーマットで出力する

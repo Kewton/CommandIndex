@@ -31,11 +31,9 @@ impl std::fmt::Display for StdinError {
                 write!(f, "too many paths ({count}), maximum is {max}")
             }
             Self::InvalidPath { path, reason } => {
-                write!(
-                    f,
-                    "invalid path '{}': {reason}",
-                    &path[..path.len().min(100)]
-                )
+                // char 境界安全な truncation（UTF-8 マルチバイト対策）
+                let truncated: String = path.chars().take(100).collect();
+                write!(f, "invalid path '{truncated}': {reason}")
             }
         }
     }

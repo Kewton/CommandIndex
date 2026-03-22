@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "description": "summary.total_impacted と overlap を limit 前基準にしたことで、現行の find_related(path, limit) API では仕様をそのまま満たせない",
+      "location": "src/cli/impact.rs:166, src/search/related.rs:79",
+      "reason": "現行 impact は各入力に対して find_related(file, 1000) を呼び、その結果だけで集約。1000件を超える関連結果を取りこぼし、統計値や overlap が不正確になる可能性。ただし実用上1000件超の related は極めて稀なため、現行の limit=1000 で十分カバーできる。"
+    },
+    {
+      "id": "M2",
+      "description": "テスト影響範囲が E2E だけでは不足しており、既存の出力フォーマット単体テストも全面更新が必要",
+      "location": "tests/output_format.rs:306, tests/e2e_impact.rs:37, src/output/mod.rs:224",
+      "reason": "現行テストは input_files / impacted_files / file_path / impacted_by 前提。新仕様の changed_files / impact[].related[] / overlap / summary に変わると unit test と E2E の両方が壊れる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "description": "パフォーマンス影響: overlap と summary を limit 前全集約で出すため、大規模 diff 利用時の性能劣化を想定すべき",
+      "location": "src/cli/impact.rs:172",
+      "reason": "入力上限 500 件 × 関連候補多数のケースでは CPU・メモリ負荷が増加。既存コマンドには直接影響しない。"
+    },
+    {
+      "id": "S2",
+      "description": "影響範囲は impact 追加だけでなく、help・出力モデル・path/human 表示まで含む",
+      "location": "src/main.rs:163, src/output/json.rs:110, src/output/human.rs:140, src/output/path.rs:68",
+      "reason": "ImpactResult のデータモデル変更は json/human/path すべての formatter に波及。CLI help にパイプ例を追加する要件もある。"
+    },
+    {
+      "id": "S3",
+      "description": "パス検証ロジックの二重管理は依存関係上の保守リスクとして残る",
+      "location": "src/cli/mod.rs:14, src/cli/stdin.rs:96",
+      "reason": "validate_file_paths と validate_file_path が並存。将来のバグ要因。"
+    },
+    {
+      "id": "S4",
+      "description": "CLI help の変更に伴い、既存の help テストも更新対象",
+      "location": "tests/cli_args.rs:445",
+      "reason": "既存 impact_help_shows_usage は impact/format/limit しか見ていない。パイプ例追加を担保できない。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "description": "外部依存関係の追加は不要であることを確認",
+      "location": "Cargo.toml",
+      "reason": "既存の RelatedSearchEngine、stdin 共通処理、出力モジュールの再構成で完結する。"
+    },
+    {
+      "id": "N2",
+      "description": "path 出力の順序安定性までテストするとCI揺れ防止に有効",
+      "location": "src/output/path.rs:68, tests/output_format.rs:367",
+      "reason": "同点時の tie-break まで固定すると snapshot 的なテストが安定する。"
+    }
+  ],
+  "summary": "既存機能への直接影響は低く、変更は impact 系とその出力層に閉じている。ただし summary と overlap を limit 前全集約で返す要件になったため、性能影響と内部依存の重さは前回より増している。テスト影響は E2E だけでなく、tests/output_format.rs の単体テストと tests/cli_args.rs の help テストまで含めて更新対象。外部依存追加は不要。"
+}

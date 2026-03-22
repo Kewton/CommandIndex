@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "description": "JSON output format does not match the Issue spec - missing 'changed_files', 'impact', 'overlap', and 'summary' fields",
+      "location": "src/output/json.rs:110-130 and src/output/mod.rs:224-240",
+      "reason": "The Issue specifies the JSON output should have: changed_files, impact (with file+related), overlap, summary (with changed/total_impacted/overlap_count). The implementation instead outputs: input_files, impacted_files (with file_path/score/relation_types/impacted_by), total_input_files, total_impacted_files. Key differences: (1) No 'overlap' array. (2) No 'summary' object with changed/total_impacted/overlap_count. (3) Field naming differs. (4) The 'impact' array in the spec uses 'related' sub-arrays per file, but the implementation flattens/aggregates into a single list."
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "description": "No overlap detection implemented",
+      "location": "src/cli/impact.rs:166-236",
+      "reason": "The Issue requires 'overlap（共通影響ファイル）が検出される'. The aggregate_impact function tracks impacted_by but does not produce an explicit overlap list."
+    },
+    {
+      "id": "S2",
+      "description": "No 'summary' object in output",
+      "location": "src/output/json.rs:110-130",
+      "reason": "The Issue spec explicitly shows a summary object with changed/total_impacted/overlap_count keys."
+    },
+    {
+      "id": "S3",
+      "description": "E2E test for 'impact_excludes_input_files_from_results' checks wrong JSON field name",
+      "location": "tests/e2e_impact.rs:225-234",
+      "reason": "The test filters on f[\"path\"] but the JSON output uses f[\"file_path\"]. This means the test assertion is vacuously true."
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "description": "No E2E test verifying overlap detection",
+      "location": "tests/e2e_impact.rs",
+      "reason": "Once overlap is implemented, a test should verify that when two input files share a common impacted file, it appears in the overlap array."
+    },
+    {
+      "id": "N2",
+      "description": "No E2E test for empty stdin (terminal detection)",
+      "location": "tests/e2e_impact.rs",
+      "reason": "No test verifying the error message when stdin is a terminal and no file arguments are provided."
+    },
+    {
+      "id": "N3",
+      "description": "Human output does not show overlap information",
+      "location": "src/output/human.rs:140-180",
+      "reason": "If overlap detection is added, the human output should also highlight overlapping files."
+    },
+    {
+      "id": "N4",
+      "description": "CLI help could mention git diff pipe pattern for discoverability",
+      "location": "src/main.rs:163-176",
+      "reason": "The Issue title mentions 'git diff ベース' but the CLI help does not mention this usage pattern."
+    }
+  ],
+  "summary": "Core impact functionality is well-implemented but JSON output structure does not match the Issue spec. Missing overlap array and summary object. E2E test has a field name bug."
+}

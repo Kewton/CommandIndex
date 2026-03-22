@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "description": "--limit の適用単位が Issue 上で未定義",
+      "location": "Issue: CLI インターフェース / 受け入れ基準 / 実装方針, 参照実装 src/cli/impact.rs:166",
+      "reason": "新しい JSON 仕様は impact[].related[] というファイル単位のネスト構造だが、--limit 5 が『入力ファイルごとの related 件数上限』なのか『全体で返すユニーク impacted file 件数上限』なのかが読めない。現行実装はフラット集計後に全体を truncate する設計なので、この点を明記しないと実装・テスト・summary 集計の解釈が割れる。"
+    },
+    {
+      "id": "M2",
+      "description": "summary と overlap が --limit 前基準か後基準か未定義",
+      "location": "Issue: 出力フォーマット（JSON）/ 受け入れ基準, 参照実装 src/cli/impact.rs:222",
+      "reason": "Issue では summary.total_impacted を『影響ファイル総数』と書いているが、現行実装には limit 適用後件数を返す流れがある。overlap も limit 後の表示対象だけから算出するのか、集約全体から算出するのかで意味が変わる。ここが曖昧だと受け入れ基準として検証不能。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "description": "入力ファイル自身を impact / overlap から除外することを受け入れ基準に明記した方がよい",
+      "location": "Issue: 受け入れ基準, 参照実装 src/cli/impact.rs:205, 既存テスト tests/e2e_impact.rs:216",
+      "reason": "現行コードは入力ファイルを結果から除外する前提。Issue 本文にこれがないと、変更ファイル同士が related や overlap に混入しても仕様違反と判定しづらい。"
+    },
+    {
+      "id": "S2",
+      "description": "path 出力の仕様が未定義",
+      "location": "Issue: ポイント / 受け入れ基準, 参照実装 src/output/path.rs:68",
+      "reason": "JSON はネスト構造だが、path はそのままでは表現できない。全 impacted path の union を 1 行 1 パスで返すなど期待値を固定すべき。"
+    },
+    {
+      "id": "S3",
+      "description": "human 出力で overlap / summary をどう見せるかが曖昧",
+      "location": "Issue: ポイント / 受け入れ基準, 参照実装 src/output/human.rs:140",
+      "reason": "human 出力でも overlap と summary を表示必須とするのか、JSON 専用なのかが読めない。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "description": "stdin 未接続時のエラー要件を受け入れ基準に含める",
+      "location": "Issue: 受け入れ基準, 参照実装 src/cli/stdin.rs:20",
+      "reason": "空 stdin / 非パイプ時の振る舞いまで触れておくと E2E の抜けを防げる。"
+    },
+    {
+      "id": "N2",
+      "description": "出力順序の決定規則を明記するとテストが安定する",
+      "location": "Issue: 出力フォーマット（JSON）/ 実装方針, 参照実装 src/cli/impact.rs:209",
+      "reason": "changed_files の順序、impact の順序、related のスコア同点時の並び、overlap の並びが未定義。"
+    },
+    {
+      "id": "N3",
+      "description": "無効パス・存在しないパスの warning 方針を補足すると既存共通処理と整合しやすい",
+      "location": "Issue: 実装上の注意点, 参照実装 src/cli/stdin.rs:71, src/cli/impact.rs:111",
+      "reason": "現行コードは invalid path を warning でスキップし、存在しないファイルも warning 後に除外する。"
+    }
+  ],
+  "summary": "1回目レビューで指摘された JSON フィールド不整合や overlap/summary 欠落は Issue 本文上かなり改善されている。今回の主な残件は、ネスト化した新フォーマットに対して --limit の意味と summary 集計基準がまだ曖昧な点。ここを固定しないと実装方針とテスト期待値が割れる。入力ファイル除外、path/human の表示仕様、stdin エラーや warning の扱いまで補足できれば、Issue として十分に実装可能な粒度になる。"
+}
