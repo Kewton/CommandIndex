@@ -8,7 +8,6 @@ use clap::ValueEnum;
 use serde::Serialize;
 use walkdir::WalkDir;
 
-use crate::embedding::Config;
 use crate::embedding::store::EmbeddingStore;
 use crate::indexer::manifest::{FileType, Manifest};
 use crate::indexer::state::{IndexState, StateError};
@@ -31,6 +30,7 @@ pub struct StatusOptions {
     pub detail: bool,
     pub coverage: bool,
     pub format: StatusFormat,
+    pub verify: bool,
 }
 
 impl Default for StatusOptions {
@@ -39,6 +39,7 @@ impl Default for StatusOptions {
             detail: false,
             coverage: false,
             format: StatusFormat::Human,
+            verify: false,
         }
     }
 }
@@ -233,11 +234,11 @@ fn get_embedding_file_count(base_path: &Path) -> u64 {
     }
 }
 
-/// config.toml から embedding モデル名を取得する
-fn get_embedding_model(commandindex_dir: &Path) -> Option<String> {
-    match Config::load(commandindex_dir) {
-        Ok(Some(config)) => config.embedding.map(|e| e.model),
-        _ => None,
+/// 設定から embedding モデル名を取得する
+fn get_embedding_model(_commandindex_dir: &Path) -> Option<String> {
+    match crate::config::load_config(Path::new(".")) {
+        Ok(config) => Some(config.embedding.model),
+        Err(_) => None,
     }
 }
 
@@ -336,6 +337,67 @@ pub fn run(
         staleness,
         storage,
     };
+
+    // Verify mode
+    if options.verify {
+        let verify_result = run_verify(path, &commandindex_dir);
+        match options.format {
+            StatusFormat::Human => {
+                writeln!(writer).ok();
+                writeln!(writer, "Index Verification").ok();
+                writeln!(
+                    writer,
+                    "  State:     {}",
+                    if verify_result.state_valid { "OK" } else { "FAIL" }
+                )
+                .ok();
+                writeln!(
+                    writer,
+                    "  Tantivy:   {}",
+                    if verify_result.tantivy_valid {
+                        "OK"
+                    } else {
+                        "FAIL"
+                    }
+                )
+                .ok();
+                writeln!(
+                    writer,
+                    "  Manifest:  {}",
+                    if verify_result.manifest_valid {
+                        "OK"
+                    } else {
+                        "FAIL"
+                    }
+                )
+                .ok();
+                writeln!(
+                    writer,
+                    "  Symbols:   {}",
+                    if verify_result.symbols_valid {
+                        "OK"
+                    } else {
+                        "FAIL"
+                    }
+                )
+                .ok();
+                for issue in &verify_result.issues {
+                    writeln!(
+                        writer,
+                        "  [{:?}] {}: {}",
+                        issue.severity, issue.component, issue.message
+                    )
+                    .ok();
+                }
+            }
+            StatusFormat::Json => {
+                let json = serde_json::to_string_pretty(&verify_result)
+                    .map_err(|e| StatusError::State(StateError::Json(e)))?;
+                writeln!(writer, "{json}").ok();
+            }
+        }
+        return Ok(());
+    }
 
     match options.format {
         StatusFormat::Human => {
@@ -462,4 +524,142 @@ pub fn run(
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Verify
+// ---------------------------------------------------------------------------
+
+/// 整合性チェック結果
+#[derive(Debug, Serialize)]
+pub struct VerifyResult {
+    pub state_valid: bool,
+    pub tantivy_valid: bool,
+    pub manifest_valid: bool,
+    pub symbols_valid: bool,
+    pub issues: Vec<VerifyIssue>,
+}
+
+/// 個別のチェック結果
+#[derive(Debug, Serialize)]
+pub struct VerifyIssue {
+    pub component: String,
+    pub severity: VerifySeverity,
+    pub message: String,
+}
+
+/// 重要度
+#[derive(Debug, Serialize)]
+pub enum VerifySeverity {
+    Error,
+    Warning,
+}
+
+/// インデックスの整合性をチェックする
+fn run_verify(base_path: &Path, commandindex_dir: &Path) -> VerifyResult {
+    let mut issues = Vec::new();
+
+    // 1. state.json
+    let state_valid = match IndexState::load(commandindex_dir) {
+        Ok(state) => match state.check_schema_version() {
+            Ok(()) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "state".to_string(),
+                    severity: VerifySeverity::Error,
+                    message: format!("Schema version mismatch: {e}"),
+                });
+                false
+            }
+        },
+        Err(e) => {
+            issues.push(VerifyIssue {
+                component: "state".to_string(),
+                severity: VerifySeverity::Error,
+                message: format!("Failed to load: {e}"),
+            });
+            false
+        }
+    };
+
+    // 2. tantivy
+    let tantivy_dir = crate::indexer::index_dir(base_path);
+    let tantivy_valid = if tantivy_dir.exists() {
+        match tantivy::Index::open_in_dir(&tantivy_dir) {
+            Ok(_) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "tantivy".to_string(),
+                    severity: VerifySeverity::Error,
+                    message: format!("Failed to open: {e}"),
+                });
+                false
+            }
+        }
+    } else {
+        issues.push(VerifyIssue {
+            component: "tantivy".to_string(),
+            severity: VerifySeverity::Error,
+            message: "Directory not found".to_string(),
+        });
+        false
+    };
+
+    // 3. manifest.json
+    let manifest_valid = match Manifest::load(commandindex_dir) {
+        Ok(manifest) => {
+            let mut valid = true;
+            for entry in &manifest.files {
+                let file_path = base_path.join(&entry.path);
+                if !file_path.exists() {
+                    issues.push(VerifyIssue {
+                        component: "manifest".to_string(),
+                        severity: VerifySeverity::Warning,
+                        message: format!("File not found: {}", entry.path),
+                    });
+                    valid = false;
+                }
+            }
+            valid
+        }
+        Err(e) => {
+            issues.push(VerifyIssue {
+                component: "manifest".to_string(),
+                severity: VerifySeverity::Error,
+                message: format!("Failed to load: {e}"),
+            });
+            false
+        }
+    };
+
+    // 4. symbols.db
+    let db_path = crate::indexer::symbol_db_path(base_path);
+    let symbols_valid = if db_path.exists() {
+        match SymbolStore::open(&db_path) {
+            Ok(_) => true,
+            Err(e) => {
+                issues.push(VerifyIssue {
+                    component: "symbols".to_string(),
+                    severity: VerifySeverity::Error,
+                    message: format!("Failed to open: {e}"),
+                });
+                false
+            }
+        }
+    } else {
+        issues.push(VerifyIssue {
+            component: "symbols".to_string(),
+            severity: VerifySeverity::Warning,
+            message: "Database not found".to_string(),
+        });
+        true // Not having symbols.db is not critical
+    };
+
+    VerifyResult {
+        state_valid,
+        tantivy_valid,
+        manifest_valid,
+        symbols_valid,
+        issues,
+    }
 }

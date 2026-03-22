@@ -1,0 +1,23 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [
+    {"id": "M1", "title": "シンボリックリンク/ハードリンクによるパストラバーサルが未対策"},
+    {"id": "M2", "title": "canonicalize ベースの検証と擬似コードが矛盾 — 一本化が必要"},
+    {"id": "M3", "title": "圧縮爆弾対策が未設計 — 展開サイズ/エントリ数の上限制御が必要"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "state.json/export_meta.json 内の絶対パス漏洩リスク"},
+    {"id": "S2", "title": "ハードリンクエントリの処理方針未定義"},
+    {"id": "S3", "title": "export_meta.json デシリアライズ後のバリデーション不足"},
+    {"id": "S4", "title": "symbols.db のパス情報漏洩リスク注意書き"},
+    {"id": "S5", "title": "commandindex.toml のエクスポート対象外明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "展開先ファイルのパーミッション固定化"},
+    {"id": "N2", "title": ".gitignore に *.local.toml パターン追加"},
+    {"id": "N3", "title": "アーカイブのチェックサム検証"},
+    {"id": "N4", "title": "Unicode 正規化によるパス偽装対策"}
+  ],
+  "must_fix_count": 3
+}

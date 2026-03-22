@@ -1,0 +1,1 @@
+{"stage": 1, "applied": ["M1: verify を StatusOptions 構造体ではなく run() 引数に変更 (YAGNI)", "M2: snapshot.rs の責務を ExportMeta 定義+読み書きのみに限定 (SRP)", "S2: export_format_version の前方互換ポリシーを明記", "S3: git hash 取得を分離関数に (DIP)"]}

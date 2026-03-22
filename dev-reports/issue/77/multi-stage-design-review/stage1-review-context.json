@@ -1,0 +1,21 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー (SOLID/KISS/YAGNI/DRY)",
+  "must_fix": [
+    {"id": "M1", "title": "VerifyResult/StatusOptions は YAGNI — verify は import 内部検証にとどめるべき"},
+    {"id": "M2", "title": "snapshot.rs の SRP 違反 — 責務を ExportMeta 定義+読み書きに限定すべき"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "ExportError/ImportError の共通バリアント DRY 改善"},
+    {"id": "S2", "title": "export_format_version の互換性ポリシー未定義 (OCP)"},
+    {"id": "S3", "title": "git_commit_hash 取得の DIP — 関数として分離すべき"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "独立サブコマンド設計は KISS 適合（維持）"},
+    {"id": "N2", "title": "export_meta.json 分離は SRP 適合（維持）"},
+    {"id": "N3", "title": "フラットアーカイブ構造の将来拡張時注意"},
+    {"id": "N4", "title": "import_index.rs 命名は適切（維持）"},
+    {"id": "N5", "title": "手動展開はセキュリティ上正当（維持）"}
+  ],
+  "must_fix_count": 2
+}

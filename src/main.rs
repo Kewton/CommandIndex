@@ -99,6 +99,9 @@ enum Commands {
         /// Show coverage statistics only
         #[arg(long, conflicts_with = "detail")]
         coverage: bool,
+        /// Verify index integrity
+        #[arg(long)]
+        verify: bool,
     },
     /// Remove index and prepare for rebuild
     Clean {
@@ -133,6 +136,22 @@ enum Commands {
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
+    },
+    /// Export index as portable tar.gz archive
+    Export {
+        /// Output file path (.tar.gz)
+        output: PathBuf,
+        /// Include embedding database
+        #[arg(long)]
+        with_embeddings: bool,
+    },
+    /// Import index from tar.gz archive
+    Import {
+        /// Input archive file path (.tar.gz)
+        input: PathBuf,
+        /// Overwrite existing index
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -295,11 +314,13 @@ fn main() {
             format,
             detail,
             coverage,
+            verify,
         } => {
             let options = commandindex::cli::status::StatusOptions {
                 detail,
                 coverage,
                 format,
+                verify,
             };
             match commandindex::cli::status::run(&path, &options, &mut std::io::stdout()) {
                 Ok(()) => 0,
@@ -308,7 +329,7 @@ fn main() {
                     1
                 }
             }
-        }
+        },
         Commands::Context {
             files,
             max_files,
@@ -376,6 +397,53 @@ fn main() {
                 }
             },
         },
+        Commands::Export {
+            output,
+            with_embeddings,
+        } => {
+            let options = commandindex::cli::export::ExportOptions { with_embeddings };
+            match commandindex::cli::export::run(std::path::Path::new("."), &output, &options) {
+                Ok(result) => {
+                    println!("Export completed:");
+                    println!("  Output: {}", result.output_path.display());
+                    println!(
+                        "  Size: {}",
+                        commandindex::cli::status::format_size(result.archive_size)
+                    );
+                    if let Some(hash) = &result.git_commit_hash {
+                        println!("  Git commit: {hash}");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
+        Commands::Import { input, force } => {
+            let options = commandindex::cli::import_index::ImportOptions { force };
+            match commandindex::cli::import_index::run(std::path::Path::new("."), &input, &options)
+            {
+                Ok(result) => {
+                    println!("Import completed:");
+                    println!("  Imported files: {}", result.imported_files);
+                    if result.git_hash_match {
+                        println!("  Git commit: matches");
+                    } else {
+                        println!("  Git commit: mismatch");
+                    }
+                    for warning in &result.warnings {
+                        println!("  Warning: {warning}");
+                    }
+                    0
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
     };
 
     process::exit(exit_code);
