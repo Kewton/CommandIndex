@@ -1,0 +1,64 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "clean --keep-embeddings の保存対象が新しい設定配置とずれる",
+      "description": "既存の clean.rs は .commandindex/config.toml を保持対象としてハードコードしている。ルートの commandindex.toml は clean の対象外であり、.commandindex/ 配下で保持すべきなのは config.local.toml と deprecated fallback の config.toml。",
+      "suggestion": "clean.rs の保持対象を LOCAL_CONFIG_FILE と LEGACY_CONFIG_FILE ベースに更新。ルートの commandindex.toml は clean の対象外であることを明示。回帰テストも追加。"
+    },
+    {
+      "id": "M2",
+      "title": "deprecated fallback の警告出力が既存CLI挙動とテストに影響する",
+      "description": "旧設定ファイルを読む際の警告メッセージの出力先や出力条件が統一されていないと、既存の利用体験やテスト安定性に影響する。",
+      "suggestion": "警告は stderr に統一し、deprecated fallback を実際に使用した場合だけ1回出す仕様に固定。旧設定のみ存在するケースと新旧両方存在するケースのテストを分けて追加。"
+    },
+    {
+      "id": "M3",
+      "title": "config show 実装には Serialize 境界の変更が必要",
+      "description": "EmbeddingConfig と RerankConfig は Deserialize のみ。config show で TOML 出力するには Serialize が必要。秘匿値マスクには表示用DTOかマスク済み変換が必要。",
+      "suggestion": "Serialize を追加する対象型と、表示用のマスク済み構造体を分ける方針をIssueに追記。config show 専用の view model を経由させる設計が安全。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存機能のベースパス差異に対する回帰確認が必要",
+      "description": "各コマンドでどのベースパスから設定を探すかのテストが必要。",
+      "suggestion": "特に search は current_dir を変えたCLIテストで保証する。"
+    },
+    {
+      "id": "S2",
+      "title": "CLIデフォルト値を Option<usize> に変えることで既存検索系テストの期待値が変わる",
+      "description": "help表示、引数未指定時の値解決が変わるため、テストは「未指定時はハードコード既定値」「設定あり時は設定値」「CLI明示時はCLI優先」を分けて持つ必要がある。",
+      "suggestion": "統合テストを追加して優先順位を固定化する。"
+    },
+    {
+      "id": "S3",
+      "title": "旧設定を残すことでテスト更新対象は前回想定より広い",
+      "description": "legacy fallback を維持するため、新パス対応テストに加えて旧ファイルの互換テストも必要。",
+      "suggestion": "E2Eテストは少なくとも3系統に分ける。commandindex.toml のみ、config.local.toml 上書き、legacy config.toml fallback。"
+    },
+    {
+      "id": "S4",
+      "title": "モジュール依存は増える",
+      "description": "外部クレート追加は不要だが、config モジュール中心の内部依存整理が必要。ConfigError と EmbeddingError::ConfigError の変換設計が曖昧だと責務がねじれやすい。",
+      "suggestion": "config を唯一の設定読込入口にする原則を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "設定読込結果の使い回しはパフォーマンス面で妥当",
+      "description": "AppConfig::load() を1回に寄せる方針でパフォーマンス影響は軽微か改善寄り。",
+      "suggestion": "パフォーマンス影響の整理を追記。"
+    },
+    {
+      "id": "N2",
+      "title": "設定ファイル名の定数化はテスト保守にも効く",
+      "description": "テストヘルパーでも同じ定数を使う方針にすると将来の移行時にも有効。",
+      "suggestion": "テストヘルパーでも定数を使う方針を追記。"
+    }
+  ],
+  "summary": "影響範囲は中規模。最大の影響は設定読込入口の集約と clean --keep-embeddings の保持対象変更。テスト影響は前回より広く、legacy fallback と警告出力の互換確認が必要。パフォーマンス影響は小さく改善寄り。外部依存追加は不要だが Serialize 導入と config モジュール中心の内部依存整理が前提。",
+  "reviewer": "Codex (gpt-5.4 medium)"
+}

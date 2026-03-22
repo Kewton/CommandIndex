@@ -4,8 +4,9 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
 
+use crate::config::{ConfigError, load_config};
 use crate::embedding::store::{EmbeddingStore, EmbeddingStoreError};
-use crate::embedding::{Config, EmbeddingError, create_provider};
+use crate::embedding::{EmbeddingError, create_provider};
 use crate::indexer::diff::{DiffError, detect_changes, scan_files};
 use crate::indexer::manifest::{
     self, FileEntry, FileType, Manifest, ManifestError, to_relative_path_string,
@@ -34,6 +35,7 @@ pub enum IndexError {
     IndexNotFound,
     SchemaVersionMismatch,
     IndexCorrupted(String),
+    Config(String),
 }
 
 impl fmt::Display for IndexError {
@@ -62,6 +64,7 @@ impl fmt::Display for IndexError {
                 f,
                 "Failed to read index state: {detail}. Run `commandindex clean` then `commandindex index` to rebuild."
             ),
+            IndexError::Config(msg) => write!(f, "Config error: {msg}"),
         }
     }
 }
@@ -82,7 +85,8 @@ impl std::error::Error for IndexError {
             IndexError::EmbeddingStore(e) => Some(e),
             IndexError::IndexNotFound
             | IndexError::SchemaVersionMismatch
-            | IndexError::IndexCorrupted(_) => None,
+            | IndexError::IndexCorrupted(_)
+            | IndexError::Config(_) => None,
         }
     }
 }
@@ -153,6 +157,12 @@ impl From<EmbeddingError> for IndexError {
 impl From<EmbeddingStoreError> for IndexError {
     fn from(e: EmbeddingStoreError) -> Self {
         IndexError::EmbeddingStore(e)
+    }
+}
+
+impl From<ConfigError> for IndexError {
+    fn from(e: ConfigError) -> Self {
+        IndexError::Config(e.to_string())
     }
 }
 
@@ -316,6 +326,7 @@ pub fn run(path: &Path, options: &IndexOptions) -> Result<IndexSummary, IndexErr
     let mut state = IndexState::new(path.to_path_buf());
     state.total_files = scanned;
     state.total_sections = indexed_sections;
+    state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
     state.save(&commandindex_dir)?;
 
     // 11. Generate embeddings if requested
@@ -764,6 +775,7 @@ pub fn run_incremental(
         );
     }
     state.total_sections = state.total_sections.saturating_sub(sections_to_remove);
+    state.last_commit_hash = crate::cli::status::git_info::get_current_commit_hash(path);
     state.touch();
     state.save(&commandindex_dir)?;
 
@@ -789,12 +801,11 @@ pub fn run_incremental(
 /// Embedding生成の共通ロジック（run / run_incremental から呼ばれる）
 fn generate_embeddings_for_manifest(
     path: &Path,
-    commandindex_dir: &Path,
+    _commandindex_dir: &Path,
     manifest: &Manifest,
 ) -> Result<(), IndexError> {
-    let config = Config::load(commandindex_dir)?;
-    let embedding_config = config.and_then(|c| c.embedding).unwrap_or_default();
-    let provider = create_provider(&embedding_config)?;
+    let app_config = load_config(path)?;
+    let provider = create_provider(&app_config.embedding)?;
 
     let db_path = crate::indexer::embeddings_db_path(path);
     let store = EmbeddingStore::open(&db_path)?;

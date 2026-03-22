@@ -1,0 +1,23 @@
+{
+  "stage": 3,
+  "focus": "影響分析",
+  "must_fix": [
+    {"id": "M1", "title": "RawRerankConfig.provider フィールドが既存と不整合", "suggestion": "RawRerankConfig から provider を削除。"},
+    {"id": "M2", "title": "thiserror の依存方針が未確定", "suggestion": "手動実装に確定させる。"},
+    {"id": "M3", "title": "search.rs の private 関数への AppConfig 引き回し設計が欠落", "suggestion": "run() で1回ロードし try_hybrid_search, try_rerank に &AppConfig を渡す。"},
+    {"id": "M4", "title": "clean.rs の保持対象ファイルの具体的な列挙がない", "suggestion": "embeddings.db, config.toml, config.local.toml を明記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "e2e テストの具体的移行方法が未記載", "suggestion": "テスト移行計画を追加。"},
+    {"id": "S2", "title": "CLI ヘルプからデフォルト値が消える", "suggestion": "clap help フィールドでデフォルト値を明示。"},
+    {"id": "S3", "title": "EmbeddingConfig Serialize 追加による api_key 露出リスク", "suggestion": "AppConfig の Serialize を削除し view model のみに限定。"},
+    {"id": "S4", "title": "cli_args.rs テストの更新漏れ", "suggestion": "config サブコマンドのテスト追加を明記。"},
+    {"id": "S5", "title": "search コマンドの base_path 決定ロジック未記載", "suggestion": "Path::new(\".\") を明記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "I/O パフォーマンス改善効果の明記"},
+    {"id": "N2", "title": ".gitignore テンプレート提供"},
+    {"id": "N3", "title": "IndexConfig.languages の消費者が未定義"},
+    {"id": "N4", "title": "deprecated 警告の抑制方法"}
+  ]
+}

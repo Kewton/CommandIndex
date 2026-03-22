@@ -1,0 +1,1 @@
+{"stage": "6-8", "action": "apply_review", "applied": true, "changes": "Stage 5/7全Must Fix(6件)と主要Should Fix(5件)を設計方針書に反映。expand_pathバグ修正、run()完全シグネチャ記載、try_hybrid_searchへの伝播明記、RRFキー衝突対策、validate関数I/O副作用除去、WorkspaceSearchResult配置変更、YAGNI適用。"}

@@ -1,0 +1,13 @@
+{
+  "stage": 4,
+  "type": "apply-review",
+  "applied_fixes": [
+    "MF-1: マージコンフリクト解決済み（対応不要）",
+    "MF-2: テストの位置づけセクションを追加（個別テストとの差別化を明記）",
+    "SF-1: テストファイルをe2e_team_workflow.rsにまとめる方針を追記",
+    "SF-2: テストヘルパーの拡張セクションを追加（write_commandindex_toml等）",
+    "SF-3: Git初期化ヘルパー（init_git_repo）の追加を追記"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/80"
+}

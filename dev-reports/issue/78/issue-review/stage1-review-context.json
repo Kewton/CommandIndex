@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "整合性",
+      "description": "全検索関数がカレントディレクトリ(\".\")をハードコードしている。run(), run_symbol_search(), run_related_search(), run_semantic_search() はすべて Path::new(\".\") を使ってインデックスディレクトリやシンボルDBパスを解決しており、任意のリポジトリパスを受け取るインターフェースになっていない。マルチリポジトリ横断検索では各リポのbase_pathを渡して検索する必要があるが、現在のAPI設計では不可能。",
+      "suggestion": "各検索関数(run, run_symbol_search, run_related_search, run_semantic_search)にbase_path: &Path パラメータを追加し、Path::new(\".\") のハードコードを除去する。これにより各リポジトリのインデックスディレクトリを指定して検索可能になる。破壊的変更になるため、既存呼び出し元(main.rs)も同時に修正が必要。"
+    },
+    {
+      "id": "M2",
+      "category": "整合性",
+      "description": "SearchResult.pathがリポジトリルートからの相対パスで格納されている。マルチリポジトリ横断検索で複数リポの結果をマージすると、異なるリポの同名ファイル(例: README.md)が衝突してRRFマージのキー(path, heading)で誤って統合される。",
+      "suggestion": "横断検索時にはSearchResultにリポジトリ識別子(リポ名またはルートパス)を付与するか、pathをリポ名付きプレフィックス(例: repo-name/src/main.rs)に変換してからマージする仕組みが必要。受け入れ基準に「結果にリポジトリ名を含めること」を明記すべき。"
+    },
+    {
+      "id": "M3",
+      "category": "受け入れ基準の網羅性",
+      "description": "ワークスペース設定ファイル(commandindex-workspace.toml)の仕様が未定義。Issue本文にファイル名のみ記載されており、TOMLスキーマ(リポジトリパスの記述方法、相対パス/絶対パスの扱い、リポ名エイリアス等)が定義されていない。",
+      "suggestion": "受け入れ基準として以下を明記する: (1) commandindex-workspace.tomlのTOMLスキーマ定義、(2) 相対パスの場合のベースディレクトリ解決ルール、(3) リポジトリ名のデフォルト値(ディレクトリ名等)、(4) 存在しないパスが指定された場合のエラーハンドリング。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "実装方針",
+      "description": "config/mod.rsのload_configは単一リポジトリのbase_pathのみ対応。ワークスペース設定はリポジトリごとの設定とは異なるレイヤーであり、既存の設定優先度チェーンとの関係が未整理。",
+      "suggestion": "ワークスペース設定は「どのリポジトリを横断するか」のみを管理し、各リポの検索・インデックス設定はリポ固有のcommandindex.tomlに委譲する設計を明記する。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性",
+      "description": "try_hybrid_search()内でもPath::new(\".\")でSymbolStore/IndexReaderを開いている。ハイブリッド検索のマルチリポ対応について言及がない。",
+      "suggestion": "ハイブリッド検索もワークスペース横断で動作するか、Phase 1ではBM25のみの横断検索とするかスコープを明示する。"
+    },
+    {
+      "id": "S3",
+      "category": "受け入れ基準",
+      "description": "status/updateコマンドのワークスペース対応について、具体的な出力仕様が不明。",
+      "suggestion": "ワークスペースstatus出力にリポ名・パス・ファイル数・最終更新日を含むこと、JSON出力はリポジトリごとの配列形式であることを明記する。"
+    },
+    {
+      "id": "S4",
+      "category": "実装方針",
+      "description": "rayon並列検索について、tantivyが内部でrayonを使用している可能性があり、バージョン競合のリスクがある。",
+      "suggestion": "rayon追加前にcargo treeでtantivyの依存ツリーを確認し、バージョンを合わせる。"
+    },
+    {
+      "id": "S5",
+      "category": "整合性",
+      "description": "--repoフィルタの仕様が不明確。検索前フィルタか検索後フィルタかで実装が大きく異なる。",
+      "suggestion": "検索前フィルタとして実装し、受け入れ基準に明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "拡張性",
+      "description": "context/embed/cleanコマンドのワークスペース対応がIssueに含まれていない。",
+      "suggestion": "Phase 1のスコープ外として明記し、将来Issueとして起票する方針を記載する。"
+    },
+    {
+      "id": "N2",
+      "category": "UX",
+      "description": "横断検索結果の表示時のリポジトリ名表示がhuman.rsに未定義。",
+      "suggestion": "human出力にリポ名プレフィックス、json出力にrepositoryフィールドを追加する。"
+    },
+    {
+      "id": "N3",
+      "category": "エラーハンドリング",
+      "description": "一部リポのインデックスが壊れている場合のgraceful degradation方針が未定義。",
+      "suggestion": "利用可能なリポのみ検索し、失敗リポは警告メッセージで報告する。"
+    },
+    {
+      "id": "N4",
+      "category": "パフォーマンス",
+      "description": "結果マージのスコア正規化について言及がない。異なるリポ間のBM25スコアを単純比較すると不公平になる。",
+      "suggestion": "RRFマージ(rank-based)を採用すればスコアの絶対値に依存しないため適切。"
+    }
+  ],
+  "summary": "Issue #78は既存コードベースのアーキテクチャと整合性が高い設計方針だが、3つのMust-Fix事項がある。最大の課題は、全検索関数がPath::new(\".\")をハードコードしており任意リポパスを受け取れない点(M1)。SearchResult.pathのリポ相対パスによるマージ時衝突(M2)、ワークスペース設定ファイルのスキーマ未定義(M3)も対処必要。"
+}
