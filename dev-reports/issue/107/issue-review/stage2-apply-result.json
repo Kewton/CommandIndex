@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "action": "Issue本文を更新",
+  "changes": [
+    "実装方針をconfig方式（llm_default_limit追加）に明確化",
+    "--format llm が未実装である事実を背景・課題に追記",
+    "受け入れ基準を7項目追加",
+    "変更内容を4ステップで具体化",
+    "rerankとの相互作用・将来展望を備考に追記"
+  ],
+  "must_fix_addressed": 2,
+  "must_fix_total": 2
+}

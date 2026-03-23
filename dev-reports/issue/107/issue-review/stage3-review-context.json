@@ -1,0 +1,39 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "issue": "LLMコンテキスト判定条件の明確化が必要",
+      "reason": "「--rerank 使用時等」の「等」の範囲が曖昧。判定基準が不明確だと意図しない動作変更リスクがある。",
+      "suggestion": "--rerank フラグが指定された場合のみを対象とする（最小スコープ）。"
+    },
+    {
+      "issue": "config show 出力への llm_default_limit 反映",
+      "reason": "SearchConfig に新フィールド追加で config show 出力に自動反映されるが、ヘルプテキスト更新も必要。",
+      "suggestion": "config show の表示確認テストと help-llm の説明更新。"
+    },
+    {
+      "issue": "workspace 検索パスでの llm_default_limit 適用漏れリスク",
+      "reason": "workspace 横断検索パスでも effective_limit が使用されており、一貫性が必要。",
+      "suggestion": "limit 解決ロジックを一箇所に集約する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "既存テスト e2e_team_workflow の拡張",
+      "suggestion": "llm_default_limit の設定反映テスト・local override テストを追加。"
+    },
+    {
+      "issue": "RawSearchConfig の merge_search でのフィールド追加漏れ注意",
+      "suggestion": "merge_search にフィールドを追記し、マージ動作のテストを拡張。"
+    },
+    {
+      "issue": "パフォーマンスへのポジティブ影響",
+      "suggestion": "対応不要。limit削減による検索・embedding処理の改善。"
+    },
+    {
+      "issue": "設定ファイルの後方互換性は問題なし",
+      "suggestion": "対応不要。Option<T>とデフォルト値で既存configとの完全互換。"
+    }
+  ],
+  "summary": "影響範囲は限定的で破壊的変更リスクは低い。主な変更対象は4箇所。最大の設計判断ポイントはLLMコンテキストの判定条件。"
+}

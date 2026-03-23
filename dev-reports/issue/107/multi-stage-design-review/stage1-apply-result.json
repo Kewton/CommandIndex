@@ -1,0 +1,12 @@
+{
+  "stage": "1-2",
+  "action": "Stage 1-2 レビュー指摘を設計方針書に反映",
+  "changes": [
+    "resolve_limitメソッドをSearchConfigに追加（SRP改善）",
+    "SearchConfig::default() trait実装追加（DRY改善）",
+    "None分岐でもSearchConfig::default()を使用しrerank時のフォールバック対応",
+    "help-llm更新を変更対象に追加",
+    "テスト影響分析を修正（構造体リテラル使用箇所のコンパイルエラー明記）",
+    "CLI層のコード例をresolve_limit()使用に更新"
+  ]
+}

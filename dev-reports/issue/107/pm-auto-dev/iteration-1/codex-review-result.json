@@ -1,0 +1,23 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/config/mod.rs",
+      "line": 177,
+      "severity": "medium",
+      "category": "security",
+      "description": "The new `llm_default_limit` is loaded from repository-controlled config and fed into reranked search with only a very loose clamp of 1000. A malicious or accidental `commandindex.toml` can therefore amplify expensive rerank/LLM work and network usage far beyond the documented default of 5, which is effectively a cost/resource-exhaustion vector.",
+      "suggestion": "Apply a much tighter upper bound for config-driven rerank defaults (for example 20-50), and require an explicit CLI override for larger values. If large values are intentionally supported, surface a warning before invoking rerank."
+    },
+    {
+      "file": "src/config/mod.rs",
+      "line": 450,
+      "severity": "medium",
+      "category": "security",
+      "description": "`snippet_lines` and `snippet_chars` are accepted from config without any validation, and `src/main.rs` also accepts arbitrary `usize` values from CLI before passing them into snippet generation. This leaves the search path open to oversized output and avoidable memory/CPU work from attacker-controlled repo config or accidental huge CLI values.",
+      "suggestion": "Clamp snippet settings to a conservative range when resolving config, and add `clap` range parsers for `--snippet-lines` and `--snippet-chars` so oversized values are rejected early."
+    }
+  ],
+  "summary": "Reviewed `src/cli/help_llm.rs`, `src/config/mod.rs`, and `src/main.rs` for panic risk, unchecked errors, overflow/off-by-one issues, path/command injection, unsafe usage, and input validation gaps. I did not find a direct panic, path traversal, command injection, SQL injection, or secret-leak regression in these files. The actionable issues are both input-validation gaps around newly config-driven search sizing, which can be abused to trigger excessive work or external LLM/rerank cost.",
+  "requires_fix": true
+}
