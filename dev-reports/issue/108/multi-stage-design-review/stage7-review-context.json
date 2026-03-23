@@ -1,0 +1,19 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "--with-snippet のCLI制約が受け入れ基準と矛盾 (Stage 6 で修正済み)"},
+    {"id": "MF-2", "title": "snippet-lines/chars の仕様が既存コードと食い違い (Stage 6 で修正済み)"},
+    {"id": "MF-3", "title": "output/snippet.rs へのデータ取得ロジック配置は既存レイヤ分離と不整合 (Stage 6 で cli/snippet_helper.rs に修正済み)"},
+    {"id": "MF-4", "title": "changed_since への波及が設計上過小評価されている", "suggestion": "回帰確認対象を明示"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "context との共通化方針の説明が実コードと波及とずれている", "suggestion": "context は今回変更しないことを明確化"},
+    {"id": "SF-2", "title": "テスト影響範囲が不足 (Stage 1-4 で対応済み)"},
+    {"id": "SF-3", "title": "セキュリティ節の機密情報リスク評価がやや弱い", "suggestion": "出力面での露出増加を明記"},
+    {"id": "SF-4", "title": "ImpactFileResult の serde 属性説明が二重化 (Stage 6 で serde 削除済み)"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "PartialEq 追加は不要、matches! で代替 (Stage 6 で matches! に変更済み)"},
+    {"id": "NH-2", "title": "RelatedSearchResult の全構築箇所を一覧化すべき"}
+  ],
+  "summary": "Stage 6 で既に多くが修正済み。追加で changed_since 波及の明示、context の非変更の明確化、セキュリティのリスク評価強化が必要"
+}

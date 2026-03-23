@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "ImpactFileResult / RelatedSearchResult にsnippetフィールドが存在しない",
+      "description": "構造体に snippet: Option<String> を追加する必要がある。#[serde(skip_serializing_if = \"Option::is_none\")] で後方互換性を維持。",
+      "suggestion": "skip_serializing_if 付きで snippet: Option<String> を追加し、既存JSONスキーマとの後方互換性を維持。"
+    },
+    {
+      "id": "MF-2",
+      "title": "run_impact / run_related_search にスニペット取得のためのIndexReaderWrapperアクセスが必要",
+      "description": "enrich_entry() のスニペット取得ロジックを共通関数として抽出し、impact/related の結果に後処理で付加するパターンが適切。",
+      "suggestion": "reader.search_by_exact_path() + truncate_body() の呼び出し部分を共通化する。"
+    },
+    {
+      "id": "MF-3",
+      "title": "全フォーマッタ（human/json/path x impact/related）がスニペット対応必要",
+      "description": "format_related_results / format_impact_results の全フォーマッタに変更が波及する。",
+      "suggestion": "構造体に snippet: Option<String> を持たせ、フォーマッタ側は Some の場合のみ表示。path.rs はスニペット無視。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "CLIオプション定義への --with-snippet / --snippet-lines 追加がImpactとSearch両方に必要",
+      "suggestion": "--with-snippet はブール型フラグとして両サブコマンドに追加。"
+    },
+    {
+      "id": "SF-2",
+      "title": "enrich_entry() のスニペット取得ロジック共有時のパフォーマンス考慮",
+      "suggestion": "limit 適用後にスニペット取得を行い、不要なI/Oを回避。"
+    },
+    {
+      "id": "SF-3",
+      "title": "既存テストへの影響: e2e_impact.rs と e2e_related_search.rs のJSONアサーション",
+      "suggestion": "skip_serializing_if 方式なら既存テスト変更不要。新規テスト追加が必要。"
+    },
+    {
+      "id": "SF-4",
+      "title": "output_format.rs のユニットテスト: 構造体フィールド追加でコンパイルエラー",
+      "suggestion": "ImpactFileResult に snippet: None を追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "context コマンドとの SnippetConfig 統一"
+    },
+    {
+      "id": "NH-2",
+      "title": "search --related-stdin のスニペット対応"
+    },
+    {
+      "id": "NH-3",
+      "title": "help-llm コマンドの更新"
+    },
+    {
+      "id": "NH-4",
+      "title": "IMPACT_AFTER_HELP / SEARCH_AFTER_HELP のヘルプテキスト更新"
+    }
+  ],
+  "summary": "影響範囲は (1) 構造体への snippet フィールド追加 (2) enrich_entry() ロジック共有化 (3) 全出力フォーマッタ対応 (4) CLIオプション追加の4点。skip_serializing_if 方式で後方互換性を保てば破壊的変更は回避可能。"
+}

@@ -1,0 +1,38 @@
+{
+  "critical": [
+    {
+      "id": "C1",
+      "title": "semantic検索ステップがユーザー入力ではなく先頭ヒットのファイルパスを使っている",
+      "detail": "src/cli/suggest.rs の build_strategy() で semantic ステップ用のクエリに query_for_result = entry_files.first().map(|(p, _)| p.as_str()) を使っているため、`commandindexdev search --semantic` に本来の task description ではなくファイルパスが入る。提案内容が誤る実バグで、検索精度を大きく損なう。",
+      "suggestion": "semantic ステップには validate_input() 後の元の task description をそのまま使う。build_strategy() に query: &str を明示的に渡し、entry_files から導出しないようにする。"
+    },
+    {
+      "id": "C2",
+      "title": "提案コマンドにファイルパスをそのまま埋め込み、オプション注入やシェル解釈を防げていない",
+      "detail": "src/cli/suggest.rs の sanitize_for_command_arg() は一部メタ文字を削除するだけで、空白、ワイルドカード、先頭の `-` などは残る。インデックス済みファイル名が `--format` や `a b.rs`、`*.rs` のような場合、生成された `context` / `search --related` / `impact` コマンドが追加オプション扱いされたり、シェル展開で別の対象に化ける。コマンド文字列をLLMやユーザーがそのまま実行する想定なら安全ではない。",
+      "suggestion": "コマンド文字列には安全なシェルクオートを適用し、位置引数の前に `--` を入れてオプション解釈を止める。少なくとも path 引数は `commandindexdev context -- '...'` のように構成し、文字削除ベースの sanitize はやめる。"
+    }
+  ],
+  "warnings": [
+    {
+      "id": "W1",
+      "title": "sanitize_for_command_arg() が値を書き換えるため、存在しないパスや別クエリを提案しうる",
+      "detail": "src/cli/suggest.rs の sanitize_for_command_arg() は引用符や `$` などを削除する。これにより、元のクエリやインデックス上のファイルパスが別物になり、提案コマンドの正確性が壊れる。安全対策と正確性の両方を満たしていない。",
+      "suggestion": "入力値は削除ではなくエスケープ/クオートで保護する。JSON出力では文字列コマンドではなく `argv` 相当の構造化表現を持たせる案も検討する。"
+    },
+    {
+      "id": "W2",
+      "title": "suggest が SymbolStore を必須にしており、関連DB欠如時に最小フォールバックも返せない",
+      "detail": "src/cli/suggest.rs の run_suggest() は BM25 検索前に symbol DB の存在確認と SymbolStore::open() を行い、欠如時は即エラーにしている。このため、tantivy index はあるが symbol DB が壊れている/欠けているケースで、BM25 ベースの簡易提案すら返せない。未処理エラーというより可用性低下の懸念。",
+      "suggestion": "BM25 ベースの最小戦略と related/semantic 依存部分を分離し、symbol DB が使えない場合でも degrade して提案を返せる設計にする。"
+    },
+    {
+      "id": "W3",
+      "title": "help-llm と E2E テストが path フォーマットを正当化しており、危険な出力経路を広げている",
+      "detail": "src/main.rs、src/cli/help_llm.rs、tests/e2e_suggest.rs では suggest の `--format path` を正式サポートとして露出している。path 形式はコマンド列をそのまま1行ずつ返すため、上記のクオート不備やオプション注入の影響を最も受けやすい。",
+      "suggestion": "安全に表現できるまで `suggest` から `path` フォーマットを外すか、少なくとも human/json と同じく厳密にクオート済みのコマンドのみ出力する。"
+    }
+  ],
+  "summary": "本変更で production code に明白な unwrap/expect パニックは見当たらなかったが、`src/cli/suggest.rs` に高優先度の実バグと安全性問題がある。最重要なのは、semantic ステップが task description ではなくトップヒットのファイルパスを検索語として使っている点と、提案コマンドへの引数埋め込みが安全でない点だ。後者はオプション注入、シェル展開、空白分割を十分に防げていないため、LLMやユーザーが出力をそのまま実行する運用では修正が必要。help-llm と tests も `path` フォーマットを前提にしており、危険な経路を広げている。",
+  "requires_fix": true
+}

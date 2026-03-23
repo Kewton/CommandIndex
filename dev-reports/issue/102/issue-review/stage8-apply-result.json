@@ -1,0 +1,11 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M1", "action": "実装方針にhelp-llm実行時のresolve_commandindex_dir未呼び出し設計を明記"},
+    {"id": "M2", "action": "受け入れ基準にhelp-llmのJSON出力パース検証テスト・全サブコマンド含有テストを追加"},
+    {"id": "S2", "action": "#[command(name = \"help-llm\")]明示指定を実装方針に追加"},
+    {"id": "S4", "action": "src/cli/help_llm.rsのモジュール責務（HelpLlmOutput構造体、run_help_llm関数）を明確化"},
+    {"id": "S5", "action": "lib.rsにpub const VERSIONを追加する方針を明記"},
+    {"id": "N2", "action": "デフォルトpretty print方針を実装方針に追加"}
+  ]
+}

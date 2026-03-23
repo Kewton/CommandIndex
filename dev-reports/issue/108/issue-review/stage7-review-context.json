@@ -1,0 +1,49 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "context コマンドも実質的な影響範囲に含める必要がある",
+      "description": "enrich_entry() のロジック共通化は context コマンドの出力仕様にも波及する。context は MarkdownLink/TagMatch のときだけ snippet を取得する制御があり、共通関数の抽出方法次第で既存挙動を変えるリスクがある。",
+      "suggestion": "影響範囲に src/cli/context.rs と tests/e2e_context_pack.rs を追加し、共通化後も context の既存仕様を維持するか、意図的に揃えるかを明記。"
+    },
+    {
+      "id": "MF-2",
+      "title": "search --changed-since も既存機能影響の確認対象に含める必要がある",
+      "description": "search --changed-since は内部的に impact 系の出力ロジックを使う。ImpactFileResult の構造変更が changed-since の出力に波及する可能性がある。",
+      "suggestion": "影響範囲に tests/e2e_changed_since.rs を追加し、--with-snippet 未指定時の回帰確認対象に。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "テスト影響範囲に e2e_context_pack.rs と e2e_changed_since.rs が抜けている",
+      "suggestion": "回帰確認対象として明記。"
+    },
+    {
+      "id": "SF-2",
+      "title": "Path形式では snippet 取得処理自体をスキップすべき",
+      "suggestion": "OutputFormat::Path では snippet 取得処理も行わないことを明記。"
+    },
+    {
+      "id": "SF-3",
+      "title": "共通 helper は cli/context.rs に置かず専用モジュールに切り出すべき",
+      "suggestion": "output か cli 配下の専用ユーティリティモジュールに切り出す方針を明記。"
+    },
+    {
+      "id": "SF-4",
+      "title": "設定値適用の影響範囲として team/local config 系テストの確認対象もある",
+      "suggestion": "tests/e2e_team_workflow.rs を回帰確認対象に含める。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "snippet 取得失敗を空文字列で表す仕様は性能分析上も注記があるとよい"
+    },
+    {
+      "id": "NH-2",
+      "title": "新規 crate 追加なし、既存依存のみで実装を明記"
+    }
+  ],
+  "summary": "context と search --changed-since への波及が影響範囲から漏れている。enrich_entry() 共通化は context の既存仕様に直接触るため must fix。テスト対象として e2e_context_pack.rs / e2e_changed_since.rs を含め、Path 出力時の snippet 取得スキップ、内部依存の配置方針を明記すべき。"
+}

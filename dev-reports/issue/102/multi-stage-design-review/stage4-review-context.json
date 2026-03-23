@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "expect()panicによる異常終了リスク", "suggestion": "match/unwrap_or_elseに置換、eprintln→process::exit(1)"},
+    {"id": "S2", "title": "after_helpの静的文字列前提のドキュメント不足", "suggestion": "セキュリティ設計セクションに明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "schema_versionをsemver形式に"},
+    {"id": "N2", "title": "Content-Type相当のメタ情報（対応不要）"},
+    {"id": "N3", "title": "既存unsafeコードとの分離確認の明文化"}
+  ]
+}

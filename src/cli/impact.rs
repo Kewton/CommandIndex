@@ -1,3 +1,16 @@
+pub const IMPACT_AFTER_HELP: &str = "\
+When to use:
+  Understand which files are affected by changes to specified files.
+  Supports stdin pipe for integration with git diff or other tools.
+
+Examples:
+  commandindexdev impact src/auth.rs --format json
+  commandindexdev impact src/a.rs src/b.rs --format path
+  echo src/auth.rs | commandindexdev impact --format json
+  git diff --name-only | commandindexdev impact --format path
+  # Impact with code snippets (JSON)
+  commandindex impact src/auth.rs --with-snippet --format json";
+
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
@@ -101,6 +114,7 @@ pub fn run_impact(
     format: OutputFormat,
     limit: Option<usize>,
     index_path: Option<&Path>,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), ImpactError> {
     // 1. ファイルリスト取得（引数優先、なければstdin）
     let input_files = if files.is_empty() {
@@ -140,7 +154,15 @@ pub fn run_impact(
     // 4. 各ファイルの関連ファイル検索 & 集約
     let engine = RelatedSearchEngine::new(&reader, &store);
     let effective_limit = limit.unwrap_or(20);
-    let result = aggregate_impact(&engine, &valid_files, effective_limit)?;
+    let mut result = aggregate_impact(&engine, &valid_files, effective_limit)?;
+
+    // 4.5 スニペット一括付与（limit適用後）
+    crate::cli::snippet_helper::enrich_impact_with_snippets(
+        &mut result.impacted_files,
+        &reader,
+        &snippet_options,
+        format,
+    );
 
     // 5. 出力
     let stdout = std::io::stdout();
@@ -223,6 +245,7 @@ fn aggregate_impact(
                 v
             },
             impacted_by: by,
+            snippet: None,
         })
         .collect();
     impacted.sort_by(|a, b| {

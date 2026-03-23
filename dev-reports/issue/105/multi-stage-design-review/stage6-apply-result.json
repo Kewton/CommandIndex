@@ -1,0 +1,1 @@
+{"stage": 6, "action": "Stage 5 Codex指摘を設計方針書とIssueに反映", "changes": ["M1: Issue仕様を設計書の全エントリ統一縮約ロジックに統一", "M2: enrich_entryのエラーハンドリング方針（best effort）をセクション3.4として新設", "S1/S2: tokens_to_char_budget ヘルパー関数追加、関数名をtruncate_snippet_for_char_budgetに変更", "S4: エラー系テストケース追加（lookup失敗、空snippet→None正規化）", "N2: 空snippet時のAPI契約を明記（空→None正規化）"]}

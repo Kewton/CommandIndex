@@ -1,0 +1,36 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存ヘルプテストのアサーション文字列変更リスク",
+      "description": "tests/e2e_embedding.rsのembed_help_shows_usageテストが'Generate embeddings'文字列を検証。about変更でテスト失敗の可能性。",
+      "suggestion": "about文言変更時に既存テストのアサーション文字列との整合性確認。変更前にcargo test --allで影響箇所を特定。"
+    },
+    {
+      "id": "S2",
+      "title": "--help-llmフラグのclap解析とサブコマンドルーティングへの影響",
+      "description": "--help-llmをグローバルオプションとして追加する場合、サブコマンド必須バリデーションとの競合が発生。",
+      "suggestion": "Cli::parse()の前にstd::env::argsを検査して--help-llm専用パスを設けるか、commandをOption<Commands>にする。"
+    },
+    {
+      "id": "S3",
+      "title": "JSON出力のスキーマ安定性と後方互換性の考慮",
+      "description": "--help-llmのJSONはLLMが消費するAPI契約。スキーマバージョニングが必要。",
+      "suggestion": "schema_versionフィールドを含める（既にIssueに反映済み）。"
+    },
+    {
+      "id": "S4",
+      "title": "after_help/before_help追加によるヘルプ出力長の増大",
+      "description": "13サブコマンド全てにExamplesとWhen to useを追加するとmain.rsが肥大化。",
+      "suggestion": "after_helpの内容は各cliモジュール（src/cli/*.rs）に定数として定義し、main.rsでは参照のみにする。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "serde/serde_jsonは既に依存済みで追加crate不要"},
+    {"id": "N2", "title": "バイナリサイズへの影響は最小限（数KB〜数十KB程度）"},
+    {"id": "N3", "title": "既存スクリプトの--helpパース互換性（CHANGELOGに記載推奨）"},
+    {"id": "N4", "title": "--help-llmのテスト追加推奨（JSON parse, 全サブコマンド含む等）"}
+  ],
+  "summary": "must_fix無し。低リスクな変更。主な注意点: (1) about文言変更時の既存テスト更新、(2) --help-llmのclap制約回避設計、(3) JSONスキーマバージョニング。依存crate追加不要。"
+}

@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "出力例に存在しないオプション --with-snippet が含まれている",
+      "detail": "Issue本文の出力例に `commandindexdev search --related src/hooks/useFullscreen.ts --limit 5 --with-snippet` とあるが、既存CLIに `--with-snippet` オプションは存在しない。search サブコマンドには `--snippet-lines` と `--snippet-chars` はあるが、`--with-snippet` はない。",
+      "suggestion": "出力例を既存オプションに合わせて修正する。例: `commandindexdev search --related src/hooks/useFullscreen.ts --limit 5 --snippet-lines 5`。または、suggest-queries が生成するコマンドは必ず既存CLIのオプション定義と照合してバリデーションする仕組みを設計に含める。"
+    },
+    {
+      "id": "M2",
+      "title": "受け入れ基準が未定義",
+      "detail": "Issueに「期待効果」はあるが、具体的な受け入れ基準（Acceptance Criteria）が定義されていない。何をもってこの機能が完了したと判断するのか不明確。",
+      "suggestion": "受け入れ基準を追加する: suggest-queries --for が正常にコマンド一覧を出力する、出力コマンドが有効なサブコマンド・オプションである、インデックス未構築時に適切なエラーメッセージを返す、--format json オプションで機械可読な出力が得られる"
+    },
+    {
+      "id": "M3",
+      "title": "エントリポイントファイル推定ロジックの設計方針が不明",
+      "detail": "タスク説明文からどのようにファイルを特定するのか、具体的なアルゴリズムやアプローチが示されていない。ルールベースかLLM依存かで実装規模が大きく変わる。",
+      "suggestion": "推定ロジックの候補を明記する: 1. BM25全文検索で上位ファイルをエントリポイントとする 2. セマンティック検索でファイル候補を取得 3. 上記ファイルにrelated/impactを適用して推奨コマンドを構築"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "出力形式（human / json）の仕様が未定義",
+      "detail": "既存サブコマンドは --format オプションで human/json/path の出力形式を選択できる。suggest-queries の出力形式はテキスト出力例のみ。LLM向け機能であればJSON出力は必須。",
+      "suggestion": "JSON出力の構造を定義する。--format json オプションを必須サポートとして仕様に含める。"
+    },
+    {
+      "id": "S2",
+      "title": "既存の help-llm サブコマンドとの関係・差別化が不明確",
+      "detail": "help-llm はLLM向けにコマンド一覧・ワークフロー・ユースケースをJSON構造で提供する機能。suggest-queries はこれと機能的に重複する部分がある。",
+      "suggestion": "help-llm は静的情報、suggest-queries はインデックス内容に基づく動的推奨という棲み分けを明確にする。"
+    },
+    {
+      "id": "S3",
+      "title": "コマンド名 suggest-queries の妥当性",
+      "detail": "既存CLIサブコマンドは1単語で統一されている。suggest-queries はハイフン区切りの2単語で命名規則から外れる。",
+      "suggestion": "suggest に短縮するか、guide / plan / strategy などの1単語コマンド名を検討する。"
+    },
+    {
+      "id": "S4",
+      "title": "Embedding/Semantic Search が未構築の場合の動作仕様が未定義",
+      "detail": "Embedding未構築環境では実行不可能なコマンドが提案される可能性がある。",
+      "suggestion": "インデックスの状態を確認し、利用可能な検索モードのみを推奨する仕様を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "出力例のファイルパスが実在しない外部プロジェクトの例",
+      "detail": "出力例がReact風のパスでCommandIndex自体の構造とは無関係。",
+      "suggestion": "CommandIndex自身のファイル構造を使った例に差し替える。"
+    },
+    {
+      "id": "N2",
+      "title": "パイプ入力（stdin）対応の検討",
+      "detail": "LLMからのパイプ入力に対応すると使い勝手が向上する。",
+      "suggestion": "初期実装では --for のみでも十分だが、将来的にstdin対応を検討。"
+    },
+    {
+      "id": "N3",
+      "title": "推奨コマンドの実行可能性検証（dry-run）機能",
+      "detail": "提案コマンドが実際に実行可能か事前に検証する機能。",
+      "suggestion": "将来的に --verify オプションを検討。"
+    }
+  ],
+  "summary": "Issue #109 は LLM活用のユーザビリティ向上に有用な機能提案だが、実装に着手するには3つの重要な課題がある。(1) 出力例に存在しないCLIオプション(--with-snippet)が含まれている、(2) 受け入れ基準が未定義でテスト設計ができない、(3) 核心機能であるタスク説明文→エントリポイントファイル推定のアルゴリズムが未定義。また、既存の help-llm との棲み分け、命名規則の統一、Embedding未構築環境での動作仕様も設計段階で決定すべき。"
+}

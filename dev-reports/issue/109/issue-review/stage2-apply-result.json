@@ -1,0 +1,9 @@
+{
+  "stage": 2,
+  "action": "apply-review",
+  "must_fix_applied": 3,
+  "should_fix_applied": 4,
+  "nice_to_have_noted": 3,
+  "issue_updated": true,
+  "title_changed": "検索クエリのLLM向けガイド (suggest)"
+}

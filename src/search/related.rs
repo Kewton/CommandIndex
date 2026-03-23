@@ -115,6 +115,7 @@ impl<'a> RelatedSearchEngine<'a> {
                 file_path: path,
                 score,
                 relation_types,
+                snippet: None,
             })
             .collect();
 

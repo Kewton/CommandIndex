@@ -1,0 +1,12 @@
+{
+  "stage": "3-4",
+  "action": "Stage 3-4 レビュー指摘を設計方針書に反映",
+  "changes": [
+    "resolve_limit()内の.min(1000)を.clamp(1, 1000)に変更（llm_default_limit=0対策）",
+    "workspace検索パスでもresolve_limit使用の注記を追加",
+    "clapヘルプ文字列(main.rs L72)の更新を設計に追加",
+    "セキュリティ設計の対策を.clamp(1,1000)に更新"
+  ],
+  "must_fix_total_stage1_4": 6,
+  "must_fix_note": "Stage 3のmust_fix 6件は全て実装時に対応する構造体リテラル更新とコア実装（設計レベルではなく実装レベルの指摘）"
+}

@@ -1,0 +1,77 @@
+{
+  "issue": 109,
+  "title": "検索クエリのLLM向けガイド (suggest)",
+  "iteration": 1,
+  "date": "2026-03-23",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "AC-1",
+      "description": "commandindexdev suggest --for \"<タスク説明>\" でコマンド列が出力される",
+      "status": "PASS",
+      "evidence": "e2e_suggest::suggest_with_index_human_format テストが成功。インデックス構築後に suggest --for で Suggested search strategy 出力を確認。"
+    },
+    {
+      "id": "AC-2",
+      "description": "--format json 指定時にJSON形式で出力される",
+      "status": "PASS",
+      "evidence": "e2e_suggest::suggest_with_index_json_format テストが成功。JSON パースし strategy 配列と query フィールドを検証済み。ユニットテスト format_json_output でも serde_json::from_str による検証済み。"
+    },
+    {
+      "id": "AC-3",
+      "description": "--format human で人間可読な形式で出力される",
+      "status": "PASS",
+      "evidence": "e2e_suggest::suggest_with_index_human_format で 'Suggested search strategy:' 文字列を確認。ユニットテスト format_human_output で番号付きリスト形式 '1. cmd1 (reason1)' を検証済み。"
+    },
+    {
+      "id": "AC-4",
+      "description": "出力されるコマンドが全て実在するサブコマンド・オプションである",
+      "status": "PASS",
+      "evidence": "suggest.rs の build_strategy/build_fallback_strategy が生成するコマンドを確認: context, search --related, impact, search --semantic, status --detail。全て main.rs の Subcommand 定義に存在する。fallback_strategy_has_valid_commands テストでバイナリ名プレフィックスも検証済み。"
+    },
+    {
+      "id": "AC-5",
+      "description": "インデックス未構築時に適切なエラーメッセージが表示される",
+      "status": "PASS",
+      "evidence": "e2e_suggest::suggest_without_index_shows_error テストが成功。stderr に 'Index not found' or 'not found' を含む failure を確認。"
+    },
+    {
+      "id": "AC-6",
+      "description": "--for 引数の入力バリデーション（空文字・空白のみ・長さ上限）が機能する",
+      "status": "PASS",
+      "evidence": "E2Eテスト: suggest_empty_for_shows_validation_error, suggest_whitespace_for_shows_validation_error が成功。ユニットテスト: validate_input_empty_string_rejected, validate_input_whitespace_only_rejected, validate_input_too_long_rejected, validate_input_control_chars_rejected, validate_input_max_length_accepted が全パス。MAX_INPUT_LENGTH=500 で管理。"
+    },
+    {
+      "id": "AC-7",
+      "description": "cargo clippy --all-targets -- -D warnings 警告0件",
+      "status": "PASS",
+      "evidence": "clippy 実行結果: 警告・エラー 0件。"
+    },
+    {
+      "id": "AC-8",
+      "description": "cargo test --all 全テストパス",
+      "status": "PASS",
+      "evidence": "307 unit tests + 31 integration tests 全パス。0 failed。"
+    },
+    {
+      "id": "AC-9",
+      "description": "統合テストで基本的な suggest シナリオが検証されている",
+      "status": "PASS",
+      "evidence": "tests/e2e_suggest.rs に6つのE2Eテスト: human/json/path format、インデックス未構築エラー、空文字/空白バリデーションエラー。tests/cli_args.rs にも suggest ヘルプ表示テストあり。"
+    },
+    {
+      "id": "AC-10",
+      "description": "help-llm 出力に suggest コマンドの情報が含まれる",
+      "status": "PASS",
+      "evidence": "src/cli/help_llm.rs に suggest コマンド定義あり（name, description, key_options, examples 含む）。help_llm テストの test_build_output_all_commands_have_name, test_build_output_all_commands_have_examples が全コマンド（suggest 含む）を検証。"
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "PASS",
+    "cargo_clippy": "PASS",
+    "cargo_test": "PASS (307 unit + 31 integration)",
+    "cargo_fmt": "PASS"
+  },
+  "issues_found": [],
+  "summary": "Issue #109 の全受入テスト基準10項目が合格。suggest サブコマンドは正しく実装されており、入力バリデーション、3種類の出力フォーマット（human/json/path）、インデックス未構築時のエラーハンドリング、help-llm 統合が全て機能している。品質チェック（build, clippy, test, fmt）も全てクリア。"
+}

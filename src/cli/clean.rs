@@ -1,3 +1,12 @@
+pub const CLEAN_AFTER_HELP: &str = "\
+When to use:
+  When index is corrupted or you want a fresh start.
+  Use --keep-embeddings to preserve the embeddings database.
+
+Examples:
+  commandindexdev clean --path .
+  commandindexdev clean --keep-embeddings";
+
 use std::fmt;
 use std::path::Path;
 

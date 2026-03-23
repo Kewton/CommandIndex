@@ -1,0 +1,22 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "help_flag_shows_usageテストにhelp-llm検証追加"},
+    {"id": "M2", "title": "e2e_embedding.rsのembed_help_shows_usageテストがabout変更で破損する可能性"},
+    {"id": "M3", "title": "help_shows_embed_subcommandの通過確認"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "VERSION定数はenv!マクロ利用が望ましい"},
+    {"id": "S2", "title": "AFTER_HELP定数の保守性"},
+    {"id": "S3", "title": "serde_json依存確認済み（追加不要）"},
+    {"id": "S4", "title": "--help出力の後方互換性（CHANGELOGに記載）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "Commands enumサイズ影響なし"},
+    {"id": "N2", "title": "バイナリサイズ影響なし"},
+    {"id": "N3", "title": "ビルド時間影響なし"},
+    {"id": "N4", "title": "after_helpはclap内部処理に影響なし"},
+    {"id": "N5", "title": "help-llmのE2Eテスト追加推奨"}
+  ]
+}

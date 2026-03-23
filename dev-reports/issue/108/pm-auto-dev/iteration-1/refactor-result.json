@@ -1,0 +1,41 @@
+{
+  "issue": 108,
+  "phase": "refactoring",
+  "iteration": 1,
+  "timestamp": "2026-03-23T00:00:00Z",
+  "status": "success",
+  "warnings_fixed": [
+    {
+      "id": "W-1",
+      "summary": "snippet_helper が 0=無制限を扱っていない",
+      "file": "src/cli/snippet_helper.rs",
+      "fix": "fetch_snippet() 内で config.lines == 0 の場合 usize::MAX に、config.chars == 0 の場合 usize::MAX に変換してから truncate_body() を呼ぶよう修正。human.rs と同じ 0=無制限 セマンティクスを適用。"
+    },
+    {
+      "id": "W-3",
+      "summary": "Impact の u64→usize 変換が未検証",
+      "file": "src/main.rs",
+      "fix": "Impact コマンドの snippet_lines/snippet_chars で `v as usize` を `usize::try_from(v).unwrap_or(usize::MAX)` に変更。同様に Diff コマンドの `limit as usize` も同じパターンに修正。"
+    }
+  ],
+  "warnings_skipped": [
+    {
+      "id": "W-2",
+      "reason": "設計判断10により --with-snippet は全モードで受理し実行時に無視する意図的な設計"
+    },
+    {
+      "id": "W-4",
+      "reason": "normalize_path() の .. 処理は Issue #108 のスコープ外"
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (0 warnings)",
+    "cargo_test": "pass (all tests passed, 0 failures)",
+    "cargo_fmt": "pass (no diff)"
+  },
+  "files_modified": [
+    "src/cli/snippet_helper.rs",
+    "src/main.rs"
+  ]
+}

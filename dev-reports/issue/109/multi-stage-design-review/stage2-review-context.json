@@ -1,0 +1,21 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"id": "M1", "title": "SymbolStore のモジュールパスが不正(embedding/store.rs → indexer/symbol_store.rs)"},
+    {"id": "M2", "title": "format_suggest_results の署名が既存パターン(writer + OutputError)と不一致"},
+    {"id": "M3", "title": "SuggestError::Output が std::io::Error で OutputError と不一致"},
+    {"id": "M4", "title": "Commands::Suggest の index_path がグローバルオプションと重複"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SuggestError に SymbolStore バリアントが不足"},
+    {"id": "S2", "title": "resolve_context が未定義 - SearchContext::new()を使うべき"},
+    {"id": "S3", "title": "impact共通化の具体設計不足 - find_related()直接利用推奨"},
+    {"id": "S4", "title": "既存コマンド数の記載が12→13に修正必要"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "SearchResult.pathとfile_pathの命名差異をコメント化"},
+    {"id": "N2", "title": "SuggestResult に入力コンテキスト情報追加"},
+    {"id": "N3", "title": "format_suggest_human の出力言語を既存と統一"}
+  ]
+}

@@ -1,0 +1,1 @@
+{"stage": 8, "action": "Stage 7 Codex指摘を設計方針書に反映", "changes": ["M1: 現状分析の推定対象にscoreを追加（path/relation/score/heading/symbolsに統一）", "M2: 影響範囲は既にセクション4で詳述済み（追加対応なし）", "S1/S2: パフォーマンス影響とbuild_context_pack責務は既に記載済み"], "note": "Stage 7の指摘は設計方針書全文版では概ね対応済みだった（Codexへの送信が抜粋版だったため差異が生じた）"}

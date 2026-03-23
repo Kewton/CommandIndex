@@ -19,7 +19,8 @@ struct Cli {
 #[derive(Subcommand)]
 #[allow(clippy::large_enum_variant)]
 enum Commands {
-    /// Build search index from repository
+    /// Build full search index from repository (--with-embedding supported)
+    #[command(after_help = commandindex::cli::index::INDEX_AFTER_HELP)]
     Index {
         /// Target directory to index
         #[arg(long, default_value = ".")]
@@ -28,7 +29,8 @@ enum Commands {
         #[arg(long)]
         with_embedding: bool,
     },
-    /// Search the index
+    /// Search the index (full-text, --related, --semantic, --changed-since, --symbol)
+    #[command(after_help = commandindex::cli::search::SEARCH_AFTER_HELP)]
     Search {
         /// Search query (full-text search)
         query: Option<String>,
@@ -47,7 +49,7 @@ enum Commands {
         /// Disable hybrid (BM25 + Semantic) search, use BM25 only
         #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
         no_semantic: bool,
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
         /// Filter by tag
@@ -67,7 +69,7 @@ enum Commands {
         /// Filter by heading
         #[arg(long)]
         heading: Option<String>,
-        /// Maximum number of results (default: from config or 20)
+        /// Maximum number of results (default: 20, with --rerank: 5)
         #[arg(long)]
         limit: Option<usize>,
         /// Number of snippet lines (default: from config or 2)
@@ -76,6 +78,9 @@ enum Commands {
         /// Number of snippet characters for single-line body (default: from config or 120)
         #[arg(long)]
         snippet_chars: Option<usize>,
+        /// Enable snippet output for related search results
+        #[arg(long)]
+        with_snippet: bool,
         /// Enable LLM-based reranking of search results
         #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
         rerank: bool,
@@ -92,7 +97,8 @@ enum Commands {
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "workspace"])]
         changed_since: Option<String>,
     },
-    /// Incrementally update the index
+    /// Incrementally update index (Git-aware delta, --workspace supported)
+    #[command(after_help = commandindex::cli::index::UPDATE_AFTER_HELP)]
     Update {
         /// Target directory
         #[arg(long, default_value = ".")]
@@ -104,12 +110,13 @@ enum Commands {
         #[arg(long)]
         workspace: Option<String>,
     },
-    /// Show index status
+    /// Show index status (--detail, --coverage, --verify, --format json)
+    #[command(after_help = commandindex::cli::status::STATUS_AFTER_HELP)]
     Status {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
-        /// Output format (human, json)
+        /// Output format for status (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
         /// Workspace config file path
@@ -125,7 +132,8 @@ enum Commands {
         #[arg(long)]
         verify: bool,
     },
-    /// Remove index and prepare for rebuild
+    /// Remove index and prepare for rebuild (--keep-embeddings supported)
+    #[command(after_help = commandindex::cli::clean::CLEAN_AFTER_HELP)]
     Clean {
         /// Target directory containing .commandindex/
         #[arg(long, default_value = ".")]
@@ -134,7 +142,8 @@ enum Commands {
         #[arg(long)]
         keep_embeddings: bool,
     },
-    /// Compare related files between two files (conflict detection)
+    /// Compare related files between two files (conflict/overlap detection, JSON output)
+    #[command(after_help = commandindex::cli::diff::DIFF_AFTER_HELP)]
     Diff {
         /// Two files to compare
         #[arg(required = true, num_args = 2)]
@@ -152,32 +161,36 @@ enum Commands {
         #[arg(long)]
         index_path: Option<PathBuf>,
     },
-    /// Generate AI-oriented context pack for specified files
+    /// Generate AI-oriented context pack for specified files (JSON output)
+    #[command(after_help = commandindex::cli::context::CONTEXT_AFTER_HELP)]
     Context {
         /// Target file paths (multiple allowed)
         #[arg(required = true)]
         files: Vec<String>,
 
         /// Maximum number of related files to include
-        #[arg(long, default_value = "20")]
-        max_files: usize,
+        #[arg(long, default_value = "20", value_parser = clap::value_parser!(u64).range(1..=1000))]
+        max_files: u64,
 
-        /// Estimated token limit
-        #[arg(long)]
-        max_tokens: Option<usize>,
+        /// Estimated token limit (approx. 1 token per 4 chars)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=1_000_000))]
+        max_tokens: Option<u64>,
     },
-    /// Generate embeddings for indexed sections
+    /// Generate embeddings for semantic search (requires Ollama)
+    #[command(after_help = commandindex::cli::embed::EMBED_AFTER_HELP)]
     Embed {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
     },
-    /// Show or manage configuration
+    /// Show or manage configuration (show/path subcommands)
+    #[command(after_help = commandindex::cli::config::CONFIG_AFTER_HELP)]
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
     },
-    /// Export index as portable tar.gz archive
+    /// Export index as portable tar.gz archive (--with-embeddings supported)
+    #[command(after_help = commandindex::cli::export::EXPORT_AFTER_HELP)]
     Export {
         /// Output file path (.tar.gz)
         output: PathBuf,
@@ -185,13 +198,14 @@ enum Commands {
         #[arg(long)]
         with_embeddings: bool,
     },
-    /// Analyze impact of file changes
+    /// Analyze impact of file changes (stdin pipe supported, JSON output)
+    #[command(after_help = commandindex::cli::impact::IMPACT_AFTER_HELP)]
     Impact {
         /// Input files (if not provided, reads from stdin)
         #[arg()]
         files: Vec<String>,
 
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
 
@@ -199,11 +213,24 @@ enum Commands {
         #[arg(long)]
         limit: Option<usize>,
 
+        /// Enable snippet output for impacted files
+        #[arg(long)]
+        with_snippet: bool,
+
+        /// Number of snippet lines (default: from config or 2)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        snippet_lines: Option<u64>,
+
+        /// Number of snippet characters for single-line body (default: from config or 120)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        snippet_chars: Option<u64>,
+
         /// Custom index directory path (overrides default .commandindex/)
         #[arg(long)]
         index_path: Option<PathBuf>,
     },
-    /// Import index from tar.gz archive
+    /// Import index from tar.gz archive (--force to overwrite)
+    #[command(after_help = commandindex::cli::import_index::IMPORT_AFTER_HELP)]
     Import {
         /// Input archive file path (.tar.gz)
         input: PathBuf,
@@ -211,7 +238,22 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
-    /// Watch for file changes and auto-update index
+    /// Show structured JSON help for LLM integration
+    #[command(name = "help-llm")]
+    HelpLlm,
+    /// Suggest search strategy based on task description (LLM-oriented)
+    #[command(after_help = commandindex::cli::suggest::SUGGEST_AFTER_HELP)]
+    Suggest {
+        /// Task description
+        #[arg(long = "for")]
+        for_task: String,
+
+        /// Output format (human, json, path)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+    },
+    /// Watch for file changes and auto-update index (daemon mode)
+    #[command(after_help = commandindex::cli::watch::WATCH_AFTER_HELP)]
     Watch {
         /// Target directory to watch
         #[arg(long, default_value = ".")]
@@ -306,6 +348,7 @@ fn main() {
             limit,
             snippet_lines,
             snippet_chars,
+            with_snippet,
             rerank,
             rerank_top,
             workspace,
@@ -338,21 +381,20 @@ fn main() {
             let ctx =
                 commandindex::cli::search::SearchContext::new(base_path, cli.index_path.as_deref())
                     .ok();
-            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &ctx {
-                Some(c) => (
-                    limit.unwrap_or(c.config.search.default_limit).min(1000),
-                    snippet_lines.unwrap_or(c.config.search.snippet_lines),
-                    snippet_chars.unwrap_or(c.config.search.snippet_chars),
-                ),
-                None => (
-                    limit.unwrap_or(20).min(1000),
-                    snippet_lines.unwrap_or(2),
-                    snippet_chars.unwrap_or(120),
-                ),
-            };
+            let search_config = ctx
+                .as_ref()
+                .map(|c| c.config.search.clone())
+                .unwrap_or_default();
+            let effective_limit = search_config.resolve_limit(limit, rerank);
+            let effective_snippet_lines = snippet_lines.unwrap_or(search_config.snippet_lines);
+            let effective_snippet_chars = snippet_chars.unwrap_or(search_config.snippet_chars);
             let snippet_config = commandindex::output::SnippetConfig {
                 lines: effective_snippet_lines,
                 chars: effective_snippet_chars,
+            };
+            let snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                enabled: with_snippet,
+                config: snippet_config,
             };
 
             // Workspace横断検索分岐
@@ -396,6 +438,7 @@ fn main() {
                 let result = commandindex::cli::search::run_related_search_from_stdin(
                     effective_limit,
                     format,
+                    snippet_options.clone(),
                 );
                 match result {
                     Ok(()) => 0,
@@ -452,7 +495,7 @@ fn main() {
                             )
                             .ok()
                         });
-                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref())
+                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref(), snippet_options.clone())
                     }
                     (None, None, None, Some(q)) => {
                         let filters = commandindex::indexer::reader::SearchFilters {
@@ -596,7 +639,7 @@ fn main() {
             index_path,
         } => match commandindex::cli::diff::run_diff(
             &files,
-            limit as usize,
+            usize::try_from(limit).unwrap_or(usize::MAX),
             format,
             index_path.as_deref(),
         ) {
@@ -610,19 +653,38 @@ fn main() {
             files,
             format,
             limit,
+            with_snippet,
+            snippet_lines,
+            snippet_chars,
             index_path,
-        } => match commandindex::cli::impact::run_impact(
-            &files,
-            format,
-            limit,
-            index_path.as_deref(),
-        ) {
-            Ok(()) => 0,
-            Err(e) => {
-                eprintln!("Error: {e}");
-                1
+        } => {
+            let base_path = std::path::Path::new(".");
+            let config = commandindex::config::load_config(base_path).ok();
+            let impact_snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                enabled: with_snippet,
+                config: commandindex::output::SnippetConfig {
+                    lines: snippet_lines
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or_else(|| config.as_ref().map_or(2, |c| c.search.snippet_lines)),
+                    chars: snippet_chars
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or_else(|| config.as_ref().map_or(120, |c| c.search.snippet_chars)),
+                },
+            };
+            match commandindex::cli::impact::run_impact(
+                &files,
+                format,
+                limit,
+                index_path.as_deref(),
+                impact_snippet_options,
+            ) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
             }
-        },
+        }
         Commands::Context {
             files,
             max_files,
@@ -639,8 +701,8 @@ fn main() {
                 };
             match commandindex::cli::context::run_context(
                 &files,
-                max_files,
-                max_tokens,
+                max_files as usize,
+                max_tokens.map(|t| t as usize),
                 &commandindex_dir,
             ) {
                 Ok(()) => 0,
@@ -820,6 +882,26 @@ fn main() {
                 }
             }
         }
+        Commands::Suggest { for_task, format } => {
+            match commandindex::cli::suggest::run_suggest(
+                &for_task,
+                format,
+                cli.index_path.as_deref(),
+            ) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
+        Commands::HelpLlm => match commandindex::cli::help_llm::run_help_llm() {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Watch {
             path,
             debounce,

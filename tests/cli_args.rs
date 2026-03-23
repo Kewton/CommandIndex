@@ -20,7 +20,9 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("import"))
         .stdout(predicate::str::contains("impact"))
         .stdout(predicate::str::contains("watch"))
-        .stdout(predicate::str::contains("diff"));
+        .stdout(predicate::str::contains("diff"))
+        .stdout(predicate::str::contains("help-llm"))
+        .stdout(predicate::str::contains("suggest"));
 }
 
 #[test]
@@ -714,4 +716,87 @@ fn search_related_multiple_conflicts_with_symbol() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
+}
+
+// --- suggest CLI option tests ---
+
+#[test]
+fn suggest_help_shows_usage() {
+    common::cmd()
+        .args(["suggest", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("suggest"))
+        .stdout(predicate::str::contains("--for"))
+        .stdout(predicate::str::contains("--format"));
+}
+
+// --- help-llm E2E tests ---
+
+#[test]
+fn help_llm_outputs_valid_json() {
+    let output = common::cmd().arg("help-llm").assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: Result<serde_json::Value, _> = serde_json::from_str(&stdout);
+    assert!(parsed.is_ok(), "help-llm output should be valid JSON");
+}
+
+#[test]
+fn help_llm_contains_all_subcommands() {
+    let output = common::cmd().arg("help-llm").assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    let commands = parsed["commands"]
+        .as_array()
+        .expect("commands should be array");
+    let command_names: Vec<&str> = commands
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+
+    let expected = [
+        "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
+        "export", "impact", "import", "watch", "suggest",
+    ];
+    for name in &expected {
+        assert!(
+            command_names.contains(name),
+            "help-llm output should contain command '{name}'"
+        );
+    }
+    assert_eq!(
+        commands.len(),
+        14,
+        "help-llm should have exactly 14 commands"
+    );
+    // help-llm itself should not be in the commands list
+    assert!(
+        !command_names.contains(&"help-llm"),
+        "help-llm should not list itself in commands"
+    );
+}
+
+#[test]
+fn help_llm_has_schema_version() {
+    let output = common::cmd().arg("help-llm").assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    assert_eq!(
+        parsed["schema_version"].as_str(),
+        Some("1.0"),
+        "schema_version should be '1.0'"
+    );
+}
+
+#[test]
+fn help_llm_version_matches_cargo() {
+    let output = common::cmd().arg("help-llm").assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    let version = parsed["version"].as_str().expect("version should exist");
+    assert_eq!(
+        version,
+        env!("CARGO_PKG_VERSION"),
+        "help-llm version should match Cargo.toml version"
+    );
 }

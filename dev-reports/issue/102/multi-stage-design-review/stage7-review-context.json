@@ -1,0 +1,18 @@
+{
+  "stage": 7,
+  "type": "整合性・影響分析レビュー2回目",
+  "must_fix": [
+    {"id": "M1", "title": "Result<(), String>は既存パターン違反→専用HelpLlmError enum必要"},
+    {"id": "M2", "title": "main.rsのmatchアームが既存exit_code代入パターンと不整合"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "Updateサブコマンドのafter_helpが変更対象リストに欠落"},
+    {"id": "S2", "title": "Issue本文JSONスキーマとVec構造体の差異が未文書化"},
+    {"id": "S3", "title": "searchのexamples定義が曖昧（modes内のexampleと重複）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "toolフィールドのハードコード（commandindexdev vs commandindex）"},
+    {"id": "N2", "title": "Deserialize追加でテスト型安全性向上"},
+    {"id": "N3", "title": "schema_versionの型（現状strで問題なし）"}
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "BM25検索の結果粒度がIssue本文の前提と一致していない",
+      "detail": "Issueでは「BM25全文検索で上位5件のファイルを取得」としているが、既存の src/indexer/reader.rs の search / search_with_options が返すのはファイル単位ではなくセクション単位の SearchResult。同一ファイルが複数セクションで上位に重複するため、そのまま related / impact の入口に使うと実質的な候補ファイル数が減り、戦略の偏りや重複提案が発生する。",
+      "suggestion": "仕様に「BM25結果は SearchResult.path でファイル単位に正規化・重複排除し、必要ならファイルごとに最大スコアを採用して上位N件を選ぶ」と明記する。受け入れ基準にも、同一ファイルの重複でステップ数や候補数が圧迫されないことを追加する。"
+    },
+    {
+      "id": "M2",
+      "title": "Embedding利用可否の判定方法が既存実装とずれている",
+      "detail": "Issueでは embedding/store.rs の既存APIで embeddings.db の存在を確認するとしているが、既存の semantic / hybrid 検索は src/cli/search.rs で SymbolStore::count_embeddings() を使って symbols.db 側の埋め込み有無を判定している。embeddings.db の存在確認だけでは、実際に search --semantic が使えるかどうかと一致しない可能性がある。",
+      "suggestion": "suggest の semantic ステップ判定は、search --semantic と同じ条件にそろえる。SymbolStore::count_embeddings() > 0 を基準にする仕様へ修正する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "help-llm 追加対応の記述が既存テスト契約まで踏み込めていない",
+      "detail": "既存の tests/cli_args.rs には help_llm_contains_all_subcommands があり、コマンド数が固定件数で検証されている。suggest を追加するとこの件数も更新が必要。",
+      "suggestion": "変更対象・テスト方針に、help-llm の既存JSON契約テスト更新を明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "impact 再利用方針がCLI層に寄りすぎている",
+      "detail": "run_impact は stdin処理、存在チェック、出力整形まで含むCLIエントリポイント。suggest が必要とするのはその中の集約ロジックだけ。",
+      "suggestion": "impact 側の集約処理を共通関数として抽出し、suggest はその純粋ロジックを呼ぶ方針に寄せる。「CLIハンドラ再利用」ではなく「関連計算ロジックの共通化」と書く。"
+    },
+    {
+      "id": "S3",
+      "title": "入力バリデーションの定義が不十分で空白入力の扱いが曖昧",
+      "detail": "--for \"   \" のような空白のみ入力をどう扱うかが未定義。",
+      "suggestion": "trim() 後に空なら InvalidInput とする、と仕様に明記する。長さ上限もtrim後基準かを定義する。"
+    },
+    {
+      "id": "S4",
+      "title": "候補が見つからない場合の振る舞いが受け入れ基準にない",
+      "detail": "BM25で有意な候補ファイルが得られない、あるいは related / impact が空になるケースの仕様がない。",
+      "suggestion": "「候補0件時は何を返すか」を明記する。汎用的な search / context ベースの最小戦略を返す、または SuggestError を返す。"
+    },
+    {
+      "id": "S5",
+      "title": "インデックス解決方法の整合性が仕様に出ていない",
+      "detail": "既存CLIはグローバル --index-path と設定ファイル経由のインデックス解決を持っている。suggest の実装方針でその解決規則をどう踏襲するかが書かれていない。",
+      "suggestion": "suggest も既存コマンドと同様に --index-path / config の解決規則に従うことを仕様へ追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "単体テストの重点がDTO生成より戦略生成ロジックに寄るとよい",
+      "detail": "SuggestStep / SuggestResult の構造体生成テストは価値が低い。ファイル重複排除、semantic有無の分岐、ステップ上限、候補0件時のフォールバックなどの戦略生成ロジックを直接検証した方が仕様の担保になる。",
+      "suggestion": "単体テスト項目を戦略組立関数の振る舞い中心に差し替える。dedup、limit、fallback、semantic gatingを優先。"
+    }
+  ],
+  "summary": "1回目レビューで挙がっていた主要論点はおおむね解消されているが、BM25結果をファイル単位として扱っている点と、semantic利用可否をembeddings.db存在で判定しようとしている点の2つが現在のコード実態と一致しない。また、help-llmの既存契約テスト更新、impactロジックの共通化、空白入力や候補0件時の仕様、--index-pathを含むインデックス解決規則の明記が不足している。"
+}

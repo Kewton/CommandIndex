@@ -1,0 +1,30 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "help-llm実行時にresolve_commandindex_dirを呼ばない設計が必要",
+      "description": "help-llmはインデックスもconfig解決も不要。即座にJSON出力してexit(0)するべき。",
+      "suggestion": "Commands::HelpLlmアームではresolve_commandindex_dirを呼ばず、JSON生成→stdout出力→exit(0)のみ。"
+    },
+    {
+      "id": "M2",
+      "title": "help_flag_shows_usageテストにhelp-llm検証追加が必須",
+      "description": "tests/cli_args.rsの全サブコマンドcontains検証にhelp-llmが含まれない。",
+      "suggestion": "help-llmのcontains検証を追加。JSON出力のパース検証テストも新規追加。"
+    }
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "JSON生成コードとCommands enumの同期保証", "suggestion": "テストでJSON commands配列とヘルプ出力のサブコマンド名を突合する自動検証"},
+    {"id": "S2", "title": "help-llmのハイフン付き名前とclap命名規約", "suggestion": "#[command(name = \"help-llm\")]を明示指定"},
+    {"id": "S3", "title": "clippy large_enum_variant警告への影響", "suggestion": "HelpLlmはunit variantで問題なし"},
+    {"id": "S4", "title": "src/cli/help_llm.rsモジュールの責務明確化", "suggestion": "HelpLlmOutput構造体、generate()関数をhelp_llm.rsに配置"},
+    {"id": "S5", "title": "VERSION定数の一元管理", "suggestion": "lib.rsにpub const VERSION追加、main.rsとhelp-llmで共通参照"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "スナップショットテスト"},
+    {"id": "N2", "title": "デフォルトpretty出力推奨"},
+    {"id": "N3", "title": "release.ymlワークフロー影響確認"},
+    {"id": "N4", "title": "CommandMate連携時のパフォーマンス（問題なし）"}
+  ],
+  "summary": "must_fix 2件: help-llmのインデックス不要設計、テスト追加。should_fix 5件: enum同期検証、命名規約、モジュール責務、VERSION一元管理。"
+}

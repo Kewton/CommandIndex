@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "action": "Stage 3影響範囲レビュー指摘事項をIssueに反映",
+  "changes": [
+    "M1-M4: 影響範囲セクションを新規追加（変更対象ファイル一覧）",
+    "M3: help-llm更新箇所を影響範囲に明記",
+    "M4: main.rsヘルプ更新を影響範囲に明記",
+    "S1: test_format_empty_resultsのLlm追加を受け入れ基準に含めた",
+    "S2: テスト追加を受け入れ基準に含めた",
+    "影響なしの確認事項も記載（検索ロジック、crate、パフォーマンス）"
+  ],
+  "issue_updated": true,
+  "must_fix_count_stage1": 3,
+  "must_fix_count_stage3": 4,
+  "total_must_fix": 7,
+  "all_must_fix_addressed": true
+}

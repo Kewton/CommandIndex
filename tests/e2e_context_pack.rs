@@ -277,23 +277,142 @@ fn context_pack_max_tokens_limits_output() {
     let full_tokens = full_pack["summary"]["estimated_tokens"]
         .as_u64()
         .unwrap_or(0);
+    let full_included = full_pack["summary"]["included"].as_u64().unwrap_or(0);
 
-    // Now request with a very small max-tokens limit
-    let limited_pack = run_context_pack(dir.path(), &["docs/a.md"], &["--max-tokens", "1"]);
+    // Precondition: フィクスチャが十分なトークン数・エントリ数を生成すること
+    assert!(
+        full_tokens > 10,
+        "precondition failed: full_tokens ({full_tokens}) should be > 10; fixture may have changed"
+    );
+    assert!(
+        full_included > 1,
+        "precondition failed: full_included ({full_included}) should be > 1; fixture may have changed"
+    );
+
+    let limit = full_tokens / 2;
+    let limited_pack = run_context_pack(
+        dir.path(),
+        &["docs/a.md"],
+        &["--max-tokens", &limit.to_string()],
+    );
 
     let limited_tokens = limited_pack["summary"]["estimated_tokens"]
         .as_u64()
         .unwrap_or(0);
-    let limited_included = limited_pack["summary"]["included"].as_u64().unwrap_or(0);
 
-    // With max-tokens=1, output should be more constrained than the full output
-    // (either fewer tokens or fewer included files)
-    if full_tokens > 1 {
+    assert!(
+        limited_tokens <= limit,
+        "estimated_tokens ({limited_tokens}) should be <= max-tokens ({limit})"
+    );
+}
+
+#[test]
+fn context_pack_max_tokens_very_small_includes_first_entry() {
+    let dir = setup_context_docs();
+
+    // max-tokens=1: very small, but first entry should still be included (exception rule)
+    let pack = run_context_pack(dir.path(), &["docs/a.md"], &["--max-tokens", "1"]);
+
+    let included = pack["summary"]["included"].as_u64().unwrap_or(0);
+    let context = pack["context"].as_array().expect("context array");
+
+    // First entry exception: at least 1 entry should be included even with tiny budget
+    if !context.is_empty() {
         assert!(
-            limited_tokens <= full_tokens || limited_included <= 1,
-            "max-tokens should limit output: limited_tokens={limited_tokens}, full_tokens={full_tokens}, limited_included={limited_included}"
+            included >= 1,
+            "first entry exception should ensure at least 1 entry is included"
         );
     }
+}
+
+#[test]
+fn context_pack_max_tokens_snippet_truncation() {
+    let dir = setup_context_docs();
+
+    // Get full pack first to see if there are entries with snippets
+    let full_pack = run_context_pack(dir.path(), &["docs/a.md"], &[]);
+    let full_context = full_pack["context"].as_array().expect("context array");
+
+    let has_snippet = full_context
+        .iter()
+        .any(|e| e.get("snippet").is_some() && !e["snippet"].is_null());
+
+    // Precondition: フィクスチャがsnippet付きエントリを生成すること
+    assert!(
+        has_snippet,
+        "precondition failed: no entries with snippets found; fixture may have changed"
+    );
+
+    // Use a very small token budget that forces snippet truncation
+    let pack = run_context_pack(dir.path(), &["docs/a.md"], &["--max-tokens", "5"]);
+    let context = pack["context"].as_array().expect("context array");
+
+    // Verify the pack is valid even with aggressive truncation
+    for entry in context {
+        assert!(
+            entry.get("path").is_some() && entry["path"].is_string(),
+            "entry should have path"
+        );
+        // snippet may be None (null/absent) or truncated
+        if let Some(snippet) = entry.get("snippet")
+            && !snippet.is_null()
+        {
+            assert!(
+                snippet.as_str().is_some(),
+                "snippet should be a string if present"
+            );
+        }
+    }
+}
+
+#[test]
+fn context_pack_estimated_tokens_includes_metadata() {
+    let dir = setup_context_docs();
+    let pack = run_context_pack(dir.path(), &["docs/a.md"], &[]);
+
+    let context = pack["context"].as_array().expect("context array");
+    let estimated_tokens = pack["summary"]["estimated_tokens"].as_u64().unwrap_or(0);
+
+    if !context.is_empty() {
+        // With metadata counting, estimated_tokens should be > 0 even for entries without snippets
+        // because path + relation + score always contribute tokens
+        assert!(
+            estimated_tokens > 0,
+            "estimated_tokens should be > 0 when there are entries"
+        );
+    }
+}
+
+#[test]
+fn context_pack_max_tokens_value_parser_rejects_zero() {
+    let dir = setup_context_docs();
+    // --max-tokens 0 should be rejected by value_parser range (1..=1_000_000)
+    let output = common::cmd()
+        .args(["context", "docs/a.md", "--max-tokens", "0"])
+        .current_dir(dir.path())
+        .assert()
+        .failure();
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("invalid value") || stderr.contains("0"),
+        "should reject --max-tokens 0, stderr: {stderr}"
+    );
+}
+
+#[test]
+fn context_pack_max_files_value_parser_rejects_zero() {
+    let dir = setup_context_docs();
+    // --max-files 0 should be rejected by value_parser range (1..=1000)
+    let output = common::cmd()
+        .args(["context", "docs/a.md", "--max-files", "0"])
+        .current_dir(dir.path())
+        .assert()
+        .failure();
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("invalid value") || stderr.contains("0"),
+        "should reject --max-files 0, stderr: {stderr}"
+    );
 }
 
 #[test]

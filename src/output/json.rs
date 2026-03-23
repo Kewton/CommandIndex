@@ -95,11 +95,19 @@ pub fn format_related_json(
                 }
             })
             .collect();
-        let json_value = serde_json::json!({
+        let mut json_value = serde_json::json!({
             "path": result.file_path,
             "score": result.score,
             "relations": relations,
         });
+        if let Some(ref snippet) = result.snippet
+            && let Some(obj) = json_value.as_object_mut()
+        {
+            obj.insert(
+                "snippet".to_string(),
+                serde_json::Value::String(snippet.clone()),
+            );
+        }
         serde_json::to_writer(&mut *writer, &json_value)?;
         writeln!(writer)?;
     }
@@ -116,12 +124,21 @@ pub fn format_impact_json(
         "total_input_files": result.total_input_files,
         "total_impacted_files": result.total_impacted_files,
         "impacted_files": result.impacted_files.iter().map(|f| {
-            serde_json::json!({
+            let mut file_json = serde_json::json!({
                 "file_path": f.file_path,
                 "score": f.score,
                 "relation_types": f.relation_types,
                 "impacted_by": f.impacted_by,
-            })
+            });
+            if let Some(ref snippet) = f.snippet
+                && let Some(obj) = file_json.as_object_mut()
+            {
+                obj.insert(
+                    "snippet".to_string(),
+                    serde_json::Value::String(snippet.clone()),
+                );
+            }
+            file_json
         }).collect::<Vec<_>>(),
     });
     serde_json::to_writer_pretty(&mut *writer, &json_value)?;

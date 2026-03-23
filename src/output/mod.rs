@@ -1,6 +1,7 @@
 pub mod context_pack;
 pub mod human;
 pub mod json;
+pub mod llm;
 pub mod path;
 
 use std::fmt;
@@ -33,6 +34,7 @@ pub enum OutputFormat {
     Human,
     Json,
     Path,
+    Llm,
 }
 
 /// 出力エラー型
@@ -94,6 +96,7 @@ pub fn format_symbol_results(
         OutputFormat::Human => human::format_symbol_human(results, writer),
         OutputFormat::Json => json::format_symbol_json(results, writer),
         OutputFormat::Path => path::format_symbol_path(results, writer),
+        OutputFormat::Llm => llm::format_symbol_llm(results, writer),
     }
 }
 
@@ -103,6 +106,7 @@ pub struct RelatedSearchResult {
     pub file_path: String,
     pub score: f32,
     pub relation_types: Vec<RelationType>,
+    pub snippet: Option<String>,
 }
 
 /// 関連タイプ
@@ -125,6 +129,7 @@ pub fn format_related_results(
         OutputFormat::Human => human::format_related_human(results, writer),
         OutputFormat::Json => json::format_related_json(results, writer),
         OutputFormat::Path => path::format_related_path(results, writer),
+        OutputFormat::Llm => llm::format_related_llm(results, writer),
     }
 }
 
@@ -149,6 +154,7 @@ pub fn format_semantic_results(
         OutputFormat::Human => human::format_semantic_human(results, writer),
         OutputFormat::Json => json::format_semantic_json(results, writer),
         OutputFormat::Path => path::format_semantic_path(results, writer),
+        OutputFormat::Llm => llm::format_semantic_llm(results, writer),
     }
 }
 
@@ -170,6 +176,7 @@ pub fn format_workspace_results(
         OutputFormat::Human => human::format_workspace_human(results, writer, snippet_config),
         OutputFormat::Json => json::format_workspace_json(results, writer),
         OutputFormat::Path => path::format_workspace_path(results, writer),
+        OutputFormat::Llm => llm::format_workspace_llm(results, writer),
     }
 }
 
@@ -193,6 +200,7 @@ pub fn format_diff_results(
         OutputFormat::Human => human::format_diff_human(result, writer),
         OutputFormat::Json => json::format_diff_json(result, writer),
         OutputFormat::Path => path::format_diff_path(result, writer),
+        OutputFormat::Llm => llm::format_diff_llm(result, writer),
     }
 }
 
@@ -207,7 +215,14 @@ pub fn format_results(
         OutputFormat::Human => human::format_human(results, writer, SnippetConfig::default()),
         OutputFormat::Json => json::format_json(results, writer),
         OutputFormat::Path => path::format_path(results, writer),
+        OutputFormat::Llm => llm::format_llm(results, writer),
     }
+}
+
+/// トークン数を概算する（文字数 / 4、最低1トークン）
+pub(crate) fn estimate_tokens(text: &str) -> usize {
+    let count = text.chars().count();
+    if count == 0 { 0 } else { (count / 4).max(1) }
 }
 
 /// tags文字列をパースしてVec<&str>に変換する
@@ -260,6 +275,7 @@ pub struct ImpactFileResult {
     pub score: f32,
     pub relation_types: Vec<String>,
     pub impacted_by: Vec<String>,
+    pub snippet: Option<String>,
 }
 
 /// impact 結果を指定フォーマットで出力する
@@ -272,7 +288,56 @@ pub fn format_impact_results(
         OutputFormat::Human => human::format_impact_human(result, writer),
         OutputFormat::Json => json::format_impact_json(result, writer),
         OutputFormat::Path => path::format_impact_path(result, writer),
+        OutputFormat::Llm => llm::format_impact_llm(result, writer),
     }
+}
+
+/// suggest サブコマンドの個別ステップ
+#[derive(Debug, Clone, Serialize)]
+pub struct SuggestStep {
+    pub command: String,
+    pub reason: String,
+}
+
+/// suggest サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct SuggestResult {
+    pub query: String,
+    pub has_embeddings: bool,
+    pub strategy: Vec<SuggestStep>,
+}
+
+/// suggest 結果を指定フォーマットで出力する
+pub fn format_suggest_results(
+    result: &SuggestResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => format_suggest_human(result, writer),
+        OutputFormat::Json => format_suggest_json(result, writer),
+        OutputFormat::Path => {
+            for step in &result.strategy {
+                writeln!(writer, "{}", step.command)?;
+            }
+            Ok(())
+        }
+        OutputFormat::Llm => format_suggest_human(result, writer),
+    }
+}
+
+fn format_suggest_human(result: &SuggestResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    writeln!(writer, "Suggested search strategy:")?;
+    for (i, step) in result.strategy.iter().enumerate() {
+        writeln!(writer, "{}. {} ({})", i + 1, step.command, step.reason)?;
+    }
+    Ok(())
+}
+
+fn format_suggest_json(result: &SuggestResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    let json = serde_json::to_string_pretty(result)?;
+    writeln!(writer, "{json}")?;
+    Ok(())
 }
 
 /// AI向け文脈パッケージ

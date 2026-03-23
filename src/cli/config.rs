@@ -1,3 +1,12 @@
+pub const CONFIG_AFTER_HELP: &str = "\
+When to use:
+  View current configuration or check config file locations.
+  Use 'show' to see effective config, 'path' to see loaded file paths.
+
+Examples:
+  commandindexdev config show
+  commandindexdev config path";
+
 use std::fmt;
 use std::path::Path;
 

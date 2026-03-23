@@ -1,0 +1,87 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Commands enum に Suggest バリアントを追加",
+      "detail": "src/main.rs の Commands enum に新しい Suggest バリアントを追加する必要がある。--for と --format の2引数定義が必要。",
+      "suggestion": "Commands enum に Suggest { for_task: String, format: OutputFormat } を追加し、main()のmatch分岐に対応処理を追加。"
+    },
+    {
+      "id": "M2",
+      "title": "src/cli/mod.rs にsuggestモジュールを追加",
+      "detail": "src/cli/suggest.rs を新規作成し、src/cli/mod.rs に pub mod suggest; を追加。",
+      "suggestion": "既存CLIモジュール構成に準拠して追加。"
+    },
+    {
+      "id": "M3",
+      "title": "既存検索APIの再利用設計",
+      "detail": "BM25検索(IndexReaderWrapper::search_with_options)、related検索(RelatedSearchEngine::find_related)を内部的に呼び出す。impact::aggregate_impactはprivate。",
+      "suggestion": "suggest.rs内でRelatedSearchEngineを直接使って同等ロジックを実装するか、aggregate_impactをpub(crate)に変更。"
+    },
+    {
+      "id": "M4",
+      "title": "テスト追加",
+      "detail": "tests/cli_args.rs のヘルプテストにsuggestを追加。新しいE2Eテスト(tests/e2e_suggest.rs)の作成が必須。",
+      "suggestion": "cli_args.rsにsuggestのヘルプ表示テスト追加。e2e_suggest.rsでインデックス構築→suggest実行→出力検証。"
+    },
+    {
+      "id": "M5",
+      "title": "出力フォーマット定義",
+      "detail": "SuggestResult構造体が必要。既存のSearchResult等とは異なる新しい構造体。",
+      "suggestion": "src/output/mod.rs に SuggestResult 構造体を定義。format_suggest_results関数を追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "help-llm出力への suggest コマンド追加",
+      "detail": "build_commands()にsuggestのCommandInfoを追加、build_use_cases()とbuild_workflows()にも追加。",
+      "suggestion": "help-llmのコマンド一覧、ユースケース、ワークフローにsuggestを追加。"
+    },
+    {
+      "id": "S2",
+      "title": "Embedding未構築時のフォールバック処理",
+      "detail": "embeddings.dbの存在チェックで条件分岐。",
+      "suggestion": "embeddings.db存在時のみsemantic検索戦略を提案に含める。"
+    },
+    {
+      "id": "S3",
+      "title": "入力バリデーション（--for引数）",
+      "detail": "空文字チェック、長さ上限、制御文字チェック等。",
+      "suggestion": "validate_task_description()関数を実装。"
+    },
+    {
+      "id": "S4",
+      "title": "専用エラー型の検討",
+      "detail": "suggestは3種類の検索を組み合わせるため、エラーパターンが複合的。",
+      "suggestion": "SuggestError enumを定義して適切なエラー文脈を提供。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "パフォーマンス考慮",
+      "detail": "BM25→related→impactの連鎖コスト。各段階のlimit適切設定で緩和可能。",
+      "suggestion": "BM25: 10件、related: 20件、impact: 20件程度のlimit設定。"
+    },
+    {
+      "id": "N2",
+      "title": "新規crate追加不要",
+      "detail": "既存のtantivy、rusqlite、serde_jsonで全て実現可能。",
+      "suggestion": "Cargo.tomlへの変更は不要。"
+    },
+    {
+      "id": "N3",
+      "title": "将来的な拡張性",
+      "detail": "SuggestStrategy enumでsemantic検索戦略の追加ポイントを設計に組み込む。",
+      "suggestion": "Context/Related/Impact/Semanticバリアントを定義し、動的に戦略リストを構築。"
+    },
+    {
+      "id": "N4",
+      "title": "既存E2Eテストへの波及なし",
+      "detail": "cli_args.rsのヘルプテスト以外、既存テストの変更は不要。",
+      "suggestion": "新規テストのみ追加すればよい。"
+    }
+  ],
+  "summary": "suggestサブコマンド追加は既存アーキテクチャに良く適合。変更対象は主に5箇所(main.rs, cli/mod.rs, cli/suggest.rs新規, output/mod.rs, help_llm.rs)。既存機能への破壊的影響ゼロ。新規crate追加不要。BM25・related・impact検索APIは既にpub(crate)以上で再利用可能。"
+}

@@ -1,3 +1,13 @@
+pub const DIFF_AFTER_HELP: &str = "\
+When to use:
+  Detect potential conflicts or overlapping concerns between two files.
+  Useful for code review and refactoring planning.
+
+Examples:
+  commandindexdev diff src/auth.rs src/session.rs --format json
+  commandindexdev diff file_a.md file_b.md
+  commandindexdev diff src/a.rs src/b.rs --limit 50";
+
 use std::collections::HashSet;
 use std::path::Path;
 
