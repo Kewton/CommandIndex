@@ -1,0 +1,63 @@
+{
+  "issue_number": 116,
+  "title": "search/related/impact のLLMプロンプト最適化",
+  "design_policy": "dev-reports/design/issue-116-llm-prompt-optimize-design-policy.md",
+  "work_plan": "dev-reports/issue/116/work-plan.md",
+  "tasks": [
+    {
+      "id": "1.1",
+      "description": "LlmFormatOptions構造体をsrc/output/mod.rsに定義",
+      "files": ["src/output/mod.rs"]
+    },
+    {
+      "id": "1.2",
+      "description": "format_resultsのシグネチャにllm_options追加",
+      "files": ["src/output/mod.rs"]
+    },
+    {
+      "id": "1.3",
+      "description": "format_impact_resultsのシグネチャにllm_options追加",
+      "files": ["src/output/mod.rs"]
+    },
+    {
+      "id": "2.1",
+      "description": "format_llmにllm_options引数追加+重複除去(dedup_results)",
+      "files": ["src/output/llm.rs"]
+    },
+    {
+      "id": "2.2",
+      "description": "bodyトランケーション(truncate_body_for_llm)+安全処理",
+      "files": ["src/output/llm.rs"]
+    },
+    {
+      "id": "2.3",
+      "description": "format_impact_llmにimpacted_by省略(IMPACTED_BY_DISPLAY_LIMIT=3)",
+      "files": ["src/output/llm.rs"]
+    },
+    {
+      "id": "3.1",
+      "description": "cli/search.rs run関数にllm_options引数追加",
+      "files": ["src/cli/search.rs"]
+    },
+    {
+      "id": "3.2",
+      "description": "cli/impact.rs run_impact関数にllm_options引数追加",
+      "files": ["src/cli/impact.rs"]
+    },
+    {
+      "id": "3.3",
+      "description": "main.rsでLlmFormatOptions組み立て・受け渡し",
+      "files": ["src/main.rs"]
+    },
+    {
+      "id": "4.1",
+      "description": "既存テストのコンパイル修正(format_to_string等にdefault追加)",
+      "files": ["tests/output_format.rs"]
+    },
+    {
+      "id": "4.2-4.5",
+      "description": "新規テスト追加(トランケーション、重複除去、impacted_by省略、E2E)",
+      "files": ["tests/output_format.rs", "tests/e2e_impact.rs"]
+    }
+  ]
+}

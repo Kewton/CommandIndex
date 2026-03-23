@@ -475,7 +475,10 @@ fn main() {
                             path_prefix: path,
                             file_type,
                         };
-                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top)
+                        let llm_options = commandindex::output::LlmFormatOptions {
+                            max_body_lines: snippet_lines,
+                        };
+                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top, &llm_options)
                     }
                     (None, Some(s), None, None) => {
                         let ctx_for_symbol = ctx.or_else(|| {
@@ -677,6 +680,9 @@ fn main() {
                 limit,
                 index_path.as_deref(),
                 impact_snippet_options,
+                &commandindex::output::LlmFormatOptions {
+                    max_body_lines: snippet_lines.map(|v| usize::try_from(v).unwrap_or(usize::MAX)),
+                },
             ) {
                 Ok(()) => 0,
                 Err(e) => {

@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "新規CLIフラグ案が既存オプション体系と不整合",
+      "description": "Issue は --max-snippet-lines と --no-token-estimate を新設する前提だが、現行コードではスニペット長は既に snippet_lines / snippet_chars で管理されている。related は search --related なので、Issue の書き方のまま実装すると既存CLIと二重化・命名不一致が起きる。",
+      "suggestion": "新規フラグ追加ではなく既存の --snippet-lines / --snippet-chars を --format llm にも適用する方針に寄せるか、別名を導入するなら理由と最終CLI形を明記する。related は search --related の文脈で記述し直す。"
+    },
+    {
+      "id": "M2",
+      "title": "受け入れ基準1の再現条件が不足しており検証不能",
+      "description": "search/related/impact を組み合わせた出力が 10KB 以下という基準は方向性として妥当だが、P6相当の具体的コマンド、入力クエリ、--limit 値、--with-snippet の有無、context を含めるか除くかが定義されていない。",
+      "suggestion": "受け入れ基準に検証レシピを固定する。対象リポジトリ/fixture、実行コマンド、各 --limit、スニペット有無、計測対象を明記する。"
+    },
+    {
+      "id": "M3",
+      "title": "related/impact のスニペット最適化要件が現行LLM出力仕様とつながっていない",
+      "description": "現行コードの format_related_llm と format_impact_llm は snippet フィールドを一切出力していない。Issue は --with-snippet 時のスニペット行数制限を提案しているが、LLM出力で本当にスニペットを出すようにするのかが不明確。",
+      "suggestion": "--format llm における related/impact の最終出力例を追加し、--with-snippet 有効時にスニペットを出すのか否かを明確化する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "impact の impacted_by 省略ルールが未定義",
+      "description": "何件以上で省略するか、先頭N件だけ残すか、総数表示にするかが未定義。",
+      "suggestion": "省略閾値・表示形式を明記する。例: a.rs, b.rs, c.rs, ... (+7 more)"
+    },
+    {
+      "id": "S2",
+      "title": "--limit の意味がコマンド横断で曖昧",
+      "description": "search は設定ファイル解決込み、search --related は related 結果件数、impact は集約後の impacted file 件数という別々の意味を持つ。",
+      "suggestion": "各コマンドでの --limit の適用単位を明記する。"
+    },
+    {
+      "id": "S3",
+      "title": "重複統合の定義が粗く実装方式が割れる",
+      "description": "同一ファイル内の重複セクションをマージの基準が不明確。現行 format_llm は path 単位のグルーピングのみ。",
+      "suggestion": "重複判定キーを定義する。例: path + heading + body 完全一致のみ除外。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "出力サイズ目標をコマンド別にも置く",
+      "description": "全体 10KB 以下だけだと、どのコマンドが肥大化要因か切り分けにくい。",
+      "suggestion": "search/related/impact 個別の目安上限を追加する。"
+    },
+    {
+      "id": "N2",
+      "title": "受け入れ基準に出力サンプル差分を含める",
+      "description": "フォーマッタ中心の変更なので期待出力の固定が有効。",
+      "suggestion": "現行出力と新オプション適用後の出力例を短く追記する。"
+    }
+  ],
+  "summary": "1回目レビューで不足していた差分・受け入れ基準は大きく改善されているが、(1) 新規CLIフラグ案が既存の snippet_lines / snippet_chars 設計と噛み合っていない、(2) 10KB基準の検証条件が未固定、(3) related/impact の --with-snippet 最適化が現行LLM出力仕様と接続されていない、の3点を整理する必要がある。"
+}
