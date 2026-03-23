@@ -49,7 +49,7 @@ enum Commands {
         /// Disable hybrid (BM25 + Semantic) search, use BM25 only
         #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
         no_semantic: bool,
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
         /// Filter by tag
@@ -69,7 +69,7 @@ enum Commands {
         /// Filter by heading
         #[arg(long)]
         heading: Option<String>,
-        /// Maximum number of results (default: from config or 20)
+        /// Maximum number of results (default: 20, with --rerank: 5)
         #[arg(long)]
         limit: Option<usize>,
         /// Number of snippet lines (default: from config or 2)
@@ -116,7 +116,7 @@ enum Commands {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
-        /// Output format (human, json)
+        /// Output format for status (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
         /// Workspace config file path
@@ -169,12 +169,12 @@ enum Commands {
         files: Vec<String>,
 
         /// Maximum number of related files to include
-        #[arg(long, default_value = "20")]
-        max_files: usize,
+        #[arg(long, default_value = "20", value_parser = clap::value_parser!(u64).range(1..=1000))]
+        max_files: u64,
 
-        /// Estimated token limit
-        #[arg(long)]
-        max_tokens: Option<usize>,
+        /// Estimated token limit (approx. 1 token per 4 chars)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=1_000_000))]
+        max_tokens: Option<u64>,
     },
     /// Generate embeddings for semantic search (requires Ollama)
     #[command(after_help = commandindex::cli::embed::EMBED_AFTER_HELP)]
@@ -205,7 +205,7 @@ enum Commands {
         #[arg()]
         files: Vec<String>,
 
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
 
@@ -370,18 +370,13 @@ fn main() {
             let ctx =
                 commandindex::cli::search::SearchContext::new(base_path, cli.index_path.as_deref())
                     .ok();
-            let (effective_limit, effective_snippet_lines, effective_snippet_chars) = match &ctx {
-                Some(c) => (
-                    limit.unwrap_or(c.config.search.default_limit).min(1000),
-                    snippet_lines.unwrap_or(c.config.search.snippet_lines),
-                    snippet_chars.unwrap_or(c.config.search.snippet_chars),
-                ),
-                None => (
-                    limit.unwrap_or(20).min(1000),
-                    snippet_lines.unwrap_or(2),
-                    snippet_chars.unwrap_or(120),
-                ),
-            };
+            let search_config = ctx
+                .as_ref()
+                .map(|c| c.config.search.clone())
+                .unwrap_or_default();
+            let effective_limit = search_config.resolve_limit(limit, rerank);
+            let effective_snippet_lines = snippet_lines.unwrap_or(search_config.snippet_lines);
+            let effective_snippet_chars = snippet_chars.unwrap_or(search_config.snippet_chars);
             let snippet_config = commandindex::output::SnippetConfig {
                 lines: effective_snippet_lines,
                 chars: effective_snippet_chars,
@@ -695,8 +690,8 @@ fn main() {
                 };
             match commandindex::cli::context::run_context(
                 &files,
-                max_files,
-                max_tokens,
+                max_files as usize,
+                max_tokens.map(|t| t as usize),
                 &commandindex_dir,
             ) {
                 Ok(()) => 0,

@@ -1,0 +1,24 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "issue": "limit解決ロジックがmain.rsに直接埋め込まれSRP違反",
+      "suggestion": "SearchConfigにresolve_limitメソッドを追加: SearchConfig::resolve_limit(&self, cli_limit: Option<usize>, is_rerank: bool) -> usize"
+    },
+    {
+      "issue": "main.rs Noneブランチのハードコードフォールバック値がconfig/mod.rsと重複(DRY違反)",
+      "suggestion": "SearchConfig::default()トレイト実装またはassociated constantで統一"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "フィールド名llm_default_limitがrerank機能と乖離",
+      "suggestion": "rerank_default_limitへの改名を検討"
+    },
+    {
+      "issue": "config showへの自動露出確認が必要",
+      "suggestion": "テストで確認"
+    }
+  ],
+  "summary": "設計は妥当だが、SRP/DRY改善としてresolve_limitメソッドとSearchConfig::default()の導入を推奨"
+}

@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "コードフェンス内の```によるMarkdownインジェクション", "suggestion": "body内のバッククォート連続数を検査し、それより1つ多い数でフェンスを構成する"},
+    {"id": "S2", "title": "strip_control_charsがUnicode BiDi制御文字を除去しない", "suggestion": "フォローアップIssueとして対応可"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "estimate_tokensオーバーフロー: リスクなし"},
+    {"id": "N2", "title": "HTMLコメント形式のLLM解釈差異: UXの問題"},
+    {"id": "N3", "title": "detect_languageのパス操作: 安全"}
+  ],
+  "summary": "must_fix 0件。should_fix 2件: コードフェンスインジェクション対策、BiDi制御文字除去。"
+}

@@ -1,6 +1,7 @@
 pub mod context_pack;
 pub mod human;
 pub mod json;
+pub mod llm;
 pub mod path;
 
 use std::fmt;
@@ -33,6 +34,7 @@ pub enum OutputFormat {
     Human,
     Json,
     Path,
+    Llm,
 }
 
 /// 出力エラー型
@@ -94,6 +96,7 @@ pub fn format_symbol_results(
         OutputFormat::Human => human::format_symbol_human(results, writer),
         OutputFormat::Json => json::format_symbol_json(results, writer),
         OutputFormat::Path => path::format_symbol_path(results, writer),
+        OutputFormat::Llm => llm::format_symbol_llm(results, writer),
     }
 }
 
@@ -126,6 +129,7 @@ pub fn format_related_results(
         OutputFormat::Human => human::format_related_human(results, writer),
         OutputFormat::Json => json::format_related_json(results, writer),
         OutputFormat::Path => path::format_related_path(results, writer),
+        OutputFormat::Llm => llm::format_related_llm(results, writer),
     }
 }
 
@@ -150,6 +154,7 @@ pub fn format_semantic_results(
         OutputFormat::Human => human::format_semantic_human(results, writer),
         OutputFormat::Json => json::format_semantic_json(results, writer),
         OutputFormat::Path => path::format_semantic_path(results, writer),
+        OutputFormat::Llm => llm::format_semantic_llm(results, writer),
     }
 }
 
@@ -171,6 +176,7 @@ pub fn format_workspace_results(
         OutputFormat::Human => human::format_workspace_human(results, writer, snippet_config),
         OutputFormat::Json => json::format_workspace_json(results, writer),
         OutputFormat::Path => path::format_workspace_path(results, writer),
+        OutputFormat::Llm => llm::format_workspace_llm(results, writer),
     }
 }
 
@@ -194,6 +200,7 @@ pub fn format_diff_results(
         OutputFormat::Human => human::format_diff_human(result, writer),
         OutputFormat::Json => json::format_diff_json(result, writer),
         OutputFormat::Path => path::format_diff_path(result, writer),
+        OutputFormat::Llm => llm::format_diff_llm(result, writer),
     }
 }
 
@@ -208,7 +215,14 @@ pub fn format_results(
         OutputFormat::Human => human::format_human(results, writer, SnippetConfig::default()),
         OutputFormat::Json => json::format_json(results, writer),
         OutputFormat::Path => path::format_path(results, writer),
+        OutputFormat::Llm => llm::format_llm(results, writer),
     }
+}
+
+/// トークン数を概算する（文字数 / 4、最低1トークン）
+pub(crate) fn estimate_tokens(text: &str) -> usize {
+    let count = text.chars().count();
+    if count == 0 { 0 } else { (count / 4).max(1) }
 }
 
 /// tags文字列をパースしてVec<&str>に変換する
@@ -274,6 +288,7 @@ pub fn format_impact_results(
         OutputFormat::Human => human::format_impact_human(result, writer),
         OutputFormat::Json => json::format_impact_json(result, writer),
         OutputFormat::Path => path::format_impact_path(result, writer),
+        OutputFormat::Llm => llm::format_impact_llm(result, writer),
     }
 }
 

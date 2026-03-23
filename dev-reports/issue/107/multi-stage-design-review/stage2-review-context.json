@@ -1,0 +1,33 @@
+{
+  "must_fix": [
+    {
+      "issue": "resolve_configのas_ref()チェーンの順序を既存パターンに合わせる必要",
+      "suggestion": "llm_default_limitはsnippet_charsの前にas_ref()で配置"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "SearchConfig構造体リテラルを直接構築している既存テストがコンパイルエラーになる",
+      "suggestion": "テスト影響分析を修正し、4箇所以上の既存テストにllm_default_limitフィールド追加が必要と明記"
+    },
+    {
+      "issue": "help-llm出力へのllm_default_limit情報反映が設計に含まれていない",
+      "suggestion": "help-llmのkey_optionsに--rerank時のデフォルト値変更情報を追加"
+    },
+    {
+      "issue": "None分岐でrerankフラグが考慮されていない",
+      "suggestion": "config読み込み失敗時のrerank対応方針を明示的に設計判断として記載"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "llm_default_limit = 0の場合のバリデーション未設計",
+      "suggestion": "最低値1の制限を検討"
+    },
+    {
+      "issue": "e2e_team_workflowテストにllm_default_limitのconfig show反映テスト追加",
+      "suggestion": "既存パターンに合わせてテスト追加"
+    }
+  ],
+  "summary": "既存テストへの影響が過小評価されている。help-llm反映とNone分岐のrerank対応の設計判断が必要"
+}
