@@ -1,9 +1,9 @@
 use commandindex::indexer::reader::SearchResult;
 use commandindex::output::{
-    DiffResult, ImpactFileResult, ImpactResult, OutputFormat, RelatedSearchResult, RelationType,
-    SemanticSearchResult, SnippetConfig, SymbolSearchResult, WorkspaceSearchResult,
-    format_diff_results, format_impact_results, format_related_results, format_results,
-    format_semantic_results, format_symbol_results, format_workspace_results,
+    DiffResult, ImpactFileResult, ImpactResult, LlmFormatOptions, OutputFormat,
+    RelatedSearchResult, RelationType, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    WorkspaceSearchResult, format_diff_results, format_impact_results, format_related_results,
+    format_results, format_semantic_results, format_symbol_results, format_workspace_results,
 };
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
@@ -19,10 +19,18 @@ fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResul
 }
 
 fn format_to_string(results: &[SearchResult], format: OutputFormat) -> String {
+    format_to_string_with_options(results, format, &LlmFormatOptions::default())
+}
+
+fn format_to_string_with_options(
+    results: &[SearchResult],
+    format: OutputFormat,
+    llm_options: &LlmFormatOptions,
+) -> String {
     // テスト時はANSIカラーを無効化
     colored::control::set_override(false);
     let mut buf = Vec::new();
-    format_results(results, format, &mut buf).unwrap();
+    format_results(results, format, &mut buf, llm_options).unwrap();
     String::from_utf8(buf).unwrap()
 }
 
@@ -340,9 +348,17 @@ fn make_impact_result() -> ImpactResult {
 }
 
 fn format_impact_to_string(result: &ImpactResult, format: OutputFormat) -> String {
+    format_impact_to_string_with_options(result, format, &LlmFormatOptions::default())
+}
+
+fn format_impact_to_string_with_options(
+    result: &ImpactResult,
+    format: OutputFormat,
+    llm_options: &LlmFormatOptions,
+) -> String {
     colored::control::set_override(false);
     let mut buf = Vec::new();
-    format_impact_results(result, format, &mut buf).unwrap();
+    format_impact_results(result, format, &mut buf, llm_options).unwrap();
     String::from_utf8(buf).unwrap()
 }
 
@@ -786,4 +802,195 @@ fn test_format_impact_llm() {
     assert!(output.contains("- src/utils.rs (path_similarity, directory_proximity) ← src/main.rs"));
     // Score should NOT be in the output
     assert!(!output.contains("0.9"));
+}
+
+// --- LLM format: dedup tests ---
+
+#[test]
+fn test_format_llm_dedup_removes_duplicates() {
+    let results = vec![
+        make_result("docs/auth.md", "認証フロー", "認証はJWTベースで行う", ""),
+        make_result("docs/auth.md", "認証フロー", "認証はJWTベースで行う", ""),
+        make_result("docs/api.md", "API", "RESTful API", ""),
+    ];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // 重複した認証フローは1回だけ出力される
+    assert_eq!(output.matches("### 認証フロー").count(), 1);
+    assert_eq!(output.matches("## docs/api.md").count(), 1);
+}
+
+#[test]
+fn test_format_llm_dedup_different_body_kept() {
+    let results = vec![
+        make_result("docs/auth.md", "認証フロー", "Body A", ""),
+        make_result("docs/auth.md", "認証フロー", "Body B", ""),
+    ];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // bodyが異なるので両方残る
+    assert!(output.contains("Body A"));
+    assert!(output.contains("Body B"));
+}
+
+// --- LLM format: body truncation tests ---
+
+#[test]
+fn test_format_llm_truncation_markdown() {
+    let body = "line1\nline2\nline3\nline4\nline5";
+    let results = vec![make_result("docs/readme.md", "Title", body, "")];
+    let options = LlmFormatOptions {
+        max_body_lines: Some(2),
+    };
+    let output = format_to_string_with_options(&results, OutputFormat::Llm, &options);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line2"));
+    assert!(output.contains("... (truncated)"));
+    assert!(!output.contains("line3"));
+}
+
+#[test]
+fn test_format_llm_truncation_code() {
+    let body = "fn main() {\n    println!(\"hello\");\n    println!(\"world\");\n    return;\n}";
+    let results = vec![make_result("src/main.rs", "main", body, "")];
+    let options = LlmFormatOptions {
+        max_body_lines: Some(2),
+    };
+    let output = format_to_string_with_options(&results, OutputFormat::Llm, &options);
+    assert!(output.contains("```rust"));
+    assert!(output.contains("fn main() {"));
+    assert!(output.contains("    println!(\"hello\");"));
+    assert!(output.contains("... (truncated)"));
+    assert!(!output.contains("return;"));
+    // Fence should be properly closed
+    assert_eq!(output.matches("```").count() % 2, 0);
+}
+
+#[test]
+fn test_format_llm_truncation_none_unlimited() {
+    let body = "line1\nline2\nline3\nline4\nline5";
+    let results = vec![make_result("docs/readme.md", "Title", body, "")];
+    // Default (None) means no truncation
+    let output = format_to_string(&results, OutputFormat::Llm);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line5"));
+    assert!(!output.contains("... (truncated)"));
+}
+
+#[test]
+fn test_format_llm_truncation_zero_unlimited() {
+    let body = "line1\nline2\nline3\nline4\nline5";
+    let results = vec![make_result("docs/readme.md", "Title", body, "")];
+    let options = LlmFormatOptions {
+        max_body_lines: Some(0),
+    };
+    let output = format_to_string_with_options(&results, OutputFormat::Llm, &options);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line5"));
+    assert!(!output.contains("... (truncated)"));
+}
+
+#[test]
+fn test_format_llm_truncation_body_within_limit() {
+    let body = "line1\nline2";
+    let results = vec![make_result("docs/readme.md", "Title", body, "")];
+    let options = LlmFormatOptions {
+        max_body_lines: Some(5),
+    };
+    let output = format_to_string_with_options(&results, OutputFormat::Llm, &options);
+    assert!(output.contains("line1"));
+    assert!(output.contains("line2"));
+    assert!(!output.contains("... (truncated)"));
+}
+
+// --- LLM Impact: impacted_by truncation tests ---
+
+#[test]
+fn test_format_impact_llm_impacted_by_within_limit() {
+    let result = ImpactResult {
+        input_files: vec!["a.rs".to_string(), "b.rs".to_string()],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "target.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec!["a.rs".to_string(), "b.rs".to_string()],
+            snippet: None,
+        }],
+        total_input_files: 2,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Llm);
+    assert!(output.contains("← a.rs, b.rs"));
+    assert!(!output.contains("more"));
+}
+
+#[test]
+fn test_format_impact_llm_impacted_by_exceeds_limit() {
+    let result = ImpactResult {
+        input_files: vec![
+            "a.rs".to_string(),
+            "b.rs".to_string(),
+            "c.rs".to_string(),
+            "d.rs".to_string(),
+            "e.rs".to_string(),
+        ],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "target.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec![
+                "a.rs".to_string(),
+                "b.rs".to_string(),
+                "c.rs".to_string(),
+                "d.rs".to_string(),
+                "e.rs".to_string(),
+            ],
+            snippet: None,
+        }],
+        total_input_files: 5,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Llm);
+    // 3件表示 + "and 2 more"
+    assert!(output.contains("a.rs, b.rs, c.rs"));
+    assert!(output.contains("... and 2 more"));
+    assert!(!output.contains("d.rs"));
+    assert!(!output.contains("e.rs"));
+}
+
+#[test]
+fn test_format_impact_llm_impacted_by_exactly_limit() {
+    let result = ImpactResult {
+        input_files: vec!["a.rs".to_string(), "b.rs".to_string(), "c.rs".to_string()],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "target.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec!["a.rs".to_string(), "b.rs".to_string(), "c.rs".to_string()],
+            snippet: None,
+        }],
+        total_input_files: 3,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Llm);
+    // ちょうど3件なので省略なし
+    assert!(output.contains("← a.rs, b.rs, c.rs"));
+    assert!(!output.contains("more"));
+}
+
+// --- Default LlmFormatOptions backward compatibility ---
+
+#[test]
+fn test_format_llm_default_options_backward_compatible() {
+    let results = vec![
+        make_result("docs/auth.md", "認証フロー", "認証はJWTベースで行う", ""),
+        make_result(
+            "src/main.rs",
+            "main",
+            "fn main() { println!(\"hello\"); }",
+            "",
+        ),
+    ];
+    let default_output = format_to_string(&results, OutputFormat::Llm);
+    let explicit_default_output =
+        format_to_string_with_options(&results, OutputFormat::Llm, &LlmFormatOptions::default());
+    assert_eq!(default_output, explicit_default_output);
 }

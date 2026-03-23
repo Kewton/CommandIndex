@@ -1,0 +1,1 @@
+{"applied": true, "changes": ["M1: show_token_estimateフィールド削除（YAGNI）、LlmFormatOptionsを簡素化", "S2: 重複除去のSRP考慮を設計書に記載", "S3: impacted_by省略閾値をIMPACTED_BY_DISPLAY_LIMIT定数に", "N2: show_token_estimate削除で対応済み"]}

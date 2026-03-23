@@ -27,7 +27,8 @@ use crate::config::{AppConfig, ConfigError, load_config};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
 use crate::output::{
-    self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    self, LlmFormatOptions, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig,
+    SymbolSearchResult,
 };
 
 // ---------------------------------------------------------------------------
@@ -206,6 +207,7 @@ impl From<crate::indexer::ResolveIndexPathError> for SearchError {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     ctx: &SearchContext,
     options: &SearchOptions,
@@ -214,6 +216,7 @@ pub fn run(
     snippet_config: SnippetConfig,
     rerank: bool,
     rerank_top: Option<usize>,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), SearchError> {
     let tantivy_dir = ctx.index_dir();
     if !tantivy_dir.exists() {
@@ -276,7 +279,7 @@ pub fn run(
             output::human::format_human(&final_results, &mut handle, snippet_config)?;
         }
         _ => {
-            output::format_results(&final_results, format, &mut handle)?;
+            output::format_results(&final_results, format, &mut handle, llm_options)?;
         }
     }
     Ok(())

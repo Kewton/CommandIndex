@@ -1,0 +1,1 @@
+{"applied": true, "changes": ["M1: format_suggest_resultsを変更なし確認対象に追加、引数追加のみと明記", "M2: format_workspace_resultsのllm_options追加を明記", "M3: max_body_linesをOption<usize>型としCLIのsnippet_lines(Option)をそのまま渡す設計に", "S1: format_semantic_resultsも引数追加対象に含める", "S2: 重複除去時は最初の出現を採用と明記", "S3: cli/search.rs run関数にllm_options引数追加を記載"]}

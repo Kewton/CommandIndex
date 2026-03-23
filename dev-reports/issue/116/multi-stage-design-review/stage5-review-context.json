@@ -1,0 +1,18 @@
+{
+  "must_fix": [
+    {"id":"M1","title":"OutputFormat::Llm(options)と別引数方式が文書内で矛盾","suggestion":"文書全体を別引数方式に統一"},
+    {"id":"M2","title":"--snippet-lines=0の意味がLLMと既存で衝突","suggestion":"0は無制限に統一するか不正値として弾く"},
+    {"id":"M3","title":"llm_optionsを全出力APIへ一律追加はISP/KISS違反","suggestion":"search系のみに限定するか、OutputRenderOptionsにまとめる"}
+  ],
+  "should_fix": [
+    {"id":"S1","title":"エラーハンドリング方針が未定義","suggestion":"変換失敗時の扱いを明記"},
+    {"id":"S2","title":"重複除去ロジックの責務分離","suggestion":"prepare_search_results_for_llmのような前処理関数に分離"},
+    {"id":"S3","title":"format_impact_llmにllm_options渡す理由が弱い","suggestion":"search系のみに限定"},
+    {"id":"S4","title":"エラーハンドリング章がない","suggestion":"新規エラー型不要・既存OutputErrorの範囲内と明記"}
+  ],
+  "nice_to_have": [
+    {"id":"N1","title":"LlmFormatOptionsにdocコメントで責務境界を明記"},
+    {"id":"N2","title":"後方互換性の移行基準を追記"}
+  ],
+  "summary": "OutputFormat::Llm(options)と別引数の矛盾、--snippet-lines=0の意味衝突、全APIへの一律引数追加が主な課題。"
+}
