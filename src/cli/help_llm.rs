@@ -396,8 +396,8 @@ fn build_commands() -> Vec<CommandInfo> {
             modes: None,
             conflicts: None,
             key_options: Some(vec![
-                "--max-files <N>  Maximum number of related files to include",
-                "--max-tokens <N>  Estimated token limit",
+                "--max-files <N>  Maximum number of related files to include (1-1000, default: 20)",
+                "--max-tokens <N>  Estimated token limit (approx. 1 token per 4 chars, 1-1000000)",
             ]),
             output_formats: None,
             output: Some("JSON context pack with file content and relationships"),
