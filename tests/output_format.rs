@@ -1,7 +1,9 @@
 use commandindex::indexer::reader::SearchResult;
 use commandindex::output::{
-    ImpactFileResult, ImpactResult, OutputFormat, SnippetConfig, WorkspaceSearchResult,
-    format_impact_results, format_results, format_workspace_results,
+    DiffResult, ImpactFileResult, ImpactResult, OutputFormat, RelatedSearchResult, RelationType,
+    SemanticSearchResult, SnippetConfig, SymbolSearchResult, WorkspaceSearchResult,
+    format_diff_results, format_impact_results, format_related_results, format_results,
+    format_semantic_results, format_symbol_results, format_workspace_results,
 };
 
 fn make_result(path: &str, heading: &str, body: &str, tags: &str) -> SearchResult {
@@ -142,7 +144,12 @@ fn test_path_format_dedup() {
 
 #[test]
 fn test_format_empty_results() {
-    for format in [OutputFormat::Human, OutputFormat::Json, OutputFormat::Path] {
+    for format in [
+        OutputFormat::Human,
+        OutputFormat::Json,
+        OutputFormat::Path,
+        OutputFormat::Llm,
+    ] {
         let output = format_to_string(&[], format);
         assert!(
             output.is_empty(),
@@ -388,4 +395,254 @@ fn test_impact_empty_results() {
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
     assert_eq!(parsed["total_impacted_files"], 0);
     assert!(parsed["impacted_files"].as_array().unwrap().is_empty());
+}
+
+// --- LLM format tests ---
+
+#[test]
+fn test_format_llm_basic() {
+    let results = vec![make_result(
+        "docs/auth.md",
+        "認証フロー",
+        "認証はJWTベースで行う",
+        "",
+    )];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("## docs/auth.md"));
+    assert!(output.contains("### 認証フロー"));
+    assert!(output.contains("認証はJWTベースで行う"));
+    // タグやスコアが含まれないこと
+    assert!(!output.contains("score"));
+    assert!(!output.contains("Tags:"));
+}
+
+#[test]
+fn test_format_llm_empty() {
+    let output = format_to_string(&[], OutputFormat::Llm);
+    assert!(output.is_empty());
+}
+
+#[test]
+fn test_format_llm_grouping() {
+    let results = vec![
+        make_result("docs/auth.md", "Title1", "Body1", ""),
+        make_result("docs/auth.md", "Title2", "Body2", ""),
+        make_result("docs/api.md", "Title3", "Body3", ""),
+    ];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // docs/auth.md should appear only once as heading
+    assert_eq!(output.matches("## docs/auth.md").count(), 1);
+    assert_eq!(output.matches("## docs/api.md").count(), 1);
+    // Both headings under auth.md
+    assert!(output.contains("### Title1"));
+    assert!(output.contains("### Title2"));
+}
+
+#[test]
+fn test_format_llm_code_fence() {
+    let results = vec![make_result(
+        "src/main.rs",
+        "main",
+        "fn main() { println!(\"hello\"); }",
+        "",
+    )];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    assert!(output.contains("```rust"));
+    assert!(output.contains("fn main()"));
+    // Fence should be closed
+    assert_eq!(output.matches("```").count() % 2, 0);
+}
+
+#[test]
+fn test_format_llm_markdown_no_fence() {
+    let results = vec![make_result(
+        "docs/readme.md",
+        "Overview",
+        "This is a markdown document",
+        "",
+    )];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // Markdown files should not be wrapped in code fences
+    assert!(!output.contains("```markdown"));
+    assert!(output.contains("This is a markdown document"));
+}
+
+#[test]
+fn test_format_llm_estimated_tokens() {
+    let body = "a".repeat(400);
+    let results = vec![make_result("test.md", "Title", &body, "")];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // 400 bytes / 4 = 100 tokens
+    assert!(output.contains("<!-- estimated tokens: ~100 -->"));
+}
+
+#[test]
+fn test_format_llm_strip_control_chars() {
+    let results = vec![make_result("test.md", "Title\x1b[31m", "Body\x00text", "")];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // Control chars should be stripped
+    assert!(!output.contains("\x1b"));
+    assert!(!output.contains("\x00"));
+    assert!(output.contains("Title"));
+    assert!(output.contains("Bodytext"));
+}
+
+#[test]
+fn test_format_llm_code_fence_backtick_escape() {
+    // Body contains triple backticks - fence should use more
+    let results = vec![make_result(
+        "src/lib.rs",
+        "test",
+        "code with ``` backticks inside",
+        "",
+    )];
+    let output = format_to_string(&results, OutputFormat::Llm);
+    // Should use 4 backticks to avoid conflict
+    assert!(output.contains("````rust"));
+    assert!(output.contains("````"));
+}
+
+// --- LLM Symbol format test ---
+
+#[test]
+fn test_format_symbol_llm() {
+    let results = vec![SymbolSearchResult {
+        name: "MyStruct".to_string(),
+        kind: "struct".to_string(),
+        file_path: "src/lib.rs".to_string(),
+        line_start: 10,
+        line_end: 25,
+        parent_name: None,
+        children: vec![SymbolSearchResult {
+            name: "new".to_string(),
+            kind: "function".to_string(),
+            file_path: "src/lib.rs".to_string(),
+            line_start: 12,
+            line_end: 20,
+            parent_name: Some("MyStruct".to_string()),
+            children: vec![],
+        }],
+    }];
+    let mut buf = Vec::new();
+    format_symbol_results(&results, OutputFormat::Llm, &mut buf).unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("## src/lib.rs"));
+    assert!(output.contains("`struct` **MyStruct** (L10-L25)"));
+    assert!(output.contains("`function` **new** (L12-L20)"));
+}
+
+// --- LLM Related format test ---
+
+#[test]
+fn test_format_related_llm() {
+    let results = vec![
+        RelatedSearchResult {
+            file_path: "src/auth.rs".to_string(),
+            score: 0.9,
+            relation_types: vec![RelationType::MarkdownLink, RelationType::ImportDependency],
+        },
+        RelatedSearchResult {
+            file_path: "src/utils.rs".to_string(),
+            score: 0.5,
+            relation_types: vec![RelationType::PathSimilarity],
+        },
+    ];
+    let mut buf = Vec::new();
+    format_related_results(&results, OutputFormat::Llm, &mut buf).unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("- src/auth.rs (link, import)"));
+    assert!(output.contains("- src/utils.rs (path)"));
+    // Score should NOT be in the output
+    assert!(!output.contains("0.9"));
+}
+
+// --- LLM Semantic format test ---
+
+#[test]
+fn test_format_semantic_llm() {
+    let results = vec![SemanticSearchResult {
+        path: "src/main.rs".to_string(),
+        heading: "Entry point".to_string(),
+        similarity: 0.95,
+        body: "fn main() {}".to_string(),
+        tags: "core".to_string(),
+        heading_level: 2,
+    }];
+    let mut buf = Vec::new();
+    format_semantic_results(&results, OutputFormat::Llm, &mut buf).unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("## src/main.rs"));
+    assert!(output.contains("### Entry point"));
+    assert!(output.contains("```rust"));
+    assert!(output.contains("fn main() {}"));
+    // Similarity score should NOT be in the output
+    assert!(!output.contains("0.95"));
+}
+
+// --- LLM Workspace format test ---
+
+#[test]
+fn test_format_workspace_llm() {
+    let results = vec![make_workspace_result(
+        "backend",
+        "src/main.rs",
+        "Entry",
+        "fn main() {}",
+        "",
+    )];
+    let mut buf = Vec::new();
+    format_workspace_results(
+        &results,
+        OutputFormat::Llm,
+        &mut buf,
+        SnippetConfig::default(),
+    )
+    .unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("## [backend] src/main.rs"));
+    assert!(output.contains("### Entry"));
+    assert!(output.contains("```rust"));
+}
+
+// --- LLM Diff format test ---
+
+#[test]
+fn test_format_diff_llm() {
+    let result = DiffResult {
+        file_a: "index_a".to_string(),
+        file_b: "index_b".to_string(),
+        only_a: vec!["path1.rs".to_string()],
+        only_b: vec!["path2.rs".to_string(), "path3.rs".to_string()],
+        overlap: vec!["shared.rs".to_string()],
+    };
+    let mut buf = Vec::new();
+    format_diff_results(&result, OutputFormat::Llm, &mut buf).unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("## Diff: index_a vs index_b"));
+    assert!(output.contains("### Only in index_a"));
+    assert!(output.contains("- path1.rs"));
+    assert!(output.contains("### Only in index_b"));
+    assert!(output.contains("- path2.rs"));
+    assert!(output.contains("### Overlap (1 files)"));
+    assert!(output.contains("- shared.rs"));
+}
+
+// --- LLM Impact format test ---
+
+#[test]
+fn test_format_impact_llm() {
+    let result = make_impact_result();
+    let output = format_impact_to_string(&result, OutputFormat::Llm);
+    assert!(output.contains("<!-- estimated tokens:"));
+    assert!(output.contains("## Impact: 1 input file(s)"));
+    assert!(output.contains("2 impacted file(s)"));
+    assert!(output.contains("- src/lib.rs (import_dependency) ← src/main.rs"));
+    assert!(output.contains("- src/utils.rs (path_similarity, directory_proximity) ← src/main.rs"));
+    // Score should NOT be in the output
+    assert!(!output.contains("0.9"));
 }

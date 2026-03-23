@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "全サブコマンド・全検索モードへの対応範囲が未定義",
+      "detail": "OutputFormat enumにLlmを追加すると、format_results, format_symbol_results, format_related_results, format_semantic_results, format_workspace_results, format_diff_results, format_impact_resultsの全7箇所のmatch式に分岐追加が必要。Issueではsearchの出力イメージのみ記載されており、他サブコマンドでのLLM出力仕様が定義されていない。",
+      "suggestion": "各サブコマンドそれぞれのLLM出力仕様を明記する。もしくは対象をsearchのみに限定し、他コマンドではフォールバック（例: path形式）する方針を記載する。"
+    },
+    {
+      "id": "M2",
+      "title": "受け入れ基準が未定義",
+      "detail": "Issueに受け入れ基準（Acceptance Criteria）の記載がない。",
+      "suggestion": "受け入れ基準を追加: (1) OutputFormat::Llm追加, (2) search結果がMarkdown形式で出力, (3) estimated tokensがヘッダーに含まれる, (4) 対象サブコマンドすべてで動作, (5) help-llmのoutput_formats更新, (6) テスト追加."
+    },
+    {
+      "id": "M3",
+      "title": "トークン数見積もりの算出方法が未定義",
+      "detail": "出力イメージに 'estimated tokens: ~2000' とあるが、算出ロジックが記載されていない。ContextPackにestimated_tokensが既に存在するが、その算出方法との整合性も不明。",
+      "suggestion": "トークン数の推定方法を明記する。既存のContextSummary.estimated_tokensの実装を確認し、統一するのが望ましい。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "コードスニペットの取得方法が未定義",
+      "detail": "bodyフィールドの内容がそのまま適切なスニペットになるとは限らない。コードフェンスの言語指定の判定方法も未記載。",
+      "suggestion": "スニペット生成仕様を明記: bodyフィールド使用か再読込か、言語判定は拡張子ベースか、最大長はどうするか。"
+    },
+    {
+      "id": "S2",
+      "title": "既存のContextPackとの機能重複・住み分けが不明確",
+      "detail": "contextコマンドがContextPack（path, snippet, symbols, estimated_tokens）を提供しており、--format llmと目的が重複する。",
+      "suggestion": "contextコマンドとの違い・使い分けをIssueに明記し、共通ロジックの共有設計方針を記載する。"
+    },
+    {
+      "id": "S3",
+      "title": "Formatterパターンへのリファクタリング検討",
+      "detail": "mod.rsに'フォーマットが5種類以上に増えた場合、trait-based Formatterパターンへのリファクタリングを検討'とコメントあり。Llm追加で4種類になる。",
+      "suggestion": "現時点ではenum match方式を維持し、5種類到達時のリファクタリングについても言及する。"
+    },
+    {
+      "id": "S4",
+      "title": "出力形式の詳細仕様が不十分",
+      "detail": "重複除去、見出し情報の扱い、タグ情報の含有、結果件数が多い場合の切り詰め方針が不明。",
+      "suggestion": "同一パスのグループ化・重複除去、見出し情報含有、タグ除外、bodyの最大行数指定を推奨。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "help-llmコマンドへの反映",
+      "detail": "help-llm.rsのoutput_formatsフィールドの更新が必要。",
+      "suggestion": "タスクリストに'help-llmコマンドのoutput_formats更新'を追加。"
+    },
+    {
+      "id": "N2",
+      "title": "出力の安全性（制御文字除去）への言及",
+      "detail": "既存のhuman.rsではstrip_control_chars()で対策を行っている。LLM出力でも同様の対策が必要。",
+      "suggestion": "実装時にstrip_control_charsを適用する旨を記載。"
+    },
+    {
+      "id": "N3",
+      "title": "将来的な拡張性（カスタムテンプレート等）への言及",
+      "detail": "LLMによってプロンプトの最適形式が異なる可能性がある。",
+      "suggestion": "将来課題として備考に記載。"
+    }
+  ],
+  "summary": "Issue #104は妥当な提案だが、実装着手前に3点のMust Fix対応が必要。(1) 全format関数への対応範囲の明確化、(2) 受け入れ基準の定義、(3) トークン数推定ロジックの仕様策定。また、既存ContextPackとの機能重複整理、コードスニペット取得方法の明確化がShould Fixとして重要。"
+}

@@ -1,0 +1,61 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "OutputFormat enum変更による全match式の網羅性エラー",
+      "detail": "src/output/mod.rsの7つのformat_*関数内のmatch式すべてにOutputFormat::Llmアームを追加する必要がある。",
+      "suggestion": "src/output/llm.rsに対応する7関数を実装し、各format_*関数にLlmアームを追加する。"
+    },
+    {
+      "id": "M2",
+      "title": "src/cli/search.rsのrun()関数内の分岐への対応",
+      "detail": "run()関数内でOutputFormat::Humanを直接分岐している箇所あり。Llmは_アームでformat_resultsに渡される形になるが、確認が必要。",
+      "suggestion": "format_results()側でLlmアームを追加すれば_分岐で処理される。"
+    },
+    {
+      "id": "M3",
+      "title": "help-llmのoutput_formatsフィールド更新（3箇所）",
+      "detail": "search(L286), diff(L379), impact(L476)のoutput_formatsに\"llm\"を追加する必要がある。",
+      "suggestion": "output_formats配列に\"llm\"を追加し、key_optionsの説明文も更新する。"
+    },
+    {
+      "id": "M4",
+      "title": "CLIヘルプ文のformat選択肢説明更新",
+      "detail": "src/main.rsの#[arg]ドキュメントコメントが古くなる。",
+      "suggestion": "「Output format (human, json, path, llm)」に更新する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "既存テストtest_format_empty_resultsの更新",
+      "detail": "tests/output_format.rsのOutputFormat列挙にLlmを追加する必要がある。",
+      "suggestion": "テストの列挙にOutputFormat::Llmを追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "Llmフォーマット用のユニットテスト追加",
+      "detail": "7つのformat関数について基本テストを作成すべき。",
+      "suggestion": "tests/output_format.rsにLlmフォーマット用テストセクションを追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "mod.rsのNOTEコメント対応（4種類目で即リファクタ不要）",
+      "detail": "Llm追加で4種類目。5種類目でリファクタリング検討のNOTEがある。",
+      "suggestion": "今回は対応不要だが認識しておく。"
+    },
+    {
+      "id": "S4",
+      "title": "changed_sinceサブコマンドのformat伝播確認",
+      "detail": "changed_sinceはrun_impactにformatを渡している。e2eテストでLlm確認が必要。",
+      "suggestion": "e2eテストで--format llmの動作確認を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "新規crate依存は不要", "detail": "既存依存のみで実装可能。"},
+    {"id": "N2", "title": "パフォーマンスへの影響は軽微", "detail": "出力フォーマッティングのみで検索ロジックに影響なし。"},
+    {"id": "N3", "title": "SEARCH_AFTER_HELPにllmのexample追加", "detail": "利用者への案内として有用。"},
+    {"id": "N4", "title": "help-llmのuse_casesにllmフォーマット言及", "detail": "LLMエージェント連携時に有用。"}
+  ],
+  "summary": "影響範囲は明確で限定的。主な変更: (1) OutputFormat enum拡張, (2) mod.rsの7つのformat_*関数にLlmアーム追加, (3) llm.rs新規作成, (4) help_llm.rs更新, (5) main.rsヘルプ更新。既存機能への破壊的影響なし、新規crate不要。全てadditive変更。"
+}
