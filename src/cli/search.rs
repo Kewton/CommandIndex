@@ -206,6 +206,7 @@ impl From<crate::indexer::ResolveIndexPathError> for SearchError {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     ctx: &SearchContext,
     options: &SearchOptions,
@@ -214,6 +215,7 @@ pub fn run(
     snippet_config: SnippetConfig,
     rerank: bool,
     rerank_top: Option<usize>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     let tantivy_dir = ctx.index_dir();
     if !tantivy_dir.exists() {
@@ -265,6 +267,16 @@ pub fn run(
     } else {
         final_results
     };
+
+    // トークン予算適用（--max-tokens）
+    let final_results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(final_results, max_tok, |r| {
+            crate::output::estimate_tokens(&r.body)
+        })
+    } else {
+        final_results
+    };
+
     if final_results.is_empty() {
         eprintln!("No results found.");
         return Ok(());
@@ -287,6 +299,7 @@ pub fn run_symbol_search(
     limit: usize,
     format: OutputFormat,
     ctx: Option<&SearchContext>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     if symbol_name.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -318,6 +331,15 @@ pub fn run_symbol_search(
         return Ok(());
     }
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            estimate_symbol_result_tokens(r)
+        })
+    } else {
+        results
+    };
+
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_symbol_results(&results, format, &mut handle)?;
@@ -330,6 +352,7 @@ pub fn run_related_search(
     format: OutputFormat,
     ctx: Option<&SearchContext>,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     super::validate_file_paths(file_paths, 100)?;
 
@@ -373,6 +396,19 @@ pub fn run_related_search(
         format,
     );
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            let mut tokens = crate::output::estimate_tokens(&r.file_path);
+            if let Some(ref snippet) = r.snippet {
+                tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+            }
+            tokens
+        })
+    } else {
+        results
+    };
+
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_related_results(&results, format, &mut handle)?;
@@ -384,6 +420,7 @@ pub fn run_related_search_from_stdin(
     limit: usize,
     format: OutputFormat,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     let files = crate::cli::stdin::read_file_paths_from_stdin(500)?;
 
@@ -434,6 +471,19 @@ pub fn run_related_search_from_stdin(
         format,
     );
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            let mut tokens = crate::output::estimate_tokens(&r.file_path);
+            if let Some(ref snippet) = r.snippet {
+                tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+            }
+            tokens
+        })
+    } else {
+        results
+    };
+
     // 既存の format_related_results で出力
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
@@ -448,6 +498,7 @@ pub fn run_semantic_search(
     tag: Option<&str>,
     filters: &SearchFilters,
     ctx: Option<&SearchContext>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     if query.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -499,6 +550,15 @@ pub fn run_semantic_search(
         .into_iter()
         .take(limit)
         .collect();
+
+    // トークン予算適用（--max-tokens）
+    let final_results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(final_results, max_tok, |r| {
+            crate::output::estimate_tokens(&r.body)
+        })
+    } else {
+        final_results
+    };
 
     if final_results.is_empty() {
         eprintln!("No results found.");
@@ -775,6 +835,20 @@ fn apply_semantic_filters(
             true
         })
         .collect()
+}
+
+/// シンボル検索結果のトークン数を推定する（非再帰版）
+fn estimate_symbol_result_tokens(r: &SymbolSearchResult) -> usize {
+    let text = format!("{} {} {}", r.name, r.kind, r.file_path);
+    let children_tokens: usize = r
+        .children
+        .iter()
+        .map(|c| {
+            let child_text = format!("{} {} {}", c.name, c.kind, c.file_path);
+            crate::output::estimate_tokens(&child_text)
+        })
+        .sum();
+    crate::output::estimate_tokens(&text) + children_tokens
 }
 
 fn build_symbol_tree(

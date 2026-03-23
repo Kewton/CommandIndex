@@ -16,6 +16,7 @@ use crate::cli::search::SearchError;
 use crate::indexer::reader::IndexReaderWrapper;
 use crate::indexer::symbol_store::SymbolStore;
 use crate::output::estimate_tokens;
+use crate::output::token_budget::{tokens_to_char_budget, truncate_snippet_for_char_budget};
 use crate::output::{
     ContextEntry, ContextPack, ContextSummary, RelatedSearchResult, RelationType,
     strip_control_chars, truncate_body,
@@ -384,11 +385,6 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
     "unknown".to_string()
 }
 
-/// トークン数を文字数予算に変換（estimate_tokensの逆変換）
-fn tokens_to_char_budget(tokens: usize) -> usize {
-    tokens * 4
-}
-
 /// ContextEntryのメタデータ部分（snippet以外）の推定トークン数を算出
 fn estimate_entry_meta_tokens(entry: &ContextEntry) -> usize {
     let mut total = 0;
@@ -415,37 +411,6 @@ fn estimate_entry_tokens(entry: &ContextEntry) -> usize {
         .map(|s| estimate_tokens(s))
         .unwrap_or(0);
     meta + snippet
-}
-
-/// snippet を先頭と末尾に比率で切り詰める際の定数
-const HEAD_RATIO: usize = 3;
-const TOTAL_PARTS: usize = 5;
-/// 省略マーカー "..." の文字数
-const ELLIPSIS_LEN: usize = 3;
-
-/// 文字数予算に収まるようsnippetを動的に切り詰める
-/// 先頭と末尾を保持し、中間を省略する戦略
-/// budget_chars: 文字数ベースの予算（トークンではない）
-/// 戻り値が空文字列の場合、呼び出し側で snippet = None に正規化する
-fn truncate_snippet_for_char_budget(snippet: &str, budget_chars: usize) -> String {
-    let chars: Vec<char> = snippet.chars().collect();
-    if chars.len() <= budget_chars {
-        return snippet.to_string();
-    }
-    if budget_chars == 0 {
-        return String::new();
-    }
-    // 省略マーカー + 最低1文字ずつ = 最低5文字必要
-    // それ未満なら先頭のみで切り詰め（省略マーカーなし）
-    if budget_chars < ELLIPSIS_LEN + 2 {
-        return chars[..budget_chars].iter().collect();
-    }
-    let content_budget = budget_chars - ELLIPSIS_LEN;
-    let head_chars = (content_budget * HEAD_RATIO) / TOTAL_PARTS;
-    let tail_chars = content_budget - head_chars;
-    let head: String = chars[..head_chars].iter().collect();
-    let tail: String = chars[chars.len() - tail_chars..].iter().collect();
-    format!("{head}...{tail}")
 }
 
 #[cfg(test)]
@@ -489,16 +454,6 @@ mod tests {
         assert_eq!(estimate_tokens("hello世界"), 1);
         // "hello世界abc" = 10 chars => 10/4 = 2
         assert_eq!(estimate_tokens("hello世界abc"), 2);
-    }
-
-    // ---- tokens_to_char_budget tests ----
-
-    #[test]
-    fn test_tokens_to_char_budget() {
-        assert_eq!(tokens_to_char_budget(0), 0);
-        assert_eq!(tokens_to_char_budget(1), 4);
-        assert_eq!(tokens_to_char_budget(10), 40);
-        assert_eq!(tokens_to_char_budget(100), 400);
     }
 
     // ---- estimate_entry_meta_tokens tests ----
@@ -563,76 +518,5 @@ mod tests {
         let entry = make_entry("a.rs", "linked", None, None, None);
         let meta = estimate_entry_meta_tokens(&entry);
         assert_eq!(estimate_entry_tokens(&entry), meta);
-    }
-
-    // ---- truncate_snippet_for_char_budget tests ----
-
-    #[test]
-    fn test_truncate_within_budget() {
-        let s = "hello";
-        assert_eq!(truncate_snippet_for_char_budget(s, 10), "hello");
-        assert_eq!(truncate_snippet_for_char_budget(s, 5), "hello");
-    }
-
-    #[test]
-    fn test_truncate_exceeds_budget() {
-        // 10 chars, budget 8
-        let s = "0123456789";
-        let result = truncate_snippet_for_char_budget(s, 8);
-        // content_budget = 8 - 3 = 5
-        // head = 5*3/5 = 3 => "012"
-        // tail = 5-3 = 2 => "89"
-        assert_eq!(result, "012...89");
-        assert_eq!(result.chars().count(), 8);
-    }
-
-    #[test]
-    fn test_truncate_zero_budget() {
-        assert_eq!(truncate_snippet_for_char_budget("hello", 0), "");
-    }
-
-    #[test]
-    fn test_truncate_budget_1() {
-        // budget < 5, so head-only
-        assert_eq!(truncate_snippet_for_char_budget("hello", 1), "h");
-    }
-
-    #[test]
-    fn test_truncate_budget_2() {
-        assert_eq!(truncate_snippet_for_char_budget("hello", 2), "he");
-    }
-
-    #[test]
-    fn test_truncate_budget_3() {
-        assert_eq!(truncate_snippet_for_char_budget("hello", 3), "hel");
-    }
-
-    #[test]
-    fn test_truncate_budget_4() {
-        assert_eq!(truncate_snippet_for_char_budget("hello", 4), "hell");
-    }
-
-    #[test]
-    fn test_truncate_budget_5() {
-        // "hello" is exactly 5 chars = budget, fits within budget
-        assert_eq!(truncate_snippet_for_char_budget("hello", 5), "hello");
-        // 6 chars with budget 5: uses ellipsis mode
-        // content_budget = 5 - 3 = 2
-        // head = 2*3/5 = 1 => "h"
-        // tail = 2-1 = 1 => "!"
-        assert_eq!(truncate_snippet_for_char_budget("hello!", 5), "h...!");
-    }
-
-    #[test]
-    fn test_truncate_short_text() {
-        // Text shorter than budget
-        assert_eq!(truncate_snippet_for_char_budget("ab", 10), "ab");
-    }
-
-    #[test]
-    fn test_truncate_japanese() {
-        let s = "あいうえおかきくけこ"; // 10 chars
-        let result = truncate_snippet_for_char_budget(s, 8);
-        assert_eq!(result.chars().count(), 8);
     }
 }

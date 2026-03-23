@@ -96,6 +96,9 @@ enum Commands {
         /// Show related files changed since a time/commit (e.g. "12 hours ago", "yesterday", commit hash)
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "workspace"])]
         changed_since: Option<String>,
+        /// Limits total estimated tokens in output (approx. 1 token per 4 chars)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=1_000_000))]
+        max_tokens: Option<u64>,
     },
     /// Incrementally update index (Git-aware delta, --workspace supported)
     #[command(after_help = commandindex::cli::index::UPDATE_AFTER_HELP)]
@@ -228,6 +231,9 @@ enum Commands {
         /// Custom index directory path (overrides default .commandindex/)
         #[arg(long)]
         index_path: Option<PathBuf>,
+        /// Limits total estimated tokens in output (approx. 1 token per 4 chars)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=1_000_000))]
+        max_tokens: Option<u64>,
     },
     /// Import index from tar.gz archive (--force to overwrite)
     #[command(after_help = commandindex::cli::import_index::IMPORT_AFTER_HELP)]
@@ -354,7 +360,9 @@ fn main() {
             workspace,
             repo,
             changed_since,
+            max_tokens,
         } => {
+            let max_tokens = max_tokens.map(|t| t as usize);
             // Handle --changed-since: delegate to impact with git log
             if let Some(since) = changed_since {
                 let index_path_opt = cli.index_path.as_deref();
@@ -363,6 +371,7 @@ fn main() {
                     format,
                     limit,
                     index_path_opt,
+                    max_tokens,
                 ) {
                     Ok(()) => return,
                     Err(commandindex::cli::changed_since::ChangedSinceError::NoChanges) => {
@@ -426,6 +435,7 @@ fn main() {
                     snippet_config,
                     rerank,
                     rerank_top,
+                    max_tokens,
                 );
                 match result {
                     Ok(()) => 0,
@@ -439,6 +449,7 @@ fn main() {
                     effective_limit,
                     format,
                     snippet_options.clone(),
+                    max_tokens,
                 );
                 match result {
                     Ok(()) => 0,
@@ -475,7 +486,7 @@ fn main() {
                             path_prefix: path,
                             file_type,
                         };
-                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top)
+                        commandindex::cli::search::run(&ctx, &options, &filters, format, snippet_config, rerank, rerank_top, max_tokens)
                     }
                     (None, Some(s), None, None) => {
                         let ctx_for_symbol = ctx.or_else(|| {
@@ -485,7 +496,7 @@ fn main() {
                             )
                             .ok()
                         });
-                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format, ctx_for_symbol.as_ref())
+                        commandindex::cli::search::run_symbol_search(&s, effective_limit, format, ctx_for_symbol.as_ref(), max_tokens)
                     }
                     (None, None, Some(ref files), None) => {
                         let ctx_for_related = ctx.or_else(|| {
@@ -495,7 +506,7 @@ fn main() {
                             )
                             .ok()
                         });
-                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref(), snippet_options.clone())
+                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref(), snippet_options.clone(), max_tokens)
                     }
                     (None, None, None, Some(q)) => {
                         let filters = commandindex::indexer::reader::SearchFilters {
@@ -516,6 +527,7 @@ fn main() {
                             tag.as_deref(),
                             &filters,
                             ctx_for_semantic.as_ref(),
+                            max_tokens,
                         )
                     }
                     (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(
@@ -657,7 +669,9 @@ fn main() {
             snippet_lines,
             snippet_chars,
             index_path,
+            max_tokens,
         } => {
+            let max_tokens = max_tokens.map(|t| t as usize);
             let base_path = std::path::Path::new(".");
             let config = commandindex::config::load_config(base_path).ok();
             let impact_snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
@@ -677,6 +691,7 @@ fn main() {
                 limit,
                 index_path.as_deref(),
                 impact_snippet_options,
+                max_tokens,
             ) {
                 Ok(()) => 0,
                 Err(e) => {
