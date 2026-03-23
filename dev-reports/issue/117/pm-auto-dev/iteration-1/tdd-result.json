@@ -1,0 +1,38 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: output/token_budget.rs 新規作成 + ユニットテスト",
+    "Task 1.2: context.rs からのユーティリティ移動",
+    "Task 2.1: main.rs に --max-tokens 引数追加",
+    "Task 2.2: CLI引数パーステスト",
+    "Task 3.1: impact.rs に --max-tokens 追加",
+    "Task 3.2: changed_since.rs に max_tokens 伝達",
+    "Task 4.1: search.rs の全モードに --max-tokens 追加",
+    "Task 4.2: workspace.rs に max_tokens 伝達",
+    "Task 5.1: help_llm.rs 更新"
+  ],
+  "files_changed": [
+    "src/output/mod.rs",
+    "src/output/token_budget.rs",
+    "src/cli/context.rs",
+    "src/main.rs",
+    "src/cli/search.rs",
+    "src/cli/impact.rs",
+    "src/cli/changed_since.rs",
+    "src/cli/workspace.rs",
+    "src/cli/help_llm.rs",
+    "tests/cli_args.rs"
+  ],
+  "tests_added": 27,
+  "tests_passed": true,
+  "clippy_clean": true,
+  "fmt_clean": true,
+  "issues_encountered": [
+    "test_embed_without_ollama_fails: pre-existing environment-dependent test failure (Ollama running on host). Not related to this change."
+  ],
+  "notes": {
+    "unit_tests_token_budget": 19,
+    "cli_args_tests_added": 8,
+    "total_tests_all_suites": "All test suites pass (except 1 pre-existing env-dependent test)"
+  }
+}

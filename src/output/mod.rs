@@ -29,6 +29,13 @@ impl Default for SnippetConfig {
     }
 }
 
+/// LLM出力フォーマットオプション
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LlmFormatOptions {
+    /// body の最大行数（None = 無制限）
+    pub max_body_lines: Option<usize>,
+}
+
 /// 出力フォーマット
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum OutputFormat {
@@ -211,12 +218,13 @@ pub fn format_results(
     results: &[SearchResult],
     format: OutputFormat,
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => human::format_human(results, writer, SnippetConfig::default()),
         OutputFormat::Json => json::format_json(results, writer),
         OutputFormat::Path => path::format_path(results, writer),
-        OutputFormat::Llm => llm::format_llm(results, writer),
+        OutputFormat::Llm => llm::format_llm(results, writer, llm_options),
     }
 }
 
@@ -284,12 +292,13 @@ pub fn format_impact_results(
     result: &ImpactResult,
     format: OutputFormat,
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => human::format_impact_human(result, writer),
         OutputFormat::Json => json::format_impact_json(result, writer),
         OutputFormat::Path => path::format_impact_path(result, writer),
-        OutputFormat::Llm => llm::format_impact_llm(result, writer),
+        OutputFormat::Llm => llm::format_impact_llm(result, writer, llm_options),
     }
 }
 

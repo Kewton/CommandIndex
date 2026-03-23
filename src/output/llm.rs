@@ -1,12 +1,16 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    DiffResult, ImpactResult, OutputError, RelatedSearchResult, SemanticSearchResult,
-    SymbolSearchResult, WorkspaceSearchResult, estimate_tokens, strip_control_chars,
+    DiffResult, ImpactResult, LlmFormatOptions, OutputError, RelatedSearchResult,
+    SemanticSearchResult, SymbolSearchResult, WorkspaceSearchResult, estimate_tokens,
+    strip_control_chars,
 };
+
+/// impacted_by の表示上限
+const IMPACTED_BY_DISPLAY_LIMIT: usize = 3;
 
 /// body内のバッククォート連続数を検査し、フェンスに必要なバッククォート数を返す
 fn fence_backticks(body: &str) -> usize {
@@ -64,22 +68,6 @@ fn is_code_file(path: &str) -> bool {
     !lang.is_empty() && lang != "markdown"
 }
 
-/// 同一パスの結果をグループ化する（出現順保持）
-fn group_by_path(results: &[SearchResult]) -> Vec<(&str, Vec<&SearchResult>)> {
-    let mut map: HashMap<&str, Vec<&SearchResult>> = HashMap::new();
-    let mut order: Vec<&str> = Vec::new();
-    for result in results {
-        if !map.contains_key(result.path.as_str()) {
-            order.push(&result.path);
-        }
-        map.entry(&result.path).or_default().push(result);
-    }
-    order
-        .into_iter()
-        .map(|p| (p, map.remove(p).unwrap()))
-        .collect()
-}
-
 /// bodyをMarkdown形式で書き出す（コードファイルならフェンス付き）
 fn write_body(writer: &mut dyn Write, path: &str, body: &str) -> Result<(), OutputError> {
     let cleaned = strip_control_chars(body);
@@ -99,14 +87,51 @@ fn write_body(writer: &mut dyn Write, path: &str, body: &str) -> Result<(), Outp
     Ok(())
 }
 
+/// 重複結果を除去する（path + heading + body の完全一致）
+fn dedup_results(results: &[SearchResult]) -> Vec<&SearchResult> {
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for r in results {
+        let key = (&r.path, &r.heading, &r.body);
+        if seen.insert(key) {
+            deduped.push(r);
+        }
+    }
+    deduped
+}
+
+/// bodyを指定行数でトランケーションする
+/// 戻り値: (トランケーション後のbody, トランケーションが発生したか)
+fn truncate_body_for_llm(body: &str, max_lines: Option<usize>) -> (String, bool) {
+    match max_lines {
+        None | Some(0) => (body.to_string(), false),
+        Some(max) => {
+            let lines: Vec<&str> = body.lines().collect();
+            if lines.len() > max {
+                let taken: Vec<&str> = lines.into_iter().take(max).collect();
+                (taken.join("\n"), true)
+            } else {
+                (body.to_string(), false)
+            }
+        }
+    }
+}
+
 /// LLM向けMarkdown形式で検索結果を出力する
-pub fn format_llm(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
+pub fn format_llm(
+    results: &[SearchResult],
+    writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
+) -> Result<(), OutputError> {
     if results.is_empty() {
         return Ok(());
     }
 
+    // 重複除去
+    let deduped = dedup_results(results);
+
     // 全体のトークン推定を先に計算
-    let total_text: String = results
+    let total_text: String = deduped
         .iter()
         .map(|r| r.body.as_str())
         .collect::<Vec<_>>()
@@ -114,7 +139,21 @@ pub fn format_llm(results: &[SearchResult], writer: &mut dyn Write) -> Result<()
     let tokens = estimate_tokens(&total_text);
     writeln!(writer, "<!-- estimated tokens: ~{tokens} -->")?;
 
-    let groups = group_by_path(results);
+    // group_by_path は &[SearchResult] を取るので、deduped を SearchResult スライスに変換
+    // ただし group_by_path の代わりに直接グルーピングする
+    let mut map: HashMap<&str, Vec<&SearchResult>> = HashMap::new();
+    let mut order: Vec<&str> = Vec::new();
+    for result in &deduped {
+        if !map.contains_key(result.path.as_str()) {
+            order.push(&result.path);
+        }
+        map.entry(&result.path).or_default().push(result);
+    }
+    let groups: Vec<(&str, Vec<&SearchResult>)> = order
+        .into_iter()
+        .map(|p| (p, map.remove(p).unwrap()))
+        .collect();
+
     for (i, (path, items)) in groups.iter().enumerate() {
         if i > 0 {
             writeln!(writer)?;
@@ -126,7 +165,29 @@ pub fn format_llm(results: &[SearchResult], writer: &mut dyn Write) -> Result<()
                 writeln!(writer, "### {heading}")?;
             }
             writeln!(writer)?;
-            write_body(writer, path, &item.body)?;
+
+            let (truncated_body, was_truncated) =
+                truncate_body_for_llm(&item.body, llm_options.max_body_lines);
+
+            if was_truncated {
+                let cleaned = strip_control_chars(&truncated_body);
+                if !cleaned.is_empty() {
+                    if is_code_file(path) {
+                        let lang = detect_language(path);
+                        let backtick_count = fence_backticks(&cleaned);
+                        let fence: String = "`".repeat(backtick_count);
+                        writeln!(writer, "{fence}{lang}")?;
+                        writeln!(writer, "{cleaned}")?;
+                        writeln!(writer, "... (truncated)")?;
+                        writeln!(writer, "{fence}")?;
+                    } else {
+                        writeln!(writer, "{cleaned}")?;
+                        writeln!(writer, "... (truncated)")?;
+                    }
+                }
+            } else {
+                write_body(writer, path, &item.body)?;
+            }
         }
     }
     Ok(())
@@ -340,8 +401,28 @@ pub fn format_diff_llm(result: &DiffResult, writer: &mut dyn Write) -> Result<()
     Ok(())
 }
 
+/// impacted_by リストをフォーマットする（IMPACTED_BY_DISPLAY_LIMIT 超で省略）
+fn format_impacted_by(impacted_by: &[String]) -> String {
+    let cleaned: Vec<String> = impacted_by.iter().map(|s| strip_control_chars(s)).collect();
+    if cleaned.len() <= IMPACTED_BY_DISPLAY_LIMIT {
+        cleaned.join(", ")
+    } else {
+        let shown: Vec<String> = cleaned
+            .iter()
+            .take(IMPACTED_BY_DISPLAY_LIMIT)
+            .cloned()
+            .collect();
+        let remaining = cleaned.len() - IMPACTED_BY_DISPLAY_LIMIT;
+        format!("{} ... and {} more", shown.join(", "), remaining)
+    }
+}
+
 /// Impact結果をLLM向けMarkdown形式で出力する
-pub fn format_impact_llm(result: &ImpactResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+pub fn format_impact_llm(
+    result: &ImpactResult,
+    writer: &mut dyn Write,
+    _llm_options: &LlmFormatOptions,
+) -> Result<(), OutputError> {
     let total_text: String = result
         .impacted_files
         .iter()
@@ -361,12 +442,7 @@ pub fn format_impact_llm(result: &ImpactResult, writer: &mut dyn Write) -> Resul
     for file in &result.impacted_files {
         let path = strip_control_chars(&file.file_path);
         let relations = file.relation_types.join(", ");
-        let impacted_by = file
-            .impacted_by
-            .iter()
-            .map(|s| strip_control_chars(s))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let impacted_by = format_impacted_by(&file.impacted_by);
         if impacted_by.is_empty() {
             writeln!(writer, "- {path} ({relations})")?;
         } else {

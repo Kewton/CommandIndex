@@ -1,0 +1,17 @@
+{
+  "must_fix": [
+    {"id":"M1","title":"src/cli/impact.rsが変更対象から漏れている","description":"impactの出力はcli/impact.rsのrun_impact()からformat_impact_resultsを呼んでいる","suggestion":"変更対象にcli/impact.rsを追加し、LlmFormatOptionsの受け渡し経路を明記"},
+    {"id":"M2","title":"Outputレイヤー限定の記述が不正確","suggestion":"CLI層にもシグネチャ変更が波及すると修正"},
+    {"id":"M3","title":"テスト影響範囲が過小評価","suggestion":"impact系の統合テストも再棚卸し"}
+  ],
+  "should_fix": [
+    {"id":"S1","title":"snippet_linesの型変換の実装箇所が曖昧","suggestion":"search系とimpact系それぞれの生成箇所を明記"},
+    {"id":"S2","title":"search --related周りの影響確認が必要","suggestion":"run_related_searchも変更なし確認対象に追加"},
+    {"id":"S3","title":"セキュリティで今回変更で悪化させないことを明記","suggestion":"strip_control_chars維持、フェンス閉じ保証を明記"}
+  ],
+  "nice_to_have": [
+    {"id":"N1","title":"help-llmの変更なし確認対象追記"},
+    {"id":"N2","title":"重複除去のメモリ影響を具体化"}
+  ],
+  "summary": "cli/impact.rsの変更対象漏れとOutputレイヤー限定表現の修正が主な残件。テスト影響範囲も再棚卸し必要。"
+}

@@ -21,7 +21,9 @@ use crate::cli::stdin::{
 };
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
-use crate::output::{self, ImpactFileResult, ImpactResult, OutputError, OutputFormat};
+use crate::output::{
+    self, ImpactFileResult, ImpactResult, LlmFormatOptions, OutputError, OutputFormat,
+};
 use crate::search::related::{RelatedSearchEngine, RelatedSearchError};
 
 const MAX_INPUT_FILES: usize = 500;
@@ -116,6 +118,7 @@ pub fn run_impact(
     index_path: Option<&Path>,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
     max_tokens: Option<usize>,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), ImpactError> {
     // 1. ファイルリスト取得（引数優先、なければstdin）
     let input_files = if files.is_empty() {
@@ -181,7 +184,7 @@ pub fn run_impact(
     // 5. 出力
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_impact_results(&result, format, &mut handle)?;
+    output::format_impact_results(&result, format, &mut handle, llm_options)?;
     Ok(())
 }
 

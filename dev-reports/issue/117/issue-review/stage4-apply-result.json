@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "apply",
+  "applied_items": [
+    "Must Fix: changed_since→impact のmax_tokensパラメータ伝達を対象コマンド表に追加",
+    "Must Fix: トークン制限の実装方式を明記（build_context_pack パターン再利用、アイテム単位の事前計算・早期打ち切り）",
+    "Must Fix: search 5モード（通常/symbol/related/semantic/changed_since）それぞれの対応方針を表として明記",
+    "Should Fix: help_llm 対応を追加",
+    "Should Fix: フォーマットオーバーヘッドの注記を追加",
+    "Should Fix: 受け入れ基準に changed_since 伝達、help_llm 対応を追加",
+    "Nice to Have: 将来の拡張として config デフォルト値、suggest 自動配分を追記"
+  ],
+  "issue_updated": true
+}

@@ -47,6 +47,7 @@ pub fn run_changed_since(
         index_path,
         crate::cli::snippet_helper::SnippetOptions::default(),
         max_tokens,
+        &crate::output::LlmFormatOptions::default(),
     )
     .map_err(ChangedSinceError::Impact)
 }

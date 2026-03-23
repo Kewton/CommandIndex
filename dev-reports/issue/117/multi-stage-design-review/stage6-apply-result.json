@@ -1,0 +1,1 @@
+{"stage":6,"type":"apply","applied_items":["Must Fix: debug_assert → max_tokens==0 で空Vec早期リターンに変更","Must Fix: ImpactResult.total_impacted_files の打ち切り後更新手順を明記","Must Fix: changed_since の SnippetOptions::default() 固定を意図的制限として明記","Should Fix: pub(crate) mod に統一","Should Fix: 日本語推定精度の制約を設計判断に追記","Should Fix: workspace の集約後一括適用を明記"],"design_policy_updated":true}
