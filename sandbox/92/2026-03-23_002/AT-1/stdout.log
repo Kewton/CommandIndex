@@ -1,0 +1,16 @@
+{
+  "file_a": "docs/auth/design.md",
+  "file_b": "docs/api-spec.md",
+  "only_a": [
+    "../../src/handler.md",
+    "api-spec",
+    "docs/api-spec.md"
+  ],
+  "only_b": [
+    "docs/auth/design.md"
+  ],
+  "overlap": [
+    "src/handler.md"
+  ],
+  "overlap_count": 1
+}

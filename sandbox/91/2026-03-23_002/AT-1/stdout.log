@@ -1,0 +1,58 @@
+{
+  "impacted_files": [
+    {
+      "file_path": "../../src/handler.md",
+      "impacted_by": [
+        "docs/auth/design.md"
+      ],
+      "relation_types": [
+        "markdown_link"
+      ],
+      "score": 1.0
+    },
+    {
+      "file_path": "api-spec",
+      "impacted_by": [
+        "docs/auth/design.md"
+      ],
+      "relation_types": [
+        "markdown_link"
+      ],
+      "score": 1.0
+    }
+  ],
+  "input_files": [
+    ".commandindex/manifest.json",
+    ".commandindex/state.json",
+    ".commandindex/symbols.db",
+    ".commandindex/tantivy/.managed.json",
+    ".commandindex/tantivy/.tantivy-meta.lock",
+    ".commandindex/tantivy/.tantivy-writer.lock",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.fast",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.fieldnorm",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.idx",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.pos",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.store",
+    ".commandindex/tantivy/1043370bde5448eb8627b8cfb7040fb4.term",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.fast",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.fieldnorm",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.idx",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.pos",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.store",
+    ".commandindex/tantivy/ab15fce55b7e4ed6ab094ff90ab6c2b0.term",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.fast",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.fieldnorm",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.idx",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.pos",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.store",
+    ".commandindex/tantivy/e3d5da549dcf41229514556e80c541f0.term",
+    ".commandindex/tantivy/meta.json",
+    "docs/api-spec.md",
+    "docs/auth/design.md",
+    "docs/isolated.md",
+    "docs/new.md",
+    "src/handler.md"
+  ],
+  "total_impacted_files": 2,
+  "total_input_files": 30
+}

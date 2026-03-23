@@ -1,0 +1,3 @@
+{"path":"api-spec","relations":["markdown_link"],"score":1.0}
+{"path":"../../src/handler.md","relations":["markdown_link"],"score":1.0}
+{"path":"src/handler.md","relations":[{"tag_match":["auth"]}],"score":0.5}
