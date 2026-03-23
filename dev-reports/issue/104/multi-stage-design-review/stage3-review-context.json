@@ -1,0 +1,21 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "search.rsのrun()内Human直接分岐とLlmのformat_results経由の構造を明記"},
+    {"id": "M2", "title": "help_llm.rsのdiffのoutput_formatsにpath欠落（llm追加時に併せて修正）"},
+    {"id": "M3", "title": "main.rsのヘルプコメント更新具体箇所(3箇所: L52, L149, L205)の明記"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "tests/output_format.rsの全列挙箇所へのLlm追加"},
+    {"id": "S2", "title": "E2Eテスト(e2e_integration.rs)へのllmフォーマット検証追加"},
+    {"id": "S3", "title": "estimate_tokens移動の具体手順記載"},
+    {"id": "S4", "title": "workspace search更新箇所の具体化"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "NOTEコメント存在の認識記載"},
+    {"id": "N2", "title": "statusコマンドが影響範囲外であることの明示"},
+    {"id": "N3", "title": "changed-sinceが自動的にLlm対応することの補足"}
+  ],
+  "summary": "影響範囲は明確で限定的。must_fix 3件: search.rs分岐構造、help_llm.rsのpath欠落修正、main.rs更新箇所明記。"
+}

@@ -1,0 +1,21 @@
+{
+  "stage": "1-4",
+  "action": "全4ステージの指摘事項を設計方針書に一括反映",
+  "changes": [
+    "Stage1-M1: スニペット分岐DRY違反は認識済み。llm.rsではSnippetConfig不使用のため直接影響なし",
+    "Stage1-S2: estimate_tokensの日本語制限事項をコメントとして追記",
+    "Stage1-S4: group_by_pathをHashMap集約→順序保持の実装に変更。IndexMap版コード削除",
+    "Stage2-M1: search.rsのrun()関数分岐構造をSection 4の注意書きに明記",
+    "Stage2-M2: estimate_tokens移動手順を具体的に4ステップで記載",
+    "Stage2-S1: pub mod llm宣言追加をレイヤー構成表に明記",
+    "Stage2-S2: statusコマンド対象外を明記",
+    "Stage2-S4: 空結果時の挙動定義（何も出力しない）を追加",
+    "Stage3-M2: help_llm.rsのdiffのoutput_formatsにpath欠落の修正を記載",
+    "Stage3-M3: main.rsのヘルプコメント更新箇所(L52, L149, L205)を具体的に記載",
+    "Stage3-S2: E2Eテストへのllmフォーマット検証追加を記載",
+    "Stage3-N3: changed-sinceが自動対応することを影響範囲表に追記",
+    "Stage4-S1: コードフェンスインジェクション対策（動的バッククォート数）を追加",
+    "Stage4-S2: Unicode BiDi制御文字対策をフォローアップIssueとして記載"
+  ],
+  "design_policy_updated": true
+}

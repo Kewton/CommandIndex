@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "search.rsのrun関数のLlm分岐がformat_results経由であることの明記不足"},
+    {"id": "M2", "title": "estimate_tokens移動時のcontext.rs変更手順が未記載"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "mod.rsにpub mod llm宣言の追加が設計書に未記載"},
+    {"id": "S2", "title": "statusコマンドが対象外であることの明示なし"},
+    {"id": "S3", "title": "format_workspace_resultsのLlmアームでsnippet_config不使用の補強"},
+    {"id": "S4", "title": "空結果時のLlm挙動定義（トークンコメント出力するか否か）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "group_by_pathのIndexMap版コード削除"},
+    {"id": "N2", "title": "main.rsの具体的行番号リスト"},
+    {"id": "N3", "title": "SEARCH_AFTER_HELPにllm例追加"}
+  ],
+  "summary": "概ね整合。must_fix 2件: search.rs分岐明記、estimate_tokens移動手順記載。"
+}
