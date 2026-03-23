@@ -1,0 +1,1 @@
+{"overall": "pass", "criteria_passed": 9, "criteria_failed": 0, "summary": "全9項目の受け入れ基準をパス。estimate_tokensは文字数ベース実装済み、全フィールドトークン推定、snippet縮約・None正規化、統一縮約ロジック、CLIヘルプ・value_parser制約、clippy警告0件、テスト全パス。"}

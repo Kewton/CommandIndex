@@ -218,11 +218,10 @@ pub fn format_results(
     }
 }
 
-/// トークン数を概算する（バイト数 / 4）
-/// 注意: 英語テキスト向けの概算。日本語テキスト（UTF-8で1文字3バイト）では
-/// 実際のLLMトークン数より少なく見積もられる可能性がある。
+/// トークン数を概算する（文字数 / 4、最低1トークン）
 pub(crate) fn estimate_tokens(text: &str) -> usize {
-    text.len() / 4
+    let count = text.chars().count();
+    if count == 0 { 0 } else { (count / 4).max(1) }
 }
 
 /// tags文字列をパースしてVec<&str>に変換する

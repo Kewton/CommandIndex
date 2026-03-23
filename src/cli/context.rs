@@ -6,7 +6,8 @@ When to use:
 Examples:
   commandindexdev context src/main.rs
   commandindexdev context src/auth.rs --max-files 10
-  commandindexdev context src/a.rs src/b.rs --max-tokens 8000";
+  commandindexdev context src/a.rs src/b.rs --max-tokens 8000
+  (Limits total estimated tokens. Estimation: approx. 1 token per 4 chars)";
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -204,7 +205,7 @@ fn build_context_pack(
     let mut token_total: usize = 0;
 
     for result in limited {
-        let entry = enrich_entry(
+        let mut entry = enrich_entry(
             &result.file_path,
             result.score,
             &result.relation_types,
@@ -213,27 +214,37 @@ fn build_context_pack(
         );
 
         if let Some(max_tok) = max_tokens {
-            let entry_tokens = entry
-                .snippet
-                .as_ref()
-                .map(|s| estimate_tokens(s))
-                .unwrap_or(0);
-            if token_total + entry_tokens > max_tok && !entries.is_empty() {
-                break;
+            let meta_tokens = estimate_entry_meta_tokens(&entry);
+
+            // メタデータだけで残予算超過 → スキップ（最初のエントリのみ例外）
+            if token_total + meta_tokens > max_tok && !entries.is_empty() {
+                continue;
             }
-            token_total += entry_tokens;
+
+            // snippet動的縮約
+            let remaining = max_tok.saturating_sub(token_total + meta_tokens);
+            let snippet_budget = tokens_to_char_budget(remaining);
+            if let Some(s) = &entry.snippet {
+                let truncated = truncate_snippet_for_char_budget(s, snippet_budget);
+                // 空文字列はNoneに正規化
+                entry.snippet = if truncated.is_empty() {
+                    None
+                } else {
+                    Some(truncated)
+                };
+            }
+
+            token_total += estimate_entry_tokens(&entry);
         }
 
         entries.push(entry);
     }
 
+    let included = entries.len();
     let estimated_tokens = if max_tokens.is_some() {
         token_total
     } else {
-        entries
-            .iter()
-            .map(|e| e.snippet.as_ref().map(|s| estimate_tokens(s)).unwrap_or(0))
-            .sum()
+        entries.iter().map(estimate_entry_tokens).sum()
     };
 
     Ok(ContextPack {
@@ -241,13 +252,9 @@ fn build_context_pack(
         context: entries,
         summary: ContextSummary {
             total_related,
-            included: 0, // 一時的に0、後で更新
+            included,
             estimated_tokens,
         },
-    })
-    .map(|mut pack| {
-        pack.summary.included = pack.context.len();
-        pack
     })
 }
 
@@ -285,6 +292,10 @@ fn enrich_entry(
                 heading = Some(first.heading.clone());
             }
             if !first.body.is_empty() {
+                // 事前に500文字/10行に切り詰める。これは max_tokens 未指定時に
+                // 出力が巨大にならないための安全策。max_tokens 指定時は
+                // build_context_pack 内の truncate_snippet_for_char_budget が
+                // さらに予算内に縮約するため、機能上の問題はない。
                 let truncated = truncate_body(&first.body, 10, 500);
                 let cleaned = strip_control_chars(&truncated);
                 if !cleaned.is_empty() {
@@ -370,4 +381,257 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
         }
     }
     "unknown".to_string()
+}
+
+/// トークン数を文字数予算に変換（estimate_tokensの逆変換）
+fn tokens_to_char_budget(tokens: usize) -> usize {
+    tokens * 4
+}
+
+/// ContextEntryのメタデータ部分（snippet以外）の推定トークン数を算出
+fn estimate_entry_meta_tokens(entry: &ContextEntry) -> usize {
+    let mut total = 0;
+    total += estimate_tokens(&entry.path);
+    total += estimate_tokens(&entry.relation);
+    total += 1; // score は固定1トークン
+    if let Some(h) = &entry.heading {
+        total += estimate_tokens(h);
+    }
+    if let Some(syms) = &entry.symbols {
+        for sym in syms {
+            total += estimate_tokens(sym);
+        }
+    }
+    total
+}
+
+/// ContextEntry全体の推定トークン数を算出（メタデータ + snippet）
+fn estimate_entry_tokens(entry: &ContextEntry) -> usize {
+    let meta = estimate_entry_meta_tokens(entry);
+    let snippet = entry
+        .snippet
+        .as_ref()
+        .map(|s| estimate_tokens(s))
+        .unwrap_or(0);
+    meta + snippet
+}
+
+/// snippet を先頭と末尾に比率で切り詰める際の定数
+const HEAD_RATIO: usize = 3;
+const TOTAL_PARTS: usize = 5;
+/// 省略マーカー "..." の文字数
+const ELLIPSIS_LEN: usize = 3;
+
+/// 文字数予算に収まるようsnippetを動的に切り詰める
+/// 先頭と末尾を保持し、中間を省略する戦略
+/// budget_chars: 文字数ベースの予算（トークンではない）
+/// 戻り値が空文字列の場合、呼び出し側で snippet = None に正規化する
+fn truncate_snippet_for_char_budget(snippet: &str, budget_chars: usize) -> String {
+    let chars: Vec<char> = snippet.chars().collect();
+    if chars.len() <= budget_chars {
+        return snippet.to_string();
+    }
+    if budget_chars == 0 {
+        return String::new();
+    }
+    // 省略マーカー + 最低1文字ずつ = 最低5文字必要
+    // それ未満なら先頭のみで切り詰め（省略マーカーなし）
+    if budget_chars < ELLIPSIS_LEN + 2 {
+        return chars[..budget_chars].iter().collect();
+    }
+    let content_budget = budget_chars - ELLIPSIS_LEN;
+    let head_chars = (content_budget * HEAD_RATIO) / TOTAL_PARTS;
+    let tail_chars = content_budget - head_chars;
+    let head: String = chars[..head_chars].iter().collect();
+    let tail: String = chars[chars.len() - tail_chars..].iter().collect();
+    format!("{head}...{tail}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- estimate_tokens tests ----
+
+    #[test]
+    fn test_estimate_tokens_ascii() {
+        // "hello" = 5 chars => 5/4 = 1
+        assert_eq!(estimate_tokens("hello"), 1);
+        // 8 chars => 8/4 = 2
+        assert_eq!(estimate_tokens("12345678"), 2);
+    }
+
+    #[test]
+    fn test_estimate_tokens_japanese() {
+        // "あいうえお" = 5 chars => 5/4 = 1 (previously would be 15/4=3 with bytes)
+        assert_eq!(estimate_tokens("あいうえお"), 1);
+        // "あいうえおかきくけこ" = 10 chars => 10/4 = 2
+        assert_eq!(estimate_tokens("あいうえおかきくけこ"), 2);
+    }
+
+    #[test]
+    fn test_estimate_tokens_empty() {
+        assert_eq!(estimate_tokens(""), 0);
+    }
+
+    #[test]
+    fn test_estimate_tokens_short() {
+        // 1 char => min 1 token
+        assert_eq!(estimate_tokens("a"), 1);
+        // 3 chars => 3/4 = 0, but max(1) => 1
+        assert_eq!(estimate_tokens("abc"), 1);
+    }
+
+    #[test]
+    fn test_estimate_tokens_mixed() {
+        // "hello世界" = 7 chars => 7/4 = 1
+        assert_eq!(estimate_tokens("hello世界"), 1);
+        // "hello世界abc" = 10 chars => 10/4 = 2
+        assert_eq!(estimate_tokens("hello世界abc"), 2);
+    }
+
+    // ---- tokens_to_char_budget tests ----
+
+    #[test]
+    fn test_tokens_to_char_budget() {
+        assert_eq!(tokens_to_char_budget(0), 0);
+        assert_eq!(tokens_to_char_budget(1), 4);
+        assert_eq!(tokens_to_char_budget(10), 40);
+        assert_eq!(tokens_to_char_budget(100), 400);
+    }
+
+    // ---- estimate_entry_meta_tokens tests ----
+
+    fn make_entry(
+        path: &str,
+        relation: &str,
+        heading: Option<&str>,
+        snippet: Option<&str>,
+        symbols: Option<Vec<&str>>,
+    ) -> ContextEntry {
+        ContextEntry {
+            path: path.to_string(),
+            relation: relation.to_string(),
+            score: 1.0,
+            heading: heading.map(|s| s.to_string()),
+            snippet: snippet.map(|s| s.to_string()),
+            symbols: symbols.map(|v| v.into_iter().map(|s| s.to_string()).collect()),
+        }
+    }
+
+    #[test]
+    fn test_estimate_entry_meta_tokens_all_fields() {
+        let entry = make_entry(
+            "src/main.rs",
+            "import_dependency",
+            Some("Main Module"),
+            Some("fn main() {}"),
+            Some(vec!["func_a", "func_b"]),
+        );
+        let meta = estimate_entry_meta_tokens(&entry);
+        // path: "src/main.rs" = 11 chars => 2
+        // relation: "import_dependency" = 17 chars => 4
+        // score: 1
+        // heading: "Main Module" = 11 chars => 2
+        // symbols: "func_a"=6=>1, "func_b"=6=>1 => 2
+        assert_eq!(meta, 2 + 4 + 1 + 2 + 2);
+    }
+
+    #[test]
+    fn test_estimate_entry_meta_tokens_minimal() {
+        let entry = make_entry("a.rs", "linked", None, None, None);
+        let meta = estimate_entry_meta_tokens(&entry);
+        // path: "a.rs" = 4 chars => 1
+        // relation: "linked" = 6 chars => 1
+        // score: 1
+        assert_eq!(meta, 1 + 1 + 1);
+    }
+
+    // ---- estimate_entry_tokens tests ----
+
+    #[test]
+    fn test_estimate_entry_tokens_with_snippet() {
+        let entry = make_entry("a.rs", "linked", None, Some("some snippet text here"), None);
+        let meta = estimate_entry_meta_tokens(&entry);
+        let snippet_tokens = estimate_tokens("some snippet text here");
+        assert_eq!(estimate_entry_tokens(&entry), meta + snippet_tokens);
+    }
+
+    #[test]
+    fn test_estimate_entry_tokens_without_snippet() {
+        let entry = make_entry("a.rs", "linked", None, None, None);
+        let meta = estimate_entry_meta_tokens(&entry);
+        assert_eq!(estimate_entry_tokens(&entry), meta);
+    }
+
+    // ---- truncate_snippet_for_char_budget tests ----
+
+    #[test]
+    fn test_truncate_within_budget() {
+        let s = "hello";
+        assert_eq!(truncate_snippet_for_char_budget(s, 10), "hello");
+        assert_eq!(truncate_snippet_for_char_budget(s, 5), "hello");
+    }
+
+    #[test]
+    fn test_truncate_exceeds_budget() {
+        // 10 chars, budget 8
+        let s = "0123456789";
+        let result = truncate_snippet_for_char_budget(s, 8);
+        // content_budget = 8 - 3 = 5
+        // head = 5*3/5 = 3 => "012"
+        // tail = 5-3 = 2 => "89"
+        assert_eq!(result, "012...89");
+        assert_eq!(result.chars().count(), 8);
+    }
+
+    #[test]
+    fn test_truncate_zero_budget() {
+        assert_eq!(truncate_snippet_for_char_budget("hello", 0), "");
+    }
+
+    #[test]
+    fn test_truncate_budget_1() {
+        // budget < 5, so head-only
+        assert_eq!(truncate_snippet_for_char_budget("hello", 1), "h");
+    }
+
+    #[test]
+    fn test_truncate_budget_2() {
+        assert_eq!(truncate_snippet_for_char_budget("hello", 2), "he");
+    }
+
+    #[test]
+    fn test_truncate_budget_3() {
+        assert_eq!(truncate_snippet_for_char_budget("hello", 3), "hel");
+    }
+
+    #[test]
+    fn test_truncate_budget_4() {
+        assert_eq!(truncate_snippet_for_char_budget("hello", 4), "hell");
+    }
+
+    #[test]
+    fn test_truncate_budget_5() {
+        // "hello" is exactly 5 chars = budget, fits within budget
+        assert_eq!(truncate_snippet_for_char_budget("hello", 5), "hello");
+        // 6 chars with budget 5: uses ellipsis mode
+        // content_budget = 5 - 3 = 2
+        // head = 2*3/5 = 1 => "h"
+        // tail = 2-1 = 1 => "!"
+        assert_eq!(truncate_snippet_for_char_budget("hello!", 5), "h...!");
+    }
+
+    #[test]
+    fn test_truncate_short_text() {
+        // Text shorter than budget
+        assert_eq!(truncate_snippet_for_char_budget("ab", 10), "ab");
+    }
+
+    #[test]
+    fn test_truncate_japanese() {
+        let s = "あいうえおかきくけこ"; // 10 chars
+        let result = truncate_snippet_for_char_budget(s, 8);
+        assert_eq!(result.chars().count(), 8);
+    }
 }
