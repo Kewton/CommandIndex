@@ -1,0 +1,19 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー (SOLID/KISS/YAGNI/DRY)",
+  "must_fix": [
+    {"id": "M1", "title": "スニペット分岐ロジックDRY違反", "detail": "human.rsのformat_human/format_workspace_humanに同じsnippet_config分岐が重複。SnippetConfigにtruncateメソッド追加推奨。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "7関数×4バリアント=28箇所のmatch arm（OCP懸念）", "suggestion": "NOTEコメントを「次のフォーマット追加時に必須リファクタ」に更新"},
+    {"id": "S2", "title": "estimate_tokensの日本語テキスト不正確", "suggestion": "制限事項としてコメント明記"},
+    {"id": "S3", "title": "detect_language()とFileType enumの拡張子マッピング重複", "suggestion": "docコメントでFileTypeとの関係を明記"},
+    {"id": "S4", "title": "自前Vecグループ化のO(n)線形探索", "suggestion": "HashMap集約→元順ソートの実装を推奨"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "strip_control_chars適用の一元化"},
+    {"id": "N2", "title": "テスト戦略明確化（スナップショットテスト推奨）"},
+    {"id": "N3", "title": "CLIヘルプ文字列の動的参照化"}
+  ],
+  "summary": "設計は全体として妥当。must_fixは1件（スニペット分岐DRY違反）のみ。"
+}

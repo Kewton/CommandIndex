@@ -15,6 +15,7 @@ use std::path::Path;
 use crate::cli::search::SearchError;
 use crate::indexer::reader::IndexReaderWrapper;
 use crate::indexer::symbol_store::SymbolStore;
+use crate::output::estimate_tokens;
 use crate::output::{
     ContextEntry, ContextPack, ContextSummary, RelatedSearchResult, RelationType,
     strip_control_chars, truncate_body,
@@ -380,12 +381,6 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
         }
     }
     "unknown".to_string()
-}
-
-/// トークン数を概算する（文字数 / 4、最低1トークン）
-fn estimate_tokens(text: &str) -> usize {
-    let count = text.chars().count();
-    if count == 0 { 0 } else { (count / 4).max(1) }
 }
 
 /// トークン数を文字数予算に変換（estimate_tokensの逆変換）
