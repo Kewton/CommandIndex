@@ -1,0 +1,8 @@
+{"stage": "1-4", "type": "1回目全ステージ指摘反映", "applied": [
+  {"from": "Stage1-M1", "action": "VERSION定数をlib.rsに追加する設計を廃止。help_llm.rs内でenv!マクロ直接使用に変更。既存パターン整合性優先。"},
+  {"from": "Stage1-M2", "action": "skip_serializing_ifは設計書に既に記載済み。確認OK。"},
+  {"from": "Stage1-S4", "action": "schema_versionの運用ルール（セマンティックバージョニング）をセクション4.8として追加。"},
+  {"from": "Stage2-M2", "action": "VERSION管理方針をenv!直接使用に統一。設計判断テーブルも更新。"},
+  {"from": "Stage4-S1", "action": "run_help_llm()のexpect()をmatchに変更。エラー時はeprintln→exit(1)。"},
+  {"from": "Stage4-S2", "action": "セキュリティ設計に「after_helpは全て静的文字列」「panic露出防止」「unsafe非依存」を追加。"}
+]}

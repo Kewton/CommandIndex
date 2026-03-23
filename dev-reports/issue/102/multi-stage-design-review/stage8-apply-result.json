@@ -1,0 +1,10 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"from": "Stage7-M1", "action": "Result<(), String>をResult<(), HelpLlmError>に変更。HelpLlmError enumを設計書に追加。既存パターン（専用Error enum）に準拠。"},
+    {"from": "Stage7-M2", "action": "main.rsのmatchアームを整数値(0/1)を返す形式に修正。既存exit_code代入パターンと一致。"},
+    {"from": "Stage7-S1", "action": "Updateサブコマンドのafter_help定数（UPDATE_AFTER_HELP）をindex.rsの変更対象リストに追加。"},
+    {"from": "Stage7-S2", "action": "設計判断テーブルにIssue本文JSONスキーマとの構造差異（Vec構造体化）の理由を追記。"},
+    {"from": "Stage7-S3", "action": "searchのexamplesはmodesとは別にトップレベル代表例を定義する方針（テスト設計で検証）"}
+  ]
+}

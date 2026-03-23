@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "S1", "action": "既存テストのアサーション文字列更新の注意事項を実装方針に追加"},
+    {"id": "S2", "action": "--help-llmの実装方法をstd::env::args事前検査方式に具体化"},
+    {"id": "S4", "action": "after_helpを各cliモジュールに定数定義する方針を追加（main.rs肥大化防止）"},
+    {"id": "S3", "action": "schema_versionは既にStage 2で反映済み"}
+  ],
+  "added_sections": ["注意事項セクション追加（crate追加不要、バイナリサイズ影響、既存ロジック影響なし）"]
+}

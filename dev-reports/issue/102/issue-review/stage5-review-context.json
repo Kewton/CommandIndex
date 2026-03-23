@@ -1,0 +1,54 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "contextコマンドのoutput_formatsがJSONスキーマに欠落",
+      "description": "contextは常にJSON(ContextPack形式)固定だが、スキーマに出力形式の記載がない",
+      "suggestion": "output: 'Always JSON (ContextPack format, not configurable)' を追加"
+    },
+    {
+      "id": "M2",
+      "title": "searchの--no-semantic/--rerank/--rerank-topがJSONスキーマに未記載",
+      "description": "--rerankはOllama依存の重要オプションだがkey_optionsに含まれていない",
+      "suggestion": "key_optionsに追加し、prerequisites にOllama依存を明記"
+    },
+    {
+      "id": "M3",
+      "title": "searchの--snippet-lines/--snippet-charsがJSONスキーマに未記載",
+      "description": "出力カスタマイズに関わるオプションが欠落",
+      "suggestion": "key_optionsに追加"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "export/import/clean/index/update/status/watchのkey_optionsが不完全",
+      "description": "各コマンドの利用可能オプションがJSONスキーマに列挙されていない",
+      "suggestion": "各コマンドにkey_optionsフィールドを追加"
+    },
+    {
+      "id": "S2",
+      "title": "search --rerankのprerequisitesがcommand-levelで未定義",
+      "description": "modesセクションにはsemantic modeのprerequisitesのみ",
+      "suggestion": "command-levelでrerank/semanticのOllama依存を明記"
+    },
+    {
+      "id": "S3",
+      "title": "グローバルオプション--index-pathがJSONスキーマに未記載",
+      "description": "全サブコマンドで利用可能なglobal optionの説明がない",
+      "suggestion": "トップレベルにglobal_optionsフィールドを追加"
+    },
+    {
+      "id": "S4",
+      "title": "実装方針で--help-llmの実装方法が未確定",
+      "description": "std::env::args事前検査とサブコマンド化の2案が併記されたまま",
+      "suggestion": "サブコマンド化(help-llm)に一本化推奨"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "versionフィールドをCARGO_PKG_VERSIONから動的取得"},
+    {"id": "N2", "title": "use_casesにrerank活用のユースケース追加"},
+    {"id": "N3", "title": "影響テスト一覧の網羅的記載"}
+  ],
+  "summary": "JSONスキーマの網羅性に課題。contextの出力形式未明記、searchの重要オプション欠落、各コマンドのkey_options不完全。実装方針はサブコマンド化に一本化推奨。"
+}
