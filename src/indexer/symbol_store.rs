@@ -535,6 +535,16 @@ impl SymbolStore {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Retrieve all import (dependency) records from the database.
+    pub fn find_all_imports(&self) -> Result<Vec<ImportInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_module, imported_names, file_hash
+             FROM dependencies",
+        )?;
+        let rows = stmt.query_map([], import_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
     /// Find file links where the given file is the target.
     /// Returns all files that link to the given target file.
     pub fn find_file_links_by_target(

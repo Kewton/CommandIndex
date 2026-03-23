@@ -233,3 +233,72 @@ fn impact_excludes_input_files_from_results() {
         "input file should be excluded from impacted files"
     );
 }
+
+// --- Issue #123: impact with --with-snippet ---
+
+/// Create a temp directory with TypeScript files that have import chains for impact testing.
+fn setup_impact_ts() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let src = dir.path().join("src");
+    std::fs::create_dir_all(&src).unwrap();
+
+    // main.ts imports from './helper'
+    std::fs::write(
+        src.join("main.ts"),
+        "import { helperFunc } from './helper';\n\nexport function main() {\n  helperFunc();\n}\n",
+    )
+    .unwrap();
+
+    // helper.ts imports from './utils'
+    std::fs::write(
+        src.join("helper.ts"),
+        "import { utilFunc } from './utils';\n\nexport function helperFunc() {\n  utilFunc();\n}\n",
+    )
+    .unwrap();
+
+    // utils.ts: no imports
+    std::fs::write(
+        src.join("utils.ts"),
+        "export function utilFunc() {\n  return 42;\n}\n",
+    )
+    .unwrap();
+
+    common::run_index(dir.path());
+    dir
+}
+
+#[test]
+fn impact_with_snippet_ts_returns_nonempty_snippets() {
+    let dir = setup_impact_ts();
+    let output = common::cmd()
+        .args([
+            "impact",
+            "src/main.ts",
+            "--format",
+            "json",
+            "--with-snippet",
+        ])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    let impacted_files = parsed["impacted_files"].as_array().unwrap();
+    assert!(
+        !impacted_files.is_empty(),
+        "should have impacted files for src/main.ts"
+    );
+    for file in impacted_files {
+        let file_path = file["file_path"].as_str().unwrap_or("<missing>");
+        let snippet = file.get("snippet").and_then(|s| s.as_str());
+        // The file_path should be a real indexed path (not an import path)
+        assert!(
+            !file_path.starts_with("./") && !file_path.starts_with("@/"),
+            "impacted file_path should be a real path, not an import path: {file_path}"
+        );
+        assert!(
+            snippet.is_some_and(|s| !s.is_empty()),
+            "snippet should be non-empty for impacted file {file_path}, got: {snippet:?}"
+        );
+    }
+}
