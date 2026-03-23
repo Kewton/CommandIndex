@@ -1,0 +1,19 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "contextコマンドに output: 'Always JSON (ContextPack format, not configurable via --format)' を追加。--max-tokensもkey_optionsに追加。"},
+    {"id": "M2", "action": "searchのkey_optionsに--no-semantic, --rerank, --rerank-top, --repoを追加。command-levelのprerequisitesに'--semantic and --rerank require Ollama running locally'を追加。"},
+    {"id": "M3", "action": "searchのkey_optionsに--snippet-lines, --snippet-charsを追加。"},
+    {"id": "S1", "action": "全コマンドにkey_optionsフィールドを追加: export(--with-embeddings), import(--force), clean(--keep-embeddings), index(--path, --with-embedding), update(--path, --with-embedding, --workspace), status(--detail, --coverage, --verify, --workspace), watch(--path, --debounce, --with-embedding), embed(--path), diff(--index-path)"},
+    {"id": "S2", "action": "searchコマンドのcommand-level prerequisitesとして--rerank/--semanticのOllama依存を明記。"},
+    {"id": "S3", "action": "JSONスキーマのトップレベルにglobal_optionsフィールド（--index-path）を追加。"},
+    {"id": "S4", "action": "実装方針をサブコマンド化（Commands::HelpLlm）に一本化。--help-llmフラグ方式を削除。"},
+    {"id": "N1", "action": "versionフィールドをCARGO_PKG_VERSIONから動的取得する方針を明記。"},
+    {"id": "N2", "action": "use_casesにhigh_precision_search（--rerank活用）を追加。"},
+    {"id": "N3", "action": "影響テスト一覧を実装方針に網羅的に記載。"}
+  ],
+  "additional_changes": [
+    "help-llmをサブコマンドに変更したため、トップレベル--help一覧にもhelp-llmを追加",
+    "受け入れ基準に「全コマンドのkey_optionsがJSONスキーマに網羅されている」を追加"
+  ]
+}

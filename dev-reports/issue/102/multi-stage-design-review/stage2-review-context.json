@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "Commands enumのunit variantパターン確認", "suggestion": "#[command(name = \"help-llm\")]を明示指定"},
+    {"id": "M2", "title": "VERSION定数の既存インライン使用との一貫性問題", "suggestion": "help_llm.rs内でenv!マクロ直接使用が既存パターンとの整合性が高い"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "after_help属性の使用場所の整合性", "suggestion": "1-2個のサブコマンドで試してからパターン確定"},
+    {"id": "S2", "title": "resolve_commandindex_dir未呼び出しパターン確認", "suggestion": "Watchと同様パターンで問題なし"},
+    {"id": "S3", "title": "Serialize使用パターン確認", "suggestion": "status/mod.rsのto_string_prettyパターン踏襲"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "docコメントスタイル統一（動詞始まりの短い英語）"},
+    {"id": "N2", "title": "help_llm.rsのエラー型は軽量でよい"},
+    {"id": "N3", "title": "cli/mod.rsのpub mod追加時アルファベット順維持"}
+  ]
+}

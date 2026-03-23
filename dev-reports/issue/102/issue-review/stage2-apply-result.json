@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "サブコマンド一覧を正確化。Config配下のshow/pathサブコマンド明記。diff重複削除。search説明に--symbolも追加。"},
+    {"id": "M2", "action": "--help-llm JSONスキーマの詳細ドラフトを追加。全13コマンドの定義含む。schema_versionフィールド追加。"},
+    {"id": "M3", "action": "searchの排他的モード群を独立したモードオブジェクトとして構造化。conflicts説明を詳細化。受け入れ基準にも明記。"},
+    {"id": "S1", "action": "workspace対応コマンド（search, update, status）に--workspace明記。use_casesにworkspace_search追加。"},
+    {"id": "S2", "action": "各コマンドにoutput_formats配列追加。statusがHuman/Jsonのみである点も反映。"},
+    {"id": "S3", "action": "実装方針にglobal argまたはサブコマンド化の選択肢を明記。clap deriveの制約への対応方針追加。"},
+    {"id": "S4", "action": "embed, search --semanticにprerequisites（Ollama）を追加。受け入れ基準にも前提条件明記要件追加。"}
+  ],
+  "deferred": [
+    {"id": "N1", "action": "schema_versionフィールドをスキーマに追加済み"},
+    {"id": "N2", "action": "workflowsセクションをスキーマに追加済み"},
+    {"id": "N3", "action": "エラーコードは実装フェーズで検討"},
+    {"id": "N4", "action": "テスト方針は作業計画フェーズで具体化"}
+  ]
+}

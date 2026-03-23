@@ -1,0 +1,22 @@
+{
+  "stage": 5,
+  "type": "通常レビュー2回目",
+  "must_fix": [
+    {"id": "M1", "title": "run_help_llm()の戻り値がvoid→Result<(), String>にしてexit_codeパターン統一"},
+    {"id": "M2", "title": "help_llm_contains_all_subcommandsテストのサブコマンド数を明確化（13: help-llm自身は含めない）"},
+    {"id": "M3", "title": "GlobalOptionsのserde renameをLLM-friendlyに変更（CLIフラグ記法をキーに使わない）"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "UseCase構造体をVec<UseCaseItem>リスト形式に変更"},
+    {"id": "S2", "title": "build_help_llm_output()のユニットテスト追加"},
+    {"id": "S3", "title": "全CommandInfoのexamplesが最低1つ以上の検証テスト追加"},
+    {"id": "S4", "title": "after_help定数の命名規則を明記（<COMMAND_NAME>_AFTER_HELP）"},
+    {"id": "S5", "title": "戻り値をResult<(), String>に（M1と合わせて）"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "--compactフラグ検討"},
+    {"id": "N2", "title": "timestampフィールド検討"},
+    {"id": "N3", "title": "SearchMode.is_defaultをboolに簡素化"},
+    {"id": "N4", "title": "JSON Schemaバリデーション検討"}
+  ]
+}

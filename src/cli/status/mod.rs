@@ -1,5 +1,16 @@
 pub mod git_info;
 
+pub const STATUS_AFTER_HELP: &str = "\
+When to use:
+  Check if index exists, its health, coverage, or verify integrity.
+  Use --format json for machine-readable output.
+
+Examples:
+  commandindexdev status --format json
+  commandindexdev status --detail
+  commandindexdev status --coverage
+  commandindexdev status --verify";
+
 use std::fmt;
 use std::io::Write;
 use std::path::{Path, PathBuf};

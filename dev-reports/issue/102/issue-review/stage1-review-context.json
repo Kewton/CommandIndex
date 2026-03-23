@@ -1,0 +1,71 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Issueに記載されたサブコマンド数が実際と一致しない",
+      "description": "Config配下のサブコマンド（show/path）やsearchの--changed-sinceのような複合機能の扱いが不明確",
+      "suggestion": "受け入れ基準に「Config配下のサブコマンド（show/path）もヘルプに含まれること」「searchの--changed-sinceのような複合機能の説明方針」を明記する。"
+    },
+    {
+      "id": "M2",
+      "title": "--help-llm のJSON出力スキーマが未定義",
+      "description": "具体的なJSONスキーマ（フィールド名、型、ネスト構造）が定義されていない",
+      "suggestion": "Issueに期待するJSONスキーマのドラフトを追加する。最低限: {tool_name, version, description, subcommands: [{name, description, when_to_use, arguments, examples, output_formats, pipe_support}]}"
+    },
+    {
+      "id": "M3",
+      "title": "searchサブコマンドの排他的オプション群の説明方針が欠落",
+      "description": "searchは5つの排他的な動作モードを持ち、LLMにとって最も混乱しやすいが、ヘルプ表現方法に言及がない",
+      "suggestion": "searchの各モードを独立したユースケースとして記述する方針を追加する"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "workspaceオプションの説明が提案に含まれていない",
+      "description": "search, update, statusの--workspaceオプション（複数リポジトリ横断検索）への言及がない",
+      "suggestion": "--help-llmの出力にworkspace横断検索のユースケースを含める要件を追加する"
+    },
+    {
+      "id": "S2",
+      "title": "--help-llm と既存の--format jsonの関係が曖昧",
+      "description": "各コマンドの対応出力形式の対応表がIssueに欠けている",
+      "suggestion": "各コマンドの対応出力形式を--help-llm出力に含める要件を明記する"
+    },
+    {
+      "id": "S3",
+      "title": "clap deriveとの実装上の制約への考慮不足",
+      "description": "--help-llmはサブコマンド選択前に処理される必要があるが、clap deriveでは制約がある",
+      "suggestion": "global argとして定義するか、サブコマンド化（help-llm）の検討を実装方針に記載する"
+    },
+    {
+      "id": "S4",
+      "title": "embed/rerankのLLM依存コマンドの前提条件がヘルプに必要",
+      "description": "外部LLMサービスが前提のコマンドの前提条件情報が欠けている",
+      "suggestion": "prerequisites（前提条件）セクションを各コマンドのhelpと--help-llm出力に追加する"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "--help-llm出力のバージョニング",
+      "suggestion": "schema_versionフィールドを含める"
+    },
+    {
+      "id": "N2",
+      "title": "典型的なワークフロー（コマンドチェーン）の記載",
+      "suggestion": "workflows配列を追加する"
+    },
+    {
+      "id": "N3",
+      "title": "エラーコード・終了コードの文書化",
+      "suggestion": "exit_codesフィールドを含める"
+    },
+    {
+      "id": "N4",
+      "title": "テスト方針の具体化",
+      "suggestion": "具体的なテストケースを追加する"
+    }
+  ],
+  "summary": "Issue #102は方向性として妥当。3点の重要修正: (1) サブコマンド列挙の正確化、(2) --help-llmのJSONスキーマ定義、(3) searchの排他的モード群のヘルプ表現方針。実装面ではclap deriveでの--help-llmフラグ実装方法が最大のリスク。"
+}

@@ -1,0 +1,72 @@
+{
+  "status": "pass",
+  "criteria": [
+    {
+      "id": 1,
+      "description": "トップレベル --help の各コマンド説明が用途ベースに拡充されている",
+      "status": "pass",
+      "evidence": "全14コマンド（help含む）の説明が用途ベースに記載。例: search='Search the index (full-text, --related, --semantic, --changed-since, --symbol)', impact='Analyze impact of file changes (stdin pipe supported, JSON output)'"
+    },
+    {
+      "id": 2,
+      "description": "commandindexdev help-llm で構造化JSON形式のヘルプが出力される",
+      "status": "pass",
+      "evidence": "JSON出力確認済み。schema_version='1.0', tool='commandindexdev', global_options/use_cases/workflows/commands各セクションが含まれている"
+    },
+    {
+      "id": 3,
+      "description": "各サブコマンドの --help に Examples と When to use が含まれる",
+      "status": "pass",
+      "evidence": "search --help, impact --help, embed --help, config --help すべてに 'When to use:' セクションと 'Examples:' セクションが含まれている"
+    },
+    {
+      "id": 4,
+      "description": "searchの排他的モード群が明確に区別されている",
+      "status": "pass",
+      "evidence": "search --help に 'Search modes (mutually exclusive):' セクションがあり、5モード（full-text, --symbol, --related, --related-stdin, --semantic, --changed-since）が列挙。help-llm JSONにもmodes配列とconflicts='Search modes are mutually exclusive'が含まれる"
+    },
+    {
+      "id": 5,
+      "description": "config配下のサブコマンド（show/path）もヘルプに含まれている",
+      "status": "pass",
+      "evidence": "config --help に 'show  Show current effective config (secrets masked)' と 'path  Show loaded config file paths' が表示。help-llm JSONにもsubcommands配列で含まれる"
+    },
+    {
+      "id": 6,
+      "description": "embed, search --semantic, search --rerankの前提条件（Ollama）がヘルプに明記されている",
+      "status": "pass",
+      "evidence": "embed --help: 'requires Ollama' がコマンド説明に、'Requires a running Ollama instance.' がWhen to useに記載。search --help: prerequisites記載。help-llm JSON: embed.prerequisites='Requires existing index and running Ollama instance', search.prerequisites='Semantic search requires embeddings', semantic mode.prerequisites=['embeddings (run `embed` first)']"
+    },
+    {
+      "id": 7,
+      "description": "全コマンドのkey_optionsがJSONスキーマに網羅されている",
+      "status": "pass",
+      "evidence": "help-llm JSON検証: key_optionsまたはsubcommandsを持たないコマンドは0件（MISSING_KEY_OPTIONS: []）。全13コマンドにkey_optionsまたはsubcommandsが存在"
+    },
+    {
+      "id": 8,
+      "description": "help-llm実行時にインデックスが不要であること",
+      "status": "pass",
+      "evidence": "インデックスが存在しない状態でcargo run -- help-llmが正常にJSON出力された（エラーなし）"
+    },
+    {
+      "id": 9,
+      "description": "help-llmのJSON出力がserde_json::from_strでパース可能であること",
+      "status": "pass",
+      "evidence": "Python json.loadでパース成功（JSON_VALID: true）。Rustのserde_json互換のJSON形式であることを確認"
+    },
+    {
+      "id": 10,
+      "description": "help-llmのJSON出力に全サブコマンドが含まれること",
+      "status": "pass",
+      "evidence": "COMMAND_COUNT: 13。全サブコマンド含有: index, search, update, status, clean, diff, context, embed, config, export, impact, import, watch"
+    },
+    {
+      "id": 11,
+      "description": "cargo test / clippy / fmt 全パス",
+      "status": "pass",
+      "evidence": "cargo test: 全テストスイートOK（287 unit + 統合テスト多数、0 failed）。cargo clippy --all-targets -- -D warnings: 警告0件。cargo fmt --all -- --check: 差分なし"
+    }
+  ],
+  "issues": []
+}

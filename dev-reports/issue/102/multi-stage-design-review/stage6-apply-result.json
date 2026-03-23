@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"from": "Stage5-M1", "action": "run_help_llm()の戻り値をResult<(), String>に変更。main.rsのmatchアームもexit_codeパターンに統一。"},
+    {"from": "Stage5-M2", "action": "テスト設計でhelp-llm自身はcommands配列に含めない設計判断を明記。全13サブコマンド。"},
+    {"from": "Stage5-M3", "action": "GlobalOptionsをVec<GlobalOption>に変更。フィールドをname/flag/description構造に。"},
+    {"from": "Stage5-S1", "action": "UseCaseをVec<UseCaseItem>リスト形式に変更。拡張性向上。"},
+    {"from": "Stage5-S2", "action": "ユニットテスト設計を追加（build_help_llm_output()の構造検証テスト4件）"},
+    {"from": "Stage5-S3", "action": "全CommandInfoのexamplesが最低1つ以上の検証テストを追加"},
+    {"from": "Stage5-S4", "action": "after_help定数の命名規則を明記（<COMMAND_NAME>_AFTER_HELP）"},
+    {"from": "Stage5-S5", "action": "M1と合わせてResult<(), String>に統一"}
+  ]
+}

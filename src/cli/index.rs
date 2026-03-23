@@ -1,3 +1,22 @@
+pub const INDEX_AFTER_HELP: &str = "\
+When to use:
+  First time setup or full rebuild of the search index.
+  Use --with-embedding to also generate embeddings for semantic search.
+
+Examples:
+  commandindexdev index --path .
+  commandindexdev index --path /path/to/repo --with-embedding";
+
+pub const UPDATE_AFTER_HELP: &str = "\
+When to use:
+  After code changes, to update the index without full rebuild.
+  Uses Git-aware delta detection for incremental updates.
+
+Examples:
+  commandindexdev update --path .
+  commandindexdev update --with-embedding
+  commandindexdev update --workspace workspace.toml";
+
 use std::fmt;
 use std::path::Path;
 use std::time::{Duration, Instant};

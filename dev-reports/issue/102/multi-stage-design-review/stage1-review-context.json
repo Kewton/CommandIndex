@@ -1,0 +1,19 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー（SOLID/KISS/YAGNI/DRY）",
+  "must_fix": [
+    {"id": "M1", "title": "VERSION定数とCargo.tomlの二重管理（DRY違反）", "suggestion": "env!(\"CARGO_PKG_VERSION\")を直接使用、lib.rsへの手動定数追加は不要"},
+    {"id": "M2", "title": "CommandInfo構造体のOption型フィールドにskip_serializing_if必須", "suggestion": "全Option型フィールドにserde(skip_serializing_if)を付与"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "help-llm JSON内容のハードコード保守性リスク（OCP違反）", "suggestion": "clapのCommand::get_subcommands()から基本情報を動的取得検討"},
+    {"id": "S2", "title": "after_help定数の分散定義（DRY懸念）", "suggestion": "main.rsで直接定義か、cli/metadata.rsに集約"},
+    {"id": "S3", "title": "main.rsの肥大化", "suggestion": "match armを最小限にし実処理はcli::help_llm::run_help_llm()に完全委譲"},
+    {"id": "S4", "title": "schema_versionの型と運用ルール未定義", "suggestion": "セマンティックバージョニングルールを設計書に明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "SearchMode構造体の汎用性（YAGNI確認）"},
+    {"id": "N2", "title": "GlobalOptions構造体の存在意義"},
+    {"id": "N3", "title": "pretty print出力のパフォーマンス"}
+  ]
+}

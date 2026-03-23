@@ -1,3 +1,12 @@
+pub const IMPORT_AFTER_HELP: &str = "\
+When to use:
+  Restore or use an index exported from another machine.
+  Use --force to overwrite an existing index.
+
+Examples:
+  commandindexdev import index.tar.gz
+  commandindexdev import index.tar.gz --force";
+
 use std::fmt;
 use std::fs::File;
 use std::io::Read;

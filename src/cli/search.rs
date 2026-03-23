@@ -1,3 +1,23 @@
+pub const SEARCH_AFTER_HELP: &str = "\
+When to use:
+  Find relevant documents, code, or symbols across your repository.
+  Use --related for impact analysis, --semantic for meaning-based search.
+
+Search modes (mutually exclusive):
+  [QUERY]                Full-text keyword search (default)
+  --symbol <NAME>        Search for code symbols (functions, structs, etc.)
+  --related <FILE>       Find files related to specified file(s)
+  --related-stdin        Find related files from stdin paths
+  --semantic <QUERY>     Meaning-based search (requires embeddings)
+  --changed-since <EXPR> Find content changed since time expression
+
+Examples:
+  commandindexdev search \"query\" --format json          # Full-text search
+  commandindexdev search --related src/auth.rs          # Related files
+  commandindexdev search --semantic \"login flow\"        # Semantic search
+  commandindexdev search --changed-since \"yesterday\"    # Recent changes
+  commandindexdev search --symbol parse_config           # Symbol search";
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 
