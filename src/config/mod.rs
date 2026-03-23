@@ -88,6 +88,7 @@ pub struct RawConfig {
 #[derive(Debug, Default, Deserialize)]
 pub struct RawSearchConfig {
     pub default_limit: Option<usize>,
+    pub llm_default_limit: Option<usize>,
     pub snippet_lines: Option<usize>,
     pub snippet_chars: Option<usize>,
 }
@@ -153,9 +154,34 @@ pub struct IndexConfig {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SearchConfig {
-    pub default_limit: usize, // default: 20
-    pub snippet_lines: usize, // default: 2
-    pub snippet_chars: usize, // default: 120
+    pub default_limit: usize,     // default: 20
+    pub llm_default_limit: usize, // default: 5 (used with --rerank)
+    pub snippet_lines: usize,     // default: 2
+    pub snippet_chars: usize,     // default: 120
+}
+
+impl Default for SearchConfig {
+    fn default() -> Self {
+        Self {
+            default_limit: 20,
+            llm_default_limit: 5,
+            snippet_lines: 2,
+            snippet_chars: 120,
+        }
+    }
+}
+
+impl SearchConfig {
+    /// Resolve effective limit based on CLI input and rerank flag.
+    /// Priority: CLI --limit > llm_default_limit (when --rerank) > default_limit
+    pub fn resolve_limit(&self, cli_limit: Option<usize>, is_rerank: bool) -> usize {
+        let raw = match cli_limit {
+            Some(l) => l,
+            None if is_rerank => self.llm_default_limit,
+            None => self.default_limit,
+        };
+        raw.clamp(1, 1000)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +387,7 @@ fn merge_search(
         (None, Some(h)) => Some(h),
         (Some(b), Some(h)) => Some(RawSearchConfig {
             default_limit: h.default_limit.or(b.default_limit),
+            llm_default_limit: h.llm_default_limit.or(b.llm_default_limit),
             snippet_lines: h.snippet_lines.or(b.snippet_lines),
             snippet_chars: h.snippet_chars.or(b.snippet_chars),
         }),
@@ -415,6 +442,11 @@ fn resolve_config(raw: RawConfig, sources: Vec<ConfigSource>) -> AppConfig {
             .as_ref()
             .and_then(|s| s.default_limit)
             .unwrap_or(20),
+        llm_default_limit: raw
+            .search
+            .as_ref()
+            .and_then(|s| s.llm_default_limit)
+            .unwrap_or(5),
         snippet_lines: raw
             .search
             .as_ref()
@@ -511,6 +543,7 @@ mod tests {
         let base = RawConfig {
             search: Some(RawSearchConfig {
                 default_limit: Some(10),
+                llm_default_limit: Some(3),
                 snippet_lines: Some(3),
                 snippet_chars: None,
             }),
@@ -525,6 +558,7 @@ mod tests {
         let higher = RawConfig {
             search: Some(RawSearchConfig {
                 default_limit: Some(50),
+                llm_default_limit: Some(7),
                 snippet_lines: None,
                 snippet_chars: Some(200),
             }),
@@ -540,6 +574,7 @@ mod tests {
         let merged = merge_raw(base, higher);
         let search = merged.search.unwrap();
         assert_eq!(search.default_limit, Some(50)); // higher wins
+        assert_eq!(search.llm_default_limit, Some(7)); // higher wins
         assert_eq!(search.snippet_lines, Some(3)); // base preserved
         assert_eq!(search.snippet_chars, Some(200)); // higher wins
 
@@ -648,6 +683,7 @@ mod tests {
         let raw = RawConfig::default();
         let config = resolve_config(raw, vec![]);
         assert_eq!(config.search.default_limit, 20);
+        assert_eq!(config.search.llm_default_limit, 5);
         assert_eq!(config.search.snippet_lines, 2);
         assert_eq!(config.search.snippet_chars, 120);
         assert_eq!(config.embedding.provider, ProviderType::Ollama);
@@ -665,6 +701,7 @@ mod tests {
         let raw = RawConfig {
             search: Some(RawSearchConfig {
                 default_limit: Some(50),
+                llm_default_limit: Some(8),
                 snippet_lines: None,
                 snippet_chars: Some(200),
             }),
@@ -685,6 +722,7 @@ mod tests {
         };
         let config = resolve_config(raw, vec![]);
         assert_eq!(config.search.default_limit, 50);
+        assert_eq!(config.search.llm_default_limit, 8);
         assert_eq!(config.search.snippet_lines, 2); // default
         assert_eq!(config.search.snippet_chars, 200);
         assert_eq!(config.embedding.provider, ProviderType::OpenAi);
@@ -706,6 +744,7 @@ mod tests {
             },
             search: SearchConfig {
                 default_limit: 20,
+                llm_default_limit: 5,
                 snippet_lines: 2,
                 snippet_chars: 120,
             },
@@ -740,6 +779,7 @@ mod tests {
             },
             search: SearchConfig {
                 default_limit: 20,
+                llm_default_limit: 5,
                 snippet_lines: 2,
                 snippet_chars: 120,
             },
@@ -760,6 +800,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let config = load_config(tmp.path()).unwrap();
         assert_eq!(config.search.default_limit, 20);
+        assert_eq!(config.search.llm_default_limit, 5);
         assert!(config.loaded_sources.is_empty());
     }
 
@@ -921,6 +962,7 @@ languages = ["typescript", "python"]
 
 [search]
 default_limit = 50
+llm_default_limit = 8
 snippet_lines = 5
 snippet_chars = 200
 
@@ -942,6 +984,7 @@ timeout_secs = 60
 
         assert_eq!(config.index.languages, vec!["typescript", "python"]);
         assert_eq!(config.search.default_limit, 50);
+        assert_eq!(config.search.llm_default_limit, 8);
         assert_eq!(config.search.snippet_lines, 5);
         assert_eq!(config.search.snippet_chars, 200);
         assert_eq!(config.embedding.provider, ProviderType::OpenAi);
@@ -966,6 +1009,7 @@ timeout_secs = 60
             },
             search: SearchConfig {
                 default_limit: 20,
+                llm_default_limit: 5,
                 snippet_lines: 2,
                 snippet_chars: 120,
             },
@@ -981,6 +1025,7 @@ timeout_secs = 60
         let view = config.to_masked_view();
         let toml_str = toml::to_string_pretty(&view).unwrap();
         assert!(toml_str.contains("api_key = \"***\""));
+        assert!(toml_str.contains("llm_default_limit"));
         assert!(!toml_str.contains("secret"));
     }
 
@@ -1042,5 +1087,58 @@ path = "../shared-index"
 
         let config = load_config(tmp.path()).unwrap();
         assert_eq!(config.index.path.as_deref(), Some("../shared-index"));
+    }
+
+    // --- resolve_limit ---
+
+    #[test]
+    fn test_resolve_limit_cli_limit_takes_priority() {
+        let config = SearchConfig::default();
+        assert_eq!(config.resolve_limit(Some(10), false), 10);
+        assert_eq!(config.resolve_limit(Some(10), true), 10);
+    }
+
+    #[test]
+    fn test_resolve_limit_rerank_uses_llm_default() {
+        let config = SearchConfig::default();
+        assert_eq!(config.resolve_limit(None, true), 5);
+    }
+
+    #[test]
+    fn test_resolve_limit_no_rerank_uses_default() {
+        let config = SearchConfig::default();
+        assert_eq!(config.resolve_limit(None, false), 20);
+    }
+
+    #[test]
+    fn test_resolve_limit_clamps_to_range() {
+        let config = SearchConfig {
+            llm_default_limit: 0,
+            ..SearchConfig::default()
+        };
+        assert_eq!(config.resolve_limit(None, true), 1); // clamp min
+        assert_eq!(config.resolve_limit(Some(0), false), 1); // clamp min
+        assert_eq!(config.resolve_limit(Some(2000), false), 1000); // clamp max
+    }
+
+    #[test]
+    fn test_resolve_limit_custom_config() {
+        let config = SearchConfig {
+            default_limit: 30,
+            llm_default_limit: 10,
+            ..SearchConfig::default()
+        };
+        assert_eq!(config.resolve_limit(None, false), 30);
+        assert_eq!(config.resolve_limit(None, true), 10);
+        assert_eq!(config.resolve_limit(Some(15), true), 15);
+    }
+
+    #[test]
+    fn test_search_config_default() {
+        let config = SearchConfig::default();
+        assert_eq!(config.default_limit, 20);
+        assert_eq!(config.llm_default_limit, 5);
+        assert_eq!(config.snippet_lines, 2);
+        assert_eq!(config.snippet_chars, 120);
     }
 }
