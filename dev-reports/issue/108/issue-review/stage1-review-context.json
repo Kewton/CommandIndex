@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "--format llm は未実装であり、Issue内で前提として記載すべきでない",
+      "description": "Issueに「--format llm との組み合わせで最適な出力」と記載されているが、OutputFormat enumはHuman, Json, Pathの3値のみであり、llmフォーマットは存在しない。",
+      "suggestion": "--format llm への言及を削除するか、別Issueとして切り出し、本Issueは既存の --format json での出力を前提とする。"
+    },
+    {
+      "id": "MF-2",
+      "title": "受け入れ基準が明記されていない",
+      "description": "具体的な受け入れ基準（Acceptance Criteria）が一切記載されていない。",
+      "suggestion": "受け入れ基準を追加: (1) search --related に --with-snippet オプション追加 (2) impact に --with-snippet オプション追加 (3) JSON出力にsnippetフィールド含む (4) --snippet-lines で行数制御可能 (5) Human/Path形式での動作定義 (6) バイナリ等の場合の動作定義"
+    },
+    {
+      "id": "MF-3",
+      "title": "スニペット取得元のデータソースが未定義",
+      "description": "スニペットをどこから取得するのかが不明。ファイル直接読み取りか、tantivyインデックスからか、粒度（全体/先頭N行/関連heading）が未定義。",
+      "suggestion": "既存のcontextコマンドのenrich_entry()ロジックを参考に、tantivyインデックスのbodyフィールドからの取得を推奨。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "既存の --snippet-lines / --snippet-chars との関係が不明確",
+      "description": "searchコマンドに既存の --snippet-lines / --snippet-chars があるが、新規か再利用かが不明。",
+      "suggestion": "既存の SnippetConfig を再利用し、config.toml のデフォルト値も適用する方針を明記。"
+    },
+    {
+      "id": "SF-2",
+      "title": "Human/Path形式での出力仕様が未定義",
+      "description": "JSON形式のみの出力イメージが記載され、Human/Path形式の動作が未定義。",
+      "suggestion": "Human形式ではスニペット表示、Path形式ではスニペット無視を定義。"
+    },
+    {
+      "id": "SF-3",
+      "title": "contextコマンドとの機能重複・棲み分けが未整理",
+      "description": "contextコマンドがすでにsnippet付き出力を提供しており、棲み分けが不明。",
+      "suggestion": "contextは重量級、--with-snippetは軽量中間選択肢として位置付けを明記。"
+    },
+    {
+      "id": "SF-4",
+      "title": "パフォーマンスへの影響考慮が不足",
+      "description": "多数の結果にスニペットを付加するコストが未検討。",
+      "suggestion": "tantivyインデックスからの取得推奨、--limitとの組み合わせでの性能考慮を記載。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "snippet_linesのデフォルト値が未記載",
+      "description": "contextコマンドのenrich_entryでは10行・500文字を使用しており参考になる。",
+      "suggestion": "--snippet-lines のデフォルト値を明記（例: 10行）。"
+    },
+    {
+      "id": "NH-2",
+      "title": "検証データの再現条件が不十分",
+      "description": "P3/P5/P2の検証条件が不明。",
+      "suggestion": "検証に使用したプロジェクトやコマンド例を記載。"
+    },
+    {
+      "id": "NH-3",
+      "title": "エラーハンドリングの方針が未記載",
+      "description": "スニペット取得失敗時の動作が未定義。",
+      "suggestion": "失敗時はsnippetフィールドをnull/空にし、エラーで停止しない方針を明記。"
+    }
+  ],
+  "summary": "Issue #108 は課題と期待効果が検証データで裏付けられ方向性は妥当。しかし以下3点が実装着手前に必須: (1) --format llm は未実装のため前提として記載不可 (2) 受け入れ基準が未定義 (3) スニペット取得元が未定義。加えて、既存 --snippet-lines/--snippet-chars との統一、contextコマンドとの棲み分け、Human/Path形式仕様の整理が必要。"
+}

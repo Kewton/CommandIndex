@@ -1,0 +1,20 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "truncate_body/strip_control_chars のインポートパスは use super:: が慣例"},
+    {"id": "MF-2", "title": "OutputFormat に PartialEq が derive されておらず != 比較不可"},
+    {"id": "MF-3", "title": "aggregate_impact() 内の ImpactFileResult 構築に snippet フィールドが不足"},
+    {"id": "MF-4", "title": "merge_related_results() 内の RelatedSearchResult 構築に snippet フィールドが不足"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "run_related_search() のパラメータ追加が既存の SearchContext パターンと不整合"},
+    {"id": "SF-2", "title": "run_impact() の result を mutable にする変更が必要"},
+    {"id": "SF-3", "title": "run_related_search_from_stdin() のコード変更例が欠落"},
+    {"id": "SF-4", "title": "Search --with-snippet と --related の requires 制約が未定義"},
+    {"id": "SF-5", "title": "RelatedSearchResult を構築するテスト全箇所の確認が必要"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "snippet.rs の関数可視性を pub(crate) にすべき"},
+    {"id": "NH-2", "title": "Impact の config.toml デフォルト値解決ロジックも設計に含めるべき"}
+  ],
+  "summary": "OutputFormat の PartialEq 不足、構造体構築箇所の snippet: None 追加漏れが主な問題"
+}

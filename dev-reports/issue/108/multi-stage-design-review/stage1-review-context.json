@@ -1,0 +1,18 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "run_impact() / run_related_search() のパラメータ肥大化（SRP違反）", "suggestion": "ImpactOptions構造体を導入し、パラメータをグループ化する"},
+    {"id": "MF-2", "title": "RelatedSearchResult に snippet フィールドを追加するのは SRP 違反", "suggestion": "設計方針書にトレードオフを明記（HashMap方式 vs 構造体埋め込み）"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "context.rs enrich_entry() とのスニペット取得ロジック重複（DRY）"},
+    {"id": "SF-2", "title": "serde(skip_serializing_if) アトリビュートの矛盾した記述"},
+    {"id": "SF-3", "title": "run_related_search_from_stdin() へのスニペット対応が設計に明記されていない"},
+    {"id": "SF-4", "title": "Search の --related 使用時の --snippet-lines/--snippet-chars のデータフロー不明確"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "fetch_snippet() のエラーログ欠如"},
+    {"id": "NH-2", "title": "fetch_snippets() のバッチ効率"},
+    {"id": "NH-3", "title": "OutputFormat の PartialEq derive 漏れの可能性"}
+  ],
+  "summary": "パラメータ構造体化と SRP トレードオフの明記が主な改善点"
+}

@@ -1,0 +1,14 @@
+{
+  "stage": 8,
+  "action": "apply_stage7_codex_impact_review",
+  "applied_fixes": [
+    {"id": "MF-1", "action": "context コマンドを影響範囲と回帰確認対象に追加。context の既存仕様維持を明記。受け入れ基準に追加"},
+    {"id": "MF-2", "action": "search --changed-since を回帰確認対象に追加（e2e_changed_since.rs）"},
+    {"id": "SF-1", "action": "テスト影響範囲に e2e_context_pack.rs, e2e_changed_since.rs を回帰確認対象として追加"},
+    {"id": "SF-2", "action": "Path形式では snippet 取得処理自体をスキップすることを明記"},
+    {"id": "SF-3", "action": "共通 helper は専用ユーティリティモジュールに切り出す方針を明記（cli/context.rs に依存しない）"},
+    {"id": "SF-4", "action": "e2e_team_workflow.rs を回帰確認対象に追加"},
+    {"id": "NH-2", "action": "非機能要件セクションを追加（新規 crate 追加なし）"}
+  ],
+  "issue_updated": true
+}

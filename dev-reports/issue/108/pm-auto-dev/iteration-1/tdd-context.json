@@ -1,0 +1,7 @@
+{
+  "issue_number": 108,
+  "title": "impact/related にコードスニペット付きモード (--with-snippet)",
+  "design_policy": "dev-reports/design/issue-108-with-snippet-design-policy.md",
+  "work_plan": "dev-reports/issue/108/work-plan.md",
+  "phase": "TDD Implementation"
+}

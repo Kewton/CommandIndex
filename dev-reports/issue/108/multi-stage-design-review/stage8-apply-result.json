@@ -1,0 +1,10 @@
+{
+  "stage": 8,
+  "action": "apply_stage7_codex_review",
+  "applied_fixes": [
+    {"id": "MF-4", "action": "changed_since の回帰確認をより詳細に記載（JSON/human/path + ImpactFileResult 構造変更の波及確認）"},
+    {"id": "SF-1", "action": "context コマンドは変更しないことを明確化（enrich_entry() には手を加えない）"},
+    {"id": "SF-3", "action": "セキュリティ節に情報露出増加リスクを明記（path のみ→本文断片）"}
+  ],
+  "note": "MF-1,2,3, SF-4, NH-1 は Stage 6 で既に修正済み"
+}

@@ -11,6 +11,7 @@ pub mod impact;
 pub mod import_index;
 pub mod index;
 pub mod search;
+pub mod snippet_helper;
 pub mod status;
 pub mod stdin;
 pub mod watch;

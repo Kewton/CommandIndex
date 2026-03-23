@@ -1,0 +1,18 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "--with-snippet の requires='related' が --related-stdin と矛盾", "suggestion": "requires を外し、実行時バリデーションに寄せる"},
+    {"id": "MF-2", "title": "snippet_lines/chars のバリデーション(1..=100) と fetch_snippet() の0=無制限が不整合", "suggestion": "0特殊扱いを削除し clap の range(1..) に統一"},
+    {"id": "MF-3", "title": "output/snippet.rs にTantivyアクセスを置く設計はSRP違反", "suggestion": "snippet 取得は cli/ 配下のユーティリティに切り出し、output は文字列表示のみ"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "run_impact等の引数追加方針は拡張性が低い→SnippetOptions構造体にまとめる"},
+    {"id": "SF-2", "title": "fetch_snippet() のエラーハンドリングが失敗原因を完全に消す"},
+    {"id": "SF-3", "title": "ImpactFileResult の serde 属性を将来の備えとして残すのは YAGNI"},
+    {"id": "SF-4", "title": "スニペット付与ループが3箇所で重複→enrich_with_snippets() に共通化"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "PartialEq 追加は不要、matches! で代替可能"},
+    {"id": "NH-2", "title": "Human 出力の dimmed 表示の意図を明記"}
+  ],
+  "summary": "--related-stdin との CLI 制約矛盾、0 扱いの不整合、data access の output 層配置が主な修正点"
+}

@@ -1,0 +1,14 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {"id": "SF-1", "title": "--snippet-lines / --snippet-chars の上限バリデーション不足"},
+    {"id": "SF-2", "title": "スニペットに機密情報が含まれるリスクへの言及不足"},
+    {"id": "SF-3", "title": "human 形式出力でのスニペット行長制限の欠如"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "fetch_snippet() エラー情報のサイレント破棄"},
+    {"id": "NH-2", "title": "JSON 出力での unwrap() 使用"},
+    {"id": "NH-3", "title": "snippet_lines=0 のエッジケース"}
+  ],
+  "summary": "重大なセキュリティ脆弱性なし。CLIバリデーション、機密情報リスク、行長制限が主な指摘"
+}

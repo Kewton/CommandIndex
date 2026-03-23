@@ -321,6 +321,7 @@ fn make_impact_result() -> ImpactResult {
                 score: 0.9,
                 relation_types: vec!["import_dependency".to_string()],
                 impacted_by: vec!["src/main.rs".to_string()],
+                snippet: None,
             },
             ImpactFileResult {
                 file_path: "src/utils.rs".to_string(),
@@ -330,6 +331,7 @@ fn make_impact_result() -> ImpactResult {
                     "directory_proximity".to_string(),
                 ],
                 impacted_by: vec!["src/main.rs".to_string()],
+                snippet: None,
             },
         ],
         total_input_files: 1,
@@ -395,6 +397,143 @@ fn test_impact_empty_results() {
     let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
     assert_eq!(parsed["total_impacted_files"], 0);
     assert!(parsed["impacted_files"].as_array().unwrap().is_empty());
+}
+
+// --- Snippet in impact JSON tests ---
+
+#[test]
+fn test_impact_json_with_snippet() {
+    let result = ImpactResult {
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "src/lib.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec!["src/main.rs".to_string()],
+            snippet: Some("fn main() {\n    println!(\"hello\");\n}".to_string()),
+        }],
+        total_input_files: 1,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
+    let files = parsed["impacted_files"].as_array().unwrap();
+    assert_eq!(
+        files[0]["snippet"],
+        "fn main() {\n    println!(\"hello\");\n}"
+    );
+}
+
+#[test]
+fn test_impact_json_without_snippet() {
+    let result = make_impact_result();
+    let output = format_impact_to_string(&result, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
+    let files = parsed["impacted_files"].as_array().unwrap();
+    // snippet: None should not produce a "snippet" field in JSON
+    assert!(files[0].get("snippet").is_none());
+    assert!(files[1].get("snippet").is_none());
+}
+
+#[test]
+fn test_impact_human_with_snippet() {
+    colored::control::set_override(false);
+    let result = ImpactResult {
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "src/lib.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec!["src/main.rs".to_string()],
+            snippet: Some("use crate::config;".to_string()),
+        }],
+        total_input_files: 1,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Human);
+    assert!(output.contains("use crate::config;"));
+}
+
+#[test]
+fn test_impact_json_with_empty_snippet() {
+    let result = ImpactResult {
+        input_files: vec!["src/main.rs".to_string()],
+        impacted_files: vec![ImpactFileResult {
+            file_path: "src/lib.rs".to_string(),
+            score: 0.9,
+            relation_types: vec!["import_dependency".to_string()],
+            impacted_by: vec!["src/main.rs".to_string()],
+            snippet: Some(String::new()),
+        }],
+        total_input_files: 1,
+        total_impacted_files: 1,
+    };
+    let output = format_impact_to_string(&result, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
+    let files = parsed["impacted_files"].as_array().unwrap();
+    assert_eq!(files[0]["snippet"], "");
+}
+
+// --- Snippet in related JSON tests ---
+
+fn format_related_to_string(results: &[RelatedSearchResult], format: OutputFormat) -> String {
+    colored::control::set_override(false);
+    let mut buf = Vec::new();
+    format_related_results(results, format, &mut buf).unwrap();
+    String::from_utf8(buf).unwrap()
+}
+
+#[test]
+fn test_related_json_with_snippet() {
+    let results = vec![RelatedSearchResult {
+        file_path: "src/auth.rs".to_string(),
+        score: 0.8,
+        relation_types: vec![RelationType::ImportDependency],
+        snippet: Some("pub fn authenticate()".to_string()),
+    }];
+    let output = format_related_to_string(&results, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(output.trim()).unwrap();
+    assert_eq!(parsed["snippet"], "pub fn authenticate()");
+}
+
+#[test]
+fn test_related_json_without_snippet() {
+    let results = vec![RelatedSearchResult {
+        file_path: "src/auth.rs".to_string(),
+        score: 0.8,
+        relation_types: vec![RelationType::ImportDependency],
+        snippet: None,
+    }];
+    let output = format_related_to_string(&results, OutputFormat::Json);
+    let parsed: serde_json::Value = serde_json::from_str(output.trim()).unwrap();
+    // snippet: None should not produce a "snippet" field in JSON
+    assert!(parsed.get("snippet").is_none());
+}
+
+#[test]
+fn test_related_human_with_snippet() {
+    colored::control::set_override(false);
+    let results = vec![RelatedSearchResult {
+        file_path: "src/auth.rs".to_string(),
+        score: 0.8,
+        relation_types: vec![RelationType::ImportDependency],
+        snippet: Some("pub fn authenticate()".to_string()),
+    }];
+    let output = format_related_to_string(&results, OutputFormat::Human);
+    assert!(output.contains("pub fn authenticate()"));
+}
+
+#[test]
+fn test_related_path_ignores_snippet() {
+    let results = vec![RelatedSearchResult {
+        file_path: "src/auth.rs".to_string(),
+        score: 0.8,
+        relation_types: vec![RelationType::ImportDependency],
+        snippet: Some("pub fn authenticate()".to_string()),
+    }];
+    let output = format_related_to_string(&results, OutputFormat::Path);
+    assert_eq!(output.trim(), "src/auth.rs");
+    assert!(!output.contains("pub fn authenticate()"));
 }
 
 // --- LLM format tests ---
@@ -542,11 +681,13 @@ fn test_format_related_llm() {
             file_path: "src/auth.rs".to_string(),
             score: 0.9,
             relation_types: vec![RelationType::MarkdownLink, RelationType::ImportDependency],
+            snippet: None,
         },
         RelatedSearchResult {
             file_path: "src/utils.rs".to_string(),
             score: 0.5,
             relation_types: vec![RelationType::PathSimilarity],
+            snippet: None,
         },
     ];
     let mut buf = Vec::new();

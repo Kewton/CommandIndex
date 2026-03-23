@@ -279,6 +279,7 @@ fn build_commands() -> Vec<CommandInfo> {
             key_options: Some(vec![
                 "--format <FORMAT>  Output format: human, json, path, llm",
                 "--limit <N>  Maximum number of results (default: 20, with --rerank: 5)",
+                "--with-snippet  Include code snippets in related search results",
                 "--no-semantic  Disable hybrid search, use BM25 only",
                 "--rerank  Enable LLM-based reranking",
                 "--workspace <FILE>  Workspace config for cross-repo search",
@@ -474,6 +475,9 @@ fn build_commands() -> Vec<CommandInfo> {
             key_options: Some(vec![
                 "--format <FORMAT>  Output format: human, json, path, llm",
                 "--limit <N>  Maximum number of impacted files to show",
+                "--with-snippet  Include code snippets in impact results",
+                "--snippet-lines <N>  Number of snippet lines (default: from config or 2)",
+                "--snippet-chars <N>  Number of snippet characters (default: from config or 120)",
             ]),
             output_formats: Some(vec!["human", "json", "path", "llm"]),
             output: Some("List of impacted files with relevance scores"),

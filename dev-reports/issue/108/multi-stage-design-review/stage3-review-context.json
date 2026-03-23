@@ -1,0 +1,20 @@
+{
+  "must_fix": [
+    {"id": "MF-1", "title": "ImpactFileResult 構築箇所（aggregate_impact + テスト）の全数確認が必要"},
+    {"id": "MF-2", "title": "run_impact() シグネチャ変更が changed_since.rs に波及（影響範囲漏れ）"},
+    {"id": "MF-3", "title": "format_impact_json() の手動JSON構築と serde アトリビュートの二重管理"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "RelatedSearchResult の serde アトリビュート記載を削除すべき"},
+    {"id": "SF-2", "title": "run_related_search() での reader 参照保持の設計を明確化"},
+    {"id": "SF-3", "title": "truncate_body() の lines=0 時の挙動が設計と不整合"},
+    {"id": "SF-4", "title": "main.rs の related_stdin 分岐で with_snippet を渡す設計が欠落"},
+    {"id": "SF-5", "title": "changed_since.rs の修正が前提であることを回帰確認テーブルに明記"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "Impact サブコマンドのパラメータ構造体化"},
+    {"id": "NH-3", "title": "スニペット取得の並列化検討"},
+    {"id": "NH-4", "title": "context.rs enrich_entry() との将来的な統合の記載"}
+  ],
+  "summary": "changed_since.rs への波及漏れ、serde二重管理の解消が最大の問題"
+}
