@@ -1,9 +1,11 @@
+pub mod changed_since;
 pub mod clean;
 pub mod config;
 pub mod context;
 pub mod diff;
 pub mod embed;
 pub mod export;
+pub mod git;
 pub mod impact;
 pub mod import_index;
 pub mod index;

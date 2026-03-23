@@ -100,6 +100,7 @@ pub fn run_impact(
     files: &[String],
     format: OutputFormat,
     limit: Option<usize>,
+    index_path: Option<&Path>,
 ) -> Result<(), ImpactError> {
     // 1. ファイルリスト取得（引数優先、なければstdin）
     let input_files = if files.is_empty() {
@@ -117,13 +118,18 @@ pub fn run_impact(
         return Err(ImpactError::NoValidPaths);
     }
 
-    // 3. インデックス・DB確認
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    // 3. インデックス・DB確認（resolve_index_path で設定ファイル・CLIオプション対応）
+    let config = crate::config::load_config(Path::new(".")).ok();
+    let config_index_path = config.as_ref().and_then(|c| c.index.path.as_deref());
+    let commandindex_dir =
+        crate::indexer::resolve_index_path(index_path, config_index_path, Path::new("."))
+            .unwrap_or_else(|_| Path::new(".").join(crate::INDEX_DIR_NAME));
+    let tantivy_dir = crate::indexer::index_dir(&commandindex_dir);
     if !tantivy_dir.exists() {
         return Err(ImpactError::IndexNotFound);
     }
 
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(&commandindex_dir);
     if !db_path.exists() {
         return Err(ImpactError::SymbolDbNotFound);
     }

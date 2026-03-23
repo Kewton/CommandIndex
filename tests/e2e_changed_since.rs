@@ -57,12 +57,12 @@ fn changed_since_commit_hash_json() {
         .success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
-    // changed_files should contain docs/c.md
-    let changed = parsed["changed_files"].as_array().unwrap();
+    // input_files should contain docs/c.md
+    let changed = parsed["input_files"].as_array().unwrap();
     let has_c = changed
         .iter()
         .any(|v| v.as_str().map(|s| s.ends_with("c.md")).unwrap_or(false));
-    assert!(has_c, "changed_files should contain c.md, got: {changed:?}");
+    assert!(has_c, "input_files should contain c.md, got: {changed:?}");
 }
 
 #[test]

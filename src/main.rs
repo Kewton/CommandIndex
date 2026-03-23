@@ -88,6 +88,9 @@ enum Commands {
         /// Filter by repository alias
         #[arg(long, requires = "workspace")]
         repo: Option<String>,
+        /// Show related files changed since a time/commit (e.g. "12 hours ago", "yesterday", commit hash)
+        #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "workspace"])]
+        changed_since: Option<String>,
     },
     /// Incrementally update the index
     Update {
@@ -144,6 +147,10 @@ enum Commands {
         /// Maximum related files per input file
         #[arg(long, default_value = "100", value_parser = clap::value_parser!(u64).range(1..=10000))]
         limit: u64,
+
+        /// Custom index directory path (overrides default .commandindex/)
+        #[arg(long)]
+        index_path: Option<PathBuf>,
     },
     /// Generate AI-oriented context pack for specified files
     Context {
@@ -191,6 +198,10 @@ enum Commands {
         /// Maximum number of impacted files to show
         #[arg(long)]
         limit: Option<usize>,
+
+        /// Custom index directory path (overrides default .commandindex/)
+        #[arg(long)]
+        index_path: Option<PathBuf>,
     },
     /// Import index from tar.gz archive
     Import {
@@ -299,7 +310,29 @@ fn main() {
             rerank_top,
             workspace,
             repo,
+            changed_since,
         } => {
+            // Handle --changed-since: delegate to impact with git log
+            if let Some(since) = changed_since {
+                let index_path_opt = cli.index_path.as_deref();
+                match commandindex::cli::changed_since::run_changed_since(
+                    &since,
+                    format,
+                    limit,
+                    index_path_opt,
+                ) {
+                    Ok(()) => return,
+                    Err(commandindex::cli::changed_since::ChangedSinceError::NoChanges) => {
+                        eprintln!("No files changed in the specified period");
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        process::exit(1);
+                    }
+                }
+            }
+
             // Build SearchContext for config resolution
             let base_path = std::path::Path::new(".");
             let ctx =
@@ -560,7 +593,13 @@ fn main() {
             files,
             format,
             limit,
-        } => match commandindex::cli::diff::run_diff(&files, limit as usize, format) {
+            index_path,
+        } => match commandindex::cli::diff::run_diff(
+            &files,
+            limit as usize,
+            format,
+            index_path.as_deref(),
+        ) {
             Ok(()) => 0,
             Err(e) => {
                 eprintln!("Error: {e}");
@@ -571,7 +610,13 @@ fn main() {
             files,
             format,
             limit,
-        } => match commandindex::cli::impact::run_impact(&files, format, limit) {
+            index_path,
+        } => match commandindex::cli::impact::run_impact(
+            &files,
+            format,
+            limit,
+            index_path.as_deref(),
+        ) {
             Ok(()) => 0,
             Err(e) => {
                 eprintln!("Error: {e}");

@@ -7,7 +7,12 @@ use crate::indexer::symbol_store::SymbolStore;
 use crate::output::{self, DiffResult, OutputFormat};
 use crate::search::related::{RelatedSearchEngine, normalize_path};
 
-pub fn run_diff(files: &[String], limit: usize, format: OutputFormat) -> Result<(), SearchError> {
+pub fn run_diff(
+    files: &[String],
+    limit: usize,
+    format: OutputFormat,
+    index_path: Option<&std::path::Path>,
+) -> Result<(), SearchError> {
     // 1. バリデーション
     if files.len() != 2 {
         return Err(SearchError::InvalidArgument(
@@ -40,12 +45,17 @@ pub fn run_diff(files: &[String], limit: usize, format: OutputFormat) -> Result<
         )));
     }
 
-    // 2. インデックス存在チェック
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    // 2. インデックス存在チェック（resolve_index_path で設定ファイル・CLIオプション対応）
+    let config = crate::config::load_config(Path::new(".")).ok();
+    let config_index_path = config.as_ref().and_then(|c| c.index.path.as_deref());
+    let commandindex_dir =
+        crate::indexer::resolve_index_path(index_path, config_index_path, Path::new("."))
+            .unwrap_or_else(|_| Path::new(".").join(crate::INDEX_DIR_NAME));
+    let tantivy_dir = crate::indexer::index_dir(&commandindex_dir);
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(&commandindex_dir);
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
