@@ -19,7 +19,8 @@ struct Cli {
 #[derive(Subcommand)]
 #[allow(clippy::large_enum_variant)]
 enum Commands {
-    /// Build search index from repository
+    /// Build full search index from repository (--with-embedding supported)
+    #[command(after_help = commandindex::cli::index::INDEX_AFTER_HELP)]
     Index {
         /// Target directory to index
         #[arg(long, default_value = ".")]
@@ -28,7 +29,8 @@ enum Commands {
         #[arg(long)]
         with_embedding: bool,
     },
-    /// Search the index
+    /// Search the index (full-text, --related, --semantic, --changed-since, --symbol)
+    #[command(after_help = commandindex::cli::search::SEARCH_AFTER_HELP)]
     Search {
         /// Search query (full-text search)
         query: Option<String>,
@@ -92,7 +94,8 @@ enum Commands {
         #[arg(long, conflicts_with_all = ["query", "symbol", "related", "semantic", "workspace"])]
         changed_since: Option<String>,
     },
-    /// Incrementally update the index
+    /// Incrementally update index (Git-aware delta, --workspace supported)
+    #[command(after_help = commandindex::cli::index::UPDATE_AFTER_HELP)]
     Update {
         /// Target directory
         #[arg(long, default_value = ".")]
@@ -104,7 +107,8 @@ enum Commands {
         #[arg(long)]
         workspace: Option<String>,
     },
-    /// Show index status
+    /// Show index status (--detail, --coverage, --verify, --format json)
+    #[command(after_help = commandindex::cli::status::STATUS_AFTER_HELP)]
     Status {
         /// Target directory
         #[arg(long, default_value = ".")]
@@ -125,7 +129,8 @@ enum Commands {
         #[arg(long)]
         verify: bool,
     },
-    /// Remove index and prepare for rebuild
+    /// Remove index and prepare for rebuild (--keep-embeddings supported)
+    #[command(after_help = commandindex::cli::clean::CLEAN_AFTER_HELP)]
     Clean {
         /// Target directory containing .commandindex/
         #[arg(long, default_value = ".")]
@@ -134,7 +139,8 @@ enum Commands {
         #[arg(long)]
         keep_embeddings: bool,
     },
-    /// Compare related files between two files (conflict detection)
+    /// Compare related files between two files (conflict/overlap detection, JSON output)
+    #[command(after_help = commandindex::cli::diff::DIFF_AFTER_HELP)]
     Diff {
         /// Two files to compare
         #[arg(required = true, num_args = 2)]
@@ -152,7 +158,8 @@ enum Commands {
         #[arg(long)]
         index_path: Option<PathBuf>,
     },
-    /// Generate AI-oriented context pack for specified files
+    /// Generate AI-oriented context pack for specified files (JSON output)
+    #[command(after_help = commandindex::cli::context::CONTEXT_AFTER_HELP)]
     Context {
         /// Target file paths (multiple allowed)
         #[arg(required = true)]
@@ -166,18 +173,21 @@ enum Commands {
         #[arg(long)]
         max_tokens: Option<usize>,
     },
-    /// Generate embeddings for indexed sections
+    /// Generate embeddings for semantic search (requires Ollama)
+    #[command(after_help = commandindex::cli::embed::EMBED_AFTER_HELP)]
     Embed {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
     },
-    /// Show or manage configuration
+    /// Show or manage configuration (show/path subcommands)
+    #[command(after_help = commandindex::cli::config::CONFIG_AFTER_HELP)]
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
     },
-    /// Export index as portable tar.gz archive
+    /// Export index as portable tar.gz archive (--with-embeddings supported)
+    #[command(after_help = commandindex::cli::export::EXPORT_AFTER_HELP)]
     Export {
         /// Output file path (.tar.gz)
         output: PathBuf,
@@ -185,7 +195,8 @@ enum Commands {
         #[arg(long)]
         with_embeddings: bool,
     },
-    /// Analyze impact of file changes
+    /// Analyze impact of file changes (stdin pipe supported, JSON output)
+    #[command(after_help = commandindex::cli::impact::IMPACT_AFTER_HELP)]
     Impact {
         /// Input files (if not provided, reads from stdin)
         #[arg()]
@@ -203,7 +214,8 @@ enum Commands {
         #[arg(long)]
         index_path: Option<PathBuf>,
     },
-    /// Import index from tar.gz archive
+    /// Import index from tar.gz archive (--force to overwrite)
+    #[command(after_help = commandindex::cli::import_index::IMPORT_AFTER_HELP)]
     Import {
         /// Input archive file path (.tar.gz)
         input: PathBuf,
@@ -211,7 +223,11 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
-    /// Watch for file changes and auto-update index
+    /// Show structured JSON help for LLM integration
+    #[command(name = "help-llm")]
+    HelpLlm,
+    /// Watch for file changes and auto-update index (daemon mode)
+    #[command(after_help = commandindex::cli::watch::WATCH_AFTER_HELP)]
     Watch {
         /// Target directory to watch
         #[arg(long, default_value = ".")]
@@ -820,6 +836,13 @@ fn main() {
                 }
             }
         }
+        Commands::HelpLlm => match commandindex::cli::help_llm::run_help_llm() {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                1
+            }
+        },
         Commands::Watch {
             path,
             debounce,

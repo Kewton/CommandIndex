@@ -6,6 +6,7 @@ pub mod diff;
 pub mod embed;
 pub mod export;
 pub mod git;
+pub mod help_llm;
 pub mod impact;
 pub mod import_index;
 pub mod index;

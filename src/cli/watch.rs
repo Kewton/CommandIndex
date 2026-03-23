@@ -1,3 +1,12 @@
+pub const WATCH_AFTER_HELP: &str = "\
+When to use:
+  Keep index automatically up to date during development.
+  Runs as a daemon watching for file changes.
+
+Examples:
+  commandindexdev watch --path .
+  commandindexdev watch --debounce 3 --with-embedding";
+
 use std::fmt;
 use std::path::Path;
 use std::time::{Duration, Instant};

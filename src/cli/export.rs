@@ -1,3 +1,12 @@
+pub const EXPORT_AFTER_HELP: &str = "\
+When to use:
+  Share or backup the index for use on another machine.
+  Use --with-embeddings to include the embedding database.
+
+Examples:
+  commandindexdev export index.tar.gz
+  commandindexdev export index.tar.gz --with-embeddings";
+
 use std::fmt;
 use std::fs::File;
 use std::io::Write;

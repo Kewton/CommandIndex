@@ -1,3 +1,14 @@
+pub const IMPACT_AFTER_HELP: &str = "\
+When to use:
+  Understand which files are affected by changes to specified files.
+  Supports stdin pipe for integration with git diff or other tools.
+
+Examples:
+  commandindexdev impact src/auth.rs --format json
+  commandindexdev impact src/a.rs src/b.rs --format path
+  echo src/auth.rs | commandindexdev impact --format json
+  git diff --name-only | commandindexdev impact --format path";
+
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;

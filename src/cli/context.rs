@@ -1,3 +1,13 @@
+pub const CONTEXT_AFTER_HELP: &str = "\
+When to use:
+  Prepare context for LLM consumption (code review, refactoring, etc.).
+  Generates a JSON context pack with file content and relationships.
+
+Examples:
+  commandindexdev context src/main.rs
+  commandindexdev context src/auth.rs --max-files 10
+  commandindexdev context src/a.rs src/b.rs --max-tokens 8000";
+
 use std::collections::HashMap;
 use std::path::Path;
 

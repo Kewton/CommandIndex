@@ -1,3 +1,11 @@
+pub const EMBED_AFTER_HELP: &str = "\
+When to use:
+  Enable semantic (meaning-based) search by generating vector embeddings.
+  Requires a running Ollama instance.
+
+Examples:
+  commandindexdev embed --path .";
+
 use std::fmt;
 use std::path::Path;
 use std::time::{Duration, Instant};
