@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0 — CommandMate連携基盤
+
+### Added
+- **`--related` 複数ファイル対応** (#87): 関連検索で複数ファイルを同時指定可能に
+- **`--index-path` オプション** (#88): CLIからインデックスパスを直接指定可能に
+- **stdin パイプ入力対応** (#89): `search --related-stdin` オプション追加、stdin からの複数ファイル関連検索
+- **`impact` サブコマンド** (#90): stdin/引数からファイルリスト入力、関連ファイル集約分析
+- **`--changed-since` オプション** (#91): 指定日時以降の変更ファイルに基づく検索
+- **`diff` サブコマンド** (#92): Git diff に基づくインデックス差分表示
+- **`watch` サブコマンド** (#93): ファイル変更監視による自動インデックス更新（notify + デバウンス）
+
+### Fixed
+- **impact/diff/changed-since/related-stdin**: インデックスパス検出を `resolve_index_path()` に統一、サブディレクトリ実行時のバグ修正
+
+---
+
 ## v0.0.6 — Phase 6: Team Extension
 
 ### Added
