@@ -322,6 +322,7 @@ pub fn format_suggest_results(
             }
             Ok(())
         }
+        OutputFormat::Llm => format_suggest_human(result, writer),
     }
 }
 
