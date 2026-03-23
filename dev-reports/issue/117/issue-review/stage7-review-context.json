@@ -1,0 +1,41 @@
+{
+  "must_fix": [
+    {
+      "issue": "search 5モードの出力型ごとのトークン推定関数設計が必要。各出力型でトークンコストの支配要素が異なる。",
+      "suggestion": "各出力型にestimate_*_result_tokens関数を定義し、build_context_packと同一の早期打ち切りパターンを適用する方針を設計書に明記する。"
+    },
+    {
+      "issue": "フォーマット毎のオーバーヘッド差の扱い。コンテンツベース推定を公式方針とする明確な記載が必要。",
+      "suggestion": "コンテンツベースの推定でmax_tokensを適用する方針を設計書に明記し、フォーマットオーバーヘッド差はドキュメントに注記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "search --related-stdin へのmax_tokensパラメータ伝達経路が考慮されていない",
+      "suggestion": "run_related_search_from_stdinにmax_tokensパラメータを追加する。"
+    },
+    {
+      "issue": "workspace横断検索（search --workspace）へのmax_tokens伝達経路の欠落リスク",
+      "suggestion": "run_workspace_searchにmax_tokensパラメータを追加し、集約後に適用する。"
+    },
+    {
+      "issue": "search --rerank併用時の適用順序が複雑",
+      "suggestion": "limit → rerank → limit trim → max_tokens trim の順序を明記する。"
+    },
+    {
+      "issue": "impact --with-snippet併用時のスニペットとトークン打ち切りの順序が不明確",
+      "suggestion": "スニペット付与後にmax_tokensトークン打ち切りを適用する設計を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "context.rsの共通関数のDRY共有化",
+      "suggestion": "output/token_budget.rsモジュールに移動してpub(crate)で共有する。"
+    },
+    {
+      "issue": "max_tokens=1, max_tokens=0のエッジケース",
+      "suggestion": "全コマンドでvalue_parser range(1..=1_000_000)を統一し、最初のエントリ例外を統一する。"
+    }
+  ],
+  "summary": "追加影響範囲: related-stdin/workspace横断検索への伝達経路、rerank併用時の適用順序、snippet付与順序。エッジケース設計の統一が必要。"
+}

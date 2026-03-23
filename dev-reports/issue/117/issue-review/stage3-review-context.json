@@ -1,0 +1,53 @@
+{
+  "must_fix": [
+    {
+      "issue": "changed_since が impact に委譲する際に --max-tokens を伝達できない。run_impact() のシグネチャに max_tokens パラメータがないため、search --changed-since 経由で --max-tokens を指定した場合にトークン制御が効かない。",
+      "suggestion": "run_impact() に max_tokens: Option<usize> パラメータを追加し、changed_since.rs からも伝達する。"
+    },
+    {
+      "issue": "estimate_tokens 関数が pub(crate) スコープである。出力フォーマット後の文字列に対してトークン推定を行う場合、各 format_*_results 関数の内部で結果を文字列バッファに書き込み、トークン推定してから truncation を行う方式か、結果リストを事前にトークン推定して件数を絞る方式かの設計判断が必要。",
+      "suggestion": "結果リストを事前にトークン推定して件数を絞る方式を採用（context の build_context_pack パターンを再利用）。"
+    },
+    {
+      "issue": "search コマンドには通常検索、symbol検索、related検索、semantic検索、changed_since の5つの検索モードがあり、出力型が異なる。全モードで一貫した --max-tokens 制御が必要。",
+      "suggestion": "各出力型に対応するトークン推定ロジックを統一的に実装する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "help_llm.rs の出力に search/impact/suggest の --max-tokens オプション情報が含まれない。",
+      "suggestion": "help_llm.rs の CommandInfo 定義に新オプションを追加する。"
+    },
+    {
+      "issue": "suggest コマンドが生成する戦略コマンドに --max-tokens が含まれない。",
+      "suggestion": "suggest の出力コマンドに --max-tokens ヒントを含める検討。"
+    },
+    {
+      "issue": "workspace 横断検索（search --workspace）での --max-tokens の扱いが不明確。",
+      "suggestion": "--max-tokens は集約後の最終結果に対して適用する方式を採用。"
+    },
+    {
+      "issue": "出力フォーマットによってトークン効率が異なるため、同じ --max-tokens 値でも実効的な情報量がずれる。",
+      "suggestion": "ドキュメントにフォーマットオーバーヘッドを含む旨を明記。"
+    },
+    {
+      "issue": "既存テストに --max-tokens オプションのパース受理テストが必要。",
+      "suggestion": "cli_args.rs に受理テストと不正値拒否テストを追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "config に default_max_tokens 設定を追加する余地がある。",
+      "suggestion": "SearchConfig に default_max_tokens: Option<usize> を追加。"
+    },
+    {
+      "issue": "--with-snippet 併用時のトークンコスト考慮が必要。",
+      "suggestion": "context の truncate_snippet_for_char_budget パターンを再利用。"
+    },
+    {
+      "issue": "各コマンドの AFTER_HELP に --max-tokens 使用例を追加する余地。",
+      "suggestion": "ヘルプテキストに使用例を追加。"
+    }
+  ],
+  "summary": "影響範囲は search(5モード), impact, suggest の3コマンドに及ぶ。最大のリスクは (1) changed_since→impact のパラメータ伝達欠落、(2) 5種の出力型への一貫したトークン推定実装、(3) help_llm/suggest出力への反映。context の build_context_pack パターン再利用が推奨。"
+}

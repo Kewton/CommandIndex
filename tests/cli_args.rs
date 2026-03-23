@@ -800,3 +800,100 @@ fn help_llm_version_matches_cargo() {
         "help-llm version should match Cargo.toml version"
     );
 }
+
+// --- --max-tokens CLI option tests ---
+
+#[test]
+fn search_max_tokens_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "100"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn impact_max_tokens_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["impact", "src/test.rs", "--max-tokens", "100"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn search_max_tokens_zero_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--max-tokens", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn search_max_tokens_over_limit_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--max-tokens", "1000001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn impact_max_tokens_zero_rejected() {
+    common::cmd()
+        .args(["impact", "src/test.rs", "--max-tokens", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn impact_max_tokens_over_limit_rejected() {
+    common::cmd()
+        .args(["impact", "src/test.rs", "--max-tokens", "1000001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn search_max_tokens_with_limit_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "test query",
+            "--limit",
+            "5",
+            "--max-tokens",
+            "100",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_max_tokens_boundary_values() {
+    // Test min value (1) is accepted
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+
+    // Test max value (1000000) is accepted
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "1000000"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}

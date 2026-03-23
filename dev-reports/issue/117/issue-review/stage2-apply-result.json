@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "type": "apply",
+  "applied_items": [
+    "Must Fix: 受け入れ基準を8項目追加",
+    "Must Fix: スコープをPhase 1に限定（自動調整モードは別Issue化を明記）",
+    "Must Fix: 設計方針を方針A（各コマンドに個別--max-tokens追加）に明確化",
+    "Should Fix: 日本語トークン推定の注意点を追記",
+    "Should Fix: context --max-tokens との関係を明確化（contextは変更なし）",
+    "Should Fix: --limit と --max-tokens の適用順序を明記",
+    "Should Fix: P7パターンの結果解釈（情報の質の影響）を補足追記",
+    "Nice to Have: suggestコマンドを対象に追加"
+  ],
+  "issue_updated": true
+}

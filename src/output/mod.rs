@@ -3,6 +3,7 @@ pub mod human;
 pub mod json;
 pub mod llm;
 pub mod path;
+pub(crate) mod token_budget;
 
 use std::fmt;
 use std::io::Write;

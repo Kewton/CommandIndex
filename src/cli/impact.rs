@@ -117,6 +117,7 @@ pub fn run_impact(
     limit: Option<usize>,
     index_path: Option<&Path>,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
     llm_options: &LlmFormatOptions,
 ) -> Result<(), ImpactError> {
     // 1. ファイルリスト取得（引数優先、なければstdin）
@@ -166,6 +167,19 @@ pub fn run_impact(
         &snippet_options,
         format,
     );
+
+    // 4.6 トークン予算適用（--max-tokens）
+    if let Some(max_tok) = max_tokens {
+        result.impacted_files =
+            crate::output::token_budget::apply_token_budget(result.impacted_files, max_tok, |r| {
+                let mut tokens = crate::output::estimate_tokens(&r.file_path);
+                if let Some(ref snippet) = r.snippet {
+                    tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+                }
+                tokens
+            });
+        result.total_impacted_files = result.impacted_files.len();
+    }
 
     // 5. 出力
     let stdout = std::io::stdout();

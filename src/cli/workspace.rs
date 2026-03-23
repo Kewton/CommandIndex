@@ -16,6 +16,7 @@ pub fn run_workspace_search(
     snippet_config: SnippetConfig,
     _rerank: bool,
     _rerank_top: Option<usize>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     // 1. WorkspaceConfig読込
     let ws_config = load_workspace_config(Path::new(ws_path))?;
@@ -101,6 +102,15 @@ pub fn run_workspace_search(
     // 7. rrf_merge_multipleで結果統合
     let limit = options.limit;
     let merged = crate::search::hybrid::rrf_merge_multiple(&all_results, limit);
+
+    // 7.5 トークン予算適用（--max-tokens）
+    let merged = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(merged, max_tok, |r| {
+            crate::output::estimate_tokens(&r.body)
+        })
+    } else {
+        merged
+    };
 
     // 8. WorkspaceSearchResultに変換（aliasプレフィックスを分離）
     let workspace_results: Vec<WorkspaceSearchResult> = merged
@@ -355,6 +365,7 @@ mod tests {
             SnippetConfig::default(),
             false,
             None,
+            None,
         );
         assert!(result.is_err());
     }
@@ -408,6 +419,7 @@ alias = "repo-a"
             OutputFormat::Human,
             SnippetConfig::default(),
             false,
+            None,
             None,
         );
         assert!(result.is_err());
