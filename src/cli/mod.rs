@@ -14,6 +14,7 @@ pub mod search;
 pub mod snippet_helper;
 pub mod status;
 pub mod stdin;
+pub mod suggest;
 pub mod watch;
 pub mod workspace;
 

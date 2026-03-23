@@ -1,0 +1,20 @@
+{
+  "stage": 3,
+  "type": "impact-analysis",
+  "must_fix": [
+    {"id": "M1", "title": "SymbolStore のモジュールパスが不正(embedding/store.rs → indexer/symbol_store.rs)"},
+    {"id": "M2", "title": "impact共通化の抽出対象が不明確 - aggregate_impactではなくfind_related直接利用"},
+    {"id": "M3", "title": "help_llm_contains_all_subcommands テストの影響度が過小評価(低→中)"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "resolve_context() が未定義"},
+    {"id": "S2", "title": "BM25→related→impact パイプラインの連鎖I/Oコスト見積もり不足"},
+    {"id": "S3", "title": "SuggestError と ImpactError のエラー型重複"},
+    {"id": "S4", "title": "output/mod.rs への追加がモジュール肥大化閾値に到達"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "help-llm use_cases/workflows への suggest 追加検討"},
+    {"id": "N2", "title": "OutputFormat::Path の空実装"},
+    {"id": "N3", "title": "500文字バリデーション上限の根拠"}
+  ]
+}

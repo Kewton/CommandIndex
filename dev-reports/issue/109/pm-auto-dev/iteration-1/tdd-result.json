@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "new_files": ["src/cli/suggest.rs", "tests/e2e_suggest.rs"],
+  "modified_files": ["src/output/mod.rs", "src/cli/mod.rs", "src/main.rs", "src/cli/help_llm.rs", "tests/cli_args.rs"],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass",
+    "cargo_test": "pass",
+    "cargo_fmt": "pass"
+  }
+}

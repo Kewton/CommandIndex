@@ -1,0 +1,17 @@
+{
+  "stage": 8,
+  "action": "apply-codex-impact-review",
+  "must_fix_applied": 3,
+  "should_fix_applied": 4,
+  "nice_to_have_noted": 1,
+  "issue_updated": true,
+  "key_changes": [
+    "フォールバック戦略を既存サブコマンドのみで定義",
+    "impact共通化時のrelated探索件数外部制御を明記",
+    "help-lmコマンド件数変更(13→14)を明示",
+    "トップレベルヘルプテスト更新を明記",
+    "e2e_impact.rsを回帰確認対象に追加",
+    "リソース管理方針(reader/store使い回し)を追加",
+    "内部モジュール依存の整理方針を追加"
+  ]
+}

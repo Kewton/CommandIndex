@@ -1,0 +1,18 @@
+{"stage": "1-4", "action": "apply-all-first-round-reviews", "changes": [
+  "SymbolStore モジュールパスを embedding/store.rs → indexer/symbol_store.rs に修正",
+  "SuggestError::Output を std::io::Error → OutputError に変更",
+  "SuggestError に SymbolStore バリアント追加",
+  "format_suggest_results に writer引数追加、OutputError使用",
+  "resolve_context() を SearchContext::new() に置換",
+  "Suggest バリアントから index_path 削除（グローバル利用）",
+  "impact共通化を撤回 → RelatedSearchEngine::find_related()直接利用に変更",
+  "sanitize_for_command_arg() 関数追加（セキュリティ）",
+  "BINARY_NAME 定数追加（DRY）",
+  "SuggestStep.step 削除（enumerate()で出力時に付与）",
+  "SuggestResult に query, has_embeddings フィールド追加",
+  "validate_input() に制御文字チェック追加",
+  "OutputFormat::Path で1行1コマンド出力に変更",
+  "既存コマンド数 12→13 に修正",
+  "tests/cli_args.rs 影響度 低→中 に変更",
+  "format_suggest_human の出力を英語に変更（既存パターン準拠）"
+]}

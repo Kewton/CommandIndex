@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [
+    {"id": "M1", "title": "--for引数がコマンド文字列にサニタイズなしで埋め込まれている(シェルインジェクションリスク)"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "validate_input() に文字種制限がない(制御文字等)"},
+    {"id": "S2", "title": "normalize_path の '..' 除去の意味的不正確さ(実害限定的)"},
+    {"id": "S3", "title": "build_strategy() 全般のコマンド文字列サニタイズ方針が未定義"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "BM25検索結果数の上限明記"},
+    {"id": "N2", "title": "エラーメッセージのパス情報漏洩(リスク低)"},
+    {"id": "N3", "title": "unsafe不使用確認(問題なし)"}
+  ]
+}

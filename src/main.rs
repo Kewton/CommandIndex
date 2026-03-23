@@ -241,6 +241,17 @@ enum Commands {
     /// Show structured JSON help for LLM integration
     #[command(name = "help-llm")]
     HelpLlm,
+    /// Suggest search strategy based on task description (LLM-oriented)
+    #[command(after_help = commandindex::cli::suggest::SUGGEST_AFTER_HELP)]
+    Suggest {
+        /// Task description
+        #[arg(long = "for")]
+        for_task: String,
+
+        /// Output format (human, json, path)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+    },
     /// Watch for file changes and auto-update index (daemon mode)
     #[command(after_help = commandindex::cli::watch::WATCH_AFTER_HELP)]
     Watch {
@@ -865,6 +876,19 @@ fn main() {
                     }
                     0
                 }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
+        Commands::Suggest { for_task, format } => {
+            match commandindex::cli::suggest::run_suggest(
+                &for_task,
+                format,
+                cli.index_path.as_deref(),
+            ) {
+                Ok(()) => 0,
                 Err(e) => {
                     eprintln!("Error: {e}");
                     1

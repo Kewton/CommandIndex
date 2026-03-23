@@ -1,0 +1,20 @@
+{
+  "stage": 1,
+  "type": "design-principles",
+  "must_fix": [
+    {"id": "M1", "title": "SuggestError の Output バリアントが std::io::Error で既存パターン(OutputError)と不整合"},
+    {"id": "M2", "title": "format_suggest_results が println! 直接使用でWriter抽象パターンに違反"},
+    {"id": "M3", "title": "resolve_context() が未定義で SearchContext との責務重複(DRY違反)"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "impact共通化の具体性不足 - RelatedSearchEngine::find_related()直接利用が現実的"},
+    {"id": "S2", "title": "Suggest バリアントの index_path がグローバルオプションと重複"},
+    {"id": "S3", "title": "SuggestStep.command のコマンド文字列ハードコード(バイナリ名等)"},
+    {"id": "S4", "title": "SuggestStep.step が手動管理で不整合リスク"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "OutputFormat::Path の空実装が不親切"},
+    {"id": "N2", "title": "500文字上限の根拠不明"},
+    {"id": "N3", "title": "SuggestResult に query フィールドがない"}
+  ]
+}

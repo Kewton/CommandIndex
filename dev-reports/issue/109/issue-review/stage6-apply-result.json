@@ -1,0 +1,17 @@
+{
+  "stage": 6,
+  "action": "apply-codex-review",
+  "must_fix_applied": 2,
+  "should_fix_applied": 5,
+  "nice_to_have_noted": 1,
+  "issue_updated": true,
+  "key_changes": [
+    "BM25結果のファイル単位正規化・重複排除を明記",
+    "Embedding判定をSymbolStore::count_embeddings() > 0に修正",
+    "help-llm契約テスト更新を明記",
+    "impact再利用を関連計算ロジック共通化に修正",
+    "空白入力のtrim()後バリデーション追加",
+    "候補0件時のフォールバック戦略追加",
+    "--index-path解決規則に従う旨追記"
+  ]
+}
