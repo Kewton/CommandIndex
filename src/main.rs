@@ -49,7 +49,7 @@ enum Commands {
         /// Disable hybrid (BM25 + Semantic) search, use BM25 only
         #[arg(long, conflicts_with_all = ["semantic", "symbol", "related"])]
         no_semantic: bool,
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
         /// Filter by tag
@@ -113,7 +113,7 @@ enum Commands {
         /// Target directory
         #[arg(long, default_value = ".")]
         path: PathBuf,
-        /// Output format (human, json)
+        /// Output format for status (human, json)
         #[arg(long, value_enum, default_value_t = commandindex::cli::status::StatusFormat::Human)]
         format: commandindex::cli::status::StatusFormat,
         /// Workspace config file path
@@ -202,7 +202,7 @@ enum Commands {
         #[arg()]
         files: Vec<String>,
 
-        /// Output format (human, json, path)
+        /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
 
