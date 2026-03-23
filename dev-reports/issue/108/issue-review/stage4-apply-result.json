@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "action": "apply_stage3_impact_review",
+  "applied_fixes": [
+    {"id": "MF-1", "action": "実装方針セクションに構造体拡張の詳細を追加（skip_serializing_if方式）"},
+    {"id": "MF-2", "action": "実装方針にenrich_entry()ロジック共通化を明記"},
+    {"id": "MF-3", "action": "実装方針に全フォーマッタ対応の詳細を追加"},
+    {"id": "SF-1", "action": "CLIオプション追加をImpact/Search両方に明記"},
+    {"id": "SF-2", "action": "limit適用後にスニペット取得を行う方針を追加"},
+    {"id": "SF-3", "action": "受け入れ基準に後方互換性の項目を追加"},
+    {"id": "SF-4", "action": "影響範囲セクションを新設（構造体変更、テスト影響等を明記）"},
+    {"id": "NH-2", "action": "受け入れ基準に --related-stdin 対応を追加"},
+    {"id": "NH-3", "action": "受け入れ基準に help-llm 更新を追加"},
+    {"id": "NH-4", "action": "実装方針に help-llm / AFTER_HELP 更新を含む"}
+  ],
+  "issue_updated": true
+}

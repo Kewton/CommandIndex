@@ -1,0 +1,43 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "id": "W-1",
+      "title": "snippet_helper が 0 指定の既存セマンティクスを壊して空スニペット化する",
+      "description": "`src/cli/snippet_helper.rs:23` は `truncate_body(&first.body, config.lines, config.chars)` をそのまま呼んでおり、既存の `human.rs` が持つ `0 = 無制限` の分岐を適用していません。`config.search.snippet_lines` または `snippet_chars` に 0 が設定されている環境では、`--with-snippet` の結果が空文字列になり、意図せず全件 `snippet: \"\"` になります。これは既存設定との互換性を壊す潜在バグです。",
+      "suggestion": "`snippet_helper::fetch_snippet()` でも `human.rs` と同じ 0 ハンドリングを行うか、0 を許容しない設計に統一して CLI/設定値の両方で明示的に弾いてください。"
+    },
+    {
+      "id": "W-2",
+      "title": "`search` の `--with-snippet` が無関係なモードでも受理されて黙って無視される",
+      "description": "`src/main.rs:81-83` の `with_snippet` には `requires` や `conflicts_with_all` が付いておらず、全文検索・symbol・semantic・workspace・changed-since でも指定できます。しかし実際に `snippet_options` が使われるのは `run_related_search()` / `run_related_search_from_stdin()` だけで、他モードでは silently ignored になります（`src/main.rs:431-518`）。入力バリデーション不足により、ユーザーはオプションが効いたと誤認します。",
+      "suggestion": "`--with-snippet` を `--related` / `--related-stdin` 専用として clap か実行時バリデーションで制限し、無効な組み合わせは明示的にエラーにしてください。"
+    },
+    {
+      "id": "W-3",
+      "title": "Impact の `u64 -> usize` 変換が未検証で、32bit 環境では切り詰めが起こりうる",
+      "description": "`src/main.rs:660-665` で `snippet_lines` / `snippet_chars` を `u64 as usize` で変換しています。現状の clap 制約は `range(1..)` のみで上限がなく、32bit 環境では大きな値が切り詰められて想定外の小さい値になる可能性があります。Rust の `as` 変換は失敗しないため、エラーにもなりません。",
+      "suggestion": "`usize::try_from(v)` を使って安全に変換し、失敗時は引数エラーにしてください。あわせて現実的な上限値を clap 側で設定すると挙動が安定します。"
+    },
+    {
+      "id": "W-4",
+      "title": "`normalize_path()` が `..` を拒否せず除去してしまい、呼び出し元の意図と別ファイルを検索しうる",
+      "description": "`src/search/related.rs:56-73` は `..` を含むパスをエラーにせず、`filter(|c| *c != \"..\")` で取り除いて正規化します。たとえば `src/../secret.rs` は `src/secret.rs` とは別の意味ですが、正規化後は単に `secret.rs` 系に変形されます。CLI 経路では別バリデータが先に弾いているものの、`RelatedSearchEngine::find_related()` 自体は public API であり、直接呼ぶ経路では入力バリデーション不足になります。",
+      "suggestion": "`normalize_path()` 自体で `..`、絶対パス、バックスラッシュを明示的に reject し、CLI バリデーションと同じ制約に揃えてください。"
+    },
+    {
+      "id": "W-5",
+      "title": "設定読み込み失敗を `ok()` で握りつぶしており、異常系が見えなくなる",
+      "description": "`src/cli/impact.rs:125-129` と `src/cli/search.rs:402-406` は `load_config(...).ok()` を使って設定読み込みエラーを捨て、黙ってデフォルト値や既定パスへフォールバックします。壊れた設定ファイルや不正な index path があってもユーザーに通知されず、誤ったインデックスに対して検索/impact が走る可能性があります。未処理エラーの握りつぶしです。",
+      "suggestion": "設定読み込み失敗は warning 以上で通知するか、少なくとも `--related-stdin` / `impact` でも通常検索と同様に設定エラーを返す方針に揃えてください。"
+    },
+    {
+      "id": "W-6",
+      "title": "snippet 取得時の Reader エラーをすべて空文字列に変換しており、障害を隠蔽する",
+      "description": "`src/cli/snippet_helper.rs:18-31` は `search_by_exact_path()` の失敗を一律 `String::new()` に変換します。仕様上は graceful degradation ですが、インデックス破損・schema mismatch・reader error と『単に該当ドキュメントがない』ケースが区別できず、障害解析が困難になります。結果として JSON には正常系と同じ `snippet: \"\"` が出力され、異常を検知しにくくなります。",
+      "suggestion": "ユーザー向け出力は空文字列でもよいので、内部的には `Result<Option<String>, ReaderError>` などで失敗理由を保持し、少なくとも debug/warning ログへ落とせる形にしてください。"
+    }
+  ],
+  "summary": "致命的な panic や明白なパストラバーサルは見当たりませんでしたが、入力バリデーションとエラー処理には改善余地があります。特に、0 指定時の snippet 生成が空文字列化する互換性バグ、`--with-snippet` の silent-ignore、`u64 as usize` の未検証変換、`normalize_path()` の過度な正規化、設定/Reader エラーの握りつぶしは修正優先度が高いです。",
+  "requires_fix": true
+}

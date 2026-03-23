@@ -78,6 +78,9 @@ enum Commands {
         /// Number of snippet characters for single-line body (default: from config or 120)
         #[arg(long)]
         snippet_chars: Option<usize>,
+        /// Enable snippet output for related search results
+        #[arg(long)]
+        with_snippet: bool,
         /// Enable LLM-based reranking of search results
         #[arg(long, conflicts_with_all = ["symbol", "related", "semantic"])]
         rerank: bool,
@@ -210,6 +213,18 @@ enum Commands {
         #[arg(long)]
         limit: Option<usize>,
 
+        /// Enable snippet output for impacted files
+        #[arg(long)]
+        with_snippet: bool,
+
+        /// Number of snippet lines (default: from config or 2)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        snippet_lines: Option<u64>,
+
+        /// Number of snippet characters for single-line body (default: from config or 120)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        snippet_chars: Option<u64>,
+
         /// Custom index directory path (overrides default .commandindex/)
         #[arg(long)]
         index_path: Option<PathBuf>,
@@ -322,6 +337,7 @@ fn main() {
             limit,
             snippet_lines,
             snippet_chars,
+            with_snippet,
             rerank,
             rerank_top,
             workspace,
@@ -370,6 +386,10 @@ fn main() {
                 lines: effective_snippet_lines,
                 chars: effective_snippet_chars,
             };
+            let snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                enabled: with_snippet,
+                config: snippet_config,
+            };
 
             // Workspace横断検索分岐
             if let Some(ws_path) = workspace {
@@ -412,6 +432,7 @@ fn main() {
                 let result = commandindex::cli::search::run_related_search_from_stdin(
                     effective_limit,
                     format,
+                    snippet_options.clone(),
                 );
                 match result {
                     Ok(()) => 0,
@@ -468,7 +489,7 @@ fn main() {
                             )
                             .ok()
                         });
-                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref())
+                        commandindex::cli::search::run_related_search(files, effective_limit, format, ctx_for_related.as_ref(), snippet_options.clone())
                     }
                     (None, None, None, Some(q)) => {
                         let filters = commandindex::indexer::reader::SearchFilters {
@@ -612,7 +633,7 @@ fn main() {
             index_path,
         } => match commandindex::cli::diff::run_diff(
             &files,
-            limit as usize,
+            usize::try_from(limit).unwrap_or(usize::MAX),
             format,
             index_path.as_deref(),
         ) {
@@ -626,19 +647,38 @@ fn main() {
             files,
             format,
             limit,
+            with_snippet,
+            snippet_lines,
+            snippet_chars,
             index_path,
-        } => match commandindex::cli::impact::run_impact(
-            &files,
-            format,
-            limit,
-            index_path.as_deref(),
-        ) {
-            Ok(()) => 0,
-            Err(e) => {
-                eprintln!("Error: {e}");
-                1
+        } => {
+            let base_path = std::path::Path::new(".");
+            let config = commandindex::config::load_config(base_path).ok();
+            let impact_snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                enabled: with_snippet,
+                config: commandindex::output::SnippetConfig {
+                    lines: snippet_lines
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or_else(|| config.as_ref().map_or(2, |c| c.search.snippet_lines)),
+                    chars: snippet_chars
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or_else(|| config.as_ref().map_or(120, |c| c.search.snippet_chars)),
+                },
+            };
+            match commandindex::cli::impact::run_impact(
+                &files,
+                format,
+                limit,
+                index_path.as_deref(),
+                impact_snippet_options,
+            ) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
             }
-        },
+        }
         Commands::Context {
             files,
             max_files,

@@ -132,6 +132,13 @@ pub fn format_related_human(
             format!("(score: {score})").dimmed(),
             relations.join(", ")
         )?;
+        if let Some(ref snippet) = result.snippet
+            && !snippet.is_empty()
+        {
+            for line in snippet.lines() {
+                writeln!(writer, "  {}", line.dimmed())?;
+            }
+        }
     }
     Ok(())
 }
@@ -174,6 +181,13 @@ pub fn format_impact_human(
                 .collect::<Vec<_>>()
                 .join(", ");
             writeln!(writer, "  {}", format!("impacted by: {by}").dimmed())?;
+        }
+        if let Some(ref snippet) = file.snippet
+            && !snippet.is_empty()
+        {
+            for line in snippet.lines() {
+                writeln!(writer, "  {}", line.dimmed())?;
+            }
         }
     }
     Ok(())

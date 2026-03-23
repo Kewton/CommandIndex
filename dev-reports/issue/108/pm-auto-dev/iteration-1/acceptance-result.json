@@ -1,0 +1,90 @@
+{
+  "criteria": [
+    {
+      "id": 1,
+      "description": "search --related に --with-snippet オプションが追加されている",
+      "status": "PASS",
+      "evidence": "main.rs L83: with_snippet: bool が Search サブコマンドに定義。L492: run_related_search に snippet_options を渡している。search --help に --with-snippet が表示される。"
+    },
+    {
+      "id": 2,
+      "description": "impact に --with-snippet / --snippet-lines / --snippet-chars オプションが追加されている",
+      "status": "PASS",
+      "evidence": "main.rs L218: with_snippet, L221: snippet_lines, L225: snippet_chars が Impact サブコマンドに定義。impact --help に3つのオプションが表示される。"
+    },
+    {
+      "id": 3,
+      "description": "--with-snippet 指定時に JSON 出力の各結果に snippet フィールドが含まれる",
+      "status": "PASS",
+      "evidence": "json.rs format_related_json L103-110: snippet が Some の場合に snippet フィールドを挿入。json.rs format_impact_json L133-140: 同様。テスト test_impact_json_with_snippet, test_related_json_with_snippet で検証済み。"
+    },
+    {
+      "id": 4,
+      "description": "--with-snippet 未指定時は既存のJSON出力スキーマに変更がない（後方互換性）",
+      "status": "PASS",
+      "evidence": "snippet_helper.rs L43,62: enabled=false なら何もしない。snippet が None のまま。json.rs L103: if let Some(ref snippet) = result.snippet で None 時はフィールド追加しない。テスト test_impact_json_without_snippet, test_related_json_without_snippet で snippet フィールドが存在しないことを検証。"
+    },
+    {
+      "id": 5,
+      "description": "--with-snippet 指定時・取得失敗の場合は snippet が空文字列で出力される",
+      "status": "PASS",
+      "evidence": "snippet_helper.rs fetch_snippet L18-32: search_by_exact_path が Err の場合 String::new() を返す。body が空の場合も String::new()。テスト test_impact_json_with_empty_snippet で空文字列の snippet が出力されることを検証。"
+    },
+    {
+      "id": 6,
+      "description": "--snippet-lines / --snippet-chars で行数・文字数制御が可能",
+      "status": "PASS",
+      "evidence": "main.rs L221-226: snippet_lines/snippet_chars が Impact に定義。main.rs L77-80: Search にも定義。snippet_helper.rs L23: truncate_body(body, config.lines, config.chars) で切り詰め。テスト test_snippet_custom_lines, test_snippet_custom_chars で検証。"
+    },
+    {
+      "id": 7,
+      "description": "Human 形式で --with-snippet 指定時にスニペットが表示される",
+      "status": "PASS",
+      "evidence": "human.rs L135-141: format_related_human で snippet が Some かつ非空の場合にインデント付きで出力。human.rs L185-191: format_impact_human で同様。テスト test_impact_human_with_snippet, test_related_human_with_snippet で検証。"
+    },
+    {
+      "id": 8,
+      "description": "Path 形式では --with-snippet が無視される",
+      "status": "PASS",
+      "evidence": "snippet_helper.rs L43,62: matches!(format, OutputFormat::Path) の場合 return（何もしない）。path.rs format_related_path, format_impact_path は snippet フィールドを出力しない。テスト test_related_path_ignores_snippet で検証。"
+    },
+    {
+      "id": 9,
+      "description": "既存テストが壊れない",
+      "status": "PASS",
+      "evidence": "cargo test --all: 287 unit tests + 31 integration tests = 全 PASS。0 failed。"
+    },
+    {
+      "id": 10,
+      "description": "cargo clippy --all-targets -- -D warnings で警告0件",
+      "status": "PASS",
+      "evidence": "cargo clippy --all-targets -- -D warnings: エラー・警告なしで正常終了。"
+    },
+    {
+      "id": 11,
+      "description": "search --related-stdin でも --with-snippet が動作する",
+      "status": "PASS",
+      "evidence": "main.rs L432-436: related_stdin 分岐で snippet_options.clone() を run_related_search_from_stdin に渡している。search.rs L386: run_related_search_from_stdin が SnippetOptions を受け取り、L430: enrich_related_with_snippets を呼び出している。"
+    },
+    {
+      "id": 12,
+      "description": "help-llm コマンドの search / impact の key_options に新オプションが反映されている",
+      "status": "PASS",
+      "evidence": "cargo run -- help-llm で確認。search の key_options に '--with-snippet  Include code snippets in related search results' が含まれる。impact の key_options に '--with-snippet', '--snippet-lines <N>', '--snippet-chars <N>' が含まれる。"
+    },
+    {
+      "id": 13,
+      "description": "impact / search の AFTER_HELP に --with-snippet の使用例が含まれる",
+      "status": "PASS",
+      "evidence": "search.rs SEARCH_AFTER_HELP L20-21: 'commandindex search --related src/auth.rs --with-snippet --format json'。impact.rs IMPACT_AFTER_HELP L11-12: 'commandindex impact src/auth.rs --with-snippet --format json'。"
+    },
+    {
+      "id": 14,
+      "description": "context コマンドの既存仕様が変更されていない",
+      "status": "PASS",
+      "evidence": "context.rs は snippet_helper を使用していない。Context サブコマンド定義(main.rs L166-178)に with_snippet 等のオプションなし。context.rs の enrich_entry は独自のスニペット生成ロジック（truncate_body L288）を保持。既存テスト e2e_context_pack.rs が全 PASS。"
+    }
+  ],
+  "overall": "PASS",
+  "summary": "Issue #108 (--with-snippet) の全14項目の受け入れ基準を満たしています。search --related / search --related-stdin / impact の各コマンドに --with-snippet オプションが正しく実装され、JSON/Human/Path の各出力形式で適切に動作します。後方互換性が保たれており、既存テスト(287+31件)は全てPASS、clippy警告も0件です。help-llm の key_options と AFTER_HELP にも使用例が反映済み。context コマンドへの影響はありません。"
+}

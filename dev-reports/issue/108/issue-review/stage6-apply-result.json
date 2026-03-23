@@ -1,0 +1,14 @@
+{
+  "stage": 6,
+  "action": "apply_stage5_codex_review",
+  "applied_fixes": [
+    {"id": "MF-1", "action": "デフォルト値を config.toml の [search] セクションに統一（未設定時 2行/120文字）。--snippet-lines/--snippet-chars で明示指定時はそちらを優先と明記"},
+    {"id": "MF-2", "action": "スニペット選択規則を明確化: 先頭ドキュメントの body を使用する簡易版、全 relation type で取得を試みると明記"},
+    {"id": "MF-3", "action": "snippet=null/skip_serializing_if の衝突を解決: --with-snippet 未指定時はフィールド省略、指定時・取得失敗は空文字列で出力"},
+    {"id": "SF-1", "action": "JSON形状差を出力イメージで明記: search --related はJSONL、impact は単一JSON"},
+    {"id": "SF-2", "action": "--snippet-chars も impact に追加、SnippetConfig 完全再利用を明記"},
+    {"id": "SF-3", "action": "help-llm の key_options 更新を受け入れ基準に明記"},
+    {"id": "SF-4", "action": "影響範囲のテスト更新対象に output_format.rs, e2e_related_search.rs, e2e_impact.rs, cli_args.rs を明記"}
+  ],
+  "issue_updated": true
+}

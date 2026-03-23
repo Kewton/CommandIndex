@@ -39,5 +39,12 @@ pub fn run_changed_since(
     }
 
     // 2. impact サブコマンドに委譲
-    run_impact(&changed_files, format, limit, index_path).map_err(ChangedSinceError::Impact)
+    run_impact(
+        &changed_files,
+        format,
+        limit,
+        index_path,
+        crate::cli::snippet_helper::SnippetOptions::default(),
+    )
+    .map_err(ChangedSinceError::Impact)
 }

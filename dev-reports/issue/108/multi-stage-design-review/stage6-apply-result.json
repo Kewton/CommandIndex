@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "action": "apply_stage5_codex_review",
+  "applied_fixes": [
+    {"id": "MF-1", "action": "requires='related' を削除、実行時に無視する設計に変更"},
+    {"id": "MF-2", "action": "0=無制限の特殊扱いを削除、clap range(1..) に統一"},
+    {"id": "MF-3", "action": "snippet 取得を cli/snippet_helper.rs に移動（output 層から cli 層へ）"},
+    {"id": "SF-1", "action": "SnippetOptions 構造体を導入し、引数をグループ化"},
+    {"id": "SF-3", "action": "ImpactFileResult の serde アトリビュートを削除（YAGNI）"},
+    {"id": "SF-4", "action": "enrich_impact_with_snippets / enrich_related_with_snippets で DRY 改善"},
+    {"id": "NH-2", "action": "Human 出力の dimmed 表示の意図をコメントで明記"}
+  ]
+}

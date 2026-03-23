@@ -103,6 +103,7 @@ pub struct RelatedSearchResult {
     pub file_path: String,
     pub score: f32,
     pub relation_types: Vec<RelationType>,
+    pub snippet: Option<String>,
 }
 
 /// 関連タイプ
@@ -260,6 +261,7 @@ pub struct ImpactFileResult {
     pub score: f32,
     pub relation_types: Vec<String>,
     pub impacted_by: Vec<String>,
+    pub snippet: Option<String>,
 }
 
 /// impact 結果を指定フォーマットで出力する

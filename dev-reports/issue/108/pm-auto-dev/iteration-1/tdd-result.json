@@ -1,0 +1,60 @@
+{
+  "issue": 108,
+  "iteration": 1,
+  "status": "success",
+  "summary": "Implemented --with-snippet option for impact and search --related commands",
+  "changes": {
+    "new_files": [
+      "src/cli/snippet_helper.rs"
+    ],
+    "modified_files": [
+      "src/output/mod.rs",
+      "src/output/json.rs",
+      "src/output/human.rs",
+      "src/cli/mod.rs",
+      "src/cli/impact.rs",
+      "src/cli/search.rs",
+      "src/cli/changed_since.rs",
+      "src/cli/context.rs",
+      "src/cli/help_llm.rs",
+      "src/search/related.rs",
+      "src/main.rs",
+      "tests/output_format.rs"
+    ]
+  },
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (0 warnings)",
+    "cargo_test": "pass (all suites, 0 failures)",
+    "cargo_fmt": "pass (no diff)"
+  },
+  "tests_added": [
+    "test_impact_json_with_snippet",
+    "test_impact_json_without_snippet",
+    "test_impact_human_with_snippet",
+    "test_impact_json_with_empty_snippet",
+    "test_related_json_with_snippet",
+    "test_related_json_without_snippet",
+    "test_related_human_with_snippet",
+    "test_related_path_ignores_snippet"
+  ],
+  "backward_compatibility": {
+    "existing_tests_pass": true,
+    "json_output_unchanged_without_flag": true,
+    "context_command_unchanged": true,
+    "changed_since_unchanged": true
+  },
+  "implementation_details": {
+    "snippet_helper_module": "src/cli/snippet_helper.rs with SnippetOptions, fetch_snippet(), enrich_impact_with_snippets(), enrich_related_with_snippets()",
+    "struct_changes": "Added snippet: Option<String> to RelatedSearchResult and ImpactFileResult",
+    "cli_options": {
+      "search": "--with-snippet (bool flag)",
+      "impact": "--with-snippet (bool flag), --snippet-lines (u64, min 1), --snippet-chars (u64, min 1)"
+    },
+    "output_formats": {
+      "json": "snippet field added only when Some (conditional inclusion)",
+      "human": "snippet displayed with dimmed style below path line",
+      "path": "snippet ignored (no change)"
+    }
+  }
+}

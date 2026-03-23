@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "デフォルト値の定義が既存 SnippetConfig / config.toml と矛盾している",
+      "description": "Issueでは --snippet-lines のデフォルトを 10 行としている一方で、既存コードでは SearchConfig.snippet_lines の既定値は 2、snippet_chars は 120。『既存の SnippetConfig を再利用』『config.toml の [search] セクションのデフォルト値も適用』という記述と 10 行固定が両立しない。",
+      "suggestion": "--with-snippet 有効時の既定値を明確に一本化する。例: 『既定値は config.search.snippet_lines / snippet_chars を使う（未設定時 2/120）』または『この機能専用に 10 行を使うため SnippetConfig は再利用しない』のどちらかに寄せる。"
+    },
+    {
+      "id": "MF-2",
+      "title": "context::enrich_entry() の共有方針では「各結果に関連性の高いスニペット」を満たせない",
+      "description": "既存 enrich_entry() は search_by_exact_path(path) の先頭ドキュメント docs.first() を使うだけで、ファイル内で最も関連度が高い箇所を選ぶロジックではない。複数セクションを持つファイルでは無関係な先頭セクションを返し得る。また既存実装では snippet を取るのは MarkdownLink / TagMatch のときだけ。",
+      "suggestion": "Issue側でスニペット選択規則を具体化する。最低でも『先頭セクションを返す簡易版』なのか、全 relation type で snippet を出すのか定義する。"
+    },
+    {
+      "id": "MF-3",
+      "title": "snippet=null と skip_serializing_if = Option::is_none の仕様が衝突している",
+      "description": "Issueは『取得失敗時は snippet フィールドを null にする』としつつ、実装方針では skip_serializing_if を付けるとしている。この組み合わせでは None は null ではなくフィールド自体が消える。--with-snippet 未指定時と取得失敗時を同じ None で表すとJSON上で両者を区別できない。",
+      "suggestion": "JSON 契約を明確化する。例: --with-snippet 指定時は常に snippet キーを出し、取得失敗時のみ null、未指定時のみキー自体を省略する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "search --related と impact の JSON 形状差を受け入れ基準に明記したほうがよい",
+      "description": "search --format json は JSONL、impact --format json は単一 JSON オブジェクト。出力例が曖昧。",
+      "suggestion": "search --related は JSONL のまま各行に snippet 追加、impact は単一 JSON で impacted_files[*].snippet を追加と明記。"
+    },
+    {
+      "id": "SF-2",
+      "title": "SnippetConfig 再利用を前提にするなら --snippet-chars の扱いも定義が必要",
+      "description": "Issueは --snippet-lines のみ扱っているが、既存 SnippetConfig は lines/chars の 2 軸。",
+      "suggestion": "--with-snippet で --snippet-chars も有効にするのか、スコープ外にするのか追記する。"
+    },
+    {
+      "id": "SF-3",
+      "title": "help-llm は手書き定義なので、更新対象として明示的に扱う必要がある",
+      "description": "help-llm は clap ヘルプから自動生成されず、静的データを手で更新する構成。",
+      "suggestion": "受け入れ基準に search / impact の key_options に --with-snippet が含まれることを追加。"
+    },
+    {
+      "id": "SF-4",
+      "title": "受け入れ基準に既存テストの追加ポイントが不足している",
+      "description": "output_format.rs, e2e_related_search.rs, cli_args.rs など追加更新が必要な箇所が具体的にある。",
+      "suggestion": "更新対象テストを影響範囲に明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "search --related-stdin の実装経路も --related と同じ設定解決に寄せる方針があると自然",
+      "description": "--related と --related-stdin で snippet 取得オプションの伝播方法を揃えると設計が安定する。",
+      "suggestion": "実装方針に一言追加。"
+    }
+  ],
+  "summary": "2回目レビューでは方向性は妥当だが、実装方針に3つの重要な不整合がある: (1) デフォルト値 10 行と既存 SnippetConfig/config 再利用方針の矛盾 (2) enrich_entry() 共有だけでは各結果に関連性の高い snippet を保証できない (3) snippet=null と skip_serializing_if の契約衝突。"
+}

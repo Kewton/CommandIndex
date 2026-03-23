@@ -172,6 +172,7 @@ pub(crate) fn merge_related_results(
             file_path: path,
             score,
             relation_types,
+            snippet: None,
         })
         .collect();
 

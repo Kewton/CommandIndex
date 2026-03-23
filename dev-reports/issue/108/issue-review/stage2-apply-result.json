@@ -1,0 +1,14 @@
+{
+  "stage": 2,
+  "action": "apply_stage1_review",
+  "applied_fixes": [
+    {"id": "MF-1", "action": "--format llm への言及を削除し、既存の --format json / --format human を前提に修正"},
+    {"id": "MF-2", "action": "受け入れ基準セクションを追加（9項目）"},
+    {"id": "MF-3", "action": "スニペット取得方針セクションを追加（tantivyインデックスからの取得、enrich_entry()共有、エラー時null）"},
+    {"id": "SF-1", "action": "既存オプションとの統一セクションを追加（SnippetConfig再利用）"},
+    {"id": "SF-2", "action": "Human/Path形式の出力仕様を追加"},
+    {"id": "SF-3", "action": "contextコマンドとの棲み分けセクションを追加"},
+    {"id": "SF-4", "action": "スニペット取得方針にインデックスからの高速取得を優先する旨を記載"}
+  ],
+  "issue_updated": true
+}

@@ -16,7 +16,9 @@ Examples:
   commandindexdev search --related src/auth.rs          # Related files
   commandindexdev search --semantic \"login flow\"        # Semantic search
   commandindexdev search --changed-since \"yesterday\"    # Recent changes
-  commandindexdev search --symbol parse_config           # Symbol search";
+  commandindexdev search --symbol parse_config           # Symbol search
+  # Related files with snippets
+  commandindex search --related src/auth.rs --with-snippet --format json";
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -327,6 +329,7 @@ pub fn run_related_search(
     limit: usize,
     format: OutputFormat,
     ctx: Option<&SearchContext>,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), SearchError> {
     super::validate_file_paths(file_paths, 100)?;
 
@@ -362,6 +365,14 @@ pub fn run_related_search(
         return Ok(());
     }
 
+    // limit 適用後にスニペット一括付与
+    crate::cli::snippet_helper::enrich_related_with_snippets(
+        &mut results,
+        &reader,
+        &snippet_options,
+        format,
+    );
+
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_related_results(&results, format, &mut handle)?;
@@ -372,6 +383,7 @@ pub fn run_related_search(
 pub fn run_related_search_from_stdin(
     limit: usize,
     format: OutputFormat,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), SearchError> {
     let files = crate::cli::stdin::read_file_paths_from_stdin(500)?;
 
@@ -407,12 +419,20 @@ pub fn run_related_search_from_stdin(
 
     // 集約（context.rs の merge_related_results と同じロジック）
     let engine = crate::search::related::RelatedSearchEngine::new(&reader, &store);
-    let results = crate::cli::context::collect_and_merge_related(&engine, &valid_files, limit)?;
+    let mut results = crate::cli::context::collect_and_merge_related(&engine, &valid_files, limit)?;
 
     if results.is_empty() {
         eprintln!("No related files found.");
         return Ok(());
     }
+
+    // limit 適用後にスニペット一括付与
+    crate::cli::snippet_helper::enrich_related_with_snippets(
+        &mut results,
+        &reader,
+        &snippet_options,
+        format,
+    );
 
     // 既存の format_related_results で出力
     let stdout = std::io::stdout();
