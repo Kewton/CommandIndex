@@ -278,7 +278,7 @@ fn build_commands() -> Vec<CommandInfo> {
             conflicts: Some("Search modes are mutually exclusive"),
             key_options: Some(vec![
                 "--format <FORMAT>  Output format: human, json, path, llm",
-                "--limit <N>  Maximum number of results",
+                "--limit <N>  Maximum number of results (default: 20, with --rerank: 5)",
                 "--no-semantic  Disable hybrid search, use BM25 only",
                 "--rerank  Enable LLM-based reranking",
                 "--workspace <FILE>  Workspace config for cross-repo search",

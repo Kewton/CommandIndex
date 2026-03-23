@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "action": "Issue本文を更新（影響範囲レビュー反映）",
+  "changes": [
+    "LLMコンテキスト判定条件を明確化（--rerankフラグのみ）",
+    "影響範囲セクションを追加（変更対象ファイル、テスト影響、後方互換性、workspace検索）",
+    "変更内容をRawSearchConfig/merge_searchの詳細レベルに具体化",
+    "受け入れ基準にconfig show表示・merge_search動作の項目を追加",
+    "help-llm更新の備考を追加"
+  ],
+  "must_fix_addressed": 0,
+  "must_fix_total": 0,
+  "should_fix_addressed": 3,
+  "should_fix_total": 3
+}

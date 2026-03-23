@@ -1,0 +1,18 @@
+{
+  "status": "pass",
+  "criteria_results": [
+    {"id": 1, "description": "llm_default_limit config追加、デフォルト5件", "result": "PASS"},
+    {"id": 2, "description": "config変更可能（local override含む）", "result": "PASS"},
+    {"id": 3, "description": "--rerank + --limit未指定時にllm_default_limit使用", "result": "PASS"},
+    {"id": 4, "description": "--limit明示指定時はそちらが優先", "result": "PASS"},
+    {"id": 5, "description": "既存フォーマット動作への影響なし", "result": "PASS"},
+    {"id": 6, "description": "default_limit=20の既存動作不変", "result": "PASS"},
+    {"id": 7, "description": "config showで正しく表示", "result": "PASS"},
+    {"id": 8, "description": "merge_searchでマージ正常動作", "result": "PASS"},
+    {"id": 9, "description": "テストで検証済み", "result": "PASS"}
+  ],
+  "test_results": {
+    "unit_tests": "293 passed, 0 failed",
+    "integration_tests": "all passed"
+  }
+}
