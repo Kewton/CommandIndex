@@ -1,0 +1,12 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {"issue": "llm_default_limit=0のバリデーション不足", "suggestion": "resolve_limit()内で.clamp(1, 1000)を適用"}
+  ],
+  "nice_to_have": [
+    {"issue": "上限値1000のマジックナンバー定数化", "suggestion": "const MAX_SEARCH_LIMIT: usize = 1000; を定義"},
+    {"issue": "config show表示確認（機密性なし、対応不要）"},
+    {"issue": "TOMLパースエラーのパス露出（既存動作と同等、対応不要）"}
+  ],
+  "summary": "セキュリティリスクは低い。主な懸念はllm_default_limit=0のバリデーションのみ。.clamp(1,1000)で対応推奨。"
+}

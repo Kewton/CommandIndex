@@ -1,0 +1,23 @@
+{
+  "must_fix": [
+    {"issue": "SearchConfig構造体リテラル使用テスト3箇所にllm_default_limit追加必要（コンパイルエラー）"},
+    {"issue": "resolve_config関数にllm_default_limit解決処理追加必要"},
+    {"issue": "merge_search関数にllm_default_limitマージ処理追加必要"},
+    {"issue": "test_merge_raw_higher_winsにRawSearchConfigリテラル更新必要"},
+    {"issue": "test_resolve_config_with_valuesにRawSearchConfigリテラル更新必要"},
+    {"issue": "main.rs L357-368のlimit解決ロジック置換必要"}
+  ],
+  "should_fix": [
+    {"issue": "workspace検索パス(main.rs L383-403)でrerank考慮されていない", "suggestion": "workspace検索でもresolve_limit使用で統一"},
+    {"issue": "test_toml_roundtrip_all_fieldsにllm_default_limit追加"},
+    {"issue": "test_resolve_config_defaultsにllm_default_limitデフォルト値アサート追加"},
+    {"issue": "config show出力のllm_default_limit検証テスト追加"}
+  ],
+  "nice_to_have": [
+    {"issue": "Noneフォールバックのハードコード完全排除"},
+    {"issue": "help_llm.rsの--limit説明更新"},
+    {"issue": "main.rs L72のclapヘルプ文字列更新"},
+    {"issue": "load_config_team_config_onlyテストにアサート追加"}
+  ],
+  "summary": "must_fix 6件は実装時の構造体リテラル更新とコア実装。workspace検索パスのrerank考慮漏れが最も注意すべきshould_fix。"
+}
