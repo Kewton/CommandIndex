@@ -275,6 +275,53 @@ pub fn format_impact_results(
     }
 }
 
+/// suggest サブコマンドの個別ステップ
+#[derive(Debug, Clone, Serialize)]
+pub struct SuggestStep {
+    pub command: String,
+    pub reason: String,
+}
+
+/// suggest サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct SuggestResult {
+    pub query: String,
+    pub has_embeddings: bool,
+    pub strategy: Vec<SuggestStep>,
+}
+
+/// suggest 結果を指定フォーマットで出力する
+pub fn format_suggest_results(
+    result: &SuggestResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => format_suggest_human(result, writer),
+        OutputFormat::Json => format_suggest_json(result, writer),
+        OutputFormat::Path => {
+            for step in &result.strategy {
+                writeln!(writer, "{}", step.command)?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn format_suggest_human(result: &SuggestResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    writeln!(writer, "Suggested search strategy:")?;
+    for (i, step) in result.strategy.iter().enumerate() {
+        writeln!(writer, "{}. {} ({})", i + 1, step.command, step.reason)?;
+    }
+    Ok(())
+}
+
+fn format_suggest_json(result: &SuggestResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    let json = serde_json::to_string_pretty(result)?;
+    writeln!(writer, "{json}")?;
+    Ok(())
+}
+
 /// AI向け文脈パッケージ
 #[derive(Debug, Serialize)]
 pub struct ContextPack {

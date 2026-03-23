@@ -1,0 +1,9 @@
+{
+  "stage": 4,
+  "action": "apply-impact-review",
+  "must_fix_applied": 5,
+  "should_fix_applied": 4,
+  "nice_to_have_noted": 4,
+  "sections_added": ["実装方針", "入力バリデーション", "エラー型設計", "パフォーマンス設計", "拡張性設計", "テスト方針"],
+  "issue_updated": true
+}

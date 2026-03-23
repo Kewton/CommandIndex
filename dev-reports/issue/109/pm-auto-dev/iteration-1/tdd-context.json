@@ -1,0 +1,7 @@
+{
+  "issue_number": 109,
+  "title": "検索クエリのLLM向けガイド (suggest)",
+  "design_policy": "dev-reports/design/issue-109-suggest-design-policy.md",
+  "work_plan": "dev-reports/issue/109/work-plan.md",
+  "phase": "TDD implementation"
+}

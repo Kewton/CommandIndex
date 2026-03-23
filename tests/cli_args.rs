@@ -21,7 +21,8 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("impact"))
         .stdout(predicate::str::contains("watch"))
         .stdout(predicate::str::contains("diff"))
-        .stdout(predicate::str::contains("help-llm"));
+        .stdout(predicate::str::contains("help-llm"))
+        .stdout(predicate::str::contains("suggest"));
 }
 
 #[test]
@@ -717,6 +718,19 @@ fn search_related_multiple_conflicts_with_symbol() {
         .stderr(predicate::str::contains("cannot be used with"));
 }
 
+// --- suggest CLI option tests ---
+
+#[test]
+fn suggest_help_shows_usage() {
+    common::cmd()
+        .args(["suggest", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("suggest"))
+        .stdout(predicate::str::contains("--for"))
+        .stdout(predicate::str::contains("--format"));
+}
+
 // --- help-llm E2E tests ---
 
 #[test]
@@ -742,7 +756,7 @@ fn help_llm_contains_all_subcommands() {
 
     let expected = [
         "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
-        "export", "impact", "import", "watch",
+        "export", "impact", "import", "watch", "suggest",
     ];
     for name in &expected {
         assert!(
@@ -752,8 +766,8 @@ fn help_llm_contains_all_subcommands() {
     }
     assert_eq!(
         commands.len(),
-        13,
-        "help-llm should have exactly 13 commands"
+        14,
+        "help-llm should have exactly 14 commands"
     );
     // help-llm itself should not be in the commands list
     assert!(

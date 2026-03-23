@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "BM25 0件時フォールバックが既存CLIに存在しないコマンド形を参照している",
+      "detail": "Issue本文ではフォールバック戦略として search --context ベースの汎用コマンドを返すとしているが、既存CLIに search --context は存在せず、context は独立サブコマンドである。",
+      "suggestion": "フォールバック戦略は既存の commandindexdev context ... / commandindexdev search ... / commandindexdev impact ... の組み合わせだけで定義し直す。"
+    },
+    {
+      "id": "M2",
+      "title": "impact ロジック再利用時に想定より重い探索が走る可能性がある",
+      "detail": "既存の impact 集約処理は find_related(file, 1000) を実行してから最後にtruncateしている。suggest 用に共通化すると探索コストが仕様記載より大きい。",
+      "suggestion": "suggest 用に共通化する impact 計算ロジックは、内部の related 探索件数も外から制御できるようにする。find_related(..., 1000) 固定のまま再利用しないことを仕様に明記。"
+    },
+    {
+      "id": "M3",
+      "title": "help-lmの既存JSON契約に破壊的変更が入る",
+      "detail": "suggest 追加で help_llm_contains_all_subcommands の固定件数13件が崩れる。downstream consumer への影響も。",
+      "suggestion": "help-llm のJSON契約変更を明示し、テストは件数・一覧・schema_version 更新方針まで見直す。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "トップレベルCLIヘルプとサブコマンド一覧テストにも影響がある",
+      "detail": "Commands enum への追加は --help のサブコマンド一覧にも影響する。",
+      "suggestion": "tests/cli_args.rs の既存ヘルプ系テストに suggest を追加。トップレベルヘルプ一覧の更新も含める。"
+    },
+    {
+      "id": "S2",
+      "title": "関連ロジックの共通化は impact コマンド側の回帰リスクを持つ",
+      "detail": "impact の中核ロジックを触るため、出力順、重複排除、relation_types 集約、limit 解釈が変わる回帰リスクがある。",
+      "suggestion": "既存 tests/e2e_impact.rs を回帰確認対象として明記。必要なら impact の既存挙動を固定する追加テストを先に入れてから共通化する。"
+    },
+    {
+      "id": "S3",
+      "title": "パフォーマンス影響は既存検索APIの呼び出し回数増加として評価すべき",
+      "detail": "suggest は BM25 + 候補ファイル数分の related + impact 用の関連計算を行うため、reader/store のI/O増加が懸念。",
+      "suggestion": "tantivy reader と SymbolStore を1回だけ開いて使い回す方針を明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "依存関係への影響は内部モジュール依存の増加を含む",
+      "detail": "外部crate追加は不要だが、内部依存(reader.rs, related.rs, impact共通関数, SymbolStore, help-llm)が増える。",
+      "suggestion": "SymbolStore::count_embeddings() と impact 共通関数は pub(crate) 契約として整理する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "help-llm の use_cases / workflows 追加有無を明示すると影響整理がしやすい",
+      "detail": "help-lmのどの層まで更新するかが不明確。",
+      "suggestion": "commands, use_cases, workflows のどれを更新するか明示する。"
+    }
+  ],
+  "summary": "suggestサブコマンド追加は新規機能だが、影響範囲は3つの軸で整理が必要: (1) フォールバック戦略に存在しないコマンド形が含まれている、(2) impact共通化時の探索コスト制御とimpact側回帰リスク、(3) help-llmのJSON契約変更。パフォーマンス面ではreader/storeの使い回しが重要。内部モジュール依存の増加もpub(crate)契約として整理すべき。"
+}

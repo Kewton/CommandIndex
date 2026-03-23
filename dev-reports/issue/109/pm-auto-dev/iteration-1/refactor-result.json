@@ -1,0 +1,59 @@
+{
+  "status": "success",
+  "timestamp": "2026-03-23T00:00:00Z",
+  "issue": 109,
+  "phase": "refactoring",
+  "target_files": [
+    "src/cli/suggest.rs",
+    "src/output/mod.rs"
+  ],
+  "changes_summary": {
+    "total_changes": 5,
+    "details": [
+      {
+        "id": "R1",
+        "category": "code_duplication",
+        "description": "build_strategy() 内の entry_files.first() 重複呼び出し（3回）を1回の if-let ブロックに統合",
+        "files": ["src/cli/suggest.rs"]
+      },
+      {
+        "id": "R2",
+        "category": "responsibility_separation",
+        "description": "build_strategy() から未使用パラメータ reader, ctx を除去。戻り値を Result<SuggestResult, SuggestError> から SuggestResult に簡素化（エラーを返すパスが存在しなかったため）",
+        "files": ["src/cli/suggest.rs"]
+      },
+      {
+        "id": "R3",
+        "category": "dead_code_removal",
+        "description": "SuggestError::SymbolDbNotFound, RelatedSearch, SymbolStore バリアントと対応する From impl を除去（W2対応によりSymbolStoreがオプショナルになったため不要）",
+        "files": ["src/cli/suggest.rs"]
+      },
+      {
+        "id": "W2",
+        "category": "codex_warning",
+        "description": "symbol_db が存在しない場合も BM25 ベースの最小戦略を返せるよう改善。SymbolStore を Option<SymbolStore> として扱い、None の場合はセマンティック検索ステップをスキップ",
+        "files": ["src/cli/suggest.rs"]
+      },
+      {
+        "id": "R4",
+        "category": "readability",
+        "description": "format_suggest_json() の明示的 map_err を From impl 経由の ? 演算子に簡素化",
+        "files": ["src/output/mod.rs"]
+      }
+    ]
+  },
+  "warnings_addressed": {
+    "W1_shell_quote": "確認済み: shell_quote() は build_strategy() 内で全てのファイルパスとクエリ文字列に適用済み。二重適用なし。",
+    "W2_symbol_store_required": "対応済み: SymbolStore を Option に変更。DB未存在時はBM25ベースのステップのみ返す。SymbolStore::open() エラー時も None として扱いエラーにしない。",
+    "W3_path_format_safety": "確認済み: 全てのファイルパスは shell_quote() 経由でシングルクオートされており安全。"
+  },
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (0 warnings)",
+    "cargo_test": "pass (307 unit tests + integration tests)",
+    "cargo_fmt": "pass (no diff)"
+  },
+  "lines_removed_estimate": 30,
+  "lines_added_estimate": 10,
+  "breaking_changes": false
+}

@@ -509,6 +509,28 @@ fn build_commands() -> Vec<CommandInfo> {
             ],
         },
         CommandInfo {
+            name: "suggest",
+            description: "Suggest search strategy based on task description",
+            when_to_use: "Get recommended search commands for a given task (LLM integration)",
+            prerequisites: Some("Requires existing index".to_string()),
+            modes: None,
+            conflicts: None,
+            key_options: Some(vec![
+                "--for <TASK>  Task description to generate suggestions for",
+                "--format <FORMAT>  Output format: human, json, path",
+            ]),
+            output_formats: Some(vec!["human", "json", "path"]),
+            output: Some("Ordered list of suggested search commands with reasons"),
+            input: None,
+            pipe_support: None,
+            subcommands: None,
+            examples: vec![
+                "commandindexdev suggest --for \"add authentication feature\"",
+                "commandindexdev suggest --for \"fix login bug\" --format json",
+                "commandindexdev suggest --for \"refactor database layer\" --format path",
+            ],
+        },
+        CommandInfo {
             name: "watch",
             description: "Watch for file changes and auto-update index",
             when_to_use: "Keep index automatically up to date during development (daemon mode)",
