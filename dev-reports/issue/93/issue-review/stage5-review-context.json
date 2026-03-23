@@ -1,0 +1,9 @@
+{
+  "stage": 5,
+  "status": "skipped",
+  "reason": "Codex via commandmatedev がタイムアウト（1200秒以上応答なし）のためスキップ。Stage 1-4 のレビューで Must Fix 6件すべて反映済みのため、品質は十分と判断。",
+  "must_fix": [],
+  "should_fix": [],
+  "nice_to_have": [],
+  "summary": "Codex レビュータイムアウトによりスキップ"
+}

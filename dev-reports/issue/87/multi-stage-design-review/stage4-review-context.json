@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "run_related_search にパストラバーサル防止の入力検証が欠如",
+      "description": "cli/search.rs の run_related_search (L269-310) では file_path の空文字チェックと長さチェックのみ実施しているが、'..' を含むパスや絶対パス、バックスラッシュの検証を行っていない。context.rs の run_context (L41-55) では '..' 禁止・絶対パス禁止・バックスラッシュ禁止の検証が実装されている。設計方針書では run_related_search を複数ファイル対応に変更し context.rs の collect_related_context を呼び出す計画だが、search.rs 側の入力検証を context.rs と同等にしなければ、context.rs 経由でない直接呼び出しパスで検証が不足する。normalize_path は '..' セグメントを単にフィルタ除去するだけ（'src/../etc/passwd' が 'src/etc/passwd' に正規化される）であり、パストラバーサル攻撃の防止としては不十分。",
+      "suggestion": "run_related_search のシグネチャ変更時に、context.rs L41-55 と同等の入力検証（'..' 禁止、絶対パス禁止、バックスラッシュ禁止）を file_paths の各要素に対して適用する。共通のバリデーション関数を抽出して DRY にすることを推奨。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "複数ファイル指定時の上限値が未設定（DoS 耐性）",
+      "description": "設計方針書のセキュリティ設計（セクション8）で『大量ファイル指定によるDoS: 現状はスコープ外、低リスク』と記載されているが、context.rs では files.len() > 100 の上限チェック (L25-28) が実装されている。run_related_search の複数ファイル対応ではこの上限チェックが設計に含まれていない。clap の num_args(1..) は引数数に制限がないため、数千ファイル指定で各ファイルに対し find_related(limit=1000) が呼ばれ、メモリ・CPU を大量消費する可能性がある。",
+      "suggestion": "context.rs と同様に files.len() > 100 の上限チェックを run_related_search に追加する。または clap 定義で num_args(1..=100) のように上限を設定する。"
+    },
+    {
+      "id": "S2",
+      "title": "normalize_path の '..' 処理がフィルタ除去のみで正規化が不正確",
+      "description": "normalize_path (related.rs L69-73) は '..' セグメントを単にフィルタで除去している。これにより 'src/../lib.rs' は 'src/lib.rs' に正規化されるが、正しくは 'lib.rs' であるべき。テスト (L373) でもこの不正確な動作が期待値として記述されている。ただし、context.rs 側では '..' を含むパス自体を拒否しているため、context.rs 経由の呼び出しでは問題にならない。しかし normalize_path が他の箇所から呼ばれた場合にパス解決が不正確になるリスクがある。",
+      "suggestion": "normalize_path でスタックベースの正規化（'..' 出現時に前のセグメントを pop する）を実装するか、context.rs と同様に '..' を含むパスをエラーとして拒否する方針を統一する。"
+    },
+    {
+      "id": "S3",
+      "title": "collect_related_context と merge_related_results の可視性変更による API 表面拡大",
+      "description": "設計方針書では context.rs の collect_related_context と merge_related_results を pub(crate) に変更する計画だが、これらの関数は内部的に入力検証を行わない（呼び出し元の run_context で検証済みの前提）。pub(crate) にすることで、クレート内の他の箇所から検証なしで呼び出される可能性が生じる。",
+      "suggestion": "collect_related_context の先頭に入力検証を追加するか、関数ドキュメントに「呼び出し元で入力検証済みであること」を safety contract として明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "エラーメッセージにユーザー入力パスがそのまま含まれる",
+      "description": "RelatedSearchError::FileNotFound と FileNotIndexed のエラーメッセージ (related.rs L29-38) にユーザー指定のパス文字列がそのまま含まれる。CLI ツールとしてはローカル利用が前提のため実質的なリスクは低いが、エラーメッセージがログに出力される環境では、意図しないパス情報がログに残る可能性がある。",
+      "suggestion": "現時点では CLI ローカルツールのため対応不要だが、将来的にサーバーサイドやログ出力を行う場合はパス情報のサニタイズを検討する。"
+    },
+    {
+      "id": "N2",
+      "title": "find_related の内部 limit=1000 ハードコード",
+      "description": "設計方針書の判断3で context.rs と同じ limit=1000 のハードコードを採用している。タグマッチのスコアリング (related.rs L238) でも reader.search(tag, 100) とハードコードされている。これらの定数が分散しているため、将来的な調整が困難になる可能性がある。",
+      "suggestion": "内部 limit 値を定数として一箇所にまとめる（例: const INTERNAL_RELATED_LIMIT: usize = 1000）。セキュリティ上の優先度は低い。"
+    },
+    {
+      "id": "N3",
+      "title": "unsafe 使用なしの確認",
+      "description": "レビュー対象の全ファイル (related.rs, context.rs, search.rs) において unsafe ブロックの使用は確認されなかった。プロジェクト規約に準拠している。",
+      "suggestion": "対応不要。現状維持。"
+    }
+  ],
+  "summary": "Issue #87 の設計方針書および関連コードのセキュリティレビューを実施した。主要な指摘は3点: (1) must_fix として、run_related_search に context.rs と同等のパストラバーサル防止の入力検証（'..' 禁止・絶対パス禁止・バックスラッシュ禁止）が欠如しており、複数ファイル対応の実装時に追加が必要。(2) should_fix として、複数ファイル指定時の上限チェック未設定による DoS リスク、normalize_path の '..' 処理の不正確さ、pub(crate) 化による検証なし呼び出しリスクの3件。(3) nice_to_have として、エラーメッセージへのパス情報含有、ハードコード定数の分散、unsafe 未使用確認の3件。unsafe 使用は確認されず、プロジェクト規約に準拠している。全体として設計方針は堅実だが、入力検証の統一と DoS 対策の追加が推奨される。"
+}

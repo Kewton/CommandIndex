@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "category": "受け入れ基準",
+      "description": "受け入れ基準に `Path` 出力形式が含まれていない。Issueでは 'human / json 出力形式に対応' と記載されているが、既存パターン（OutputFormat enum）は Human, Json, Path の3種類を持ち、全サブコマンドが3形式に対応している。Path形式の対応漏れは既存パターンとの不整合になる。",
+      "suggestion": "受け入れ基準を 'human / json / path 出力形式に対応' に修正する。既存の format_related_results() が3形式すべてに対応しているため、diff出力も同様に3形式対応とすべき。"
+    },
+    {
+      "id": "MF-2",
+      "category": "CLIインターフェース整合性",
+      "description": "Issueの提案するCLIインターフェース `commandindex diff src/auth/jwt.rs src/auth/middleware.rs --format json` は、既存のCLIパターンと不整合がある。既存サブコマンドでは `--format` は `value_enum` 型で `OutputFormat::Human` がデフォルト値として設定されている（例: Searchサブコマンド）。この点はIssueに明記されていないが、実装時にデフォルト値設定が必要。",
+      "suggestion": "--format オプションのデフォルト値を Human とし、既存のSearchサブコマンドと同じ `#[arg(long, value_enum, default_value_t = OutputFormat::Human)]` パターンを適用することを受け入れ基準またはポイントに明記する。"
+    },
+    {
+      "id": "MF-3",
+      "category": "技術的正確性",
+      "description": "Issueでは '内部的には各ファイルに対して --related を実行し' と記載しているが、実際の実装は `run_related_search()` 関数ではなく `RelatedSearchEngine::find_related()` メソッドを直接呼ぶべきである。`run_related_search()` はCLI出力まで含む関数（stdout出力）であり、結果のVec<RelatedSearchResult>を返さない（戻り値は Result<(), SearchError>）。",
+      "suggestion": "ポイントの記述を '内部的には各ファイルに対して RelatedSearchEngine::find_related() を実行し、結果の集合演算を返す' に修正する。既存の context サブコマンド（src/cli/context.rs の collect_related_context()）が同様のパターンで実装されており、これを参考にできる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "category": "実装方針",
+      "description": "Issue内に '2ファイル間の詳細な差分に特化' と記載があるが、CLIインターフェース例は2ファイルのみの対応となっている。一方で概要には '2つ以上のファイルの影響範囲を比較し' とあり、矛盾がある。2ファイル限定か3ファイル以上も対応するか明確にすべき。",
+      "suggestion": "Phase 1としては2ファイル比較に限定し、3ファイル以上対応は将来拡張として明記する。CLIのfiles引数を `#[arg(required = true, num_args = 2)]` で2つ固定にするか、`#[arg(required = true, num_args = 2..)]` で2つ以上にするか決定する。概要の文言を合わせる。"
+    },
+    {
+      "id": "SF-2",
+      "category": "出力フォーマット",
+      "description": "JSON出力例の構造が既存のJSONL出力パターンと異なる。既存の検索結果は全てJSONL形式（1行1JSON）で出力されるが、Issue提案のdiff出力は単一JSONオブジェクトとなっている。diff結果は1つの比較結果なので単一JSONが適切だが、この違いを明記すべき。",
+      "suggestion": "diff出力はJSONL形式ではなく単一JSONオブジェクトであることをポイントに明記する。また、human形式での出力例もIssueに含めると実装時の認識齟齬を防げる。"
+    },
+    {
+      "id": "SF-3",
+      "category": "既存コード活用",
+      "description": "context サブコマンド（src/cli/context.rs）に既に複数ファイルの関連検索結果をマージする `merge_related_results()` や `collect_related_context()` が実装されている。diff サブコマンドはこれらの関数と処理が重複する可能性が高いが、Issueでは言及がない。",
+      "suggestion": "実装ポイントに、context サブコマンドの `collect_related_context()` と `merge_related_results()` をリファクタリング・共通化できる可能性について言及する。少なくとも RelatedSearchEngine の利用パターンは context.rs を参考にすべきことを明記する。"
+    },
+    {
+      "id": "SF-4",
+      "category": "エラーハンドリング",
+      "description": "受け入れ基準にエラーケースの記述がない。指定ファイルがインデックスに存在しない場合、インデックス自体が存在しない場合、同じファイルを2回指定した場合などのエラーハンドリングが未定義。",
+      "suggestion": "以下のエラーケースを受け入れ基準に追加する: (1) インデックス未作成時の適切なエラーメッセージ、(2) ファイルがインデックスに存在しない場合のハンドリング、(3) 同一ファイル指定時の振る舞い。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "category": "CLI設計",
+      "description": "既存のCommands enumにはStatusやConfigのように独自のフォーマット型を持つサブコマンドもある。diffサブコマンドでPath形式が意味を持つか検討の余地がある（overlapのパスリストのみ出力するなど）。",
+      "suggestion": "Path出力形式では overlap のファイルパスのみを1行1パスで出力する仕様とすると、パイプライン連携で便利。例: `commandindex diff a.rs b.rs --format path` -> overlap ファイルの一覧。"
+    },
+    {
+      "id": "NH-2",
+      "category": "拡張性",
+      "description": "impact サブコマンド（#90）との機能重複について、'diff は2ファイル間の詳細な差分に特化' とあるが、将来的な統合・差別化の方針が不明確。",
+      "suggestion": "impact (#90) が実装された場合の関係性を補足として記載する。例: impact は単一ファイルの影響範囲分析、diff は複数ファイル間の影響範囲比較という棲み分けを明確にする。"
+    },
+    {
+      "id": "NH-3",
+      "category": "テスト方針",
+      "description": "受け入れ基準に 'cargo test / clippy / fmt 全パス' とあるが、具体的なテストケースの記載がない。",
+      "suggestion": "以下のテストケースを受け入れ基準に追加するとよい: (1) 重複なし（overlap空）、(2) 完全一致（only_a, only_b空）、(3) 部分重複、(4) 入力ファイル自身が結果に含まれないこと。"
+    }
+  ],
+  "summary": "Issue #92の内容は技術的に実現可能であり、既存の RelatedSearchEngine::find_related() と context サブコマンドの実装パターンを活用することで効率的に実装できる。主な修正事項は3点: (1) Path出力形式の対応漏れ（既存パターンは3形式対応）、(2) 内部実装の記述が不正確（run_related_search ではなく find_related を直接使用すべき）、(3) --format のデフォルト値など既存CLIパターンとの整合性の明記。また、context.rs に既に類似のマージロジックが存在するため、共通化の検討を推奨する。2ファイル vs 2ファイル以上の矛盾も解消が必要。"
+}

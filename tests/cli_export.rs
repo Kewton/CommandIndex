@@ -36,7 +36,8 @@ fn export_basic() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    let result = commandindex::cli::export::run(dir.path(), &output, &options);
+    let ci_dir = dir.path().join(".commandindex");
+    let result = commandindex::cli::export::run(&ci_dir, &output, &options);
     assert!(result.is_ok(), "export should succeed: {:?}", result.err());
 
     let result = result.unwrap();
@@ -60,7 +61,8 @@ fn export_not_initialized() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    let result = commandindex::cli::export::run(dir.path(), &output, &options);
+    let ci_dir = dir.path().join(".commandindex");
+    let result = commandindex::cli::export::run(&ci_dir, &output, &options);
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(err_msg.contains("not initialized"));
@@ -78,7 +80,8 @@ fn export_excludes_config_local_toml() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    commandindex::cli::export::run(dir.path(), &output, &options).unwrap();
+    let ci_dir_export = dir.path().join(".commandindex");
+    commandindex::cli::export::run(&ci_dir_export, &output, &options).unwrap();
 
     let entries = list_archive_entries(&output);
     assert!(
@@ -99,7 +102,8 @@ fn export_excludes_embeddings_by_default() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    commandindex::cli::export::run(dir.path(), &output, &options).unwrap();
+    let ci_dir_export = dir.path().join(".commandindex");
+    commandindex::cli::export::run(&ci_dir_export, &output, &options).unwrap();
 
     let entries = list_archive_entries(&output);
     assert!(
@@ -120,7 +124,8 @@ fn export_includes_embeddings_when_requested() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: true,
     };
-    commandindex::cli::export::run(dir.path(), &output, &options).unwrap();
+    let ci_dir_export = dir.path().join(".commandindex");
+    commandindex::cli::export::run(&ci_dir_export, &output, &options).unwrap();
 
     let entries = list_archive_entries(&output);
     assert!(
@@ -137,7 +142,8 @@ fn export_sanitizes_index_root() {
     let options = commandindex::cli::export::ExportOptions {
         with_embeddings: false,
     };
-    commandindex::cli::export::run(dir.path(), &output, &options).unwrap();
+    let ci_dir_export = dir.path().join(".commandindex");
+    commandindex::cli::export::run(&ci_dir_export, &output, &options).unwrap();
 
     // Read state.json from the archive
     let file = std::fs::File::open(&output).unwrap();

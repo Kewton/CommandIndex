@@ -1,0 +1,4 @@
+{"path":"api-spec","relations":["markdown_link"],"score":1.0}
+{"path":"../../src/handler.md","relations":["markdown_link"],"score":1.0}
+{"path":"docs/api-spec.md","relations":[{"tag_match":["auth"]},"path_similarity"],"score":0.8999999761581421}
+{"path":"src/handler.md","relations":[{"tag_match":["auth"]}],"score":0.5}

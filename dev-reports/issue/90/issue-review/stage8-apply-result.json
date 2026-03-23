@@ -1,0 +1,11 @@
+{
+  "stage": 8,
+  "applied_items": ["M1", "M2", "S2", "S4"],
+  "changes": [
+    "find_related(file, 1000) で十分カバーできることを --limit 適用ルールに注記",
+    "影響範囲が output 層と CLI help まで含むことを実装上の注意点に追加",
+    "output_format.rs 単体テスト更新を受け入れ基準に追加"
+  ],
+  "skipped_items": ["S1", "S3", "N1", "N2"],
+  "reason": "S1はパフォーマンスの想定であり実装時に対応、S3は将来課題、N1-N2は補足情報"
+}

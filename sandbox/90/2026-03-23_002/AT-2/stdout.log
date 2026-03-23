@@ -1,0 +1,13 @@
+Impact analysis: 1 input file(s), 4 impacted file(s)
+
+../../src/handler.md (score: 1.00) [markdown_link]
+  impacted by: docs/auth/design.md
+
+api-spec (score: 1.00) [markdown_link]
+  impacted by: docs/auth/design.md
+
+docs/api-spec.md (score: 0.90) [path_similarity, tag_match]
+  impacted by: docs/auth/design.md
+
+src/handler.md (score: 0.50) [tag_match]
+  impacted by: docs/auth/design.md

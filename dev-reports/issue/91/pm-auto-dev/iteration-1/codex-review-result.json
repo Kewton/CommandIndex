@@ -1,0 +1,55 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/search.rs",
+      "line": 849,
+      "severity": "low",
+      "category": "security",
+      "description": "The `since` value is printed to stderr without sanitization. If `since` contains terminal escape sequences (e.g. ANSI codes), this could cause terminal manipulation. The `validate_changed_since_input` rejects control chars (bytes < 0x20), which blocks most escape sequences (ESC = 0x1B). However, DEL (0x7F) and some multi-byte Unicode control characters are not blocked.",
+      "suggestion": "Consider using `crate::output::strip_control_chars()` on `since` before printing to stderr, or extend `validate_changed_since_input` to reject bytes >= 0x7F that are not valid UTF-8 printable characters. This is low severity because the input comes from command-line arguments (already limited by the shell) and most dangerous control chars are already blocked."
+    },
+    {
+      "file": "src/cli/git.rs",
+      "line": 85,
+      "severity": "low",
+      "category": "bug",
+      "description": "When git log output exceeds MAX_GIT_OUTPUT_LINES (5000), the remaining output is silently discarded with no warning to the user. The child process is then waited on, but if git is still writing to its stdout pipe (which is now not being read), it could block on a full pipe buffer, causing `child.wait()` to hang indefinitely.",
+      "suggestion": "After the `for` loop with `.take(MAX_GIT_OUTPUT_LINES)`, drop the `reader` (and thus close the stdout pipe) before calling `child.wait()`. This allows git to receive SIGPIPE and terminate. Alternatively, explicitly drop `stdout` or the reader. Also consider emitting a warning when the limit is reached. Example: `drop(reader); let status = child.wait()...`"
+    },
+    {
+      "file": "src/cli/git.rs",
+      "line": 59,
+      "severity": "low",
+      "category": "bug",
+      "description": "Short hex strings like `abc1` (4 chars, all hex) are treated as commit hashes, but they could also be valid git time expressions or branch names. The `validate_commit_hash` function accepts any 4-40 char lowercase hex string. A string like `dead` would be interpreted as a commit hash rather than being passed as a `--since` time expression. This is unlikely to cause real issues since such strings are not valid time expressions, but it could cause confusing error messages when git cannot resolve the short hash.",
+      "suggestion": "This is a design trade-off and acceptable for now. Consider documenting this behavior or adding a minimum length of 7 for commit hash detection to match git's default abbreviated hash length."
+    },
+    {
+      "file": "src/cli/search.rs",
+      "line": 854,
+      "severity": "low",
+      "category": "bug",
+      "description": "When `changed_files.len() > MAX_INPUT_FILES`, the first MAX_INPUT_FILES files are taken. Since `get_changed_files` sorts files alphabetically, this truncation is deterministic but may exclude recently changed files that happen to sort later alphabetically. The warning message is printed but the user has no control over which files are kept.",
+      "suggestion": "Consider documenting this truncation behavior or providing an option to control the sort order (e.g., by recency). Alternatively, consider returning an error instead of silently truncating."
+    },
+    {
+      "file": "src/cli/git.rs",
+      "line": 56,
+      "severity": "medium",
+      "category": "security",
+      "description": "The `get_changed_files` function does not validate that the returned file paths from git are safe (no path traversal, no absolute paths). While git itself should return relative paths within the repo, a maliciously crafted git repository could potentially return paths with `..` components. These paths are then passed to `filter_existing_files` which calls `Path::new(p).exists()`, potentially probing arbitrary filesystem locations.",
+      "suggestion": "Add path validation on the file paths returned by git (reject paths containing `..`, absolute paths, or paths with control characters) before passing them to downstream functions. The existing `validate_file_paths` or `validate_file_path` functions could be reused for this purpose."
+    },
+    {
+      "file": "src/cli/search.rs",
+      "line": 838,
+      "severity": "low",
+      "category": "bug",
+      "description": "The `run_changed_since_search` function uses `std::env::current_dir()` for the repo path when calling `get_changed_files`, but uses `Path::new(\".\")` for index_dir and symbol_db_path. These should resolve to the same directory in practice, but there is an inconsistency. If the current directory changes between calls (unlikely in single-threaded CLI), the paths could diverge.",
+      "suggestion": "Use the same path source consistently. Either use `repo_path` for all path calculations or use `Path::new(\".\")` for all. Using `repo_path` (from `current_dir()`) would be more robust as it provides an absolute path."
+    }
+  ],
+  "summary": "The implementation is well-structured with good security practices. Input validation in `validate_changed_since_input` effectively blocks command injection (leading dash rejection) and control character attacks. The code properly uses structured error types, and the clap `conflicts_with_all` configuration is comprehensive. Two areas deserve attention: (1) the git output pipe could potentially hang if output exceeds 5000 lines since the reader is not dropped before `child.wait()`, and (2) file paths returned from `git log` are not validated for path traversal before being passed to `filter_existing_files`. Neither issue is critical in normal usage scenarios.",
+  "requires_fix": false
+}

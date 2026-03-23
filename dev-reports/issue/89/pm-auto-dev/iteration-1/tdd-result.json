@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "phases_completed": ["Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5"],
+  "tests_passed": true,
+  "clippy_clean": true,
+  "fmt_clean": true,
+  "files_created": ["src/cli/stdin.rs", "src/cli/impact.rs", "tests/e2e_impact.rs"],
+  "files_modified": ["src/cli/mod.rs", "src/cli/search.rs", "src/cli/context.rs", "src/output/mod.rs", "src/output/json.rs", "src/output/human.rs", "src/output/path.rs", "src/main.rs", "tests/cli_args.rs", "tests/e2e_related_search.rs", "tests/output_format.rs"],
+  "total_changes": "479 insertions, 29 deletions across 14 files"
+}

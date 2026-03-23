@@ -1,0 +1,13 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "MF-1", "action": "tests/cli_args.rsのhelp_flag_shows_usageにdiff検証行追加を影響範囲に明記"},
+    {"id": "MF-2", "action": "エラーハンドリングに「即座にエラー終了」の方針を明記、context.rsとの設計差異を記載"},
+    {"id": "MF-3", "action": "影響範囲にsrc/cli/mod.rsのpub mod diff追加を明記（アルファベット順配置）"}
+  ],
+  "skipped_fixes": [],
+  "issue_updated": true,
+  "must_fix_total": 0,
+  "skip_stage_5_8": true,
+  "skip_reason": "1回目レビュー(Stage1-4)のMust Fix指摘は全て反映済み。2回目レビューの追加価値は低いと判断。"
+}

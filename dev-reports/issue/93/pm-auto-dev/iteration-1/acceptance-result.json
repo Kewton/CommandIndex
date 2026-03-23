@@ -1,0 +1,22 @@
+{
+  "status": "pass",
+  "acceptance_criteria": [
+    {"criterion": "ファイル変更を検知して自動 update が実行される", "status": "pass", "note": "run() 内で notify watcher + run_incremental() 呼び出し実装済み"},
+    {"criterion": "デバウンス（連続変更のバッチ処理）", "status": "pass", "note": "Debouncer 構造体実装、max_wait による starvation 防止も対応"},
+    {"criterion": ".cmindexignore に従ったフィルタリング", "status": "pass", "note": "run_incremental() 内の既存ロジックに委ねる設計（DRY原則）"},
+    {"criterion": "対象拡張子以外のファイルイベントは無視", "status": "pass", "note": "is_relevant_event() で FileType::all_extensions() を使用"},
+    {"criterion": "インデックス未構築時はエラーメッセージ出して終了", "status": "pass", "note": ".commandindex/ 存在チェック → IndexNotFound エラー"},
+    {"criterion": "回復可能エラー時はログ出力し監視継続", "status": "pass", "note": "is_recoverable() でエラー分類、回復可能は eprintln で継続"},
+    {"criterion": "ロック競合時はスキップして次回リトライ", "status": "pass", "note": "Writer エラーは回復可能として扱い、次のデバウンスサイクルでリトライ"},
+    {"criterion": "ログメッセージ表示", "status": "pass", "note": "起動時、変更検知時、update完了時にprintlnで表示"},
+    {"criterion": "Ctrl+C で正常終了", "status": "pass", "note": "ctrlc + AtomicBool でグレースフルシャットダウン"},
+    {"criterion": "--with-embedding オプション対応", "status": "pass", "note": "CLI引数から IndexOptions に渡す"},
+    {"criterion": "cargo test / clippy / fmt 全パス", "status": "pass", "note": "全テストパス、clippy警告0、fmt差分なし"}
+  ],
+  "test_results": {
+    "unit_tests": "29 passed, 0 failed",
+    "integration_tests": "all existing 32 tests pass",
+    "clippy": "0 warnings",
+    "fmt": "no diff"
+  }
+}

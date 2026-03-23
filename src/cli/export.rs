@@ -93,11 +93,11 @@ const INDEX_ROOT_PLACEHOLDER: &str = "__COMMANDINDEX_EXPORT_PLACEHOLDER__";
 
 /// Export index as portable tar.gz archive
 pub fn run(
-    path: &Path,
+    commandindex_dir: &Path,
     output: &Path,
     options: &ExportOptions,
 ) -> Result<ExportResult, ExportError> {
-    let ci_dir = crate::indexer::commandindex_dir(path);
+    let ci_dir = commandindex_dir.to_path_buf();
 
     // 1. Check .commandindex/ exists
     if !IndexState::exists(&ci_dir) {
@@ -108,8 +108,8 @@ pub fn run(
     let state = IndexState::load(&ci_dir)?;
     state.check_schema_version()?;
 
-    // 3. Get git commit hash
-    let git_hash = current_git_hash(path);
+    // 3. Get git commit hash (use index_root from state as base path)
+    let git_hash = current_git_hash(&state.index_root);
 
     // 4. Build ExportMeta
     let meta = ExportMeta {

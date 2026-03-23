@@ -1,0 +1,1 @@
+{"stage": 1, "applied": ["M1:SRP-Debouncer構造体・is_relevant_event・is_recoverable分離", "M2:WatchError.is_recoverable()メソッド追加", "M3:テスタビリティ向上は判断4で対応(DRY優先でwatchフィルタ最小化)"]}

@@ -1,0 +1,17 @@
+{
+  "status": "pass",
+  "criteria": {
+    "stdin_file_list": "pass - e2e tests verify stdin pipe input",
+    "argument_file_input": "pass - e2e tests verify direct file arguments",
+    "per_file_related": "pass - JSON output has impact[].related[] structure",
+    "overlap_detection": "pass - overlap array populated when 2+ inputs share related files",
+    "summary_statistics": "pass - summary.changed, total_impacted, overlap_count present",
+    "input_file_exclusion": "pass - input files excluded from related/overlap",
+    "human_json_path_formats": "pass - all 3 formats working with new structure",
+    "limit_per_file": "pass - --limit applies per-file to related[]",
+    "e2e_tests_comprehensive": "pass - overlap, summary, exclusion, field names tested",
+    "output_format_unit_tests": "pass - all impact format unit tests updated",
+    "cargo_test_clippy_fmt": "pass - all green"
+  },
+  "summary": "All 11 acceptance criteria pass."
+}

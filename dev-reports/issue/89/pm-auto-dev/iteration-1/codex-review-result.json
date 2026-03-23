@@ -1,0 +1,34 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "id": "W1",
+      "file": "src/cli/search.rs",
+      "line": 278,
+      "category": "input_validation",
+      "description": "`run_related_search()` validates only empty string and length before delegating to `RelatedSearchEngine::find_related()`. Unlike stdin/context flows, it does not reject absolute paths, `..`, or backslash-containing paths. Because path normalization downstream silently drops `..` segments, callers can get surprising matches for an unintended indexed path instead of a hard failure.",
+      "security_impact": "Path validation is inconsistent across entry points and can allow path-confusion style lookups.",
+      "recommendation": "Reuse the same shared path validator used by stdin/context before calling `find_related()`."
+    },
+    {
+      "id": "W2",
+      "file": "src/cli/context.rs",
+      "line": 89,
+      "category": "resource_usage",
+      "description": "`collect_and_merge_related()` accepts `limit` but still fetches up to 1000 related files per input file before truncating the merged list. For large stdin batches this performs avoidable work and can inflate memory/CPU usage even when the caller requested a small limit.",
+      "security_impact": "This is not a direct vulnerability, but it increases the blast radius of large or adversarial inputs.",
+      "recommendation": "Push the effective limit down into per-file collection, or cap intermediate result growth before the final truncate."
+    },
+    {
+      "id": "W3",
+      "file": "src/output/json.rs",
+      "line": 109,
+      "category": "output_contract",
+      "description": "`format_impact_json()` emits impacted file entries under the key `path`, while the declared `ImpactFileResult` field and the documented schema use `file_path`. This is a compatibility bug for downstream JSON consumers and easy to miss because the human/path formatters still use `file_path` internally.",
+      "security_impact": "No direct security impact, but it is a correctness bug in the machine-readable interface.",
+      "recommendation": "Align the JSON key with the documented schema, or update all callers/tests/docs to the actual contract."
+    }
+  ],
+  "summary": "No critical panic or memory-safety issue was found in the reviewed files, and there is no obvious command injection, unsafe usage, or secret leakage in scope. The main risks are inconsistent path validation in `search --related`, unnecessary intermediate work for stdin batch processing, and an `impact` JSON schema mismatch that can break consumers.",
+  "requires_fix": true
+}

@@ -1,0 +1,16 @@
+{
+  "stage": "5-8",
+  "action": "設計方針書更新（2回目レビュー反映）",
+  "applied_must_fix": [
+    "S5-M1: index_dir() の正しいAPI（引数必須、戻り値PathBuf）に修正。exists()先行チェック追加",
+    "S5-M2: インデックスアクセスを impact.rs と同パターン（exists() -> open() -> ?）に統一",
+    "S7-MF1: index_dir(Path::new('.')) パターンに修正",
+    "S7-MF2: filter_existing_files() の第2戻り値を warnings として正しく使用",
+    "S7-MF3: main.rs への挿入位置を明記（related_stdin の直後、match の直前）"
+  ],
+  "applied_should_fix": [
+    "S5-S1: validate_commit_hash() を1回だけ呼び出し、is_commit_hash 変数に保持",
+    "S5-S2: GitError::NotARepository を削除（YAGNI）",
+    "S5-S3: MAX_INPUT_FILES 定数を impact.rs から共用（マジックナンバー排除）"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "stage": 4,
+  "review_type": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "SEC-S1",
+      "category": "パストラバーサル",
+      "severity": "medium",
+      "title": "run_diff() に context.rs 相当の明示的パスバリデーションが不足",
+      "description": "context.rs (L41-55) では '..' 含有チェック、絶対パス拒否、バックスラッシュ拒否を明示的に実施しているが、設計方針書の run_diff() は normalize_path() のみに依存している。normalize_path() は '..' セグメントを除去(drop)するだけで拒否しないため、意図しないパス正規化が発生する可能性がある。例: 'src/../../../etc/passwd' は 'src/etc/passwd' に正規化される。CLIツールでありインデックス検索のみなのでファイルシステムへの直接アクセスリスクは低いが、context.rs と同水準の防御的バリデーションを追加すべき。",
+      "location": "設計方針書 4.2 run_diff() バリデーション部分",
+      "recommendation": "normalize_path() 呼び出し前に context.rs と同様の明示的チェックを追加: (1) path.contains(\"..\") で拒否、(2) 絶対パス('/' または '\\' 始まり)で拒否、(3) バックスラッシュ含有で拒否。既存の context.rs L41-55 のパターンをそのまま踏襲できる。"
+    },
+    {
+      "id": "SEC-S2",
+      "category": "パストラバーサル",
+      "severity": "low",
+      "title": "normalize_path() の '..' 処理が除去(drop)であり解決(resolve)ではない",
+      "description": "normalize_path() (related.rs L69-73) は '..' セグメントを単純にフィルタリングで除去するため、'a/../b.rs' が 'a/b.rs' になる(正しくは 'b.rs')。テスト test_normalize_path_dotdot (L372-374) もこの挙動を正として記述している。diff サブコマンドでは normalize_path() 後にインデックス検索するため、誤正規化されたパスは単にマッチしないだけで実害は限定的だが、将来的にファイルI/Oに使われた場合にリスクとなる。",
+      "location": "src/search/related.rs L69-73",
+      "recommendation": "既存の normalize_path() の '..' 処理はプロジェクト全体の既存動作であるため、diff 単体での修正対象外とし、run_diff() 側で '..' を含むパスを事前拒否する(SEC-S1)ことで対処する。normalize_path() 自体の修正は別Issueで検討。"
+    },
+    {
+      "id": "SEC-S3",
+      "category": "入力バリデーション",
+      "severity": "low",
+      "title": "limit パラメータの上限値チェックが未定義",
+      "description": "設計方針書の CLI 定義で limit は usize 型で default_value=100 だが、上限チェックがない。search.rs の run_related_search() も同様に上限チェックなし。極端に大きな値(例: usize::MAX)が指定された場合、find_related() 内で全結果を収集後 truncate するため一時的にメモリを大量消費する可能性がある。",
+      "location": "設計方針書 4.1 CLI定義 limit パラメータ",
+      "recommendation": "clap の value_parser で上限を設定する(例: value_parser!(clap::value_parser!(usize).range(1..=10000)))。既存の search --related にも上限がないため、共通の改善として検討可。diff 単体では run_diff() 内で limit.min(10000) 等のキャップを追加するのが簡便。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "SEC-N1",
+      "category": "情報漏洩",
+      "severity": "info",
+      "title": "エラーメッセージにユーザー入力パスを含む点の確認",
+      "description": "SearchError::InvalidArgument で 'Cannot diff a file with itself: {norm_a}' のようにパスをエラーメッセージに含めている。CLIツールとしてはユーザー自身の入力を返しているだけなので問題ないが、将来的にAPI化する場合はサニタイズを検討すべき。",
+      "recommendation": "現時点では対応不要。API化の際にエラーレスポンスの情報量を制限するレイヤーを追加する。"
+    },
+    {
+      "id": "SEC-N2",
+      "category": "unsafe使用",
+      "severity": "info",
+      "title": "unsafe コード使用なし -- 問題なし",
+      "description": "設計方針書および既存コード(related.rs, search.rs, context.rs)に unsafe コードは存在しない。Rust の標準ライブラリおよび安全なクレートのみを使用しており、メモリ安全性の懸念はない。",
+      "recommendation": "対応不要。引き続き unsafe 禁止方針を維持。"
+    },
+    {
+      "id": "SEC-N3",
+      "category": "入力バリデーション",
+      "severity": "info",
+      "title": "clap の num_args=2 によるファイル数制約は適切",
+      "description": "diff サブコマンドは num_args=2 で厳密に2ファイルを要求しており、context.rs のような可変長入力(1..100)と異なりファイル数の上限チェックは不要。clap レベルでの入力制約は適切に設計されている。",
+      "recommendation": "対応不要。"
+    }
+  ],
+  "summary": "セキュリティレビューの結果、must_fix(必須修正)事項はなし。should_fix として3件を検出した。最も重要なのは SEC-S1: context.rs で実施済みの明示的パスバリデーション('..' 拒否、絶対パス拒否、バックスラッシュ拒否)が diff の設計に含まれていない点。normalize_path() のみに依存する設計は、context.rs との防御レベルの不整合を生む。diff はインデックス検索のみでファイルI/Oを行わないため実際の攻撃リスクは低いが、防御的プログラミングの観点から context.rs と同水準のバリデーションを run_diff() に追加することを推奨する。unsafe コード使用なし、エラーメッセージの情報開示も CLIツールとして適切な範囲内であり、全体としてセキュリティ上の重大な問題は確認されなかった。"
+}

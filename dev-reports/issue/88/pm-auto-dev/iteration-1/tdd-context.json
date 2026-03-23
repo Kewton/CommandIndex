@@ -1,0 +1,8 @@
+{
+  "issue_number": 88,
+  "title": "[Feature] --index-path オプション（インデックスパス指定）",
+  "design_policy": "dev-reports/design/issue-88-index-path-design-policy.md",
+  "work_plan": "dev-reports/issue/88/work-plan.md",
+  "branch": "feature/issue-88-index-path",
+  "instructions": "作業計画書（work-plan.md）と設計方針書（design-policy.md）に従い、Phase 1〜6の全タスクをTDD方式で実装してください。"
+}

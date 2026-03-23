@@ -4,8 +4,8 @@ use colored::Colorize;
 
 use crate::indexer::reader::SearchResult;
 use crate::output::{
-    OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
-    WorkspaceSearchResult, parse_tags, strip_control_chars, truncate_body,
+    DiffResult, OutputError, RelatedSearchResult, SemanticSearchResult, SnippetConfig,
+    SymbolSearchResult, WorkspaceSearchResult, parse_tags, strip_control_chars, truncate_body,
 };
 
 /// Human形式で検索結果を出力する
@@ -136,6 +136,49 @@ pub fn format_related_human(
     Ok(())
 }
 
+/// impact 結果をhuman形式で出力する
+pub fn format_impact_human(
+    result: &crate::output::ImpactResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    writeln!(
+        writer,
+        "{}",
+        format!(
+            "Impact analysis: {} input file(s), {} impacted file(s)",
+            result.total_input_files, result.total_impacted_files
+        )
+        .bold()
+    )?;
+    writeln!(writer)?;
+
+    for (i, file) in result.impacted_files.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+        let path = strip_control_chars(&file.file_path);
+        let score = format!("{:.2}", file.score);
+        let relations = file.relation_types.join(", ");
+        writeln!(
+            writer,
+            "{} {} [{}]",
+            path.green(),
+            format!("(score: {score})").dimmed(),
+            relations
+        )?;
+        if !file.impacted_by.is_empty() {
+            let by = file
+                .impacted_by
+                .iter()
+                .map(|s| strip_control_chars(s))
+                .collect::<Vec<_>>()
+                .join(", ");
+            writeln!(writer, "  {}", format!("impacted by: {by}").dimmed())?;
+        }
+    }
+    Ok(())
+}
+
 /// セマンティック検索結果をhuman形式で出力する
 pub fn format_semantic_human(
     results: &[SemanticSearchResult],
@@ -196,6 +239,45 @@ pub fn format_symbol_human(
                 "    [{child_kind}] {child_name} (line {}-{})",
                 child.line_start, child.line_end
             )?;
+        }
+    }
+    Ok(())
+}
+
+/// Diff結果をhuman形式で出力する
+pub fn format_diff_human(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+    let file_a = strip_control_chars(&result.file_a);
+    let file_b = strip_control_chars(&result.file_b);
+
+    writeln!(writer, "=== Diff: {} vs {} ===", file_a, file_b)?;
+    writeln!(writer)?;
+
+    writeln!(writer, "Only in {}:", file_a)?;
+    if result.only_a.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.only_a {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
+        }
+    }
+    writeln!(writer)?;
+
+    writeln!(writer, "Only in {}:", file_b)?;
+    if result.only_b.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.only_b {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
+        }
+    }
+    writeln!(writer)?;
+
+    writeln!(writer, "Overlap ({} files):", result.overlap.len())?;
+    if result.overlap.is_empty() {
+        writeln!(writer, "  (none)")?;
+    } else {
+        for path in &result.overlap {
+            writeln!(writer, "  {}", strip_control_chars(path))?;
         }
     }
     Ok(())

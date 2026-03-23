@@ -1,0 +1,1 @@
+{"stage": 1, "focus": "設計原則 (SOLID/KISS/YAGNI/DRY)", "must_fix_count": 3, "should_fix_count": 4, "nice_to_have_count": 3, "must_fix_ids": ["M1:SRP-責務分離", "M2:DRY-エラー型設計", "M3:OCP-テスタビリティ"]}

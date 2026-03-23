@@ -1,0 +1,18 @@
+{
+  "stage": 4,
+  "action": "Issue本文更新（影響範囲レビュー反映）",
+  "applied_items": [
+    "M1: aggregate_impact() pub(crate)化または共通モジュール抽出を実装方針に明記",
+    "M2: conflicts_with_all の排他対象一覧を明記",
+    "M3: 期間文字列バリデーション方針（git log exit code チェック）を追加",
+    "S1: パフォーマンス考慮セクション追加（MAX_INPUT_FILES/INTERNAL_FETCH_LIMIT 共用）",
+    "S2: Git不在時のエラーハンドリングを受け入れ基準に追加済み（Stage 2で対応済み）",
+    "S3: テスト設計は作業計画で策定",
+    "S4: 出力整合性は実装時に検討"
+  ],
+  "must_fix_count": 3,
+  "should_fix_count": 4,
+  "nice_to_have_count": 3,
+  "skip_stage_5_8": false,
+  "reason": "Must Fix 合計5件（Stage1: 2件 + Stage3: 3件）のため、2回目レビューを実施"
+}

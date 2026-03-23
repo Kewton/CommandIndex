@@ -1,0 +1,7 @@
+{
+  "issue_number": 89,
+  "title": "stdin パイプ入力対応",
+  "design_policy": "dev-reports/design/issue-89-stdin-pipe-design-policy.md",
+  "work_plan": "dev-reports/issue/89/work-plan.md",
+  "phases": ["Phase 1: stdin共通基盤", "Phase 2: impact サブコマンド", "Phase 3: search --related-stdin", "Phase 4: テスト", "Phase 5: 品質チェック"]
+}

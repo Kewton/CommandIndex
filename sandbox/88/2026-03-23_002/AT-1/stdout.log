@@ -1,0 +1,4 @@
+docs/auth/design.md:4 [# Auth Design]
+  See [[api-spec]] for details.
+  Check [handler](../../src/handler.md) for impl.
+  Tags: auth, security

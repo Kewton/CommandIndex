@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "aggregate_impact() visibility",
+      "description": "設計方針書では aggregate_impact() を pub(crate) に変更すると記載されているが、現在の impact.rs (177行目) では `fn aggregate_impact(...)` はプライベート関数である。設計方針書のシグネチャ `pub(crate) fn aggregate_impact(engine: &RelatedSearchEngine, files: &[String], limit: usize) -> Result<ImpactResult, ImpactError>` は現在のシグネチャと一致するが、可視性変更が必要。これ自体は設計通りだが、実装時に確実に変更すること。",
+      "suggestion": "実装時に `fn aggregate_impact` を `pub(crate) fn aggregate_impact` に変更する。設計方針書の記載は正確。"
+    },
+    {
+      "id": "M2",
+      "category": "run_changed_since_search() 内の関数名不一致",
+      "description": "設計方針書 4.4 節で `get_index_path()`, `open_index()`, `open_symbol_store()` という関数を使用しているが、これらの関数はコードベースに存在しない。既存コードでは `crate::indexer::index_dir(Path::new(\".\"))` でインデックスディレクトリを取得し、`IndexReaderWrapper::open(&tantivy_dir)` でリーダーを開き、`SymbolStore::open(&db_path)` でシンボルストアを開いている（search.rs 285-296行目、impact.rs 123-134行目参照）。",
+      "suggestion": "設計方針書 4.4 節の `get_index_path()` / `open_index()` / `open_symbol_store()` を、既存パターンに合わせて `crate::indexer::index_dir()` / `IndexReaderWrapper::open()` / `SymbolStore::open()` に修正する。"
+    },
+    {
+      "id": "M3",
+      "category": "filter_existing_files() の呼び出し不一致",
+      "description": "設計方針書 4.4 節で `filter_existing_files(&files)` を呼んでいるが、既存の `filter_existing_files` は `crate::cli::stdin::filter_existing_files()` にあり、返り値は `(Vec<String>, Vec<String>)` のタプル（有効ファイルリスト, 警告リスト）である。設計方針書では `let valid_files = filter_existing_files(&files);` と単一値で受けており、シグネチャが一致しない。",
+      "suggestion": "設計方針書を修正して `let (valid_files, warnings) = crate::cli::stdin::filter_existing_files(&files);` に変更し、warnings の eprintln 出力も追加する。run_related_search_from_stdin() (search.rs 325-328行目) と同じパターンに揃える。"
+    },
+    {
+      "id": "M4",
+      "category": "validate_commit_hash() の配置不一致",
+      "description": "設計方針書 4.3 節の git.rs 内で `validate_commit_hash(since)` を呼んでいるが、この関数は現在 `src/cli/status/git_info.rs` に `pub fn validate_commit_hash(hash: &str) -> bool` として存在する。新規 git.rs から呼ぶには、git_info.rs の関数をインポートする必要があるが、設計方針書ではこの依存関係が明記されていない。もしくは git.rs 内で再実装することになるが、DRY 違反になる。",
+      "suggestion": "設計方針書に `use crate::cli::status::git_info::validate_commit_hash;` の依存関係を明記する。または git_info.rs から共通モジュールに切り出すことを検討する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "conflicts_with_all リストの不足",
+      "description": "設計方針書の conflicts_with_all に `related_stdin` が含まれているが、逆方向の整合性として、既存の `related_stdin` の conflicts_with_all (main.rs 38行目) に `changed_since` を追加する記載が設計方針書にない。同様に `related` の conflicts_with_all にも `changed_since` の追加が必要。既存オプション側の修正漏れが発生するリスクがある。",
+      "suggestion": "設計方針書に、既存オプション (related_stdin, related, no_semantic, rerank 等) の conflicts_with_all への changed_since 追加を明記する。もしくは changed_since 側の conflicts_with_all だけで十分かを clap の仕様で確認する（clap は双方向で自動的に排他にするため、片方だけで十分な場合がある）。"
+    },
+    {
+      "id": "S2",
+      "category": "main.rs 分岐パターンの位置",
+      "description": "設計方針書 4.2 節では `} else if let Some(ref since) = changed_since {` と記載しているが、main.rs の Search 分岐変数デストラクチャリング (224-242行目) に `changed_since` が含まれていない。実装時に Search enum variant に changed_since フィールドを追加し、デストラクチャリングにも追加が必要だが、設計方針書では clap 定義の追加のみ記載し、デストラクチャリングの変更に言及していない。",
+      "suggestion": "設計方針書の 4.1 節または 4.2 節に、Commands::Search のデストラクチャリング部分に `changed_since` を追加する旨を明記する。"
+    },
+    {
+      "id": "S3",
+      "category": "ImpactError の From 変換の不完全マッピング",
+      "description": "設計方針書 4.5 節の `From<ImpactError> for SearchError` の変換で、ImpactError の全バリアントがカバーされているが、ImpactError::Stdin の変換先が SearchError::Stdin(e) となっている。しかし ImpactError::Stdin は StdinError 型で、SearchError::Stdin も StdinError 型なので型は一致する。ただし、changed_since のフローでは stdin は使わないため、この変換パスは実際には到達しない。到達不能な変換パスが存在することは問題ではないが、テスト観点では留意が必要。",
+      "suggestion": "レビュー観点としては問題なし。ただし実装時に #[allow(dead_code)] 系の clippy 警告が出ないことを確認する。"
+    },
+    {
+      "id": "S4",
+      "category": "run_changed_since_search の format_impact_results 呼び出し",
+      "description": "設計方針書 4.4 節で `format_impact_results(&result, format, &mut std::io::stdout().lock())` を呼んでいるが、この関数は `Result<(), OutputError>` を返す。設計方針書では `.map_err(SearchError::Output)` で変換しているが、実際の SearchError::Output は `OutputError` を包む enum variant なので、`SearchError::Output(e)` への変換は正しい。ただし impact.rs の run_impact() (144行目) では `output::format_impact_results(&result, format, &mut handle)?` と `?` で変換しており、`From<OutputError> for ImpactError` が実装済み。search.rs 側では `From<OutputError> for SearchError` も実装済み (127-131行目) なので `.map_err()` ではなく `?` 演算子で十分。",
+      "suggestion": "設計方針書の `.map_err(SearchError::Output)` を `?` に統一して既存パターンに合わせる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "テストヘルパーの命名パターン",
+      "description": "設計方針書で tests/common/mod.rs に git ヘルパー追加を予定しているが、具体的な関数名 `git_init_with_commit` は既存ヘルパーの命名パターン (`cmd()`, `run_index()`, `run_search()` 等の verb-first / snake_case) と整合している。",
+      "suggestion": "命名は既存パターンと整合しており問題なし。"
+    },
+    {
+      "id": "N2",
+      "category": "エラーメッセージの言語統一",
+      "description": "設計方針書 4.4 節で `eprintln!(\"指定期間内の変更が見つかりません: {}\", since)` と日本語メッセージが使われているが、既存コードのエラーメッセージは全て英語 (例: 'No results found.', 'No related files found.' 等)。",
+      "suggestion": "英語に統一する: `eprintln!(\"No changes found since: {}\", since)`"
+    },
+    {
+      "id": "N3",
+      "category": "git.rs の vec! マクロ内の format!",
+      "description": "設計方針書 4.3 節の git.rs で `vec![\"log\", \"--name-only\", \"--format=\", &format!(\"{}..HEAD\", since)]` としているが、format! の結果は String であり &String を &str にデリファレンスするため一時変数への束縛が必要な場合がある。コンパイル時にライフタイム問題が発生する可能性がある。",
+      "suggestion": "let range = format!(\"{}..HEAD\", since); を先に束縛し、vec! 内では &range として使う。"
+    }
+  ],
+  "summary": "設計方針書と既存コードベースの整合性レビューの結果、must_fix 4件、should_fix 4件、nice_to_have 3件を検出した。最も重要な不整合は、(M2) 設計方針書内で使用されている get_index_path()/open_index()/open_symbol_store() が実在しない関数名である点、(M3) filter_existing_files() の返り値型がタプルであり設計方針書の記載と不一致な点、(M4) validate_commit_hash() の依存関係が未記載な点である。aggregate_impact() の pub(crate) 化 (M1) は設計方針書の記載通りだが実装時の変更確認が必要。ImpactError/SearchError のバリアントマッピングは概ね正確だが、既存の From 実装パターン（? 演算子利用）との微細な不整合がある (S4)。clap の conflicts_with_all は片方向の定義でも clap が双方向に排他制御するため S1 は実害なしの可能性が高いが、明示的な記載があるとより安全。テスト設計パターンは既存の cli_args.rs のパターン（排他テストで 'cannot be used with' を検証）と整合している。"
+}

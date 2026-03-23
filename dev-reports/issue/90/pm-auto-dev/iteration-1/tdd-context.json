@@ -1,0 +1,19 @@
+{
+  "issue_number": 90,
+  "title": "impact サブコマンド（git diff ベースの影響分析）",
+  "design_policy": "dev-reports/design/issue-90-impact-design-policy.md",
+  "work_plan": "dev-reports/issue/90/work-plan.md",
+  "tasks": [
+    "Task 1.1: src/output/mod.rs 型定義変更（ImpactResult, ImpactPerFile, ImpactRelatedFile, ImpactSummary）",
+    "Task 1.2: format_impact_results ディスパッチャー更新",
+    "Task 2.1: src/cli/impact.rs aggregate_impact 全面書き換え",
+    "Task 2.2: validate_and_normalize に MAX_INPUT_FILES チェック追加",
+    "Task 3.1: src/output/json.rs format_impact_json を Serialize 活用に書き換え",
+    "Task 3.2: src/output/human.rs format_impact_human 全面刷新",
+    "Task 3.3: src/output/path.rs format_impact_path 更新",
+    "Task 4.1: tests/output_format.rs impact 単体テスト全面更新",
+    "Task 4.2: tests/e2e_impact.rs 全面更新",
+    "Task 5.1: src/cli/stdin.rs UTF-8 truncation バグ修正"
+  ],
+  "quality_checks": ["cargo build", "cargo clippy --all-targets -- -D warnings", "cargo test --all", "cargo fmt --all -- --check"]
+}

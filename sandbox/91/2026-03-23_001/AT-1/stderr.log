@@ -1,0 +1,7 @@
+error: unexpected argument '--changed-since' found
+
+  tip: a similar argument exists: '--heading'
+
+Usage: commandindex search --heading <HEADING> [QUERY]
+
+For more information, try '--help'.

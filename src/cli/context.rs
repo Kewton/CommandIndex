@@ -15,53 +15,18 @@ pub fn run_context(
     files: &[String],
     max_files: usize,
     max_tokens: Option<usize>,
+    commandindex_dir: &Path,
 ) -> Result<(), SearchError> {
     // 入力検証
-    if files.is_empty() {
-        return Err(SearchError::InvalidArgument(
-            "At least one file is required".to_string(),
-        ));
-    }
-    if files.len() > 100 {
-        return Err(SearchError::InvalidArgument(
-            "Too many files specified (max 100)".to_string(),
-        ));
-    }
-    for f in files {
-        if f.is_empty() {
-            return Err(SearchError::InvalidArgument(
-                "File path cannot be empty".to_string(),
-            ));
-        }
-        if f.len() > 1024 {
-            return Err(SearchError::InvalidArgument(
-                "File path too long (max 1024 characters)".to_string(),
-            ));
-        }
-        if f.contains("..") {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain '..': {f}"
-            )));
-        }
-        if f.starts_with('/') || f.starts_with('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must be relative: {f}"
-            )));
-        }
-        if f.contains('\\') {
-            return Err(SearchError::InvalidArgument(format!(
-                "File path must not contain backslashes: {f}"
-            )));
-        }
-    }
+    super::validate_file_paths(files, 100)?;
 
     // インデックスオープン
-    let tantivy_dir = crate::indexer::index_dir(Path::new("."));
+    let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
 
-    let db_path = crate::indexer::symbol_db_path(Path::new("."));
+    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
     if !db_path.exists() {
         return Err(SearchError::SymbolDbNotFound);
     }
@@ -83,8 +48,9 @@ pub fn run_context(
     Ok(())
 }
 
-/// 各ファイルの関連検索結果を収集・マージする
-fn collect_related_context(
+/// 各ファイルの関連検索結果を収集・マージする。
+/// Caller must validate file_paths with validate_file_paths before calling.
+pub(crate) fn collect_related_context(
     files: &[String],
     reader: &IndexReaderWrapper,
     store: &SymbolStore,
@@ -107,8 +73,31 @@ fn collect_related_context(
     Ok(merge_related_results(results_per_file, files))
 }
 
-/// 複数ファイルの関連検索結果をunionマージする
-fn merge_related_results(
+/// 外部から呼び出し可能な関連ファイル収集・マージ（search --related-stdin 用）
+pub(crate) fn collect_and_merge_related(
+    engine: &RelatedSearchEngine,
+    files: &[String],
+    limit: usize,
+) -> Result<Vec<RelatedSearchResult>, SearchError> {
+    let mut results_per_file = Vec::new();
+    for file in files {
+        match engine.find_related(file, 1000) {
+            Ok(results) => results_per_file.push(results),
+            Err(crate::search::related::RelatedSearchError::FileNotFound(_))
+            | Err(crate::search::related::RelatedSearchError::FileNotIndexed(_)) => {
+                results_per_file.push(Vec::new());
+            }
+            Err(e) => return Err(SearchError::RelatedSearch(e)),
+        }
+    }
+
+    let mut merged = merge_related_results(results_per_file, files);
+    merged.truncate(limit);
+    Ok(merged)
+}
+
+/// Merges related search results from multiple files using union + max score strategy.
+pub(crate) fn merge_related_results(
     results_per_file: Vec<Vec<RelatedSearchResult>>,
     target_files: &[String],
 ) -> Vec<RelatedSearchResult> {

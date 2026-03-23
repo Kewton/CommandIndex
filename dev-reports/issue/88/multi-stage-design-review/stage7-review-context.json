@@ -1,0 +1,19 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "config.local.toml の扱いがまだ矛盾", "suggestion": "設計書全体で方針を一本化（共有index配下のlocal configは読まない）"},
+    {"id": "M2", "title": "load_config維持方針が既存コードと受け入れ要件を同時に満たせない", "suggestion": "team config読み込み専用+local/legacy追加マージ専用の補助APIを定義"},
+    {"id": "M3", "title": "cleanのホワイトリスト方式が既存keep_embeddings挙動と衝突", "suggestion": "通常時はindex dir全削除、keep_embeddings時のみ部分削除。安全ガードは削除前検証で担保"},
+    {"id": "M4", "title": "未作成パスの..正規化方針がセキュリティ・互換性の両面で曖昧", "suggestion": "..や不正な相対パスは明示的エラーにする"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SearchContext中心の設計がsearch以外への波及を表現不足", "suggestion": "全コマンド共通のpath解決結果structを設ける"},
+    {"id": "S2", "title": "既存テストへの波及見積もりが楽観的", "suggestion": "影響範囲表にconfig/workspace/status/export/import/ignoreテスト群も追加"},
+    {"id": "S3", "title": "resolve_index_pathの配置がindexer層と不整合", "suggestion": "configかpath専用モジュールへの配置を検討"},
+    {"id": "S4", "title": "symlink防御の一律適用が強すぎる", "suggestion": "read-onlyとdestructive系でポリシーを分ける"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "IgnoreFilter変更のindex/updateへの波及を具体化"},
+    {"id": "N2", "title": "出力メッセージ変更の影響先を一覧化"}
+  ],
+  "summary": "4件のMust Fix: config.local.toml矛盾(再指摘)、load_config維持方針の不足、cleanの既存挙動乖離、パストラバーサル対策の曖昧さ"
+}

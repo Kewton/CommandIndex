@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "DRY",
+      "description": "validate_commit_hash() が git_info.rs に既存（pub fn, L16-21）だが、設計方針書の git.rs では同名関数を暗黙的に再実装している（4.3節 L116 で validate_commit_hash(since) を呼び出しているが定義がない）。git_info.rs の validate_commit_hash は既に pub であり再利用可能。",
+      "suggestion": "新規 git.rs から use crate::cli::status::git_info::validate_commit_hash; で既存関数を再利用する。git.rs 内での再定義を避けること。"
+    },
+    {
+      "id": "M2",
+      "category": "API設計",
+      "description": "run_changed_since_search() の設計（4.4節）で、インデックス・DB のオープン処理（get_index_path, open_index, open_symbol_store）が既存コードに存在しない関数名で記述されている。実際のコードベースでは crate::indexer::index_dir(Path::new(\".\")) と IndexReaderWrapper::open() / SymbolStore::open() を直接使用するパターン（impact.rs L123-134, search.rs L285-296 参照）。",
+      "suggestion": "設計方針書の擬似コードを実際のコードベースのパターンに合わせる。具体的には impact.rs の run_impact() と同じ index_dir / symbol_db_path / IndexReaderWrapper::open / SymbolStore::open パターンを使用し、存在しないヘルパー関数を参照しない。"
+    },
+    {
+      "id": "M3",
+      "category": "DRY / Single Responsibility",
+      "description": "run_changed_since_search()（4.4節）内の filter_existing_files() の呼び出しが、stdin.rs の filter_existing_files() と同じシグネチャに見えるが、設計書では引数が &[String] を受けて Vec<String> を返す簡易版として記述されている。一方、既存の stdin::filter_existing_files() は (Vec<String>, Vec<String>) のタプル（valid, warnings）を返す。設計書の filter_existing_files は既存と異なるシグネチャで暗黙的な新規関数になっている。",
+      "suggestion": "既存の stdin::filter_existing_files() を再利用し、warnings も eprintln! で出力する（impact.rs L114-117 と同じパターン）。新たな filter_existing_files を定義しないこと。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "Open/Closed",
+      "description": "aggregate_impact() を pub(crate) 化する設計だが、この関数は impact.rs 内部でのみ使用されていた private 関数であり、search.rs からの呼び出しのために可視性を変更する。現状 aggregate_impact() は ImpactError を返すため、search.rs 側で ImpactError -> SearchError の変換が必要になる。この変換レイヤーは正しく設計されているが、将来的に aggregate_impact のシグネチャ変更が search.rs にも波及するリスクがある。",
+      "suggestion": "現時点では pub(crate) 化で問題ないが、将来 changed-since 以外のユースケースが増える場合はトレイトベースの抽象化を検討するコメントを残すとよい。現状の設計は YAGNI 原則に沿っており適切。"
+    },
+    {
+      "id": "S2",
+      "category": "エラーハンドリング",
+      "description": "GitError の全バリアントが SearchError::InvalidArgument(String) にマッピングされている（4.5節 L220-235）。これにより、Git 固有のエラー情報（NotARepository vs GitNotFound vs CommandFailed）が失われ、呼び出し元でのエラー種別判定ができなくなる。",
+      "suggestion": "SearchError に GitError バリアントを追加する（SearchError::Git(GitError)）か、少なくとも InvalidArgument のメッセージに十分なコンテキストを含める。現状のメッセージは十分だが、将来的にプログラマティックなエラー判定が必要になった場合に対応しにくい。"
+    },
+    {
+      "id": "S3",
+      "category": "KISS",
+      "description": "main.rs の Search コマンドの分岐ロジックが既に複雑（workspace -> related_stdin -> match(query, symbol, related, semantic)）であり、changed_since の追加で更に if let 分岐が増える。設計書では related_stdin と同じパターンで分岐を追加するが、分岐が5段階になる。",
+      "suggestion": "分岐の追加自体は既存パターンに従っており許容範囲だが、将来的にはサブコマンドのディスパッチロジックを SearchMode enum 等に抽出してマッチングすることを検討する価値がある。今回の実装では現行パターンに合わせて問題ない。"
+    },
+    {
+      "id": "S4",
+      "category": "DRY",
+      "description": "git.rs の get_changed_files() 内で Command::new(\"git\") パターンを使用するが、git_info.rs にも run_git() ヘルパーが存在する。設計書6節で「Command::new(\"git\") パターンは十分シンプルで重複は許容範囲」と判断しているが、run_git() を pub(crate) 化すれば再利用可能。",
+      "suggestion": "git_info.rs の run_git() を pub(crate) に変更し、git.rs から再利用する。ただし run_git() は Option<String> を返すため、get_changed_files() ではより詳細なエラー情報が必要であり、直接の再利用が難しい面もある。最低限 validate_commit_hash() は必ず再利用すること（M1 参照）。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "KISS",
+      "description": "get_changed_files() の戻り値で HashSet -> Vec の変換を行っているが、順序が不定になる。ファイル一覧の順序が出力に影響する可能性がある。",
+      "suggestion": "HashSet で重複排除後、sort してから Vec に変換すると出力が安定する。あるいは IndexSet（indexmap クレート）を使用する。依存追加を避けるなら Vec + sort + dedup パターンでもよい。"
+    },
+    {
+      "id": "N2",
+      "category": "API設計",
+      "description": "設計書ではエラーメッセージに日本語（\"指定期間内の変更が見つかりません\"）と英語が混在している（4.4節 L165 vs L179）。既存コードベースは全て英語メッセージ。",
+      "suggestion": "既存コードベースに合わせて全て英語メッセージに統一する。例: \"No changes found in the specified period: {since}\""
+    },
+    {
+      "id": "N3",
+      "category": "YAGNI",
+      "description": "validate_changed_since_input() の制御文字拒否チェック（b < 0x20 && b != b'\\t'）でタブ文字を許可しているが、--changed-since の入力値でタブ文字が有効なケースは想定しにくい。",
+      "suggestion": "タブ文字も拒否して問題ない。ただしこれは微小な変更であり、セキュリティ上のリスクは低い。"
+    },
+    {
+      "id": "N4",
+      "category": "KISS",
+      "description": "conflicts_with_all のリストが長い（query, symbol, related, related_stdin, semantic, workspace, tag, path, file_type, heading, no_semantic, rerank の12個）。clap のグループ機能を使えば簡潔化できる。",
+      "suggestion": "clap の ArgGroup を定義して、text_search_mode / filter_options のようなグループで conflicts を管理するとメンテナンス性が向上する。ただし既存コードが個別指定パターンなので、今回は合わせてよい。"
+    }
+  ],
+  "summary": "設計方針書は全体的に良好で、既存の impact サブコマンドのパターンを適切に再利用する方針が取られている。主要な指摘は3点: (1) git_info.rs に既存の validate_commit_hash() を再利用せず暗黙的に再定義している DRY 違反、(2) 設計書の擬似コードが実際のコードベースのAPI（IndexReaderWrapper::open 等）と乖離している点、(3) filter_existing_files() のシグネチャが既存と異なる点。これらは実装時に混乱を招くため修正が必要。Should-fix レベルでは GitError -> SearchError のマッピングでエラー情報が失われる点と、run_git() ヘルパーの再利用可能性がある。全体として YAGNI 原則に沿った適切なスコープであり、不要な過剰設計は見られない。"
+}

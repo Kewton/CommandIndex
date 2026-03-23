@@ -1,0 +1,16 @@
+{
+  "issue_number": 91,
+  "title": "--changed-since オプション（Git 履歴ベースの変更検索）",
+  "design_policy": "dev-reports/design/issue-91-changed-since-design-policy.md",
+  "work_plan": "dev-reports/issue/91/work-plan.md",
+  "tasks": [
+    "Task 1.1: src/cli/git.rs 新規作成（GitError, validate_changed_since_input, get_changed_files）",
+    "Task 1.2: src/cli/impact.rs の aggregate_impact() / MAX_INPUT_FILES を pub(crate) 化",
+    "Task 1.3: src/cli/search.rs に From<ImpactError> / From<GitError> 実装",
+    "Task 1.4: src/main.rs に changed_since 引数定義・分岐追加",
+    "Task 1.5: src/cli/search.rs に run_changed_since_search() 実装",
+    "Task 2.1: tests/cli_args.rs に排他制御テスト",
+    "Task 2.2: src/cli/git.rs 内の単体テスト",
+    "Task 2.3: tests/e2e_changed_since.rs E2Eテスト"
+  ]
+}
