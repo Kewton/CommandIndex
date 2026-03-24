@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "index.rsのincremental更新経路（generate_embeddings_for_manifest）にもトランザクション適用が必要",
+      "detail": "embed.rsだけでなく、index --with-embedding経由のgenerate_embeddings_for_manifest()にもT2のトランザクションを適用しないと、incremental更新経路で同じautocommit問題が残る。Issueには記載済みだが、影響範囲の記述をincrementalパスにも明確に拡張すべき。",
+      "suggestion": "影響範囲にindex.rsのincremental経路を明示し、T2の適用対象であることを再確認する。"
+    },
+    {
+      "id": "M2",
+      "title": "T2のROLLBACK方針変更により、エラー時の振る舞いが「個別スキップ・次ファイル続行」から「ファイル単位再試行可能な失敗」に変わる",
+      "detail": "現行コードではsection単位でエラーをスキップして続行する。T2でファイル単位ROLLBACKに変更すると、1つのsection失敗でファイル全体が未処理扱いになる。この振る舞い変更を影響範囲として明記すべき。",
+      "suggestion": "影響範囲にエラー時振る舞いの変更を明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "影響を受けないファイルの一覧にincremental更新関連のコードが漏れている",
+      "detail": "影響範囲の「影響を受けないファイル」リストには検索・提案・状態のみが記載されているが、incremental更新パスの存在を考慮すべき。",
+      "suggestion": "影響範囲をincremental更新経路も含めて整理する。"
+    },
+    {
+      "id": "S2",
+      "title": "テスト影響: transaction commit/rollback の回帰テストが必要",
+      "detail": "受け入れ基準にcargo test/clippy/fmtはあるが、T2の本質であるcommit/rollback挙動を直接検証する項目がない。",
+      "suggestion": "store.rsにtransaction commit/rollbackの単体テストを追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "パフォーマンス影響: 異常系のレイテンシ悪化可能性",
+      "detail": "正常系は改善するが、Ollama停止時やVRAM不足時はREQUEST_TIMEOUT_SECS=60により待機時間が長くなる。さらにROLLBACKでファイル単位再処理となる。",
+      "suggestion": "パフォーマンス影響に正常系/異常系を分けて記載する。"
+    },
+    {
+      "id": "S4",
+      "title": "依存関係: 外部コンポーネント(Ollama/SQLite)の負荷特性変化",
+      "detail": "crate依存は増えないが、Ollamaへのリクエストサイズ増加とSQLiteの書き込みパターン変更がある。",
+      "suggestion": "依存関係にOllamaメモリ負荷とSQLite書き込みパターンの変化を記載する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "読み取り系機能(search/suggest/status)の回帰確認",
+      "detail": "埋め込みDB生成方式の変更後、search/suggest/statusが従来通り動くことの確認があると安心。",
+      "suggestion": "手動確認項目に追加する。"
+    }
+  ],
+  "summary": "影響範囲はembed/indexのincremental更新経路に波及。テスト面ではtransactionのcommit/rollback回帰確認が不足。性能面では正常系改善・異常系はタイムアウト延長とファイル単位再試行の影響がある。"
+}

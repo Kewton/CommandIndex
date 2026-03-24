@@ -907,20 +907,31 @@ fn generate_embeddings_for_manifest(
             Ok(embeddings) => {
                 let dimension = provider.dimension();
                 let model = provider.model_name();
-                for (section, embedding) in sections.iter().zip(embeddings.iter()) {
-                    if let Err(e) = store.upsert_embedding(
-                        &entry.path,
-                        &section.heading,
-                        embedding,
-                        dimension,
-                        model,
-                        &entry.hash,
-                    ) {
-                        eprintln!(
-                            "Warning: failed to store embedding for {}#{}: {e}",
-                            entry.path, section.heading
-                        );
+                if sections.len() != embeddings.len() {
+                    eprintln!(
+                        "Warning: section/embedding count mismatch for {}: {} sections, {} embeddings",
+                        entry.path,
+                        sections.len(),
+                        embeddings.len()
+                    );
+                } else if let Err(e) = store.execute_in_transaction(|store| {
+                    store.delete_by_path(&entry.path)?;
+                    for (section, embedding) in sections.iter().zip(embeddings.iter()) {
+                        store.upsert_embedding(
+                            &entry.path,
+                            &section.heading,
+                            embedding,
+                            dimension,
+                            model,
+                            &entry.hash,
+                        )?;
                     }
+                    Ok(())
+                }) {
+                    eprintln!(
+                        "Warning: failed to store embeddings for {}: {e}",
+                        entry.path
+                    );
                 }
             }
             Err(e) => {

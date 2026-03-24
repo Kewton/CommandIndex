@@ -9,13 +9,13 @@ use super::{
 };
 
 /// Maximum number of texts per request batch for Ollama.
-const BATCH_SIZE: usize = 10;
+const BATCH_SIZE: usize = 50;
 /// Maximum text length (characters) before truncation.
 const MAX_TEXT_LENGTH: usize = 8192;
 /// Connect timeout in seconds.
 const CONNECT_TIMEOUT_SECS: u64 = 10;
 /// Request timeout in seconds.
-const REQUEST_TIMEOUT_SECS: u64 = 30;
+const REQUEST_TIMEOUT_SECS: u64 = 60;
 
 // ---------------------------------------------------------------------------
 // Request / Response types

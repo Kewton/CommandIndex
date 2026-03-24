@@ -302,6 +302,25 @@ impl EmbeddingStore {
         Ok(count > 0)
     }
 
+    /// ファイル単位のトランザクション内でクロージャを実行する。
+    /// クロージャが Ok を返した場合のみ COMMIT、Err の場合は ROLLBACK。
+    pub fn execute_in_transaction<F, T>(&self, f: F) -> Result<T, EmbeddingStoreError>
+    where
+        F: FnOnce(&Self) -> Result<T, EmbeddingStoreError>,
+    {
+        self.conn.execute_batch("BEGIN")?;
+        match f(self) {
+            Ok(value) => {
+                self.conn.execute_batch("COMMIT")?;
+                Ok(value)
+            }
+            Err(e) => {
+                let _ = self.conn.execute_batch("ROLLBACK");
+                Err(e)
+            }
+        }
+    }
+
     /// ファイルのembeddingを削除
     pub fn delete_by_path(&self, path: &str) -> Result<(), EmbeddingStoreError> {
         self.conn.execute(
@@ -745,5 +764,105 @@ mod tests {
         let bytes = f32_slice_to_bytes(&original);
         let restored = bytes_to_f32_vec(&bytes);
         assert_eq!(original, restored);
+    }
+
+    #[test]
+    fn test_execute_in_transaction_commit() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        store
+            .execute_in_transaction(|s| {
+                s.upsert_embedding("src/main.rs", "main", &[0.1], 1, "nomic", "hash1")?;
+                Ok(())
+            })
+            .unwrap();
+
+        // Data should persist after commit
+        let results = store.find_by_path("src/main.rs").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].file_hash, "hash1");
+    }
+
+    #[test]
+    fn test_execute_in_transaction_rollback() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert initial data outside transaction
+        store
+            .upsert_embedding("src/lib.rs", "lib", &[0.2], 1, "nomic", "hash0")
+            .unwrap();
+
+        // Transaction that fails should rollback
+        let result: Result<(), _> = store.execute_in_transaction(|s| {
+            s.upsert_embedding("src/main.rs", "main", &[0.1], 1, "nomic", "hash1")?;
+            Err(EmbeddingStoreError::InvalidEmbedding {
+                expected_bytes: 4,
+                actual_bytes: 0,
+            })
+        });
+
+        assert!(result.is_err());
+        // Data from failed transaction should not persist
+        let results = store.find_by_path("src/main.rs").unwrap();
+        assert!(results.is_empty());
+        // Pre-existing data should be unaffected
+        let results = store.find_by_path("src/lib.rs").unwrap();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_execute_in_transaction_multiple_upserts() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        store
+            .execute_in_transaction(|s| {
+                s.upsert_embedding("src/main.rs", "heading1", &[0.1], 1, "nomic", "hash1")?;
+                s.upsert_embedding("src/main.rs", "heading2", &[0.2], 1, "nomic", "hash1")?;
+                s.upsert_embedding("src/main.rs", "heading3", &[0.3], 1, "nomic", "hash1")?;
+                Ok(())
+            })
+            .unwrap();
+
+        // All three should be committed atomically
+        let results = store.find_by_path("src/main.rs").unwrap();
+        assert_eq!(results.len(), 3);
+        assert_eq!(store.count().unwrap(), 3);
+    }
+
+    #[test]
+    fn test_execute_in_transaction_deletes_orphan_sections() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Initial state: file has 3 sections
+        store
+            .upsert_embedding("src/main.rs", "heading1", &[0.1], 1, "nomic", "hash1")
+            .unwrap();
+        store
+            .upsert_embedding("src/main.rs", "heading2", &[0.2], 1, "nomic", "hash1")
+            .unwrap();
+        store
+            .upsert_embedding("src/main.rs", "heading3", &[0.3], 1, "nomic", "hash1")
+            .unwrap();
+        assert_eq!(store.find_by_path("src/main.rs").unwrap().len(), 3);
+
+        // File now has only 2 sections: DELETE + INSERT in transaction
+        store
+            .execute_in_transaction(|s| {
+                s.delete_by_path("src/main.rs")?;
+                s.upsert_embedding("src/main.rs", "heading1", &[0.4], 1, "nomic", "hash2")?;
+                s.upsert_embedding("src/main.rs", "heading2", &[0.5], 1, "nomic", "hash2")?;
+                Ok(())
+            })
+            .unwrap();
+
+        // Should have exactly 2 sections (heading3 orphan removed)
+        let results = store.find_by_path("src/main.rs").unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].file_hash, "hash2");
+        assert_eq!(results[1].file_hash, "hash2");
     }
 }

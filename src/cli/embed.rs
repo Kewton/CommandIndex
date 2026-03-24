@@ -178,25 +178,40 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
         // Generate embeddings
         match provider.embed(&texts) {
             Ok(embeddings) => {
-                let dimension = provider.dimension();
-                let model = provider.model_name();
-                for (section, embedding) in sections.iter().zip(embeddings.iter()) {
-                    if let Err(e) = store.upsert_embedding(
-                        &entry.path,
-                        &section.heading,
-                        embedding,
-                        dimension,
-                        model,
-                        &entry.hash,
-                    ) {
-                        eprintln!(
-                            "Warning: failed to store embedding for {}#{}: {e}",
-                            entry.path, section.heading
-                        );
-                        failed += 1;
-                        continue;
+                if sections.len() != embeddings.len() {
+                    eprintln!(
+                        "Warning: section/embedding count mismatch for {}: {} sections, {} embeddings",
+                        entry.path,
+                        sections.len(),
+                        embeddings.len()
+                    );
+                    failed += sections.len() as u64;
+                } else {
+                    let dimension = provider.dimension();
+                    let model = provider.model_name();
+                    match store.execute_in_transaction(|store| {
+                        store.delete_by_path(&entry.path)?;
+                        for (section, embedding) in sections.iter().zip(embeddings.iter()) {
+                            store.upsert_embedding(
+                                &entry.path,
+                                &section.heading,
+                                embedding,
+                                dimension,
+                                model,
+                                &entry.hash,
+                            )?;
+                        }
+                        Ok(sections.len() as u64)
+                    }) {
+                        Ok(count) => generated += count,
+                        Err(e) => {
+                            eprintln!(
+                                "Warning: failed to store embeddings for {}: {e}",
+                                entry.path
+                            );
+                            failed += sections.len() as u64;
+                        }
                     }
-                    generated += 1;
                 }
             }
             Err(e) => {

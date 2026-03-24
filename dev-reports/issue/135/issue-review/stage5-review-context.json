@@ -1,0 +1,33 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "T2の部分コミット方針とhas_current_embedding()キャッシュ判定の矛盾",
+      "detail": "Issueでは「エラー時は成功分をコミット」としているが、has_current_embedding()はパス+ハッシュで判定するためファイル全体が処理済みとみなされる。一部sectionが欠損した場合、再実行しても当該ファイルはスキップされ、欠損が回復されない。",
+      "suggestion": "トランザクションのエラー時はROLLBACKに統一する（ファイル全体のupsertが成功した場合のみCOMMIT）。これにより、再実行時にhas_current_embedding()が未処理と判定し自動回復が可能になる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "受け入れ基準にindex --with-embedding経路のテストが欠落",
+      "detail": "T2はindex.rsのgenerate_embeddings_for_manifest()にもトランザクションを適用するが、受け入れ基準にはindex --with-embedding経路の動作確認が含まれていない。",
+      "suggestion": "受け入れ基準に「index --with-embedding コマンド実行時にエラーなく完了すること」を追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "execute_in_transactionのAPI契約が曖昧",
+      "detail": "closureの返り値型、Err時の扱い、COMMIT失敗時の扱い、ネスト時の扱いが明確でない。部分コミットと致命的エラーのROLLBACKの境界も未定義。",
+      "suggestion": "API契約を明記する。closureがOkを返した場合のみCOMMIT、ErrならROLLBACKのように単純化する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "性能改善Issueとしてベンチマークの受け入れ基準が弱い",
+      "detail": "主目的は3-5倍高速化だが、受け入れ基準はビルド・lint・手動実行の正常性確認に留まっている。",
+      "suggestion": "変更前後の比較手順と最低限の成功判定を追加する。"
+    }
+  ],
+  "summary": "T2の部分コミット方針はhas_current_embedding()のキャッシュ判定と矛盾しており必須修正。受け入れ基準はindex --with-embedding経路まで広げるべき。execute_in_transactionの契約も具体化が必要。"
+}

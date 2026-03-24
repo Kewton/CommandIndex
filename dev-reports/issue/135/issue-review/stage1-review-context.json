@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "REQUEST_TIMEOUT_SECS が30秒のままではバッチサイズ50でタイムアウトする可能性が高い",
+      "detail": "ollama.rs の REQUEST_TIMEOUT_SECS は 30秒 (行18) に設定されている。バッチサイズ10で1リクエストあたり約0.1秒(590秒/5870回)だが、バッチサイズ50では1リクエストあたり約0.5秒が理論値。しかし、Ollamaはバッチサイズが大きいとVRAMとの兼ね合いで処理時間が非線形に増加する場合がある。Issueにタイムアウト値の調整が含まれていない。",
+      "suggestion": "T1にREQUEST_TIMEOUT_SECSの見直し(例: 60-120秒への引き上げ)を含めるか、バッチサイズ拡大に伴うタイムアウトリスクを明記する。"
+    },
+    {
+      "id": "M2",
+      "title": "受け入れ基準が定義されていない",
+      "detail": "Issueに「期待効果」は記載されているが、テスト可能な受け入れ基準(Acceptance Criteria)が一切定義されていない。完了条件が曖昧なため、PRレビュー時に合否判断ができない。",
+      "suggestion": "以下のような受け入れ基準を追加する:\n- [ ] BATCH_SIZE=50に変更後、cargo test --all が全パスすること\n- [ ] cargo clippy --all-targets -- -D warnings で警告0件\n- [ ] T2: store.rsにトランザクションバッチ化メソッドが追加され、embed.rsから呼ばれること\n- [ ] 手動テスト: embed実行時にエラーなく完了すること"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "T2の実装方針が不十分 -- EmbeddingStore にトランザクション制御APIが存在しない",
+      "detail": "Issueでは embed.rs にBEGIN TRANSACTION/COMMITを追加すると記載しているが、EmbeddingStoreはConnectionを内部に持つ構造体であり、connはprivateフィールド。現状のAPIでは外部からトランザクションを制御する手段がない。store.rsに新しいメソッド(begin_transaction/commit等)を追加するか、upsert_embedding_batch のようなバッチAPIを追加する必要がある。",
+      "suggestion": "T2の実装方針を具体化する。例: store.rsに `pub fn begin_transaction(&self)` / `pub fn commit_transaction(&self)` メソッドを追加、または `pub fn upsert_embeddings_batch(&self, items: &[...])` のようなバッチupsert APIを追加する設計を明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "embed.rsのファイル単位ループ構造の理解が不正確",
+      "detail": "Issueでは「ファイル単位でBEGIN TRANSACTION/COMMITを追加」と記載しているが、embed.rs 行150のループ(for entry in &manifest.files)は既にファイル単位である。トランザクションのスコープは「ファイル内の全セクション」であり、ファイルのセクション数が多い場合は1トランザクション内のupsert数が大きくなる点をIssueに明記すべき。",
+      "suggestion": "T2の説明に、トランザクションのスコープがファイル単位(= そのファイルの全セクション)であることを明示し、1ファイルに大量のセクションがある場合のリスクについて記載する。"
+    },
+    {
+      "id": "S3",
+      "title": "embed.rs の行番号参照が変更に弱い表現",
+      "detail": "行番号は正確だが、対象コードの説明(例: 'sections.iter().zip(embeddings.iter()) のループ内upsert_embedding呼び出し')を併記すべき。",
+      "suggestion": "行番号に加えて、対象コードブロックの概要説明を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "OpenAIプロバイダーにも同じautocommitの問題がある旨の記載",
+      "detail": "T2のSQLiteトランザクションバッチ化はプロバイダーに依存しない共通の改善。Issueでは「OpenAIプロバイダーは既にBATCH_SIZE=100で問題なし」とT1についてのみ言及しているが、T2はOpenAI利用時にも有効である。",
+      "suggestion": "T2がプロバイダー非依存の改善であることを明記する。"
+    },
+    {
+      "id": "N2",
+      "title": "ロールバック戦略の記載がない",
+      "detail": "T2でトランザクションを導入する場合、途中でembedding生成が失敗したときのロールバック戦略が未定義。",
+      "suggestion": "エラー時の振る舞い(部分コミット or ロールバック)をIssueに明記する。"
+    },
+    {
+      "id": "N3",
+      "title": "パフォーマンス測定の計画がない",
+      "detail": "高速化を目的としたIssueだが、変更前後のベンチマーク測定方法が記載されていない。",
+      "suggestion": "受け入れ基準の一部として、手動ベンチマーク手順を記載する。"
+    }
+  ],
+  "summary": "Issue #135のコード参照(ファイルパス、行番号、定数値)は全て正確であり、ボトルネック分析も妥当。ただし2点の必須修正がある。(1) バッチサイズ5倍拡大に伴うREQUEST_TIMEOUT_SECSの調整がIssueに含まれていない。(2) テスト可能な受け入れ基準が未定義。また、T2のSQLiteトランザクション化について、EmbeddingStoreのconnがprivateであるため新しいAPIの設計が必要だが、その具体的な方針が不足している。"
+}

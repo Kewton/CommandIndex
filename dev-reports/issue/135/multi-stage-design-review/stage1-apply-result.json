@@ -1,0 +1,20 @@
+{
+  "applied_from_stage1_to_4": [
+    {"stage": 2, "id": "M1", "action": "beforeコードにgenerated += 1を追加、完全なコード例に更新"},
+    {"stage": 2, "id": "M2", "action": "「振る舞い変更」セクションを4.2.2に追加。per-section→per-fileの粒度変更を明記"},
+    {"stage": 2, "id": "M3", "action": "判断3のrusqlite説明を修正。Connection::transaction(&mut self)とexecute_batch(&self)の区別を正確に記載"},
+    {"stage": 3, "id": "M1", "action": "4.2.2の振る舞い変更セクションでカバー"},
+    {"stage": 3, "id": "M2", "action": "判断5としてorphan sections対策を追加。DELETE+INSERTのアトミック置換方式を採用"},
+    {"stage": 1, "id": "S2", "action": "DRY違反の指摘は認識するが、本Issue(#135)のスコープ外。共通化は別Issueで対応"},
+    {"stage": 2, "id": "S1", "action": "4.2.3にindex.rs固有のbefore/afterコード例を追加"},
+    {"stage": 2, "id": "S2", "action": "COMMIT失敗時のエッジケースをAPI契約に追記"},
+    {"stage": 2, "id": "S3", "action": "ollama.rsテスト欄の記述を「手動テストで検証」に更新"},
+    {"stage": 3, "id": "S1", "action": "tests/e2e_semantic_hybrid.rsを影響範囲に追加"},
+    {"stage": 4, "id": "N1", "action": "ROLLBACK失敗時のログ出力をコード例に追加"}
+  ],
+  "skipped": [
+    {"stage": 1, "id": "S1", "reason": "ネスト防止のランタイムガードはYAGNI。SQLiteがcannot start a transactionエラーを返すため検出可能"},
+    {"stage": 1, "id": "S3", "reason": "BATCH_SIZEの設定ファイル化はスコープ外"},
+    {"stage": 3, "id": "S4", "reason": "WAL mode最適化はスコープ外"}
+  ]
+}

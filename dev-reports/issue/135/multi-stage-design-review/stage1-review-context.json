@@ -1,0 +1,15 @@
+{
+  "stage": "Stage 1: 設計原則レビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "raw SQLトランザクションのネスト防止策が不十分", "suggestion": "Cell<bool>のin_transactionフラグ追加"},
+    {"id": "S2", "title": "embed.rsとindex.rsのembedding生成ループがDRY違反", "suggestion": "共通関数に抽出"},
+    {"id": "S3", "title": "BATCH_SIZEとTIMEOUTがハードコードでフォールバック計画と矛盾", "suggestion": "フォールバック計画の記述をスコープ明確化"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "execute_in_transactionの戻り値型の汎用性（YAGNI懸念）"},
+    {"id": "N2", "title": "failedカウンタの挙動変更が未文書化"},
+    {"id": "N3", "title": "結合テストシナリオ不足"}
+  ],
+  "summary": "must_fix 0件。主な改善点: ネスト防止ガード、DRY違反の共通化、フォールバック計画のスコープ明確化。"
+}
