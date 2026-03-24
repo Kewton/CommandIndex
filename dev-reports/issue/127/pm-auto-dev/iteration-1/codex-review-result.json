@@ -1,0 +1,23 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/suggest.rs",
+      "line": 161,
+      "severity": "medium",
+      "category": "bug",
+      "description": "ファイル種別判定が `/` 区切りのパスだけを前提にしており、`tests/`・`__tests__/`・`docs/`・`dev-reports/` の検出が Windows 形式の `\\\\` 区切りパスで機能しません。インデックス側の `to_relative_path_string()` は区切り文字を正規化していないため、OS によってランキング結果が変わる潜在バグになります。",
+      "suggestion": "判定前に `path.replace('\\\\', \"/\")` のように区切り文字を正規化するか、`Path::components()` ベースでディレクトリ名を判定して OS 非依存にしてください。"
+    },
+    {
+      "file": "src/cli/suggest.rs",
+      "line": 187,
+      "severity": "low",
+      "category": "bug",
+      "description": "コメントでは「プロジェクトルート直下の定型ドキュメントのみ」を減衰対象としていますが、実装は `file_name` だけを見ているため、`src/readme.md` や `guide/changelog.md` のようなネストした Markdown も `is_root_doc` として誤判定されます。関連ドキュメントが意図せず下位に押し下げられる可能性があります。",
+      "suggestion": "`Path::parent()` や正規化後のセグメント数を使って、本当にルート直下にある場合だけ `is_root_doc` を `true` にしてください。"
+    }
+  ],
+  "summary": "変更範囲では重大なセキュリティ脆弱性は見当たりませんでした。潜在バグとして、パス区切り文字の OS 依存による重み付け漏れと、ルート直下ドキュメント判定の誤検知を確認しました。",
+  "requires_fix": true
+}

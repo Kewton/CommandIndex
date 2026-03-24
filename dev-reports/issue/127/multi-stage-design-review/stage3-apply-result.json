@@ -1,0 +1,9 @@
+{
+  "applied": [
+    {"id": "S3-M1", "action": "dedup順序をdedup(全件)→weight→truncateに変更（判断3を全面改訂）"},
+    {"id": "S3-M2", "action": "e2eテストへの影響を4.2既存テスト表に追記（要確認）"},
+    {"id": "S3-S2", "action": "to_lowercase()をfile_type_weight_factor内で1回のみ実行する設計に変更"},
+    {"id": "S3-S3", "action": ".md一律減衰を廃止。dev-reports/docs/ルート直下定型ドキュメントのみに限定（判断5を新設）"},
+    {"id": "S3-S4", "action": "is_test_fileのセパレータパターン適用（Stage 1と同じ方向、判断4を新設）"}
+  ]
+}

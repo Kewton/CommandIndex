@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "再現手順の正確性",
+      "description": "「実際の動作」セクションに記載されている出力は、suggest コマンドの出力フォーマット（SuggestResult: command + reason のリスト）と一致していない。suggest は context/search/impact コマンドの文字列リストを返すが、BM25の内部結果順位なのかsuggest出力のpath引数なのかが不明確。",
+      "suggestion": "再現手順を「suggest --for ... --format json の出力JSON」として具体的に貼付するか、BM25の内部スコアリングの問題として記述を修正する。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準の欠如",
+      "description": "受け入れ基準（Acceptance Criteria）が定義されていない。改善提案の3つの方向性のうちどれを実装すればIssueを完了とするかが不明確。",
+      "suggestion": "受け入れ基準を明示する。例: (1) suggest結果のトップ3にテストファイルが含まれないこと (2) ファイルパスに検索語が直接含まれるファイルが優先されること (3) 再現手順の入力で useFullscreen.ts が上位N件以内に出ること"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "実装方針の妥当性",
+      "description": "改善提案の「ハイブリッド戦略」は suggest のアーキテクチャを根本的に変更する必要がある。影響範囲が評価されていない。",
+      "suggestion": "Phase 1: BM25スコアリング改善（テストファイルペナルティ、ファイル種別ブースト）とPhase 2: ハイブリッド検索統合を分離し、Phase分割を明記する。"
+    },
+    {
+      "id": "S2",
+      "category": "問題の特定精度",
+      "description": "path フィールドは STRING 型で全文検索対象外。ファイル名の部分一致ではなく body/heading/tags の本文内容がマッチしている。",
+      "suggestion": "問題の根本原因をより正確に記述する。path は完全一致でBM25検索対象外であることを明記する。"
+    },
+    {
+      "id": "S3",
+      "category": "整合性・正確性",
+      "description": "テストファイルのブースト調整は、現在のスキーマにファイル種別フィールドがないためBM25レベルでは実現できない。ポストフィルタでのスコア調整かスキーマ変更が必要。",
+      "suggestion": "技術的アプローチとして (a) BM25検索後のポストプロセス (b) スキーマにfile_typeフィールド追加 のどちらを取るか記載する。"
+    },
+    {
+      "id": "S4",
+      "category": "受け入れ基準の網羅性",
+      "description": "deduplicate_by_file のスコア集約戦略（max）の妥当性が検討されていない。",
+      "suggestion": "dedup戦略の検討をスコープに含めるか、スコープ外なら明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "再現手順の正確性",
+      "description": "バイナリ名が commandindexdev だが環境セクションは commandindex 0.1.0 と不一致。",
+      "suggestion": "環境セクションのバイナリ名を統一する。"
+    },
+    {
+      "id": "N2",
+      "category": "実装方針の妥当性",
+      "description": "BM25_SEARCH_LIMIT=20、DEDUP_FILE_LIMIT=5 の調整可能性が検討されていない。",
+      "suggestion": "改善後のチューニングパラメータとして検討スコープに含める。"
+    },
+    {
+      "id": "N3",
+      "category": "整合性・正確性",
+      "description": "tantivy のフィールドブースト未設定＝均等重みであることの根拠が不足。",
+      "suggestion": "tantivy ドキュメントへのリンクを補足として追記する。"
+    }
+  ],
+  "summary": "Issue #127 は suggest コマンドのBM25検索品質に関するバグ報告として方向性は正しいが、2点の必須修正事項がある。(1) 再現手順の出力がsuggestの実際の出力フォーマットと整合しておらず再現性が不十分、(2) 受け入れ基準が未定義で完了条件が不明確。改善提案の技術的実現可能性（スキーマにファイル種別フィールドなし、ハイブリッド検索統合の影響範囲大）がIssueに反映されていないため、Phase分割と技術的制約の明記が推奨される。"
+}

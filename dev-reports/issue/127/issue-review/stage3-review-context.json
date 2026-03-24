@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能への影響",
+      "description": "deduplicate_by_fileにスコア係数ロジックを追加する場合、既存ユニットテスト3件が修正必要。deduplicate_by_fileのシグネチャは変更せず、新関数apply_file_type_penaltyを別途作成するパイプライン構成を推奨。",
+      "suggestion": "search_entry_files内でdeduplicate_by_fileの後にapply_file_type_penaltyを適用する"
+    },
+    {
+      "id": "M2",
+      "category": "既存機能への影響",
+      "description": "reader.rsのsearch()を変更するとsearch/impact/suggest/relatedの全コマンドに影響が波及する。",
+      "suggestion": "reader.rsには変更を加えず、スコア調整はsuggest.rs内のポストプロセスとして実装する"
+    },
+    {
+      "id": "M3",
+      "category": "テストへの影響",
+      "description": "スコア減衰ロジックのユニットテストが必須。ファイル種別判定パターンのテストがないとリグレッションリスクが高い。",
+      "suggestion": "is_test_file, is_doc_file等の判定関数を純粋関数として切り出し、ユニットテストを追加"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テストへの影響",
+      "description": "スコア減衰の効果を検証するE2Eテストが存在しない。",
+      "suggestion": "テストファイルとソースファイルを含むフィクスチャでsuggest結果の順序を検証するE2Eテストを追加"
+    },
+    {
+      "id": "S2",
+      "category": "依存関係への影響",
+      "description": "build_strategyはentry_filesの先頭ファイルに対してコマンドを生成する。スコア減衰により推薦ファイルが変わる。",
+      "suggestion": "build_strategyのテストでスコア減衰後の順序でコマンドが生成されることを確認"
+    },
+    {
+      "id": "S3",
+      "category": "既存機能への影響",
+      "description": "スコア減衰係数のマジックナンバーをハードコードすると調整困難。",
+      "suggestion": "減衰係数を定数化（TEST_FILE_PENALTY, DOC_FILE_PENALTY）し、将来の設定ファイル化の拡張ポイントを残す"
+    },
+    {
+      "id": "S4",
+      "category": "既存機能への影響",
+      "description": "searchコマンドのハイブリッド検索パスにも同様のバイアス問題が存在する可能性。本Issueスコープ外だが認識必要。",
+      "suggestion": "Phase 1ではsuggestのみ対応。スコア減衰関数はsearchモジュールからも再利用可能に設計"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "パフォーマンスへの影響",
+      "description": "ポストプロセスはO(n)の乗算でlimit=20, dedup後5件のため影響無視可能。",
+      "suggestion": "対応不要"
+    },
+    {
+      "id": "N2",
+      "category": "依存関係への影響",
+      "description": "manifest.rsのFileType::from_extension()やreader.rsのmatches_file_type()を活用できる可能性。",
+      "suggestion": "既存ユーティリティを確認し共通化できる部分は活用する"
+    }
+  ],
+  "summary": "変更範囲はsuggest.rs内のポストプロセスに限定。reader.rsを変更せずsuggest.rs内で完結させることでsearch/impact/relatedへの影響ゼロ。deduplicate_by_file後にファイルパスベースのスコア減衰関数を適用するパイプラインを構築。パフォーマンス影響は無視可能。"
+}

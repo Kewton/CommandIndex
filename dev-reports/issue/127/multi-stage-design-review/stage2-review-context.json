@@ -1,0 +1,36 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "API整合性",
+      "description": "設計書のsearch_entry_files()コード例でdeduped変数のlet束縛が不足。",
+      "suggestion": "コード例を正確に2行のlet束縛形式に修正。"
+    },
+    {
+      "id": "M2",
+      "category": "テスト戦略",
+      "description": "is_test_file_ignores_source_filesのテストケースにtest_utils.rsが含まれるが、実装ではtestを含む全ファイルがtrue。設計とテストが矛盾。",
+      "suggestion": "is_test_file()の判定を '_test.' / '.test.' パターンに限定するか、test_utilsもテストファイル扱いとする設計判断を明記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "命名規約",
+      "description": "TEST_FILE_BOOST/DOC_FILE_BOOSTは「ブースト」だが実質「減衰」。既存定数名は意味が明確。",
+      "suggestion": "TEST_FILE_WEIGHT/DOC_FILE_WEIGHTに変更。関数名もapply_file_type_weightに。"
+    },
+    {
+      "id": "S3",
+      "category": "型整合性",
+      "description": "DEDUP_FILE_LIMIT=5で切った後のブースト適用で候補が固定される。BM25上位6-20位にソースファイルが集中するケースで精度劣化の可能性。",
+      "suggestion": "Phase 2の検討事項としてDEDUP_FILE_LIMITをboost前に適用しない方式を記載。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "エラーハンドリング", "description": "空文字列パスのテストケース追加推奨。"},
+    {"id": "N2", "category": "命名規約", "description": "dev-reports/判定がプロジェクト固有。コメントで明記。"},
+    {"id": "N3", "category": "テスト戦略", "description": "統合テストは含まれていない。Phase 1スコープとしては妥当。"}
+  ],
+  "summary": "既存コードとの整合性は概ね良好。must_fix: コード例の記述正確性とis_test_file()の矛盾修正。should_fix: 命名改善（boost→weight）とdedup順序検討。"
+}

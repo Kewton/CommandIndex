@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "action": "再現手順の「実際の動作」を明確化。suggestコマンドの出力フォーマットとの整合性を確保し、BM25内部のスコアリング問題であることを明記。pathフィールドはSTRING型で全文検索対象外であることを追記。"},
+    {"id": "M2", "action": "受け入れ基準セクションを新設。テストファイル/ドキュメントのスコア減衰、再現手順での動作確認、既存テスト・clippy通過の5項目を定義。"},
+    {"id": "S1", "action": "改善方針をPhase 1（BM25スコアリング改善 - 本Issueスコープ）とPhase 2（ハイブリッド検索統合 - 別Issue）に分離。"},
+    {"id": "S2", "action": "問題点と根本原因分析セクションで、pathフィールドがSTRING型で全文検索対象外であること、body/heading/tagsの本文内容がマッチしていることを明記。"},
+    {"id": "S3", "action": "技術的制約セクションを新設。tantivyのQueryParserにドキュメント属性ブーストがないこと、ポストプロセス方式を採用することを記載。"},
+    {"id": "S4", "action": "技術的制約セクションでdeduplicate_by_fileのスコア集約戦略はスコープ外であることを明記。"},
+    {"id": "N1", "action": "環境セクションのバイナリ名をcommandindexdevに統一。"}
+  ],
+  "skipped_items": [
+    {"id": "N2", "reason": "BM25_SEARCH_LIMIT/DEDUP_FILE_LIMITの調整はPhase 1改善後の最適化として別途検討"},
+    {"id": "N3", "reason": "tantivy公式ドキュメントリンクの追加は優先度低"}
+  ],
+  "issue_updated": true
+}

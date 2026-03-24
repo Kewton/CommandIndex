@@ -1,0 +1,48 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能への影響",
+      "description": "dedup(limit=5)の後にboostを適用する設計では、BM25上位5件がテストファイルで占有された場合に本来推薦すべきソースファイル（6位以下）が候補に含まれない。",
+      "suggestion": "dedup limitを拡大またはboost→truncate順序に変更。"
+    },
+    {
+      "id": "M2",
+      "category": "既存テストへの影響",
+      "description": "e2eテストのテスト用リポジトリ内のファイルがis_test_file/is_doc_fileに該当する場合、e2eテストの期待値と不一致になる可能性。",
+      "suggestion": "common::git_init_with_commit()のファイル構成を確認し、boost後もe2eテストが安定することを検証。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "将来の拡張",
+      "description": "is_test_file/is_doc_fileがsuggest.rsにハードコード。Phase 2でロジック移動が必要。",
+      "suggestion": "pub(crate)関数にするか共通モジュール配置を検討。"
+    },
+    {
+      "id": "S2",
+      "category": "パフォーマンス",
+      "description": "to_lowercase()がファイルごとに2回実行される。",
+      "suggestion": "file_type_boost_factor()内で一度だけlowercase化。"
+    },
+    {
+      "id": "S3",
+      "category": "既存機能への影響",
+      "description": ".md一律減衰はMarkdown中心プロジェクトでsuggest精度が低下する。",
+      "suggestion": "README.md/CHANGELOG.md等の定型ドキュメントかdev-reports/docs/配下のみに限定。"
+    },
+    {
+      "id": "S4",
+      "category": "テストへの影響",
+      "description": "file_name.contains('test')はcontest.rs, latest.rs等の部分一致誤判定。",
+      "suggestion": "'_test.' / '.test.' / '_spec.' / '.spec.' パターンに限定。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "boost係数のconfig.toml設定化をTODOに。"},
+    {"id": "N2", "description": "build_strategyのトップファイル変化をリリースノートに明記。"},
+    {"id": "N3", "description": "partial_cmpのNaN対策としてtotal_cmp使用を検討。"}
+  ],
+  "summary": "M1(dedup順序問題)が最重要。Stage 1-2と合わせてis_test_fileの判定精度、.md一律減衰問題を修正すべき。"
+}

@@ -1,0 +1,8 @@
+{
+  "applied": [
+    {"id": "S1-M1", "action": "is_test_file()をセパレータ付きパターン(_test./.test./_spec./.spec.)に変更。contest.rs/latest.rs/test_utils.rsの誤検知を防止"},
+    {"id": "S1-S2", "action": "dedup順序を変更: dedup(BM25_SEARCH_LIMIT)→weight→truncate(DEDUP_FILE_LIMIT)。6位以下のソースファイルが救済される設計に"},
+    {"id": "S1-S1", "action": "Phase 2のテーブル駆動方式拡張を将来課題として記録"},
+    {"id": "S1-S3", "action": "Phase 2での共通モジュール移動を判断2に追記"}
+  ]
+}
