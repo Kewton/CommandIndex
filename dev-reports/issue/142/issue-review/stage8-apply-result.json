@@ -1,0 +1,12 @@
+{
+  "stage": 8,
+  "type": "apply_review",
+  "applied_items": [
+    "影響範囲の『既存サブコマンド: 影響なし』を『既存検索・indexingロジックには直接影響しないが、CLI公開面に影響あり』に修正",
+    "テスト影響を詳細化: トップレベルhelp期待値更新、before-change --help追加、E2Eテスト（embeddingあり/なし等）追加",
+    "パフォーマンス影響を明記: git log走査とsection embedding総当たり比較のレイテンシ懸念",
+    "出力モジュールへの変更波及を影響範囲に追記",
+    "受け入れ基準にテスト関連項目を追加（トップレベルhelp、help-llm件数、--helpサブコマンド、E2Eケース）"
+  ],
+  "issue_updated": true
+}

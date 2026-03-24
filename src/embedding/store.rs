@@ -137,7 +137,7 @@ fn bytes_to_f32_vec(bytes: &[u8]) -> Vec<f32> {
 
 /// Compute cosine similarity between two vectors of equal length.
 /// Returns 0.0 if either vector has zero norm.
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+pub(crate) fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     let mut dot = 0.0_f32;
     let mut norm_a = 0.0_f32;
     let mut norm_b = 0.0_f32;

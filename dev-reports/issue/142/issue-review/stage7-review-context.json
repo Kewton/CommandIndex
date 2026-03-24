@@ -1,0 +1,31 @@
+{
+  "stage": 7,
+  "type": "impact_review_2nd",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {
+      "issue": "影響範囲の『既存サブコマンド: 影響なし』が不正確。CLIヘルプとhelp-llmの出力仕様は変わる。",
+      "reason": "tests/cli_args.rs:6 のトップレベルhelp確認、tests/cli_args.rs:745 のhelp-llm確認が固定値で検証している。",
+      "suggestion": "影響範囲を『既存の検索・indexingロジックには直接影響しないが、CLI公開面として--help / help-llmの出力とそれに依存するテスト・連携には影響あり』に修正。"
+    },
+    {
+      "issue": "テスト影響の記述が不足。help-llm件数更新だけでは足りない。",
+      "reason": "before-changeをCommandsに追加すると、トップレベル--help期待値、サブコマンド受理テスト、ヘルプ文言テスト、E2Eの新規追加が必要。",
+      "suggestion": "1) tests/cli_args.rsトップレベルhelp期待値更新、2) before-change --help追加、3) help-llm一覧・件数更新、4) git repoセットアップE2E追加、5) embeddingあり/なし、indexあり/なし、不正パス、非gitrepoケース追加。"
+    },
+    {
+      "issue": "パフォーマンス影響が過小評価。git log走査とsection embedding総当たり比較が新たなホットパス。",
+      "reason": "コストはgit logプロセス起動＋履歴走査、Issue数に応じた文書取得、対象ファイルsection数×文書section数×文書件数のmax poolingに依存。",
+      "suggestion": "影響範囲に『履歴が深いファイルやsection数の多い文書群ではレイテンシ増加の可能性あり』を明記し、文書取得件数上限、ランキング対象件数上限の方針を追記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "共通出力モジュールへの変更波及が明記されていない",
+      "reason": "BeforeChangeResultとformat関数の追加がoutput/*.rsに必要",
+      "suggestion": "影響範囲に出力モジュールへの変更を明記"
+    }
+  ],
+  "nice_to_have": [],
+  "summary": "影響範囲の記述が楽観的すぎる。CLIヘルプ・テストへの波及、パフォーマンス影響を正確に記述すべき。"
+}

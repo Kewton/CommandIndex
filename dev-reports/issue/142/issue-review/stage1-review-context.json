@@ -1,0 +1,62 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "issue": "ナレッジグラフに「ソースファイル → Issue」のリンクが存在しない",
+      "reason": "現在のknowledge_nodesテーブルには 'issue' と 'document' の2種類のノードしかなく、documentノードはdev-reports/配下のファイルのみ。一般的なソースファイルを起点とした2ホップ走査は不可能。",
+      "suggestion": "ソースファイルとIssueを関連付ける仕組みが必要。選択肢: (1) git logのコミットメッセージからIssue番号を抽出してエッジ追加、(2) dev-reports内の設計書にaffected_filesセクション追加、(3) before-change実行時にgit logをリアルタイム走査。"
+    },
+    {
+      "issue": "受け入れ基準が未定義",
+      "reason": "何をもって完了とするかが曖昧。実装者やレビュアーが合否判定できない。",
+      "suggestion": "受け入れ基準を追加: (1) before-change <file>で関連ナレッジが返ること、(2) --format human/json/llmで正しく出力、(3) 関連Issueなしの場合のfallback、(4) --index-pathで別worktree参照可能、(5) --limitで件数制限。"
+    },
+    {
+      "issue": "find_knowledge_relatedはdocument起点のみで任意ソースファイルを起点にできない",
+      "reason": "src/config/z-index.tsのような一般ソースファイルはknowledge_nodesに登録されていないため、このメソッドでは何も返らない。",
+      "suggestion": "before-change用の新しいクエリメソッドを作成するか、git log経由のIssue特定ロジックを組み合わせた専用メソッドを実装する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "セマンティック検索のsearch_similarにパスフィルタがない",
+      "reason": "ステップ1の候補リストでフィルタする必要がある。",
+      "suggestion": "search_similarにパスフィルタを追加するか、呼び出し側でフィルタリングする方針を明記。"
+    },
+    {
+      "issue": "コマンド名 'before-change' のCLI命名規則整合性",
+      "reason": "既存サブコマンドとの一貫性を検討すべき。",
+      "suggestion": "HelpLlmがhelp-llmを使用しているため、before-changeも同様に定義可能。"
+    },
+    {
+      "issue": "擬似コードとAPIの乖離がIssue本文で未修正",
+      "reason": "実装時に混乱する。",
+      "suggestion": "Issue本文の擬似コードを実際のAPI名に更新する。"
+    },
+    {
+      "issue": "エラーハンドリング方針が未定義",
+      "reason": "インデックス未作成、embedding未生成、Ollamaサーバー停止時のメッセージが未定義。",
+      "suggestion": "BeforeChangeError enumを定義し、各障害パターンのバリアントを含める。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "セマンティック検索クエリの定義が曖昧",
+      "reason": "embeddingクエリとして何を使うか不明。",
+      "suggestion": "対象ファイルのembeddingをfind_by_pathで取得しクエリとする方針を明記。"
+    },
+    {
+      "issue": "出力フォーマットに --format path が含まれていない",
+      "reason": "既存OutputFormatとの一貫性。",
+      "suggestion": "--format pathも対応するか、除外理由を明記。"
+    },
+    {
+      "issue": "Git連携（ステップ3）の詳細不足",
+      "reason": "--index-pathでの読み込み詳細が未記述。",
+      "suggestion": "resolve_commandindex_dirのパターンを活用する方針を明記。"
+    }
+  ],
+  "summary": "最大の問題は「ソースファイル → Issue」のリンクがナレッジグラフに存在しないこと。受け入れ基準の追加とAPI名の修正も必要。"
+}

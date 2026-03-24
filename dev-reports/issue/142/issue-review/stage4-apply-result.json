@@ -1,0 +1,20 @@
+{
+  "stage": 4,
+  "type": "apply_review",
+  "applied_items": [
+    "アーキテクチャセクション追加（設計方針・モジュール構成）",
+    "git log走査ロジックの責務分離を明記",
+    "SymbolStoreにfind_knowledge_by_issue()メソッド追加を明記",
+    "embedding未生成時のフォールバック動作をオプショナル設計に変更",
+    "BeforeChangeResult出力構造体の必要性を明記",
+    "--max-commitsオプション追加",
+    "--index-pathの優先順位をimpactコマンドと同じパターンに明記",
+    "help-llmへの情報追加を受け入れ基準に追加",
+    "影響範囲セクション追加"
+  ],
+  "issue_updated": true,
+  "must_fix_count_stage1": 3,
+  "must_fix_count_stage3": 3,
+  "total_must_fix": 6,
+  "skip_stage5_8": false
+}

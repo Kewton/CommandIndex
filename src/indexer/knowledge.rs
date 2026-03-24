@@ -58,6 +58,22 @@ impl KnowledgeRelation {
             Self::HasWorkplan => "has_workplan",
         }
     }
+
+    /// Parse a relation string from the database. Returns `None` for unknown values.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "has_design" => Some(Self::HasDesign),
+            "has_review" => Some(Self::HasReview),
+            "has_workplan" => Some(Self::HasWorkplan),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for KnowledgeRelation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
 }
 
 /// ドキュメントのサブタイプ
@@ -350,6 +366,34 @@ mod tests {
         assert_eq!(KnowledgeRelation::HasDesign.as_str(), "has_design");
         assert_eq!(KnowledgeRelation::HasReview.as_str(), "has_review");
         assert_eq!(KnowledgeRelation::HasWorkplan.as_str(), "has_workplan");
+    }
+
+    #[test]
+    fn test_knowledge_relation_parse() {
+        assert_eq!(
+            KnowledgeRelation::parse("has_design"),
+            Some(KnowledgeRelation::HasDesign)
+        );
+        assert_eq!(
+            KnowledgeRelation::parse("has_review"),
+            Some(KnowledgeRelation::HasReview)
+        );
+        assert_eq!(
+            KnowledgeRelation::parse("has_workplan"),
+            Some(KnowledgeRelation::HasWorkplan)
+        );
+        assert_eq!(KnowledgeRelation::parse("unknown"), None);
+        assert_eq!(KnowledgeRelation::parse(""), None);
+    }
+
+    #[test]
+    fn test_knowledge_relation_display() {
+        assert_eq!(format!("{}", KnowledgeRelation::HasDesign), "has_design");
+        assert_eq!(format!("{}", KnowledgeRelation::HasReview), "has_review");
+        assert_eq!(
+            format!("{}", KnowledgeRelation::HasWorkplan),
+            "has_workplan"
+        );
     }
 
     #[test]

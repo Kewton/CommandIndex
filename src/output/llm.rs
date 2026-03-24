@@ -355,6 +355,48 @@ pub fn format_related_llm(
     Ok(())
 }
 
+/// before-change結果をLLM向けMarkdown形式で出力する
+pub fn format_before_change_llm(
+    result: &crate::output::BeforeChangeResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let file = strip_control_chars(&result.file_path);
+    writeln!(
+        writer,
+        "## Before-change: {file} ({} issue(s), {} finding(s))",
+        result.total_issues,
+        result.findings.len()
+    )?;
+
+    if result.findings.is_empty() {
+        writeln!(writer)?;
+        writeln!(writer, "No related design documents found.")?;
+        return Ok(());
+    }
+
+    writeln!(writer)?;
+
+    for finding in &result.findings {
+        let doc_path = strip_control_chars(&finding.doc_path);
+        let relation = strip_control_chars(&finding.relation);
+        let issue = strip_control_chars(&finding.issue_number);
+        let sim_str = finding
+            .similarity
+            .map(|s| format!(" [{s:.2}]"))
+            .unwrap_or_default();
+        let title_str = finding
+            .doc_title
+            .as_ref()
+            .map(|t| format!(" - {}", strip_control_chars(t)))
+            .unwrap_or_default();
+        writeln!(
+            writer,
+            "- {doc_path}{sim_str} (#{issue}, {relation}){title_str}"
+        )?;
+    }
+    Ok(())
+}
+
 /// Diff結果をLLM向けMarkdown形式で出力する
 pub fn format_diff_llm(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
     let total_text = format!(

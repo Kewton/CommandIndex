@@ -1,0 +1,56 @@
+{
+  "issue": 142,
+  "phase": "refactoring",
+  "status": "completed",
+  "timestamp": "2026-03-25T00:00:00Z",
+  "fixes": [
+    {
+      "id": 1,
+      "severity": "medium",
+      "file": "src/cli/before_change.rs",
+      "description": "git log stderr hang: stderr pipe buffer could fill and cause deadlock during wait()",
+      "fix": "Spawn a dedicated thread to drain stderr concurrently with stdout reading, then join after wait()"
+    },
+    {
+      "id": 2,
+      "severity": "medium",
+      "file": "src/cli/before_change.rs",
+      "description": "max_sim initialized to 0.0, negative cosine similarities rounded to 0.0",
+      "fix": "Changed max_sim initialization from 0.0 to f32::NEG_INFINITY"
+    },
+    {
+      "id": 3,
+      "severity": "medium",
+      "file": "src/cli/before_change.rs",
+      "description": "find_by_path() Err silently swallowed via unwrap_or_default()",
+      "fix": "Replaced unwrap_or_default() with explicit match that emits eprintln! warning on Err"
+    },
+    {
+      "id": 4,
+      "severity": "low",
+      "file": "src/output/path.rs",
+      "description": "Path output written without sanitization, control character injection risk",
+      "fix": "Added sanitize_path() helper that strips control characters (except tab) and applied to all path output functions"
+    },
+    {
+      "id": 5,
+      "severity": "low",
+      "file": "src/indexer/symbol_store.rs",
+      "description": "Unknown relation string from DB output to stderr without sanitization",
+      "fix": "Replace control characters with U+FFFD before outputting to stderr"
+    },
+    {
+      "id": 6,
+      "severity": "low",
+      "file": "src/cli/before_change.rs",
+      "description": "Regex compiled at runtime with expect(), panic risk on pattern change",
+      "fix": "Moved regex to static LazyLock<Regex> (ISSUE_RE) for compile-time-like initialization"
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass",
+    "cargo_fmt": "pass",
+    "cargo_test": "pass (1 pre-existing failure in test_embed_without_ollama_fails unrelated to changes)"
+  }
+}

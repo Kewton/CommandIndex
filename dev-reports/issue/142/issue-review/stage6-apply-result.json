@@ -1,0 +1,16 @@
+{
+  "stage": 6,
+  "type": "apply_review",
+  "applied_items": [
+    "概要の表現を『多段フロー』に修正（2ホップ走査の誤解を解消）",
+    "擬似コードをresolve_index_path → symbol_db_path / embeddings_db_pathベースに修正",
+    "複数section embeddingの集約方針（max pooling）を明記",
+    "Issue番号抽出パターンを拡張（#NNN, (#NNN), fixes #NNN, refs #NNN）",
+    "--limitの意味を『全体上位N件』に明確化",
+    "モジュール構成にsrc/cli/mod.rs, src/main.rs, tests/cli_args.rsを追加",
+    "入力バリデーション（不正パス拒否、非gitリポジトリ）を受け入れ基準に追加",
+    "help-llmテスト更新を受け入れ基準に追加",
+    "エラーハンドリングにwarning条件のケース分けを追加"
+  ],
+  "issue_updated": true
+}

@@ -1,0 +1,45 @@
+{
+  "stage": 5,
+  "type": "design_principles_2nd",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {
+      "issue": "入力検証がvalidate_file_path()を再利用せず独自実装を増やす前提",
+      "reason": "DRY/KISS違反。stdin.rsのvalidate_file_path()で空文字・NUL・..等をカバー済み",
+      "suggestion": "validate_file_path()を共通利用し、git固有の追加条件だけを重ねる"
+    },
+    {
+      "issue": "BeforeChangeErrorがresolve_index_path/Config/Io失敗を表現できていない",
+      "reason": "エラー型の網羅性不足",
+      "suggestion": "ResolveIndexPath(ResolveIndexPathError)、Io(std::io::Error)を追加"
+    },
+    {
+      "issue": "Embedding系エラーの致命/非致命の整理が不足",
+      "reason": "DB不存在・schema mismatch・find_by_path失敗等の扱いが未定",
+      "suggestion": "ケース分け: DB不存在→warning継続、対象ファイルemb未取得→info非ランキング、文書emb欠如→similarity:None、schema mismatch→warning+フォールバック"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "KnowledgeDocResult.relation: StringがKnowledgeRelation enumを活かしていない",
+      "suggestion": "KnowledgeRelation enumを利用し出力層で文字列化"
+    },
+    {
+      "issue": "IndexNotFound(String)/SymbolDbNotFound(String)が過剰",
+      "suggestion": "unit variantに寄せる"
+    },
+    {
+      "issue": "read-onlyコマンドにreject_symlink()は過剰(KISS/YAGNI)",
+      "suggestion": "resolve_index_path()までを基本とし、reject_symlink()は適用しない"
+    },
+    {
+      "issue": "フォーマッタAPIがBeforeChangeResultを受ける形に統一されていない",
+      "suggestion": "format_before_change_results(&BeforeChangeResult, format, writer)に統一"
+    }
+  ],
+  "nice_to_have": [
+    {"issue": "find_knowledge_by_issue(&[String])の引数型", "suggestion": "今回はString固定で問題なし"},
+    {"issue": "Issue番号抽出パターンの保守性", "suggestion": "regex群を定数/専用ヘルパーに閉じ込める"}
+  ],
+  "summary": "前回レビュー反映は効いている。入力検証の共通化、エラー型の網羅性、Embedding系エラーの整理が残課題。"
+}

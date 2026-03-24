@@ -61,6 +61,15 @@ pub struct EmbeddingSimilarityResult {
     pub similarity: f32,
 }
 
+/// ナレッジグラフ Issue → ドキュメント検索の結果構造体
+#[derive(Debug, Clone, PartialEq)]
+pub struct KnowledgeDocResult {
+    pub issue_number: String,
+    pub relation: crate::indexer::knowledge::KnowledgeRelation,
+    pub file_path: String,
+    pub title: Option<String>,
+}
+
 // ---------------------------------------------------------------------------
 // Row mapping helpers
 // ---------------------------------------------------------------------------
@@ -844,6 +853,72 @@ impl SymbolStore {
 
     /// Find documents related to the given file through the knowledge graph.
     /// If the file is a document node, find its issue and return all sibling documents.
+    /// Issue番号群からナレッジグラフ経由でドキュメントを検索する。
+    /// Issue → document の 1ホップ走査。
+    pub fn find_knowledge_by_issue(
+        &self,
+        issue_numbers: &[String],
+    ) -> Result<Vec<KnowledgeDocResult>, SymbolStoreError> {
+        if issue_numbers.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Build IN clause with placeholders
+        let placeholders: Vec<String> = issue_numbers
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("?{}", i + 1))
+            .collect();
+        let in_clause = placeholders.join(", ");
+        let sql = format!(
+            "SELECT kn_issue.identifier AS issue_number,
+                    ke.relation,
+                    kn_doc.file_path,
+                    kn_doc.title
+             FROM knowledge_nodes kn_issue
+             JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
+             JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'
+             WHERE kn_issue.type = 'issue'
+               AND kn_issue.identifier IN ({in_clause})
+             ORDER BY kn_issue.identifier, ke.relation"
+        );
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::types::ToSql> = issue_numbers
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
+        let rows = stmt.query_map(params.as_slice(), |row| {
+            let issue_number: String = row.get(0)?;
+            let relation_str: String = row.get(1)?;
+            let file_path: String = row.get(2)?;
+            let title: Option<String> = row.get(3)?;
+            Ok((issue_number, relation_str, file_path, title))
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let (issue_number, relation_str, file_path, title) = row?;
+            if let Some(relation) =
+                crate::indexer::knowledge::KnowledgeRelation::parse(&relation_str)
+            {
+                results.push(KnowledgeDocResult {
+                    issue_number,
+                    relation,
+                    file_path,
+                    title,
+                });
+            } else {
+                let sanitized: String = relation_str
+                    .chars()
+                    .map(|c| if c.is_control() { '\u{FFFD}' } else { c })
+                    .collect();
+                eprintln!("Warning: unknown knowledge relation '{sanitized}', skipping");
+            }
+        }
+        Ok(results)
+    }
+
     pub fn find_knowledge_related(
         &self,
         file_path: &str,
@@ -1775,5 +1850,69 @@ mod tests {
 
         let related = store.find_knowledge_related("src/main.rs").unwrap();
         assert!(related.is_empty());
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_normal() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/design/issue-200-feature-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Query for issue 100
+        let results = store.find_knowledge_by_issue(&["100".to_string()]).unwrap();
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.issue_number == "100"));
+
+        // Query for issue 200
+        let results = store.find_knowledge_by_issue(&["200".to_string()]).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].issue_number, "200");
+
+        // Query for both
+        let results = store
+            .find_knowledge_by_issue(&["100".to_string(), "200".to_string()])
+            .unwrap();
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_empty_input() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.find_knowledge_by_issue(&[]).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_no_match() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.find_knowledge_by_issue(&["999".to_string()]).unwrap();
+        assert!(results.is_empty());
     }
 }
