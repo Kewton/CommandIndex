@@ -1,0 +1,14 @@
+{
+  "stage": 1,
+  "focus": "設計原則 (SOLID/KISS/YAGNI/DRY)",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "DRY: DocSubtype逆変換がsymbol_store.rsに散在", "description": "DocSubtype::parse()メソッドを追加し、symbol_store.rsから委譲する形にすべき"},
+    {"id": "S2", "title": "DRY: build_pattern_rules()が毎回正規表現を再コンパイル", "description": "LazyLockで静的初期化すべき"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "KISS: display_labelとgrouped()の暗黙的文字列結合が脆い"},
+    {"id": "N2", "title": "YAGNI: 正規表現が.*で広すぎるが現時点では問題なし"}
+  ],
+  "summary": "設計はSOLID/KISS/YAGNIに概ね沿っている。DRY違反2箇所を推奨改善。"
+}

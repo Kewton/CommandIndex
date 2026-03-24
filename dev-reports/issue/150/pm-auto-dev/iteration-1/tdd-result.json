@@ -1,0 +1,1 @@
+{"status": "success", "tests_passed": 17, "tests_failed": 0, "clippy_warnings": 0, "details": "All 11 unit tests (5 new + 6 updated) and 6 E2E tests pass. Clippy clean. Format check clean. Pre-existing failure in test_embed_without_ollama_fails (unrelated to this change) is excluded from count."}

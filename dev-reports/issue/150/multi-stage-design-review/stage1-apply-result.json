@@ -1,0 +1,1 @@
+{"stage": 1, "applied": ["S1: DocSubtype::parse()メソッド追加を判断4として追記", "S2: LazyLock最適化はスコープ外（Issue分離）"], "issue_updated": false, "design_doc_updated": true}

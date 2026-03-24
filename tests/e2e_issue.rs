@@ -46,6 +46,13 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::ProgressReport,
         },
+        KnowledgeEntry {
+            issue_number: "140".to_string(),
+            file_path: "dev-reports/review/2026-03-20-issue140-consistency-review-stage2.md"
+                .to_string(),
+            relation: KnowledgeRelation::HasReview,
+            doc_subtype: DocSubtype::StageReview,
+        },
     ];
     store.insert_knowledge_entries(&entries).unwrap();
 
@@ -125,7 +132,7 @@ fn issue_path_format() {
 
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     let lines: Vec<&str> = stdout.trim().lines().collect();
-    assert_eq!(lines.len(), 5);
+    assert_eq!(lines.len(), 6);
     // Verify all paths are present
     assert!(lines.contains(&"dev-reports/design/issue-140-issue-cmd-design-policy.md"));
     assert!(lines.contains(&"dev-reports/issue/140/work-plan.md"));

@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "focus": "セキュリティ",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "正規表現の.*を[^/]*に変更（防御的プログラミング）", "description": "パスセパレータを明示的に除外すべき"},
+    {"id": "S2", "title": "既存のprogress report正規表現の.+も[^/]+に変更推奨"},
+    {"id": "S3", "title": "build_pattern_rules()を静的初期化でCPU負荷軽減"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "Issue番号の\\d+を\\d{1,10}に制限"},
+    {"id": "N2", "title": "detect_dev_reports_changesのstdoutサイズ制限"}
+  ],
+  "summary": "セキュリティ上の重大な問題なし。防御的プログラミングとして正規表現の.*を[^/]*に変更推奨。"
+}

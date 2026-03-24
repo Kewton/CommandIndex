@@ -1,0 +1,1 @@
+{"stage": 4, "applied": ["S1: 正規表現の.*を[^/]*に変更（防御的プログラミング）", "S3: シンボリックリンク対策をセキュリティ設計に追記"], "skipped": ["S2: 既存progress reportのパターン変更はスコープ外"], "design_doc_updated": true, "total_must_fix_stage1_4": 1}

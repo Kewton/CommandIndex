@@ -1,0 +1,40 @@
+{
+  "stage": 2,
+  "applied_items": [
+    {
+      "id": "M1",
+      "action": "Added DocSubtype specification section - new StageReview variant with impact analysis on display_label(), sort_order(), and symbol_store.rs"
+    },
+    {
+      "id": "M2",
+      "action": "Added 6 explicit acceptance criteria covering parse, scan, display, existing tests, new tests, and test updates"
+    },
+    {
+      "id": "S1",
+      "action": "Documented that date prefix (YYYY-MM-DD) is always present (enforced by tooling) and included in regex pattern"
+    },
+    {
+      "id": "S2",
+      "action": "Added display specification: each stage file listed individually (no summarization)"
+    },
+    {
+      "id": "S3",
+      "action": "Added acceptance criterion #6 requiring test_scan_dev_reports_with_temp_dir update"
+    },
+    {
+      "id": "N3",
+      "action": "Added target code reference: build_pattern_rules() in src/indexer/knowledge.rs"
+    }
+  ],
+  "skipped_items": [
+    {
+      "id": "N1",
+      "reason": "Stage number extraction is a follow-up enhancement, not critical for this issue"
+    },
+    {
+      "id": "N2",
+      "reason": "LazyLock optimization is a separate refactoring concern"
+    }
+  ],
+  "issue_updated": true
+}

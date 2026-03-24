@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "focus": "整合性",
+  "must_fix": [
+    {"id": "M1", "title": "3ファイル同時変更の実装順序依存を明記すべき", "description": "DocSubtype追加は knowledge.rs, issue.rs, symbol_store.rs を同一コミットで変更必須"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "正規表現の具体的マッチ例を設計書に追記"},
+    {"id": "S2", "title": "テスト計画に追加ファイルの具体パスを明記"},
+    {"id": "S3", "title": "symbol_store.rsの挿入位置を明確化"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "DocSubtypeにDisplayトレイト未実装（一貫性）"},
+    {"id": "N2", "title": "DocSubtype::parse()メソッド追加推奨"}
+  ],
+  "summary": "設計書は概ねコードベースと整合。必須修正1件: 3ファイル同時変更の依存関係明記。"
+}
