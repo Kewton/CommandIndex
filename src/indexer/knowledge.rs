@@ -52,7 +52,7 @@ impl From<SymbolStoreError> for KnowledgeError {
 /// Statically compiled regex for issue number extraction.
 /// Shared between `before_change.rs` and `knowledge.rs`.
 pub static ISSUE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?i)(?:#(\d+)|\(#(\d+)\)|fixes\s+#(\d+)|refs\s+#(\d+))")
+    regex::Regex::new(r"(?i)(?:#(\d+)|\(#(\d+)\)|fixes\s+#(\d+)|refs\s+#(\d+)|issue[- ]?(\d+))")
         .expect("ISSUE_RE is a valid regex literal")
 });
 
@@ -67,6 +67,7 @@ pub fn extract_issue_numbers(text: &str) -> Vec<String> {
                 .or(cap.get(2))
                 .or(cap.get(3))
                 .or(cap.get(4))
+                .or(cap.get(5))
                 .map(|m| m.as_str().to_string())
         })
         .collect()
@@ -293,8 +294,9 @@ pub fn extract_file_modifies_from_git_log(
         if reading_files {
             let trimmed = line.trim();
             if trimmed.is_empty() {
-                // Empty line between commits => next commit coming
-                reading_files = false;
+                // Skip empty lines — git log places them between format output and file list,
+                // and between file lists of consecutive commits. The next COMMIT_START
+                // will naturally reset reading_files.
                 continue;
             }
 
@@ -779,6 +781,46 @@ mod tests {
         assert!(nums.contains(&"2".to_string()));
         assert!(nums.contains(&"3".to_string()));
         assert!(nums.contains(&"4".to_string()));
+    }
+
+    // --- Bug #151: issue-NNN pattern not matched ---
+
+    #[test]
+    fn test_extract_issue_numbers_issue_dash_pattern() {
+        // feat(issue-99): ... → should extract 99
+        let nums = extract_issue_numbers("feat(issue-99): add sidebar toggle");
+        assert!(
+            nums.contains(&"99".to_string()),
+            "issue-99 not matched: {nums:?}"
+        );
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_issue_space_pattern() {
+        // Issue #525, #526 → should extract 525 and 526
+        let nums = extract_issue_numbers("Issue #525, #526, #168");
+        assert!(
+            nums.contains(&"525".to_string()),
+            "#525 not matched: {nums:?}"
+        );
+        assert!(
+            nums.contains(&"526".to_string()),
+            "#526 not matched: {nums:?}"
+        );
+        assert!(
+            nums.contains(&"168".to_string()),
+            "#168 not matched: {nums:?}"
+        );
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_fix_parens_hash() {
+        // fix(#299): ... → should extract 299
+        let nums = extract_issue_numbers("fix(#299): unify z-index system");
+        assert!(
+            nums.contains(&"299".to_string()),
+            "#299 not matched: {nums:?}"
+        );
     }
 
     // --- validate_git_file_path tests ---
