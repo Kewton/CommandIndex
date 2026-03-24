@@ -55,6 +55,21 @@ pub fn parse_jsonl(output: &str) -> Vec<serde_json::Value> {
         .collect()
 }
 
+/// JSONL出力からメタデータ行を除外して検索結果のみ返す
+pub fn parse_search_jsonl(output: &str) -> Vec<serde_json::Value> {
+    parse_jsonl(output)
+        .into_iter()
+        .filter(|v| v.get("type").and_then(|t| t.as_str()) != Some("metadata"))
+        .collect()
+}
+
+/// JSONL出力からメタデータ行を取得
+pub fn parse_jsonl_metadata(output: &str) -> Option<serde_json::Value> {
+    parse_jsonl(output)
+        .into_iter()
+        .find(|v| v.get("type").and_then(|t| t.as_str()) == Some("metadata"))
+}
+
 /// Composite: run search and parse JSONL results.
 pub fn run_search_jsonl(path: impl AsRef<std::path::Path>, query: &str) -> Vec<serde_json::Value> {
     let output = run_search(path, query).success();

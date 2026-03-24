@@ -1,0 +1,18 @@
+{
+  "issue_number": 125,
+  "title": "--rerank がモデル未検出時にサイレントフォールバックし結果が変わらない",
+  "design_policy": "dev-reports/design/issue-125-rerank-fallback-design-policy.md",
+  "work_plan": "dev-reports/issue/125/work-plan.md",
+  "tasks": [
+    "Task 1.1: RerankError::PartialTimeout バリアント追加 (src/rerank/mod.rs)",
+    "Task 1.2: RerankStatus enum 定義 (src/cli/search.rs)",
+    "Task 2.1: ollama.rs のタイムアウト処理変更",
+    "Task 3.1: rerank_error_hint() ヘルパー関数追加",
+    "Task 3.2: try_rerank() シグネチャ変更",
+    "Task 3.3: build_rerank_stdout_prefix() / build_rerank_stderr_message() 追加",
+    "Task 3.4: run() 関数の出力制御統合",
+    "Task 4.1: 単体テスト追加",
+    "Task 4.2: テストユーティリティ更新 (tests/common/mod.rs)",
+    "Task 4.3: E2Eテスト拡充"
+  ]
+}

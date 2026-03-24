@@ -487,6 +487,89 @@ fn test_context_with_embeddings() {
 }
 
 // ===========================================================================
+// Rerank fallback tests (no Ollama required)
+// ===========================================================================
+
+#[test]
+fn test_rerank_fallback_stderr_message() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_stderr_message: setup");
+
+    create_test_config(&commandindex_dir)
+        .expect("test_rerank_fallback_stderr_message: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "human"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("[rerank] Reranking skipped:"),
+        "test_rerank_fallback_stderr_message: stderr should contain '[rerank] Reranking skipped:', got: {stderr}"
+    );
+}
+
+#[test]
+fn test_rerank_fallback_json_metadata() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_json_metadata: setup");
+
+    create_test_config(&commandindex_dir)
+        .expect("test_rerank_fallback_json_metadata: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "json"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let metadata = common::parse_jsonl_metadata(&stdout);
+    assert!(
+        metadata.is_some(),
+        "test_rerank_fallback_json_metadata: should have metadata line, got stdout: {stdout}"
+    );
+    let meta = metadata.unwrap();
+    assert_eq!(
+        meta["type"], "metadata",
+        "test_rerank_fallback_json_metadata: type should be 'metadata'"
+    );
+    assert_eq!(
+        meta["rerank_status"], "skipped",
+        "test_rerank_fallback_json_metadata: rerank_status should be 'skipped'"
+    );
+
+    // Verify search results are still present (excluding metadata)
+    let results = common::parse_search_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "test_rerank_fallback_json_metadata: search results should not be empty"
+    );
+}
+
+#[test]
+fn test_rerank_fallback_llm_comment() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_llm_comment: setup");
+
+    create_test_config(&commandindex_dir).expect("test_rerank_fallback_llm_comment: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "llm"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains("<!-- rerank skipped:"),
+        "test_rerank_fallback_llm_comment: stdout should contain '<!-- rerank skipped:', got: {stdout}"
+    );
+}
+
+// ===========================================================================
 // Environment-dependent tests (require Ollama)
 // ===========================================================================
 

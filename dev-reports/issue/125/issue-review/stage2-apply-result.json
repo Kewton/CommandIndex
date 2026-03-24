@@ -1,0 +1,18 @@
+{
+  "stage": 2,
+  "action": "Issue本文更新",
+  "applied_items": [
+    "M1: 実装方針を「Graceful degradation + 明示的フォールバック通知」に一本化",
+    "M2: try_rerank()のシグネチャ変更を受け入れ基準に明記",
+    "M3: 各フォーマット別のフォールバック表現を定義",
+    "S1: try_hybrid_search()の修正はスコープ外として明記",
+    "S2: テスト計画を受け入れ基準に追加",
+    "S3: デフォルトモデル変更をスコープ外として明記",
+    "S4: stderrメッセージ改善をアクション可能なヒント付きに変更"
+  ],
+  "skipped_items": [
+    "N2: preflight checkはスコープ外",
+    "N3: パフォーマンス最適化はスコープ外",
+    "N4: tracing crate導入はスコープ外"
+  ]
+}

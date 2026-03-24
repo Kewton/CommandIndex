@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: RerankError::PartialTimeout variant added to src/rerank/mod.rs",
+    "Task 1.2: RerankStatus enum defined in src/cli/search.rs (private)",
+    "Task 2.1: ollama.rs timeout handling changed to return PartialTimeout error",
+    "Task 3.1: rerank_error_hint() helper function added",
+    "Task 3.2: try_rerank() signature changed to return (Vec<SearchResult>, RerankStatus)",
+    "Task 3.3: build_rerank_stdout_prefix() and build_rerank_stderr_message() added",
+    "Task 3.4: run() function output control integrated",
+    "Task 4.1: Unit tests added (12 tests in search.rs, 1 in mod.rs)",
+    "Task 4.2: Test utilities parse_search_jsonl() and parse_jsonl_metadata() added",
+    "Task 4.3: E2E tests added (3 new tests: stderr, json metadata, llm comment)"
+  ],
+  "tests_passed": true,
+  "clippy_clean": true,
+  "build_success": true,
+  "fmt_clean": true,
+  "notes": "All new and existing tests pass. The pre-existing test_embed_without_ollama_fails was already failing before these changes.",
+  "codex_review": {
+    "critical_fixed": 1,
+    "warnings_fixed": 2,
+    "fixes": [
+      "sanitize_reason()に-->エスケープ追加(HTMLコメント破壊防止)",
+      "serde_json::to_string().unwrap()→.ok()に変更(パニック防止)",
+      "stderr出力にもsanitize_reason()適用"
+    ]
+  }
+}
