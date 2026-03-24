@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "根本原因の正確性",
+      "description": "影響範囲が不完全。score_import_deps() の行181で imp.target_module がscoresキーになる問題に加え、行194 find_imports_by_target(target) にも同種のミスマッチがある。target は正規化された実ファイルパスだが、SQLite dependencies テーブルの target_module カラムには生のインポートパスが格納されている。逆方向の依存関係も常に0件になる。",
+      "suggestion": "Issueの根本原因セクションに逆方向ルックアップ（find_imports_by_target）のミスマッチも明記する。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準の欠如",
+      "description": "Issueに受け入れ基準（Acceptance Criteria）が一切記載されていない。修正完了の判断基準が不明確。",
+      "suggestion": "受け入れ基準を追加: 1. 相対パスインポートの結果でsnippetが非空 2. エイリアスインポート(@/xxx)でもsnippet非空 3. 外部パッケージは空文字列許容 4. json/llm両フォーマットで正しく出力 5. 既存テスト全パス"
+    },
+    {
+      "id": "M3",
+      "category": "影響範囲の不足",
+      "description": "snippet以前に、related検索結果の file_path フィールド自体がインポートパスのまま返される問題がある。snippetだけでなく検索結果のパス自体が不正確。",
+      "suggestion": "「related検索結果のfile_pathがインポートパスのまま返される（snippet空はその副作用）」という本質的な問題を明示する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "再現手順の完全性",
+      "description": "再現手順は外部TypeScript/Next.jsプロジェクトを前提としており、CommandIndexリポジトリ単体では再現できない。",
+      "suggestion": "最小再現手順を追加する（TypeScriptファイル2つで再現可能な手順）。"
+    },
+    {
+      "id": "S2",
+      "category": "影響範囲の正確性",
+      "description": "impact サブコマンドへの影響が具体的に分析されていない。",
+      "suggestion": "impact サブコマンドのコードパスも確認し、同じ問題が発生するか明確に記載する。"
+    },
+    {
+      "id": "S3",
+      "category": "解決方針の欠如",
+      "description": "根本原因は特定されているが解決方針が記載されていない。パスエイリアス解決をどの層で行うかの設計判断が必要。",
+      "suggestion": "解決アプローチ案（score_import_deps内で検索、インデックス時に解決、部分一致検索等）を記載する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "テスト方針",
+      "description": "修正後のリグレッションテスト方針が記載されていない。",
+      "suggestion": "テストケースの方針を受け入れ基準に追加する。"
+    },
+    {
+      "id": "N2",
+      "category": "環境情報",
+      "description": "環境情報が不足しているが、ロジックの問題であり環境依存ではない。",
+      "suggestion": "低優先度。"
+    },
+    {
+      "id": "N3",
+      "category": "外部パッケージの扱い",
+      "description": "外部パッケージのインポートはsnippetが空になるが、この挙動が期待通りかどうかの明示がない。",
+      "suggestion": "外部パッケージのsnippet空を正常動作として明記する。"
+    }
+  ],
+  "summary": "根本原因分析は正確だが、3点の重大指摘: (1)逆方向ルックアップにも同じミスマッチ (2)file_path自体がインポートパスのまま返される根本問題 (3)受け入れ基準の完全欠落"
+}

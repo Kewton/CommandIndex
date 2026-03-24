@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "must_fix": [
+    {"id": "M1", "category": "サフィックスマッチ誤マッチ", "description": "パスコンポーネント境界未チェック。authがoauthにマッチする問題。ends_with('/' + suffix)にすべき。"},
+    {"id": "M2", "category": "入力バリデーション", "description": "resolve_import_pathの入力に長さ・制御文字チェックがない。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "DoS-メモリ", "description": "all_indexed_pathsに上限設定（例: 100,000パス）。"},
+    {"id": "S2", "category": "DoS-計算量", "description": "完全一致チェックにHashSet使用。"},
+    {"id": "S3", "category": "全テーブルスキャン", "description": "逆方向ルックアップに全dependenciesスキャン回避。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "解決失敗時のデバッグログ出力。"},
+    {"id": "N2", "description": "unsafe未使用。問題なし。"}
+  ]
+}

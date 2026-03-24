@@ -1,0 +1,17 @@
+{
+  "issue_number": 123,
+  "title": "[BUG] --with-snippet が空文字列を返す（related/impact）",
+  "design_policy": "dev-reports/design/issue-123-snippet-empty-design-policy.md",
+  "work_plan": "dev-reports/issue/123/work-plan.md",
+  "tasks": [
+    "Task 1.1: IndexReaderWrapper に all_indexed_paths() 追加 (src/indexer/reader.rs)",
+    "Task 1.2: SymbolStore に find_all_imports() 追加 (src/indexer/symbol_store.rs)",
+    "Task 1.3: resolve_import_path, path_component_suffix_matches 追加 (src/search/related.rs)",
+    "Task 1.4: add_relation 共通ヘルパー追加 (src/search/related.rs)",
+    "Task 1.5: RelatedSearchEngine 改修 - OnceCell, score_import_deps修正 (src/search/related.rs)",
+    "Task 2.1: ユニットテスト追加 (src/search/related.rs #[cfg(test)])",
+    "Task 2.2: E2Eテスト追加・更新 (tests/e2e_related_search.rs, tests/e2e_impact.rs)"
+  ],
+  "root_cause": "score_import_deps() が imp.target_module (インポートパス) をscoresキーに使用し、tantivyの実ファイルパスと不一致",
+  "solution": "score_import_deps内でresolve_import_pathによりインポートパスをファイルパスに変換。OnceCell<HashSet<String>>でキャッシュ。"
+}

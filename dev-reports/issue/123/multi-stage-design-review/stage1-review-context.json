@@ -1,0 +1,18 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "SRP", "description": "resolve_import_pathをscore_import_deps内に直接組み込むとSRP違反。独立関数として切り出すべき。"},
+    {"id": "M2", "category": "DRY", "description": "順方向・逆方向のスコア加算パターンが重複。パス解決は一括で行い解決済みマップを渡す設計に。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "OCP/KISS", "description": "all_indexed_paths()の戻り値をHashSetにする。"},
+    {"id": "S2", "category": "KISS", "description": "@/→src/のハードコードではなくalias_mapパラメータ検討。"},
+    {"id": "S3", "category": "DIP", "description": "パスリストを外部から注入可能にしてテスタビリティ向上。"},
+    {"id": "S4", "category": "YAGNI", "description": "最短パス優先の複雑なタイブレークは不要。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "aggregate_impactレベルでキャッシュ。OnceCell/LazyCell活用。"},
+    {"id": "N2", "description": "resolve_import_pathのユニットテスト追加計画明記。"}
+  ]
+}
