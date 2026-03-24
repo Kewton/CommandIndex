@@ -25,6 +25,9 @@ const MAX_INPUT_LENGTH: usize = 500;
 /// BM25検索のデフォルトlimit
 const BM25_SEARCH_LIMIT: usize = 20;
 
+/// セマンティックフォールバック時の検索上限
+const SEMANTIC_FALLBACK_LIMIT: usize = 20;
+
 /// ファイル単位dedupの上限
 const DEDUP_FILE_LIMIT: usize = 5;
 
@@ -228,6 +231,88 @@ fn apply_file_type_weight(files: Vec<(String, f32)>, limit: usize) -> Vec<(Strin
 }
 
 // ---------------------------------------------------------------------------
+// Semantic fallback
+// ---------------------------------------------------------------------------
+
+/// BM25が0件の場合にセマンティック検索でファイルを取得する。
+///
+/// embedding 関連のすべてのエラーは eprintln でログ出力し `None` を返す
+/// (graceful degradation)。ログにはクエリ文字列を含めない。
+fn try_semantic_fallback(ctx: &SearchContext, query: &str) -> Option<Vec<(String, f32)>> {
+    // 1. EmbeddingStore を開く
+    let emb_db_path = ctx.embeddings_db_path();
+    if !emb_db_path.exists() {
+        return None;
+    }
+    let store = match crate::embedding::store::EmbeddingStore::open(&emb_db_path) {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("[suggest] semantic fallback: embedding store unavailable");
+            return None;
+        }
+    };
+
+    // 2. embedding が存在するか確認
+    match store.count() {
+        Ok(0) | Err(_) => return None,
+        Ok(_) => {}
+    }
+
+    // 3. プロバイダー生成 & クエリ埋め込み生成
+    let provider = match crate::embedding::create_provider(&ctx.config.embedding) {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("[suggest] semantic fallback: embedding provider unavailable");
+            return None;
+        }
+    };
+
+    let query_embeddings = match provider.embed(&[query.to_string()]) {
+        Ok(e) => e,
+        Err(_) => {
+            eprintln!("[suggest] semantic fallback: embedding generation failed");
+            return None;
+        }
+    };
+
+    let query_embedding = query_embeddings.first()?;
+
+    // 4. 類似度検索
+    let results = match store.search_similar(query_embedding, SEMANTIC_FALLBACK_LIMIT) {
+        Ok(r) => r,
+        Err(_) => {
+            eprintln!("[suggest] semantic fallback: similarity search failed");
+            return None;
+        }
+    };
+
+    if results.is_empty() {
+        return None;
+    }
+
+    // 5. ファイル単位 dedup（similarity → score として使用）
+    let pairs: Vec<(String, f32)> = results
+        .into_iter()
+        .map(|r| (r.file_path, r.similarity))
+        .collect();
+    let deduped = deduplicate_by_file_pairs(pairs, DEDUP_FILE_LIMIT);
+    Some(deduped)
+}
+
+/// (path, score) ペアのリストをファイル単位で重複排除し、上位 limit 件を返す。
+fn deduplicate_by_file_pairs(pairs: Vec<(String, f32)>, limit: usize) -> Vec<(String, f32)> {
+    let mut file_scores: HashMap<String, f32> = HashMap::new();
+    for (path, score) in pairs {
+        let entry = file_scores.entry(path).or_insert(0.0);
+        *entry = entry.max(score);
+    }
+    let mut sorted: Vec<(String, f32)> = file_scores.into_iter().collect();
+    sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.truncate(limit);
+    sorted
+}
+
+// ---------------------------------------------------------------------------
 // Strategy building
 // ---------------------------------------------------------------------------
 
@@ -281,7 +366,10 @@ fn build_strategy(
 }
 
 /// BM25結果が0件の場合のフォールバック戦略
-fn build_fallback_strategy() -> SuggestResult {
+///
+/// `has_embeddings` — embeddings.db 上にデータが存在するか。
+/// semantic fallback 失敗時でも、DB にデータがあれば true を維持する。
+fn build_fallback_strategy(has_embeddings: bool) -> SuggestResult {
     let steps = vec![
         SuggestStep {
             command: format!("{BINARY_NAME} status --detail"),
@@ -294,7 +382,7 @@ fn build_fallback_strategy() -> SuggestResult {
     ];
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
-        has_embeddings: false,
+        has_embeddings,
         strategy: steps,
     }
 }
@@ -361,9 +449,19 @@ pub fn run_suggest(
     // 4. BM25検索 → ファイル単位dedup
     let entry_files = search_entry_files(&reader, &query)?;
 
-    // 5. 戦略生成
+    // 5. 戦略生成（BM25 0件時はセマンティックフォールバックを試行）
+    let has_embeddings = emb_store
+        .as_ref()
+        .and_then(|s| s.count().ok())
+        .is_some_and(|c| c > 0);
+
     let mut result = if entry_files.is_empty() {
-        build_fallback_strategy()
+        // BM25 0件 → セマンティック検索にフォールバック
+        if let Some(semantic_files) = try_semantic_fallback(&ctx, &query) {
+            build_strategy(emb_store.as_ref(), &semantic_files, &query)
+        } else {
+            build_fallback_strategy(has_embeddings)
+        }
     } else {
         build_strategy(emb_store.as_ref(), &entry_files, &query)
     };
@@ -571,7 +669,7 @@ mod tests {
 
     #[test]
     fn fallback_strategy_has_valid_commands() {
-        let result = build_fallback_strategy();
+        let result = build_fallback_strategy(false);
         assert!(!result.strategy.is_empty(), "Fallback should have steps");
         for step in &result.strategy {
             assert!(
@@ -585,7 +683,7 @@ mod tests {
 
     #[test]
     fn fallback_strategy_has_no_embeddings() {
-        let result = build_fallback_strategy();
+        let result = build_fallback_strategy(false);
         assert!(!result.has_embeddings);
     }
 
