@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "受け入れ基準の明確性",
+      "description": "Issue改善提案に「exitコードを非ゼロにする」案と「コメントを出力に含める」案が併記されているが、どちらを採用するか未決定。両方を実装すると互いに矛盾する可能性がある。",
+      "suggestion": "方針を1つに決定すること。推奨: try_rerank()がResult型を返すよう変更し、呼び出し元でRerankError種別に応じて (1) stderr警告 + 出力にメタデータ付与（graceful degradation）、(2) 非ゼロ終了（--strict-rerankオプション追加時）を選択可能にする。デフォルトはgraceful degradation + 明示的な警告出力。"
+    },
+    {
+      "id": "M2",
+      "category": "根本原因の対処",
+      "description": "try_rerank()関数がVec<SearchResult>を直接返す設計が根本原因と特定されているが、Issueにこの関数のシグネチャ変更の具体的な受け入れ基準がない。",
+      "suggestion": "受け入れ基準に「try_rerank()が(Vec<SearchResult>, bool)のタプルを返す」ことを明記する。これによりrun関数側でフォールバック時の出力制御が可能になる。"
+    },
+    {
+      "id": "M3",
+      "category": "出力フォーマットの網羅性",
+      "description": "改善提案の「<!-- rerank skipped -->コメント」はllmフォーマット専用。json/human/pathフォーマットでの表現が未定義。",
+      "suggestion": "各フォーマットでのフォールバック表現を明確化: json -> \"rerank_applied\": false、llm -> <!-- rerank skipped: reason -->、human -> stderr警告、path -> stderr警告のみ。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "既存設計との整合性",
+      "description": "try_hybrid_search()も同様のgraceful degradationパターンだが、rerankだけ修正するとフォールバック通知方式が不一致になる。",
+      "suggestion": "スコープをrerankに限定しつつ、将来的にhybrid searchにも適用できるよう汎用的に設計する。"
+    },
+    {
+      "id": "S2",
+      "category": "テスト計画",
+      "description": "既存テスト test_rerank_fallback_via_cli は「クラッシュしないこと」のみ検証。フォールバック時の出力検証がない。",
+      "suggestion": "テストケース追加: (1) stderrにモデル名とスキップ理由含む、(2) json出力時にrerank_appliedがfalse、(3) ネットワークエラーケース。"
+    },
+    {
+      "id": "S3",
+      "category": "デフォルトモデル設定",
+      "description": "デフォルトrerankモデル変更の仕様が不明確。rerankはembeddingと異なる用途。",
+      "suggestion": "デフォルトモデル変更は別Issueに分離。本Issueでは通知改善に集中。"
+    },
+    {
+      "id": "S4",
+      "category": "エラー分類の精度",
+      "description": "Ollama APIのエラーレスポンスパターンが正確にハンドリングされていない可能性。",
+      "suggestion": "RerankError種別ごとにユーザー向けメッセージとヒントを付与する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "ユーザビリティ",
+      "description": "フォールバック時のstderrメッセージが技術的すぎる。",
+      "suggestion": "アクション可能なヒントを含める。例: 'Run `ollama pull llama3` to install, or set rerank.model in commandindex.toml.'"
+    },
+    {
+      "id": "N2",
+      "category": "設定検証",
+      "description": "rerankモデルの事前検証が未実装。",
+      "suggestion": "rerank実行前にモデル一覧取得で存在確認するpreflight checkを追加。"
+    },
+    {
+      "id": "N3",
+      "category": "パフォーマンス",
+      "description": "rerank失敗時、既にlimit拡大済みで不要なオーバーヘッドがある。",
+      "suggestion": "本Issueスコープ外。将来的にrerankの利用可否を検索前に確認する最適化。"
+    },
+    {
+      "id": "N4",
+      "category": "ログレベル",
+      "description": "eprintlnで直接出力しており、verbose/quietオプションとの連携がない。",
+      "suggestion": "将来的にtracing crateの導入を検討。本Issueではeprintlnベースで十分。"
+    }
+  ],
+  "summary": "Issue #125は実在するバグを正確に特定しており、根本原因分析も妥当。ただし受け入れ基準が改善提案の列挙にとどまり、具体的な実装方針が未決定。最も重要な決定事項は「フォールバック時のユーザー通知方法」の一本化と、try_rerank()のシグネチャ変更の明確化。"
+}

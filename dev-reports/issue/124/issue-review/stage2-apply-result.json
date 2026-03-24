@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "type": "apply_review",
+  "applied_items": ["MF-1", "MF-2", "MF-3", "SF-1", "SF-2", "SF-3", "NH-1"],
+  "issue_updated": true,
+  "changes": [
+    "「可能性のある原因」→「確定した根本原因」セクションに書き換え、コード箇所を明記",
+    "影響箇所セクションを追加（semantic, hybrid, E2Eテスト）",
+    "修正方針セクションを追加（推奨案A: searchをembeddings.dbから読む）",
+    "受け入れ基準AC-1〜AC-5を追加",
+    "備考として設計書更新・リファクタリング別Issue化を記載"
+  ]
+}

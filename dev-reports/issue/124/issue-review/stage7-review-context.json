@@ -1,0 +1,63 @@
+{
+  "stage": 7,
+  "type": "impact_review_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能への影響",
+      "description": "EmbeddingStoreに切り替えるとembeddings.db未存在、DB未初期化、テーブル欠如、schema mismatchの各ケースで既存UXが壊れる",
+      "suggestion": "検索機能の異常系契約を明記: run_semantic_search()はNoEmbeddings、try_hybrid_search()は従来通りgraceful fallbackを維持"
+    },
+    {
+      "id": "M2",
+      "category": "テストへの影響",
+      "description": "e2e_semantic_hybrid.rsの6件だけでなく、symbol_store.rsのcount_embeddings()/search_similar()ユニットテスト群も実契約を担保しなくなる",
+      "suggestion": "embedding/store.rs側の同等ユニットテスト追加を影響範囲に含める"
+    },
+    {
+      "id": "M3",
+      "category": "パフォーマンスへの影響",
+      "description": "58692 section/202.4 MB DBで全件スキャンの性能影響を「問題なし」で済ませるには根拠不足",
+      "suggestion": "brute-force全件走査であること、想定規模でのベンチ確認対象を明記"
+    },
+    {
+      "id": "M4",
+      "category": "依存関係への影響",
+      "description": "cli/searchがembedding/storeに新規依存し、schema変更影響範囲が広がる",
+      "suggestion": "cli/search → embedding/storeの新規依存、EmbeddingStoreError変換、EmbeddingSimilarityResultの公開面積拡大を明記"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "既存機能への影響",
+      "description": "statusは機能変更なし、SymbolStoreの埋め込み関連APIは残置される",
+      "suggestion": "残置判断を明記"
+    },
+    {
+      "id": "S2",
+      "category": "テストへの影響",
+      "description": "ignoredテスト2件(test_hybrid_auto_switch, test_hybrid_bm25_fallback)も修正対象",
+      "suggestion": "更新対象テストを具体的に列挙"
+    },
+    {
+      "id": "S3",
+      "category": "パフォーマンスへの影響",
+      "description": "hybrid経路の検索ホットパス処理量が変わる",
+      "suggestion": "性能影響をsemantic単体だけでなくhybrid経路にも分けて記載"
+    },
+    {
+      "id": "S4",
+      "category": "依存関係への影響",
+      "description": "外部依存の追加なし。Ollama/embedding provider依存の実行時契約は不変",
+      "suggestion": "明記する"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "テスト", "description": "search_similar()のユニットテスト化"},
+    {"id": "N2", "category": "パフォーマンス", "description": "将来的なANN最適化の管理"},
+    {"id": "N3", "category": "依存関係", "description": "EmbeddingSimilarityResultやcosine類似度の共通化"}
+  ],
+  "summary": "主要影響は検索異常系契約、テスト移管、全件走査コスト、cli/search→embedding/storeの新規依存。Issue本文はコード変更箇所の列挙としては概ね妥当だが、ユニットテスト移管、性能退行確認、未初期化時の契約維持、内部依存の増加を明文化すると見落としが減る。"
+}

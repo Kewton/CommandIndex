@@ -1,0 +1,17 @@
+{
+  "stage": 6,
+  "action": "Issue本文更新（Codex通常レビュー2回目反映）",
+  "applied_items": [
+    "M1: JSON互換性方針を明示（type: metadata 判別キー追加）",
+    "M2: provider層のeprintlnも廃止、rerank()戻り値にwarnings追加",
+    "M3: タイムアウト2種類を明確に分離（HTTPリクエスト vs 全体デッドライン）",
+    "S1: llm/human/pathのテスト検証項目を受け入れ基準に追加",
+    "S2: RerankStatusにAppliedPartially追加（部分適用の中間状態対応）",
+    "S4: 全RerankErrorバリアントのヒントメッセージを定義",
+    "N1: llm出力のコメント順序を固定（rerank < estimated tokens）"
+  ],
+  "skipped_items": [
+    "S3: output層へのformatter追加はオーバーエンジニアリング。run()内での制御で十分",
+    "N2: hybrid fallback通知はスコープ外として設計メモに追記済み"
+  ]
+}

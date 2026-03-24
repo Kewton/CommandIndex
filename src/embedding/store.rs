@@ -9,6 +9,14 @@ const CURRENT_EMBEDDING_SCHEMA_VERSION: u32 = 1;
 // Data types
 // ---------------------------------------------------------------------------
 
+/// Result of a cosine similarity search against stored embeddings.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EmbeddingSimilarityResult {
+    pub file_path: String,
+    pub section_heading: String,
+    pub similarity: f32,
+}
+
 /// A single embedding record retrieved from the database.
 #[derive(Debug, Clone)]
 pub struct EmbeddingRecord {
@@ -31,7 +39,14 @@ pub struct EmbeddingRecord {
 pub enum EmbeddingStoreError {
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
-    SchemaVersionMismatch { expected: u32, found: u32 },
+    SchemaVersionMismatch {
+        expected: u32,
+        found: u32,
+    },
+    InvalidEmbedding {
+        expected_bytes: usize,
+        actual_bytes: usize,
+    },
 }
 
 impl fmt::Display for EmbeddingStoreError {
@@ -45,6 +60,15 @@ impl fmt::Display for EmbeddingStoreError {
                     "Schema version mismatch: expected {expected}, found {found}"
                 )
             }
+            Self::InvalidEmbedding {
+                expected_bytes,
+                actual_bytes,
+            } => {
+                write!(
+                    f,
+                    "Invalid embedding: expected {expected_bytes} bytes, got {actual_bytes} bytes"
+                )
+            }
         }
     }
 }
@@ -55,6 +79,7 @@ impl std::error::Error for EmbeddingStoreError {
             Self::Sqlite(e) => Some(e),
             Self::Io(e) => Some(e),
             Self::SchemaVersionMismatch { .. } => None,
+            Self::InvalidEmbedding { .. } => None,
         }
     }
 }
@@ -88,6 +113,43 @@ fn bytes_to_f32_vec(bytes: &[u8]) -> Vec<f32> {
         .chunks_exact(4)
         .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("chunks_exact guarantees 4 bytes")))
         .collect()
+}
+
+// ---------------------------------------------------------------------------
+// Similarity search helpers
+// ---------------------------------------------------------------------------
+
+/// Compute cosine similarity between two vectors of equal length.
+/// Returns 0.0 if either vector has zero norm.
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    let mut dot = 0.0_f32;
+    let mut norm_a = 0.0_f32;
+    let mut norm_b = 0.0_f32;
+    for (&ai, &bi) in a.iter().zip(b.iter()) {
+        dot += ai * bi;
+        norm_a += ai * ai;
+        norm_b += bi * bi;
+    }
+    let denom = norm_a.sqrt() * norm_b.sqrt();
+    if denom == 0.0 { 0.0 } else { dot / denom }
+}
+
+/// Convert a BLOB to an embedding vector, validating the size.
+fn blob_to_embedding(
+    blob: &[u8],
+    expected_dimension: usize,
+) -> Result<Vec<f32>, EmbeddingStoreError> {
+    let expected_bytes = expected_dimension * 4;
+    if blob.len() != expected_bytes {
+        return Err(EmbeddingStoreError::InvalidEmbedding {
+            expected_bytes,
+            actual_bytes: blob.len(),
+        });
+    }
+    Ok(blob
+        .chunks_exact(4)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect())
 }
 
 // ---------------------------------------------------------------------------
@@ -265,6 +327,71 @@ impl EmbeddingStore {
             |row| row.get(0),
         )?;
         Ok(count as u64)
+    }
+
+    /// Search for the top-k most similar embeddings using cosine similarity.
+    ///
+    /// Loads all stored embeddings, filters out records whose dimension does not
+    /// match the query, computes cosine similarity, and returns the top-k results
+    /// sorted by descending similarity.
+    pub fn search_similar(
+        &self,
+        query_embedding: &[f32],
+        top_k: usize,
+    ) -> Result<Vec<EmbeddingSimilarityResult>, EmbeddingStoreError> {
+        let query_dim = query_embedding.len();
+        let mut stmt = self.conn.prepare(
+            "SELECT section_path, section_heading, embedding, dimension FROM embeddings",
+        )?;
+
+        let mut results: Vec<EmbeddingSimilarityResult> = Vec::new();
+
+        let rows = stmt.query_map([], |row| {
+            let section_path: String = row.get(0)?;
+            let section_heading: String = row.get(1)?;
+            let blob: Vec<u8> = row.get(2)?;
+            let dimension: i64 = row.get(3)?;
+            Ok((section_path, section_heading, blob, dimension as usize))
+        })?;
+
+        for row_result in rows {
+            let (section_path, section_heading, blob, dimension) = row_result?;
+
+            // Validate BLOB size against stored dimension
+            let stored_embedding = match blob_to_embedding(&blob, dimension) {
+                Ok(emb) => emb,
+                Err(_) => {
+                    continue;
+                }
+            };
+
+            // Filter out dimension mismatches with query
+            if stored_embedding.len() != query_dim {
+                continue;
+            }
+
+            let similarity = cosine_similarity(query_embedding, &stored_embedding);
+
+            // Filter non-finite results (NaN, +/-Inf from corrupted data)
+            if !similarity.is_finite() {
+                continue;
+            }
+
+            results.push(EmbeddingSimilarityResult {
+                file_path: section_path,
+                section_heading,
+                similarity,
+            });
+        }
+
+        // Sort by descending similarity
+        results.sort_by(|a, b| {
+            b.similarity
+                .partial_cmp(&a.similarity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        results.truncate(top_k);
+        Ok(results)
     }
 }
 
@@ -506,6 +633,110 @@ mod tests {
             .unwrap();
 
         assert_eq!(store.count_distinct_files().unwrap(), 2);
+    }
+
+    #[test]
+    fn test_search_similar_basic() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert two embeddings with different similarities to [1,0,0,0]
+        store
+            .upsert_embedding("alpha.md", "Alpha", &[0.9, 0.1, 0.0, 0.0], 4, "nomic", "h1")
+            .unwrap();
+        store
+            .upsert_embedding("beta.md", "Beta", &[0.0, 0.0, 1.0, 0.0], 4, "nomic", "h2")
+            .unwrap();
+
+        let query = [1.0_f32, 0.0, 0.0, 0.0];
+        let results = store.search_similar(&query, 10).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].file_path, "alpha.md");
+        assert_eq!(results[1].file_path, "beta.md");
+        assert!(results[0].similarity > results[1].similarity);
+    }
+
+    #[test]
+    fn test_search_similar_top_k() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        store
+            .upsert_embedding("a.md", "A", &[0.9, 0.1, 0.0, 0.0], 4, "nomic", "h1")
+            .unwrap();
+        store
+            .upsert_embedding("b.md", "B", &[0.0, 0.0, 1.0, 0.0], 4, "nomic", "h2")
+            .unwrap();
+        store
+            .upsert_embedding("c.md", "C", &[1.0, 0.0, 0.0, 0.0], 4, "nomic", "h3")
+            .unwrap();
+
+        let query = [1.0_f32, 0.0, 0.0, 0.0];
+        let results = store.search_similar(&query, 2).unwrap();
+
+        assert_eq!(results.len(), 2);
+        // c.md is exact match (sim=1.0), a.md is similar
+        assert_eq!(results[0].file_path, "c.md");
+        assert_eq!(results[1].file_path, "a.md");
+    }
+
+    #[test]
+    fn test_search_similar_dimension_mismatch() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert 3-dimensional embedding
+        store
+            .upsert_embedding("a.md", "A", &[1.0, 0.0, 0.0], 3, "nomic", "h1")
+            .unwrap();
+        // Insert 4-dimensional embedding
+        store
+            .upsert_embedding("b.md", "B", &[1.0, 0.0, 0.0, 0.0], 4, "nomic", "h2")
+            .unwrap();
+
+        // Query with 4 dimensions - should only match b.md
+        let query = [1.0_f32, 0.0, 0.0, 0.0];
+        let results = store.search_similar(&query, 10).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].file_path, "b.md");
+    }
+
+    #[test]
+    fn test_search_similar_empty_db() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let query = [1.0_f32, 0.0, 0.0];
+        let results = store.search_similar(&query, 10).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_blob_to_embedding_validation() {
+        // Valid case: 3 floats = 12 bytes
+        let data = [1.0_f32, 2.0, 3.0];
+        let bytes = f32_slice_to_bytes(&data);
+        let result = blob_to_embedding(&bytes, 3);
+        assert!(result.is_ok());
+        let emb = result.unwrap();
+        assert_eq!(emb.len(), 3);
+        assert!((emb[0] - 1.0).abs() < f32::EPSILON);
+
+        // Invalid case: wrong byte count
+        let result = blob_to_embedding(&bytes, 4);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EmbeddingStoreError::InvalidEmbedding {
+                expected_bytes,
+                actual_bytes,
+            } => {
+                assert_eq!(expected_bytes, 16); // 4 * 4
+                assert_eq!(actual_bytes, 12); // 3 * 4
+            }
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
     }
 
     #[test]

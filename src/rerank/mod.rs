@@ -71,6 +71,7 @@ pub struct RerankCandidate {
     pub original_index: usize,
 }
 
+#[derive(Debug)]
 pub struct RerankResult {
     pub index: usize,
     pub score: f32,
@@ -83,11 +84,20 @@ pub struct RerankResult {
 #[derive(Debug)]
 pub enum RerankError {
     NetworkError(String),
-    ApiError { status: u16, message: String },
+    ApiError {
+        status: u16,
+        message: String,
+    },
     ModelNotFound(String),
     InvalidResponse(String),
     Timeout,
     ConfigError(String),
+    /// タイムアウトにより一部の候補のみスコアリング完了
+    PartialTimeout {
+        results: Vec<RerankResult>,
+        scored: usize,
+        total: usize,
+    },
 }
 
 impl fmt::Display for RerankError {
@@ -99,6 +109,10 @@ impl fmt::Display for RerankError {
             Self::InvalidResponse(msg) => write!(f, "Invalid response: {msg}"),
             Self::Timeout => write!(f, "Request timeout"),
             Self::ConfigError(msg) => write!(f, "Config error: {msg}"),
+            Self::PartialTimeout { scored, total, .. } => write!(
+                f,
+                "Timeout reached after scoring {scored} of {total} candidates"
+            ),
         }
     }
 }
@@ -222,5 +236,27 @@ mod tests {
 
         let err = RerankError::Timeout;
         assert_eq!(format!("{err}"), "Request timeout");
+    }
+
+    #[test]
+    fn test_rerank_error_partial_timeout_display() {
+        let err = RerankError::PartialTimeout {
+            results: vec![
+                RerankResult {
+                    index: 0,
+                    score: 8.0,
+                },
+                RerankResult {
+                    index: 1,
+                    score: 5.0,
+                },
+            ],
+            scored: 2,
+            total: 5,
+        };
+        assert_eq!(
+            format!("{err}"),
+            "Timeout reached after scoring 2 of 5 candidates"
+        );
     }
 }

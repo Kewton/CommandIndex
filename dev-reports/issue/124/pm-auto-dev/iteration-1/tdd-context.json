@@ -1,0 +1,17 @@
+{
+  "issue_number": 124,
+  "title": "[BUG] search --semantic がembed済みでも「No embeddings found」エラー",
+  "root_cause": "search --semantic reads from symbols.db (SymbolStore) but embed writes to embeddings.db (EmbeddingStore)",
+  "fix_approach": "Change search to read from embeddings.db (EmbeddingStore) instead of symbols.db (SymbolStore)",
+  "tasks": [
+    "Task 1.1: Add EmbeddingSimilarityResult, InvalidEmbedding error, blob_to_embedding(), cosine_similarity(), search_similar() to src/embedding/store.rs",
+    "Task 1.2: Add unit tests for search_similar in src/embedding/store.rs",
+    "Task 2.1: Add SearchError::EmbeddingStore variant with Display/source/From impls in src/cli/search.rs",
+    "Task 2.2: Change run_semantic_search() to use EmbeddingStore (Path::exists check, open, count, search_similar)",
+    "Task 2.3: Change try_hybrid_search() to use EmbeddingStore with graceful BM25 fallback",
+    "Task 2.4: Change suggest.rs maybe_add_semantic_step() to use EmbeddingStore",
+    "Task 3.1: Update tests/e2e_semantic_hybrid.rs to use EmbeddingStore"
+  ],
+  "design_policy": "dev-reports/design/issue-124-semantic-error-design-policy.md",
+  "work_plan": "dev-reports/issue/124/work-plan.md"
+}

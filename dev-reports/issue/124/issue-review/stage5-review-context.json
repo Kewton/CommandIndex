@@ -1,0 +1,48 @@
+{
+  "stage": 5,
+  "type": "normal_review_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "category": "既存コードとの整合性",
+      "description": "影響箇所に hybrid_rerank() とあるが、現行コードで実際に hybrid 経路を担っているのは try_hybrid_search()。実装対象の特定を誤らせる。",
+      "suggestion": "影響箇所・修正対象を try_hybrid_search() に修正し、run_semantic_search() と対で明記する。"
+    },
+    {
+      "id": "MF-2",
+      "category": "実装方針の妥当性",
+      "description": "推奨案Aの記述だけでは AC-4 を満たせない。EmbeddingStore::open() は DB ファイル未存在でも成功し得るが、テーブル未作成のまま count()/search_similar() を呼ぶと no such table: embeddings 系の SQLite エラーになる。",
+      "suggestion": "修正方針に「embeddings.db の存在確認、未初期化DB/テーブル欠如時の扱い、EmbeddingStoreError から SearchError::NoEmbeddings または hybrid fallback へのマッピング」を明示する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "category": "既存APIとの整合性",
+      "description": "EmbeddingStore には既に count() と count_distinct_files() がある。count_embeddings() を新設すると同義 API が増える。",
+      "suggestion": "既存 count() の利用または薄い互換メソッド追加のどちらかに表現を緩める。"
+    },
+    {
+      "id": "SF-2",
+      "category": "受け入れ基準の明確性",
+      "description": "semantic 検索は embeddings.db だけで完結せず、symbols.db / Tantivy でのメタデータ補完に依存している（enrich_with_metadata()）。結果フォーマットの退行を見逃す。",
+      "suggestion": "AC に「既存の見出し・本文・タグ補完が維持される」を追加する。"
+    },
+    {
+      "id": "SF-3",
+      "category": "実装方針の具体性",
+      "description": "SymbolStore::search_similar() の BLOB サイズ不整合スキップと dimension mismatch スキップの挙動を引き継ぐか不明。",
+      "suggestion": "search_similar() 追加時は SymbolStore 側と同等のバリデーション・ソート契約を維持する旨を追記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "category": "設計変更の記録",
+      "description": "Issue-63 設計書更新は記載済みだが、どの記述をどう変えるかまでは明示されていない。",
+      "suggestion": "semantic/hybrid の参照先は embeddings.db、symbols.db はメタデータ補完用という責務分担まで設計書更新対象として記載。"
+    }
+  ],
+  "summary": "1回目レビューの主要指摘は概ね反映済み。残件は try_hybrid_search() への名称修正と、embeddings.db 未存在・未初期化時の挙動を実装方針/AC に明示しないと AC-4 が成立しない点が中心。EmbeddingStore 既存APIとの整合、メタデータ補完契約、search_similar() の防御挙動継承を明記するとIssueの品質がより高まる。"
+}

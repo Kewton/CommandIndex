@@ -1,0 +1,1 @@
+{"stage":2,"type":"consistency","reviewer":"Claude Opus","must_fix_count":6,"should_fix_count":4,"nice_to_have_count":3,"key_issues":["DB参照先変更は設計通り正しい","EmbeddingStoreにsearch_similar()追加が必要","カラム名差異(section_path vs file_path, model vs model_name)の取り扱い","From<EmbeddingStoreError>の追加が必要","テストのEmbeddingStore切替が必要"]}

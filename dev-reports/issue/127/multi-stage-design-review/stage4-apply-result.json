@@ -1,0 +1,12 @@
+{
+  "applied": [
+    {"id": "S4-S2", "action": "パス正規化の制約をセキュリティ設計テーブルに追記（tantivyのインデックスパスは正規化済みのためリスク極小）"},
+    {"id": "S4-S3", "action": "is_test_fileの精度改善はStage 1と統合済み"}
+  ],
+  "skipped": [
+    {"id": "S4-S1", "action": "validate_inputのバイト長vs文字数問題は本Issue(#127)のスコープ外。既存動作の変更となるため別Issueで対応"}
+  ],
+  "must_fix_total_stage1_4": 5,
+  "skip_stage_5_8": false,
+  "note": "Must Fix 5件あるが全て設計方針書に反映済み。2回目レビューの必要性を判定"
+}
