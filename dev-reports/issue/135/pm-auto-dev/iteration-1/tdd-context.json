@@ -1,0 +1,40 @@
+{
+  "issue_number": 135,
+  "title": "embedding生成のバッチサイズ拡大による高速化",
+  "design_policy": "dev-reports/design/issue-135-design-policy.md",
+  "work_plan": "dev-reports/issue/135/work-plan.md",
+  "tasks": [
+    {
+      "id": "2.1",
+      "description": "EmbeddingStore::execute_in_transaction メソッド追加",
+      "file": "src/embedding/store.rs",
+      "test_first": true
+    },
+    {
+      "id": "2.2",
+      "description": "トランザクション単体テスト追加",
+      "file": "src/embedding/store.rs",
+      "tests": [
+        "test_execute_in_transaction_commit",
+        "test_execute_in_transaction_rollback",
+        "test_execute_in_transaction_multiple_upserts",
+        "test_execute_in_transaction_deletes_orphan_sections"
+      ]
+    },
+    {
+      "id": "1.1",
+      "description": "BATCH_SIZE=50, REQUEST_TIMEOUT_SECS=60",
+      "file": "src/embedding/ollama.rs"
+    },
+    {
+      "id": "3.1",
+      "description": "embed.rs トランザクション適用 + 件数検証",
+      "file": "src/cli/embed.rs"
+    },
+    {
+      "id": "3.2",
+      "description": "index.rs トランザクション適用 + 件数検証",
+      "file": "src/cli/index.rs"
+    }
+  ]
+}

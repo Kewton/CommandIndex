@@ -1,0 +1,19 @@
+{
+  "stage": "Stage 3: 影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "failedカウンタの粒度変更（per-section→per-file）が未文書化", "suggestion": "明示的に文書化"},
+    {"id": "M2", "title": "orphan sections問題: upsert前にdelete_by_pathがなくファイルのセクション減少時に古いデータが残る", "suggestion": "トランザクション内でDELETE+INSERTを実行、または既知の制限として文書化"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "tests/e2e_semantic_hybrid.rsがEmbeddingStoreを使用しているが影響範囲に未記載"},
+    {"id": "S2", "title": "ネストトランザクション防止のランタイムガード"},
+    {"id": "S3", "title": "index.rsのエラーハンドリングがembed.rsと異なるため独自のコード例が必要"},
+    {"id": "S4", "title": "SQLite journal mode（WAL）の考慮"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "BATCH_SIZEのconfig化"},
+    {"id": "N2", "title": "パフォーマンスベンチマーク計画"},
+    {"id": "N3", "title": "search.rsの影響なしリストへの追加"}
+  ],
+  "summary": "must_fix 2件。failed/generatedカウンタの粒度変更の文書化、orphan sectionsへの対応方針の明確化。"
+}

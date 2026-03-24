@@ -1,0 +1,14 @@
+{
+  "applied": [
+    {"id": "M1", "action": "T2の実装方針をraw SQL方式（execute_batch）に変更し、rusqlite &self制約に適合"},
+    {"id": "M2", "action": "エラー時の振る舞いにROLLBACK処理を明記"},
+    {"id": "M3", "action": "T2の対象ファイルにindex.rs（generate_embeddings_for_manifest）を追加"},
+    {"id": "S1", "action": "リスクセクションにVRAM使用量増加の記載は既存。50→30へのフォールバック記載済み"},
+    {"id": "S3", "action": "影響範囲セクションにOpenAI providerが変更なしであることを明記"}
+  ],
+  "skipped": [
+    {"id": "S2", "reason": "connect_timeoutの分離は実装フェーズで対応可能。Issueレベルでは不要"},
+    {"id": "N1", "reason": "テスト追加は実装フェーズ（TDD）でカバー"},
+    {"id": "N2", "reason": "WAL modeはスコープ外。別Issueで対応"}
+  ]
+}

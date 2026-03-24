@@ -1,0 +1,10 @@
+{
+  "applied": [
+    {"id": "M1", "action": "T2のエラー時振る舞いをROLLBACKに統一。has_current_embedding()キャッシュとの整合性を明記"},
+    {"id": "S1", "action": "受け入れ基準に「index --with-embedding コマンド実行時にエラーなく完了すること」を追加"},
+    {"id": "S2", "action": "execute_in_transactionのAPI契約を明記（Ok→COMMIT、Err→ROLLBACK）"}
+  ],
+  "skipped": [
+    {"id": "N1", "reason": "ベンチマーク手順の詳細は実装フェーズで対応"}
+  ]
+}
