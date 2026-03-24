@@ -1,0 +1,25 @@
+{
+  "must_fix": [
+    {
+      "title": "--index-path の扱いが既存CLIと不整合",
+      "description": "Why サブコマンド定義に index_path をローカル引数として持つと既存CLIグローバルオプションと二重化する。",
+      "suggestion": "グローバル Cli::index_path を使う前提に修正し、Commands::Why から index_path フィールドを外す。"
+    },
+    {
+      "title": "出力時の制御文字サニタイズ方針が欠けている",
+      "description": "DB由来の title や file_path をそのまま human/llm 出力に流すと制御文字やANSIエスケープリスク。",
+      "suggestion": "format_why_human と format_why_llm で既存の strip_control_chars 相当を適用する方針を追記。"
+    }
+  ],
+  "should_fix": [
+    {"title": "対象ドキュメント範囲の説明と出力例の不一致"},
+    {"title": "tests/output_format.rs 相当のテスト追加"},
+    {"title": "find_knowledge_related() 拡張は search --related にも波及"},
+    {"title": "WhyError の schema version mismatch 対応"}
+  ],
+  "nice_to_have": [
+    {"title": "WHY_AFTER_HELP 文面整備"},
+    {"title": "JSON キー名を Issue本文と一致させる（serde rename）"}
+  ],
+  "summary": "--index-pathのグローバル統一と出力サニタイズ方針の明記が必要。"
+}

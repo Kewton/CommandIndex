@@ -182,6 +182,16 @@ pub fn format_before_change_json(
     Ok(())
 }
 
+/// why 結果をJSON形式で出力する（単一JSONオブジェクト）
+pub fn format_why_json(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    serde_json::to_writer_pretty(&mut *writer, result)?;
+    writeln!(writer)?;
+    Ok(())
+}
+
 /// シンボル検索結果をJSONL形式で出力する
 pub fn format_symbol_json(
     results: &[SymbolSearchResult],

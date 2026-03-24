@@ -1,0 +1,18 @@
+{
+  "issue_number": 140,
+  "title": "commandindex issue <number> コマンドの実装",
+  "design_policy": "dev-reports/design/issue-140-issue-cmd-design-policy.md",
+  "work_plan": "dev-reports/issue/140/work-plan.md",
+  "tasks": [
+    {"id": "1.1", "description": "KnowledgeRelation/DocSubtype に Serialize derive 追加", "file": "src/indexer/knowledge.rs"},
+    {"id": "1.2", "description": "IssueDocumentEntry 型追加", "file": "src/indexer/knowledge.rs"},
+    {"id": "1.3", "description": "find_documents_by_issue() 関数追加", "file": "src/indexer/symbol_store.rs"},
+    {"id": "2.1", "description": "IssueCommandError + IssueDocumentsResult 型", "file": "src/cli/issue.rs"},
+    {"id": "2.2", "description": "run() + 出力フォーマッタ", "file": "src/cli/issue.rs"},
+    {"id": "2.3", "description": "Commands enum + ディスパッチ", "files": ["src/main.rs", "src/cli/mod.rs"]},
+    {"id": "2.4", "description": "help-llm 更新", "file": "src/cli/help_llm.rs"},
+    {"id": "3.1", "description": "cli_args.rs テスト更新", "file": "tests/cli_args.rs"},
+    {"id": "3.2", "description": "E2E テスト作成", "file": "tests/e2e_issue.rs"},
+    {"id": "3.3", "description": "symbol_store 単体テスト", "file": "src/indexer/symbol_store.rs"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "issue_number": 141,
+  "title": "commandindexdev why <file> コマンドの実装",
+  "design_policy": "dev-reports/design/issue-141-why-cmd-design-policy.md",
+  "work_plan": "dev-reports/issue/141/work-plan.md",
+  "tasks": [
+    "Task 1.1: KnowledgeRelatedResult に title フィールド追加",
+    "Task 1.2: find_knowledge_related() の SQL 拡張",
+    "Task 1.3: find_knowledge_related 単体テスト追加",
+    "Task 2.1: WhyResult 型定義",
+    "Task 2.2-2.5: 4フォーマッタ実装",
+    "Task 3.1: WhyError + run_why() 関数",
+    "Task 3.2: Commands::Why + dispatch",
+    "Task 3.3: help-llm エントリ追加",
+    "Task 4.1: CLI パーステスト"
+  ]
+}

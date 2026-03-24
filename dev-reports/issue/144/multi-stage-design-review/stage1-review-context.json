@@ -1,0 +1,21 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "DRY", "description": "rrf_merge_filesは既存hybrid.rsのrrf_merge_multipleとロジックがほぼ同一。suggest.rsにコピーするとRRFロジックが2箇所に散在する。", "suggestion": "hybrid.rsに汎用的なrrf_merge_by_key<K>()を追加し、キー抽出クロージャをパラメータ化する。"},
+    {"id": "M2", "category": "DRY", "description": "try_semantic_searchのセマンティック検索パイプライン(store open→count→provider→embed→search)が3箇所に重複する。", "suggestion": "共通のセマンティッククエリ実行関数をsrc/search/semantic.rsに配置する。"},
+    {"id": "M3", "category": "SOLID (SRP)", "description": "suggest.rsは既に900行近い。RRF統合とセマンティック検索パイプラインを追加するとSRP違反が深刻化する。", "suggestion": "ファイル単位集約とfile_type_weightをsrc/search/ranking.rsに切り出し、RRFはhybrid.rsに統合する。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "DRY", "description": "deduplicate_by_file/deduplicate_by_file_pairsとaggregate_by_file/aggregate_semantic_by_fileが重複。", "suggestion": "共通のaggregate_max_by_keyユーティリティに統合する。"},
+    {"id": "S2", "category": "YAGNI", "description": "rrf_merge_filesのk: f32パラメータは不要。K=60を使う設計。", "suggestion": "hybrid.rsのRRF_Kをpub constにして共有。"},
+    {"id": "S3", "category": "型安全性", "description": "(String, f32)タプルの多用。path/score取り違えリスク。", "suggestion": "struct FileScore { path, score } を定義する。"},
+    {"id": "S4", "category": "SOLID (OCP)", "description": "file_type_weight_factorのif-elseチェーンはハードコード。", "suggestion": "weightルールテーブル化を検討。"},
+    {"id": "S5", "category": "エラーハンドリング", "description": "try_semantic_searchの全エラーをNoneで握りつぶす設計。SchemaVersionMismatch等の致命的エラーも無視。", "suggestion": "致命的エラーはErrで返し、一時的エラーのみNoneにする。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "KISS", "description": "file_type_weightのRRF前適用で二重減衰の効果が生じる可能性。", "suggestion": "テスト計画で二重減衰の検証を追加。"},
+    {"id": "N2", "category": "テスト戦略", "description": "aggregate_by_fileの単体テストが未記載。", "suggestion": "テスト戦略に追加。"},
+    {"id": "N3", "category": "KISS", "description": "semantic.rsのenrichとaggregateで責務が異なる。", "suggestion": "責務を明記しておく。"},
+    {"id": "N4", "category": "ドキュメント", "description": "アーキテクチャ図でsemantic.rsの役割が曖昧。", "suggestion": "具体的な責務を記載。"}
+  ],
+  "summary": "DRY違反(RRFロジック重複、セマンティックパイプライン重複)とSRP違反(suggest.rsの責務集中)が主要課題。共通ロジックをsearch/レイヤーに適切に配置すれば保守性向上。"
+}

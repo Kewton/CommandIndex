@@ -1,0 +1,31 @@
+{
+  "applied": [
+    {
+      "source": "must_fix",
+      "title": "対象ドキュメント範囲が既存ナレッジグラフとまだずれている",
+      "action": "「対象ドキュメント範囲」セクションを追加し、全sibling documentを返す方針を明記。"
+    },
+    {
+      "source": "must_fix",
+      "title": "「存在しないファイルパスへのバリデーション」が既存APIの実態と不一致",
+      "action": "受け入れ基準とエラーハンドリング表を修正。パス文字列の妥当性検証とグラフ未登録時メッセージを分離して記載。"
+    },
+    {
+      "source": "should_fix",
+      "title": "既存API再利用方針だけでは期待出力に必要なデータが不足",
+      "action": "WhyResult結果モデルをRust構造体で定義し、Issueタイトルを含む専用結果型を追記。"
+    },
+    {
+      "source": "should_fix",
+      "title": "受け入れ基準がhuman以外の出力仕様まで定義し切れていない",
+      "action": "json/path/llm各形式のサンプル出力を使用例セクションに追加。"
+    },
+    {
+      "source": "should_fix",
+      "title": "変更対象モジュールの網羅性",
+      "action": "「変更対象モジュール」セクションを追加し、全変更ファイルをテーブルで列挙。"
+    }
+  ],
+  "skipped": [],
+  "summary": "Must Fix 2件、Should Fix 3件すべて反映完了。"
+}

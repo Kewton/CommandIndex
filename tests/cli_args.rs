@@ -23,7 +23,9 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("diff"))
         .stdout(predicate::str::contains("help-llm"))
         .stdout(predicate::str::contains("suggest"))
-        .stdout(predicate::str::contains("before-change"));
+        .stdout(predicate::str::contains("before-change"))
+        .stdout(predicate::str::contains("why"))
+        .stdout(predicate::str::contains("issue"));
 }
 
 #[test]
@@ -756,21 +758,8 @@ fn help_llm_contains_all_subcommands() {
         .collect();
 
     let expected = [
-        "index",
-        "search",
-        "update",
-        "status",
-        "clean",
-        "diff",
-        "context",
-        "embed",
-        "config",
-        "export",
-        "impact",
-        "import",
-        "watch",
-        "suggest",
-        "before-change",
+        "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
+        "export", "impact", "import", "watch", "suggest", "before-change", "why", "issue",
     ];
     for name in &expected {
         assert!(
@@ -780,8 +769,8 @@ fn help_llm_contains_all_subcommands() {
     }
     assert_eq!(
         commands.len(),
-        15,
-        "help-llm should have exactly 15 commands"
+        17,
+        "help-llm should have exactly 17 commands"
     );
     // help-llm itself should not be in the commands list
     assert!(
@@ -942,4 +931,58 @@ fn before_change_max_commits_over_limit_rejected() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
+}
+
+// --- issue CLI option tests ---
+
+#[test]
+fn issue_help_shows_usage() {
+    common::cmd()
+        .args(["issue", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Issue"))
+        .stdout(predicate::str::contains("format"));
+}
+
+#[test]
+fn issue_accepts_number() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "140"])
+        .assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("Symbol database not found")
+                .or(predicate::str::contains("No documents found")),
+        );
+}
+
+#[test]
+fn issue_rejects_zero() {
+    common::cmd()
+        .args(["issue", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn issue_rejects_non_numeric() {
+    common::cmd()
+        .args(["issue", "abc"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn issue_accepts_format_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "140", "--format", "json"])
+        .assert()
+        .failure();
 }

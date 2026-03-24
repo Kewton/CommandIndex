@@ -100,6 +100,26 @@ pub fn format_before_change_path(
     Ok(())
 }
 
+/// why 結果をpath形式で出力する（入力ファイル含む、1行1パス）
+pub fn format_why_path(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let mut seen = std::collections::HashSet::new();
+    // Include the input file itself
+    if seen.insert(result.file_path.clone()) {
+        writeln!(writer, "{}", result.file_path)?;
+    }
+    for issue in &result.issues {
+        for doc in &issue.documents {
+            if seen.insert(doc.file_path.clone()) {
+                writeln!(writer, "{}", doc.file_path)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// シンボル検索結果をpath:line形式で出力する（重複除去）
 pub fn format_symbol_path(
     results: &[SymbolSearchResult],

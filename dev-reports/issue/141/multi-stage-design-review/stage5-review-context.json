@@ -1,0 +1,25 @@
+{
+  "must_fix": [
+    {
+      "title": "インデックスパス解決フローが既存CLI基盤と不整合",
+      "description": "データフローでは SymbolStore::open(symbols.db) を直接行う設計だが、既存コードベースでは resolve_index_path と設定ファイル読込を通して symbols.db の場所を解決するのが標準。",
+      "suggestion": "why も search / impact と同様に resolve_index_path と symbol_db_path() を使う前提へ修正。WhyError にindex path解決失敗を表現する経路を追加。"
+    },
+    {
+      "title": "出力契約が path 形式だけ自己矛盾している",
+      "description": "Human/JSON/LLM の例は入力ドキュメント自身を含んでいるが、Path形式だけ「sibling documentのファイルパス」と記載。SQLに自己除外条件がない。",
+      "suggestion": "全フォーマットで統一する。入力ファイルを常に含めるか常に除外するかを決める。"
+    }
+  ],
+  "should_fix": [
+    {"title": "find_knowledge_related() への title 追加はAPIの責務を広げすぎ"},
+    {"title": "単一ファイル入力なのに Vec<String> は KISS/YAGNI 観点で重い"},
+    {"title": "WhyError が schema/version 異常のガイダンスを持っていない"},
+    {"title": "index_path がグローバルオプションと二重化"}
+  ],
+  "nice_to_have": [
+    {"title": "relation表示名変換を output 共通ヘルパーへ寄せる余地"},
+    {"title": "テスト設計に output層の単体テスト追加"}
+  ],
+  "summary": "インデックスパス解決フローの修正と、path形式の出力契約統一が必要。"
+}

@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "applied": [
+    "M1: semantic.rsのエラー方針をResult返却に統一。query_semanticはResult<Option<...>, SemanticError>を返す。graceful degradationはCLI層で判断。SemanticError型を新設",
+    "M2: rrf_merge_by_keyを非公開内部ヘルパー(compute_rrf_scores)に変更。公開APIはrrf_merge/rrf_merge_filesの2本のみ。RRF_Kはpub(crate)ではなく非公開定数のまま維持",
+    "S1: semantic.rsの各関数にpure/I/Oを明記",
+    "S2: aggregate_semantic_by_fileをranking.rs::aggregate_similarity_by_fileに統合。集約責務はranking.rsに一本化",
+    "S4: hybrid.rsを「RRFアルゴリズムの置き場」として責務を明示"
+  ],
+  "deferred": [
+    "S3: ranking.rsとsemantic.rsの統合は見送り。ranking.rsはpure関数のみ、semantic.rsはI/O含む。責務が異なるため分離を維持"
+  ]
+}

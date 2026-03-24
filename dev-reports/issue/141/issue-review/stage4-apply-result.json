@@ -1,0 +1,26 @@
+{
+  "applied": [],
+  "skipped": [
+    {
+      "source": "should_fix",
+      "title": "cli_args.rs テストに why 追加",
+      "reason": "テスト方針セクションに「CLIの引数パーステスト」として既に含まれている。実装時に対応。"
+    },
+    {
+      "source": "should_fix",
+      "title": "help_llm.rs に why コマンド追加",
+      "reason": "実装時に既存パターンに倣って対応する項目。"
+    },
+    {
+      "source": "should_fix",
+      "title": "find_knowledge_related の走査方向限定",
+      "reason": "Issue本文で「指定ファイルパスのdocumentノード」と明記済み。"
+    },
+    {
+      "source": "should_fix",
+      "title": "output モジュールへの WhyResult 型追加",
+      "reason": "実装詳細。実装時に対応。"
+    }
+  ],
+  "summary": "Must Fix 0件。Should Fix 4件はすべて実装時対応事項のため、Issue本文の追加修正なし。"
+}

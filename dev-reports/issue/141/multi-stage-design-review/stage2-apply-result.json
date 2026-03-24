@@ -1,0 +1,1 @@
+{"applied": [{"title": "file: String を files: Vec<String> に変更"}, {"title": "WhyError を ImpactError パターンに統一（IndexNotFound PathBufなし、SymbolDbNotFound追加）"}, {"title": "index_path は Impact パターンに合わせてコマンド内に定義"}], "summary": "Stage 2 Must Fix 3件反映完了"}

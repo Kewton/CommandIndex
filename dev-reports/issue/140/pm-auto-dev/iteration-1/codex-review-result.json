@@ -1,0 +1,11 @@
+{
+  "critical": [],
+  "warnings": [
+    {"file": "src/indexer/symbol_store.rs", "line": 876, "severity": "low", "category": "bug", "description": "Unknown relation/metadata エラーで InvalidEmbedding を流用。意味が合わない。", "suggestion": "knowledge graph 専用エラーバリアント追加を検討（低優先度）"},
+    {"file": "src/cli/issue.rs", "line": 65, "severity": "low", "category": "bug", "description": "grouped() のカテゴリリストがハードコード。DocSubtype 追加時に漏れるリスク。", "suggestion": "「その他」カテゴリ追加を検討"},
+    {"file": "src/indexer/symbol_store.rs", "line": 856, "severity": "low", "category": "bug", "description": "LIMIT 100 がハードコード。切り捨て時の通知なし。", "suggestion": "警告出力を検討（低優先度）"}
+  ],
+  "summary": "クリティカルな潜在バグやセキュリティ脆弱性は発見されなかった。SQLパラメータバインド、strip_control_chars、clapバリデーション等の対策が適切に実施済み。",
+  "requires_fix": false,
+  "reviewer": "Claude Opus (Codex応答不可のため代替)"
+}

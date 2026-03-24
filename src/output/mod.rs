@@ -384,6 +384,43 @@ fn format_suggest_json(result: &SuggestResult, writer: &mut dyn Write) -> Result
     Ok(())
 }
 
+/// why サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyResult {
+    pub file_path: String,
+    pub issues: Vec<WhyIssueEntry>,
+}
+
+/// why の Issue エントリ
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyIssueEntry {
+    pub issue_number: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub documents: Vec<WhyDocumentEntry>,
+}
+
+/// why の Document エントリ
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyDocumentEntry {
+    pub file_path: String,
+    pub relation: String,
+}
+
+/// why 結果を指定フォーマットで出力する
+pub fn format_why_results(
+    result: &WhyResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_why_human(result, writer),
+        OutputFormat::Json => json::format_why_json(result, writer),
+        OutputFormat::Path => path::format_why_path(result, writer),
+        OutputFormat::Llm => llm::format_why_llm(result, writer),
+    }
+}
+
 /// AI向け文脈パッケージ
 #[derive(Debug, Serialize)]
 pub struct ContextPack {

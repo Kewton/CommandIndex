@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "action": "改善方針を具体化。フォールバック方式からRRFハイブリッド方式への移行を明記"},
+    {"id": "M2", "action": "受け入れ基準セクションを7項目で追加"},
+    {"id": "M3", "action": "既存のhybrid.rs（rrf_merge）活用を改善方針に明記"},
+    {"id": "S1", "action": "パフォーマンス考慮セクションを追加"},
+    {"id": "S2", "action": "ファイルタイプ重み付けに「実装済み」注釈を追加"},
+    {"id": "S3", "action": "file_type_weight適用タイミングの設計判断を記載"}
+  ],
+  "deferred_items": [
+    {"id": "S4", "reason": "dedup関数整理は実装時に判断"},
+    {"id": "N1", "reason": "コンテキスト依存切替は将来Issueとして除外"},
+    {"id": "N2", "reason": "テスト戦略は受け入れ基準に統合"},
+    {"id": "N3", "reason": "ドキュメント更新は実装時に対応"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/144"
+}

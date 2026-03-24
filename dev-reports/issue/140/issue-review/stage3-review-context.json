@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "cli_args.rsテストに新コマンドのアサーション追加が必要",
+      "description": "tests/cli_args.rs の help_flag_shows_usage テストに issue サブコマンドのアサーションがない。新コマンド固有の引数パーステストも必要。",
+      "suggestion": "issue サブコマンドのヘルプ表示テストと引数パーステストを追加する。"
+    },
+    {
+      "id": "M2",
+      "title": "ORDER BY がrelationのみでdoc_subtypeを考慮していない",
+      "description": "has_review に issue_review, design_review, progress_report の3つの doc_subtype が含まれる。relation だけでは細かいソートが不十分。",
+      "suggestion": "ORDER BY に json_extract(ke.metadata, '$.doc_subtype') のサブソートを追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "help-llm の use_cases/workflows にも反映が必要",
+      "description": "build_commands() だけでなく build_use_cases() と build_workflows() にも issue コマンドの利用例を追加すべき。",
+      "suggestion": "UseCaseItem と Investigation ワークフローに追加。"
+    },
+    {
+      "id": "S2",
+      "title": "入力値バリデーション",
+      "description": "Issue番号の数値パースバリデーションとエラーハンドリングが必要。",
+      "suggestion": "number.parse::<u64>() のバリデーション。"
+    },
+    {
+      "id": "S3",
+      "title": "出力フォーマッタ4ファイルへの関数追加",
+      "description": "human.rs, json.rs, path.rs, llm.rs すべてに format_issue_* 関数追加が必要。",
+      "suggestion": "既存パターンを参考に実装。型名は IssueDocumentsResult が明確。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "空結果時のUXメッセージ",
+      "description": "結果が空の場合 'No documents found for issue #XXX' を表示すべき。",
+      "suggestion": "他コマンドのパターンに合わせる。"
+    },
+    {
+      "id": "N2",
+      "title": "E2Eテスト追加",
+      "description": "tests/e2e_issue.rs を新規作成し、ナレッジグラフデータ投入→issueコマンド実行→検証のE2Eテストを追加。",
+      "suggestion": "テンポラリディレクトリでSymbolStoreにデータ投入後テスト。"
+    }
+  ],
+  "summary": "影響範囲は限定的で既存機能を壊すリスクは低い。主な注意点: ORDER BYのdoc_subtype考慮、テスト追加、出力フォーマッタ4ファイルへの対応、help-llmへの反映。新規crate不要、パフォーマンス問題なし。"
+}

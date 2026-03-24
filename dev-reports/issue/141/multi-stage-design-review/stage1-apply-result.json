@@ -1,0 +1,1 @@
+{"applied": [{"title": "display_label() を output/human.rs に移動（SRP準拠）"}, {"title": "WhyError::Validation(SearchError) を InvalidArgument(String) に変更（DIP準拠）"}], "summary": "Stage 1 Must Fix 2件反映完了"}
