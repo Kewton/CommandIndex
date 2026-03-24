@@ -1,6 +1,8 @@
 use std::fmt;
 use std::path::Path;
 
+use serde::Serialize;
+
 use crate::indexer::symbol_store::SymbolStoreError;
 
 // ---------------------------------------------------------------------------
@@ -43,7 +45,7 @@ impl From<SymbolStoreError> for KnowledgeError {
 // ---------------------------------------------------------------------------
 
 /// ナレッジグラフのエッジ種別
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum KnowledgeRelation {
     HasDesign,
     HasReview,
@@ -61,7 +63,7 @@ impl KnowledgeRelation {
 }
 
 /// ドキュメントのサブタイプ
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum DocSubtype {
     DesignPolicy,
     WorkPlan,
@@ -86,6 +88,14 @@ impl DocSubtype {
 #[derive(Debug, Clone)]
 pub struct KnowledgeEntry {
     pub issue_number: String,
+    pub file_path: String,
+    pub relation: KnowledgeRelation,
+    pub doc_subtype: DocSubtype,
+}
+
+/// Issue関連ドキュメントの検索結果（metadataパース済みDTO）
+#[derive(Debug, Clone, Serialize)]
+pub struct IssueDocumentEntry {
     pub file_path: String,
     pub relation: KnowledgeRelation,
     pub doc_subtype: DocSubtype,

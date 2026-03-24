@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "エラーメッセージ仕様が既存実装パターンとずれる可能性",
+      "description": "既存コードではSearchError::IndexNotFound / SymbolDbNotFoundのようにTantivy index不在とsymbols DB不在を分けて扱う。issueコマンドがsymbols.dbだけを見て判定すると他コマンドと異なるUXになる可能性。",
+      "suggestion": "cli::issueのエラー処理を既存search/diff/impactのパターンに揃える。未初期化判定メッセージを統一する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "CLI入口変更のため回帰確認が必要",
+      "description": "Commands enumとmatch cli.commandはCLI全体の入口。ヘルプ表示、サブコマンド列挙、clapエラーメッセージに波及する。",
+      "suggestion": "tests/cli_args.rsを中心に回帰確認が必要と明記。"
+    },
+    {
+      "id": "S2",
+      "title": "E2Eテストは既存テストユーティリティ流儀との整合確認が必要",
+      "description": "tests/common/mod.rsのcargo_bin(\"commandindex\")と一時ディレクトリ運用が前提。CLI実行含めて--index-path/.commandindexの扱いを既存流儀に合わせる必要。",
+      "suggestion": "tests/commonを使ったCLI起動前提でテストする方針を明記。"
+    },
+    {
+      "id": "S3",
+      "title": "JSONメタデータの都度パースをoutput層に漏らさない",
+      "description": "find_documents_by_issue()でdoc_subtypeをパース済みDTOにする方針は妥当。",
+      "suggestion": "出力層では再パースしない方針を維持。"
+    },
+    {
+      "id": "S4",
+      "title": "新規依存追加なしで実装可能であることの明記",
+      "description": "clap/rusqlite/serde_jsonの既存依存で完結。",
+      "suggestion": "Issue本文に明記すると見通しが良い。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "出力フォーマッタの単体テスト追加検討",
+      "description": "E2E中心だが整形ロジック単体テストもあると切り分けしやすい。",
+      "suggestion": "IssueDocumentsResultのhuman/json/llm/path整形単体テストを検討。"
+    },
+    {
+      "id": "N2",
+      "title": "--index-pathの相対/絶対パス解決テスト",
+      "description": "新コマンドでグローバル--index-pathの経路を踏むのでE2Eがあると安心。",
+      "suggestion": "commandindex --index-path <dir> issue <N>の動作確認を追加。"
+    }
+  ],
+  "summary": "影響範囲は限定的。主な波及先はCLI入口、help-llm、出力フォーマッタ、テスト群。tests/cli_args.rsは必須更新。パフォーマンス問題なし。注意点はエラー処理を既存コマンドと揃えること、DTOに閉じ込めて責務と性能を崩さないこと。"
+}
