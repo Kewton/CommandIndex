@@ -1,0 +1,20 @@
+{
+  "stage": 4,
+  "action": "apply_impact_review",
+  "applied_items": [
+    {"id": "M1", "action": "型変換とデータフロー設計セクションを追加。SearchResult型での統一方針を明記"},
+    {"id": "M2", "action": "ファイルタイプ重み付けセクションに「再ソートしてからRRF統合」を明記。RRFがランク順位ベースである点を説明"},
+    {"id": "M3", "action": "セマンティック結果変換の共通ヘルパーpub化方針を記載"},
+    {"id": "S1", "action": "パフォーマンス考慮にタイムアウト設定とtry_hybrid_searchパターン踏襲を追記"},
+    {"id": "S4", "action": "戦略生成ロジック調整セクションを追加"}
+  ],
+  "deferred_items": [
+    {"id": "S2", "reason": "テスト戦略は受け入れ基準に含まれている"},
+    {"id": "S3", "reason": "コード重複整理は実装時にリファクタリング"},
+    {"id": "N3", "reason": "DEDUP_FILE_LIMIT調整は実装時に検討"},
+    {"id": "N4", "reason": "ログプレフィックスは実装時に対応"}
+  ],
+  "impact_section_added": true,
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/144"
+}
