@@ -1,0 +1,10 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "T1.5を選択肢ベースから必須要件に書き直し。3つの必須要件と受け入れ基準を明記"},
+    {"id": "S1", "action": "T2.5の警告をsearch_similar()の返り値にメタ情報を持たせる設計に変更。全CLI経路で一貫して対応"},
+    {"id": "S2", "action": "T3を「手動評価」と明記。CI再現性の問題を明示"},
+    {"id": "N1", "action": "T4をREADME.mdに「Embedding」セクション新設と明記。T1.5の自動クリーンアップとの整合性を記載"}
+  ],
+  "issue_updated": true
+}

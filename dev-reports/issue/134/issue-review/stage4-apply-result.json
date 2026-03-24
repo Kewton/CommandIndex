@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    {"id": "M1", "action": "T1.5を新設: has_current_embedding()のmodel列条件追加、モデル変更検知・警告・クリーンアップ"},
+    {"id": "M2", "action": "T1.5に旧モデルのembeddingクリーンアップ処理を含める"},
+    {"id": "S3", "action": "T2.5を新設: 次元不一致時の警告メッセージ実装"},
+    {"id": "S2", "action": "今後の検討事項にパフォーマンス影響評価を追記"}
+  ],
+  "issue_updated": true
+}

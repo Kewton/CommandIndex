@@ -706,7 +706,15 @@ pub fn run_semantic_search(
     })?;
 
     // Search similar with oversampling
-    let similar_results = emb_store.search_similar(query_embedding, limit.saturating_mul(5))?;
+    let search_output = emb_store.search_similar(query_embedding, limit.saturating_mul(5))?;
+    if search_output.should_warn_dimension_mismatch() {
+        eprintln!(
+            "Warning: {}/{} embeddings were skipped due to dimension mismatch. \
+             Consider re-running 'commandindex embed' after model change.",
+            search_output.skipped_dimension_mismatch, search_output.total_records
+        );
+    }
+    let similar_results = search_output.results;
 
     // Enrich with metadata from tantivy
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
@@ -861,7 +869,7 @@ fn try_hybrid_search(
     };
 
     // 5. 類似検索（オーバーサンプリング付き）
-    let similar_results = match emb_store.search_similar(
+    let search_output = match emb_store.search_similar(
         query_embedding,
         options.limit.saturating_mul(HYBRID_OVERSAMPLING_FACTOR),
     ) {
@@ -871,6 +879,14 @@ fn try_hybrid_search(
             return Ok(bm25_results);
         }
     };
+    if search_output.should_warn_dimension_mismatch() {
+        eprintln!(
+            "Warning: {}/{} embeddings were skipped due to dimension mismatch. \
+             Consider re-running 'commandindex embed' after model change.",
+            search_output.skipped_dimension_mismatch, search_output.total_records
+        );
+    }
+    let similar_results = search_output.results;
 
     // 6. セマンティック結果をSearchResult型に変換
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);

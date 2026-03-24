@@ -1,0 +1,49 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "モデル変更時にキャッシュが無効化されず、次元不整合が発生する",
+      "description": "has_current_embedding()はsection_pathとfile_hashのみでキャッシュ判定し、model名をチェックしていない。モデル変更後もファイル未変更ならキャッシュヒットし旧embeddingが残存、検索結果が0件になる。",
+      "suggestion": "has_current_embedding()にmodel列の条件を追加するか、embed実行時にモデル変更を検知し警告・パージする仕組みを導入。"
+    },
+    {
+      "id": "M2",
+      "title": "モデル変更時に旧モデルのembeddingデータが残存する",
+      "description": "UNIQUEインデックスが(section_path, section_heading, model)のため旧モデルのレコードが残りDB肥大化。M1のキャッシュ問題で新モデルの再生成も行われない。",
+      "suggestion": "モデル変更検知時に旧モデルのembeddingレコードを削除するクリーンアップ処理を実装。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "bge-m3モデル名のバリエーション対応が不十分",
+      "description": "known_dimensionは完全一致のみ。異なるタグ名で設定した場合にdimension=0になる。",
+      "suggestion": "プレフィックスマッチやcached_dimensionフォールバック動作のテストを追加。"
+    },
+    {
+      "id": "S2",
+      "title": "1024次元によるメモリ・検索速度への影響",
+      "description": "768次元比で33%増加。フルスキャンのためI/O影響あり。",
+      "suggestion": "ドキュメントにパフォーマンス特性を記載。"
+    },
+    {
+      "id": "S3",
+      "title": "search_similar()での次元不一致スキップが無警告",
+      "description": "全レコードスキップでもエラーなし。デバッグ困難。",
+      "suggestion": "スキップ数を集計し、大部分がスキップされた場合に警告メッセージを出力。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "MAX_TEXT_LENGTHのモデル別調整",
+      "description": "スコープ外。別Issue推奨。"
+    },
+    {
+      "id": "N2",
+      "title": "commandindex.tomlの設定例にbge-m3を追加",
+      "description": "ドキュメント更新時に対応。"
+    }
+  ],
+  "summary": "最も深刻な問題はhas_current_embedding()がmodel列を見ていないキャッシュ問題(M1)。モデル変更後にembedを再実行しても旧embeddingが残存し、セマンティック検索が暗黙的に0件を返す。M1/M2の修正を必須とし、S3の警告メッセージ追加を強く推奨。セキュリティ面・後方互換性への悪影響なし。"
+}

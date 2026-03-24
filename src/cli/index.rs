@@ -875,13 +875,20 @@ fn generate_embeddings_for_manifest(
     let store = EmbeddingStore::open(&db_path)?;
     store.create_tables()?;
 
+    // Delete stale embeddings from previous model
+    let model_name = provider.model_name();
+    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
+    if stale_deleted > 0 {
+        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
+    }
+
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir).map_err(|e| {
         IndexError::IndexCorrupted(format!("Failed to open tantivy for embedding: {e}"))
     })?;
 
     for entry in &manifest.files {
-        if store.has_current_embedding(&entry.path, &entry.hash)? {
+        if store.has_current_embedding(&entry.path, &entry.hash, model_name)? {
             continue;
         }
 

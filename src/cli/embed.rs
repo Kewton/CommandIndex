@@ -141,6 +141,13 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
+    // 6.5. Delete stale embeddings from previous model
+    let model_name = provider.model_name();
+    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
+    if stale_deleted > 0 {
+        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
+    }
+
     let mut total_sections: u64 = 0;
     let mut generated: u64 = 0;
     let mut cached: u64 = 0;
@@ -149,7 +156,7 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
     // 7. Process each file entry
     for entry in &manifest.files {
         // Check cache: if embedding already exists for this hash, skip
-        if store.has_current_embedding(&entry.path, &entry.hash)? {
+        if store.has_current_embedding(&entry.path, &entry.hash, model_name)? {
             cached += entry.sections;
             total_sections += entry.sections;
             continue;
