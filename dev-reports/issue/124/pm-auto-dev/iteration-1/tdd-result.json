@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "1.1: Added EmbeddingSimilarityResult struct, InvalidEmbedding error variant, cosine_similarity, blob_to_embedding, and search_similar to EmbeddingStore",
+    "1.2: Added 5 unit tests for search_similar and blob_to_embedding in embedding/store.rs",
+    "2.1: Added EmbeddingStore error variant to SearchError with From impl (maps 'no such table' to NoEmbeddings)",
+    "2.2: Changed run_semantic_search to use EmbeddingStore from embeddings.db instead of SymbolStore from symbols.db",
+    "2.3: Changed try_hybrid_search to use EmbeddingStore from embeddings.db with graceful BM25 fallback",
+    "2.4: Changed suggest.rs maybe_add_semantic_step to use EmbeddingStore::count() instead of SymbolStore::count_embeddings()",
+    "3.1: Updated e2e_semantic_hybrid.rs tests to use EmbeddingStore::upsert_embedding instead of SymbolStore::insert_embeddings"
+  ],
+  "tests_passed": true,
+  "clippy_clean": true,
+  "summary": "Fixed Issue #124: search --semantic and hybrid search now read embeddings from embeddings.db (EmbeddingStore) instead of symbols.db (SymbolStore), matching where the embed command writes them. All new and existing tests pass (1 pre-existing test failure in test_embed_without_ollama_fails is unrelated). Clippy and fmt are clean."
+}

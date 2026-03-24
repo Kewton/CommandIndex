@@ -1,0 +1,13 @@
+{
+  "stage": 8,
+  "type": "apply_consistency_impact_2nd",
+  "applied_items": ["MF-1", "MF-2", "MF-3", "MF-4", "SF-1", "SF-2", "SF-4", "NH-2"],
+  "changes": [
+    "判断7の#[deprecated]記述を判断5と整合させて残置に統一",
+    "擬似コードにPath::exists()事前チェックを追加",
+    "exit_code()記述を削除（Display, source()のみ）",
+    "no such table文字列判定は暫定策であるリスクを明記",
+    "cli/suggest -> embedding/storeの新規依存を追加",
+    "責務境界（EmbeddingStore=検索、SymbolStore=メタデータ補完）を明記"
+  ]
+}

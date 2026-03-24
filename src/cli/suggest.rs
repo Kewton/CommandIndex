@@ -14,7 +14,6 @@ use std::path::Path;
 
 use crate::cli::search::SearchContext;
 use crate::indexer::reader::{IndexReaderWrapper, SearchResult};
-use crate::indexer::symbol_store::SymbolStore;
 use crate::output::{self, OutputFormat, SuggestResult, SuggestStep};
 
 /// バイナリ名の定数化（DRY: 一箇所管理）
@@ -138,7 +137,7 @@ fn deduplicate_by_file(results: Vec<SearchResult>, limit: usize) -> Vec<(String,
 /// `store` が `Some` の場合はセマンティック検索ステップも追加する。
 /// `None` の場合はBM25ベースのステップのみ生成する（W2対応）。
 fn build_strategy(
-    store: Option<&SymbolStore>,
+    emb_store: Option<&crate::embedding::store::EmbeddingStore>,
     entry_files: &[(String, f32)],
     original_query: &str,
 ) -> SuggestResult {
@@ -164,9 +163,7 @@ fn build_strategy(
     }
 
     // semantic search (条件付き) — 元の task description を使う
-    let has_embeddings = store
-        .map(|s| maybe_add_semantic_step(&mut steps, s, original_query))
-        .unwrap_or(false);
+    let has_embeddings = maybe_add_semantic_step(&mut steps, emb_store, original_query);
 
     // 追加のエントリーファイルがあれば context を追加
     for (file, _) in entry_files.iter().skip(1).take(2) {
@@ -205,8 +202,13 @@ fn build_fallback_strategy() -> SuggestResult {
 
 /// Embedding構築済みの場合のみsemantic検索ステップを追加
 /// Returns whether embeddings are available.
-fn maybe_add_semantic_step(steps: &mut Vec<SuggestStep>, store: &SymbolStore, query: &str) -> bool {
-    if let Ok(count) = store.count_embeddings()
+fn maybe_add_semantic_step(
+    steps: &mut Vec<SuggestStep>,
+    emb_store: Option<&crate::embedding::store::EmbeddingStore>,
+    query: &str,
+) -> bool {
+    if let Some(store) = emb_store
+        && let Ok(count) = store.count()
         && count > 0
     {
         let quoted = shell_quote(query);
@@ -247,11 +249,11 @@ pub fn run_suggest(
     }
     let reader = IndexReaderWrapper::open(&index_dir)?;
 
-    // SymbolStore はオプショナル: DBが存在しない場合もBM25ベースで戦略を返す（W2対応）
-    let store = {
-        let db_path = ctx.symbol_db_path();
+    // EmbeddingStore はオプショナル: DBが存在しない場合もBM25ベースで戦略を返す（W2対応）
+    let emb_store = {
+        let db_path = ctx.embeddings_db_path();
         if db_path.exists() {
-            SymbolStore::open(&db_path).ok()
+            crate::embedding::store::EmbeddingStore::open(&db_path).ok()
         } else {
             None
         }
@@ -264,7 +266,7 @@ pub fn run_suggest(
     let mut result = if entry_files.is_empty() {
         build_fallback_strategy()
     } else {
-        build_strategy(store.as_ref(), &entry_files, &query)
+        build_strategy(emb_store.as_ref(), &entry_files, &query)
     };
     result.query = query;
 

@@ -1,0 +1,1 @@
+{"stage":4,"type":"security","reviewer":"Claude Opus","must_fix_count":1,"should_fix_count":3,"nice_to_have_count":3,"key_issues":["bytes_to_f32_vecがBLOBサイズ検証なし - InvalidEmbeddingエラーバリアントとvalidated blob_to_embedding関数が必要","NaN/Inf値のハンドリング","SQLインジェクションリスクなし、unsafe使用なし"]}

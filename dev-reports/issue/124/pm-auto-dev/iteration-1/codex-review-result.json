@@ -1,0 +1,10 @@
+{
+  "critical": [],
+  "warnings": [
+    {"file": "src/cli/search.rs", "line": 189, "severity": "medium", "category": "bug", "description": "no such table文字列一致がSQLiteメッセージ変更で誤分類される", "suggestion": "no such table: embeddingsまで限定"},
+    {"file": "src/cli/search.rs", "line": 547, "severity": "medium", "category": "bug", "description": "semantic経路でSchemaVersionMismatchの専用ハンドリングがない", "suggestion": "hybrid経路と契約をそろえる"},
+    {"file": "src/embedding/store.rs", "line": 373, "severity": "low", "category": "bug", "description": "search_similar()がNaNのみ除外でInfが残る", "suggestion": "similarity.is_finite()で有限値のみ採用"}
+  ],
+  "summary": "Critical 0件。主な懸念はエラー分類の文字列依存、schema mismatchの不整合、NaN/Infフィルタ不足。",
+  "requires_fix": false
+}

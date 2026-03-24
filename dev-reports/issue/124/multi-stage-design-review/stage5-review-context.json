@@ -1,0 +1,20 @@
+{
+  "stage": 5,
+  "type": "design_principles_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {"id": "MF-1", "category": "エラーハンドリング", "description": "EmbeddingStore::open()はDB未存在でも新規作成で成功するため、「未存在時はopen()が失敗」という前提が誤り", "suggestion": "Path::exists()で事前判定、テーブル未作成時のno such tableをNoEmbeddingsに変換"},
+    {"id": "MF-2", "category": "API設計", "description": "SchemaVersionMismatchをNoEmbeddingsに潰すのは不適切。原因を隠す", "suggestion": "SchemaVersionMismatchは専用のrebuild案内に変換、NoEmbeddingsとは分離"},
+    {"id": "MF-3", "category": "SOLID/KISS/YAGNI", "description": "#[deprecated]付与はバグ修正の必須スコープを超える", "suggestion": "非推奨化は削除Issue側に寄せる"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "description": "EmbeddingSimilarityResultをpubにする境界を明記"},
+    {"id": "SF-2", "description": "NaN/Inf扱いを詳細設計に落とし込む"},
+    {"id": "SF-3", "description": "semantic利用可否判定がsearchとsuggestで同一契約維持を明記"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "description": "bytes_to_f32_vec()は検証済みBLOB専用と注記"},
+    {"id": "NH-2", "description": "削除予定APIと新設APIの責務境界を明記"}
+  ],
+  "summary": "EmbeddingStore::open()の挙動事実誤認、SchemaVersionMismatch→NoEmbeddings変換の不適切さ、#[deprecated]付与の過剰さが主な問題"
+}
