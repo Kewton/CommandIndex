@@ -1,0 +1,20 @@
+{
+  "must_fix": [
+    {"id": "M1", "description": "改善後データフローと判断2でprovider戻り値表現が矛盾。Ok((results, warnings))表記を修正すべき。"},
+    {"id": "M2", "description": "RerankError::PartialTimeout追加のDisplay/テスト/match波及範囲が不足。"},
+    {"id": "M3", "description": "json/llm出力のreasonにApiErrorレスポンスがそのまま露出するセキュリティリスク。サニタイズ必要。"},
+    {"id": "M4", "description": "JSON互換性説明が楽観的。既存parse_jsonl()は行種別判定しない。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "search限定の例外実装であることを明記。"},
+    {"id": "S2", "description": "reason/モデル名の制御文字除去・改行正規化方針追加。"},
+    {"id": "S3", "description": "Timeout vs PartialTimeoutの発生条件を明文化。"},
+    {"id": "S4", "description": "RerankStatusの配置場所を再確認（rerank/mod.rs vs cli/search.rs）。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "Cargo.toml変更なしを影響範囲に明記。"},
+    {"id": "N2", "description": "ヒント文言は定型文に留める。"},
+    {"id": "N3", "description": "分離後の関数名で記述統一。"}
+  ],
+  "summary": "データフロー表記の矛盾修正とreasonサニタイズ方針が主な課題。"
+}

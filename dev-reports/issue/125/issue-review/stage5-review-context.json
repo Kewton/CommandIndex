@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存JSON契約との整合性",
+      "description": "--format json は現状 JSONL で各行が検索結果オブジェクトである前提。先頭メタデータ行を追加すると既存のJSONL消費側に破壊的変更が入るが、Issueでは互換性方針が未定義。",
+      "suggestion": "JSON出力の契約変更を明示すること。推奨は type: \"metadata\" | \"result\" のような判別キーを持つJSONLにするか、別オプションで互換性を管理すること。受け入れ基準に「JSON出力は異種JSONLになる」ことと関連テスト・ヘルプの更新を含めるべき。"
+    },
+    {
+      "id": "M2",
+      "category": "エラー伝搬設計の正確性",
+      "description": "try_rerank()のeprintln!削除で出力制御をrun()に一元化できる前提だが、src/rerank/ollama.rs側でもタイムアウト時に直接eprintln!している。またタイムアウトは部分結果を返して終了になっており、RerankStatus::Skippedだけでは検知できない。",
+      "suggestion": "try_rerank()だけでなくrerank provider層も含めて構造化ステータスを返す設計に修正。SkippedだけでなくAppliedWithWarningまたはwarning一覧を持つ形にし、ollama.rsの直接出力を廃止してrun()まで伝搬できるよう受け入れ基準を補強するべき。"
+    },
+    {
+      "id": "M3",
+      "category": "タイムアウト方針の妥当性",
+      "description": "IssueのヒントではTimeout -> Increase rerank.timeout_secsを想定しているが、実装にはHTTPクライアントの固定10秒REQUEST_TIMEOUT_SECSがあり、config.rerank.timeout_secsは全体締切にしか使われていない。一部のtimeoutは設定値を増やしても解消せず、提案ヒントはコード実装と不整合。",
+      "suggestion": "タイムアウトを1種類として扱わず、HTTPリクエストtimeoutと全体deadline超過を分離すること。受け入れ基準もそれに合わせてどのエラーにどのヒントを出すかを再定義するべき。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "受け入れ基準の網羅性",
+      "description": "Issue は全フォーマットでフォールバック情報を出力するとしているが、テスト受け入れ基準はstderrとjsonしか検証していない。llm/human/pathが未検証。",
+      "suggestion": "受け入れ基準にllm・human・pathの検証項目を追加。"
+    },
+    {
+      "id": "S2",
+      "category": "状態モデルの明確性",
+      "description": "RerankStatus の Applied/Skipped/NotRequested だけでは、一部だけrerank できた中間状態を表現できない。",
+      "suggestion": "AppliedFully / AppliedPartially / Skipped のようにするか、状態と警告を分離して扱う。"
+    },
+    {
+      "id": "S3",
+      "category": "実装責務の分離",
+      "description": "Issueはフォーマット別表現をrun()に集約する方針だが、出力ロジックはsrc/output/*に分離されている。run()でjson/llmの先頭行を手書きすると例外実装になる。",
+      "suggestion": "run()にベタ書きではなく、output層にメタデータ付きformatterを追加する案も検討。"
+    },
+    {
+      "id": "S4",
+      "category": "エラー分類の明確性",
+      "description": "ヒント例はModelNotFound/NetworkError/Timeoutの3種だが、実際のRerankErrorにはApiError/InvalidResponse/ConfigErrorもある。扱いが未定義。",
+      "suggestion": "全RerankErrorバリアントのユーザー向けメッセージ方針をIssueに書くこと。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "LLM出力仕様の明確化",
+      "description": "llmフォーマットは既に<!-- estimated tokens: ... -->コメントを先頭に出しているため、<!-- rerank skipped: ... -->の順序が未定義。",
+      "suggestion": "rerankコメントをestimated tokensコメントより前に置くよう順序を固定。"
+    },
+    {
+      "id": "N2",
+      "category": "将来拡張との整合性",
+      "description": "try_hybrid_search()にも同じgraceful degradationが存在するため、通知方式が二重化しやすい。",
+      "suggestion": "スコープ外のまま、将来的にhybrid fallback通知にも同じ基盤を使う設計メモを1行入れておく。"
+    }
+  ],
+  "summary": "方向性自体は妥当だが、実装に入る前に「JSON契約」「構造化ステータスの粒度」「timeoutの実際の意味」をもう一段具体化する必要がある。"
+}

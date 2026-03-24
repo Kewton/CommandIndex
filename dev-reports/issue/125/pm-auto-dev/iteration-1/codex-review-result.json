@@ -1,0 +1,32 @@
+{
+  "critical": [
+    {
+      "file": "src/cli/search.rs",
+      "line": 99,
+      "severity": "high",
+      "category": "security",
+      "description": "Rerank failure reasons are interpolated into the LLM HTML comment after only control-character stripping. A server-controlled ApiError/NetworkError message can still contain sequences like `-->`, which prematurely close the comment and inject arbitrary visible content into stdout. The same raw reason is also emitted to stderr in `build_rerank_stderr_message`, allowing log/terminal injection.",
+      "suggestion": "Do not embed raw error text directly into HTML comments or stderr. Introduce a dedicated escaped/display-safe formatter for rerank reasons: strip control characters, collapse whitespace, cap length, and escape or remove `-->`, backticks, and other comment-breaking sequences before writing to stdout/stderr."
+    }
+  ],
+  "warnings": [
+    {
+      "file": "src/cli/search.rs",
+      "line": 86,
+      "severity": "low",
+      "category": "bug",
+      "description": "Production code uses `serde_json::to_string(&meta).unwrap()` when building rerank metadata prefixes. This is unlikely to fail with the current shape, but it is still a panic point in the CLI path and violates the stated no-panic review goal.",
+      "suggestion": "Replace `unwrap()` with fallible handling. Either return `Option<String>`/`Result<String, OutputError>` from the helper or fall back to a constant safe metadata string when serialization fails."
+    },
+    {
+      "file": "src/cli/search.rs",
+      "line": 116,
+      "severity": "medium",
+      "category": "security",
+      "description": "The stderr warning path formats `{reason}` directly without passing through `sanitize_reason`. If the remote endpoint returns newlines, ANSI escapes, or other crafted content inside ApiError/NetworkError messages, the CLI can emit forged multi-line log entries or terminal control sequences.",
+      "suggestion": "Apply the same sanitization policy to stderr messages as to stdout prefixes, ideally using a single shared safe-display function for all user-visible rerank reason output."
+    }
+  ],
+  "summary": "Two user-controlled output paths remain risky in the rerank fallback implementation. The most important issue is that rerank reasons can be injected into LLM comments and stderr without sufficient escaping, so remote error text can break comment structure or poison terminal/log output. There is also one remaining panic point via `unwrap()` in production metadata generation. I did not find path traversal, command injection, integer overflow, or resource leak issues in the reviewed changes.",
+  "requires_fix": true
+}

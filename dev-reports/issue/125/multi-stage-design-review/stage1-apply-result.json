@@ -1,0 +1,15 @@
+{
+  "stage": 1,
+  "action": "設計方針書更新（設計原則レビュー反映）",
+  "applied_items": [
+    "M1: trait戻り値を維持し、RerankError::PartialTimeoutバリアント追加でOCP準拠に",
+    "M2: RerankError::Displayはエラー事実のみ。ヒントはCLI層のrerank_error_hint()で付加（SRP準拠）",
+    "S1: emit_rerank_status()ヘルパー関数を判断6として追加",
+    "S3: hybrid統一のTODOはスコープ外に既に記載済み",
+    "S4: テスト設計にOllama前提条件の明記は作業計画で具体化"
+  ],
+  "skipped_items": [
+    "S2: RerankMetadata構造体はオーバーエンジニアリング。json!マクロで十分（KISS）",
+    "N1-N3: 優先度低、将来検討"
+  ]
+}

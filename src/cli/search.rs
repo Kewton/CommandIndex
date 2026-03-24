@@ -21,6 +21,7 @@ Examples:
   commandindex search --related src/auth.rs --with-snippet --format json";
 
 use std::fmt;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::config::{AppConfig, ConfigError, load_config};
@@ -30,6 +31,129 @@ use crate::output::{
     self, LlmFormatOptions, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig,
     SymbolSearchResult,
 };
+use crate::rerank::RerankError;
+
+// ---------------------------------------------------------------------------
+// RerankStatus (private to CLI layer)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
+enum RerankStatus {
+    Applied,
+    AppliedPartially { warning: String },
+    Skipped { reason: String },
+}
+
+// ---------------------------------------------------------------------------
+// Rerank output helpers
+// ---------------------------------------------------------------------------
+
+/// RerankError に対応するユーザー向けヒント文字列を返す（テスト用）
+#[cfg(test)]
+fn rerank_error_hint(err: &RerankError) -> &'static str {
+    match err {
+        RerankError::ModelNotFound(_) => {
+            "Run `ollama pull <model>` to install, or set rerank.model in config."
+        }
+        RerankError::NetworkError(_) => "Is Ollama running? Try `ollama serve`.",
+        RerankError::Timeout => "Check Ollama server load.",
+        RerankError::ApiError { .. } => "Check Ollama logs.",
+        RerankError::InvalidResponse(_) => "Check model compatibility.",
+        RerankError::ConfigError(_) => "Check rerank settings in commandindex.toml.",
+        RerankError::PartialTimeout { .. } => "Some candidates were not scored due to timeout.",
+    }
+}
+
+/// reason 文字列をサニタイズする（制御文字除去、HTMLコメント破壊防止、長さ制限）
+fn sanitize_reason(reason: &str) -> String {
+    let sanitized: String = reason
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    // HTMLコメント破壊防止: --> をエスケープ
+    let sanitized = sanitized.replace("-->", "--&gt;");
+    // 長さ制限（200文字）
+    if sanitized.len() > 200 {
+        format!("{}...", &sanitized[..197])
+    } else {
+        sanitized
+    }
+}
+
+/// stdout 向けメタデータを生成する（json/llm のみ）
+fn build_rerank_stdout_prefix(status: &RerankStatus, format: OutputFormat) -> Option<String> {
+    match (status, format) {
+        (RerankStatus::Skipped { reason }, OutputFormat::Json) => {
+            let sanitized = sanitize_reason(reason);
+            let meta = serde_json::json!({
+                "type": "metadata",
+                "rerank_status": "skipped",
+                "rerank_warnings": [sanitized],
+            });
+            serde_json::to_string(&meta).ok()
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Json) => {
+            let sanitized = sanitize_reason(warning);
+            let meta = serde_json::json!({
+                "type": "metadata",
+                "rerank_status": "partial",
+                "rerank_warnings": [sanitized],
+            });
+            serde_json::to_string(&meta).ok()
+        }
+        (RerankStatus::Skipped { reason }, OutputFormat::Llm) => {
+            let sanitized = sanitize_reason(reason);
+            Some(format!("<!-- rerank skipped: {sanitized} -->"))
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Llm) => {
+            let sanitized = sanitize_reason(warning);
+            Some(format!("<!-- rerank warning: {sanitized} -->"))
+        }
+        _ => None,
+    }
+}
+
+/// stderr 向け警告メッセージを生成する（human/path のみ）
+fn build_rerank_stderr_message(status: &RerankStatus, format: OutputFormat) -> Option<String> {
+    match (status, format) {
+        (RerankStatus::Skipped { reason }, OutputFormat::Human | OutputFormat::Path) => {
+            let sanitized = sanitize_reason(reason);
+            let hint = rerank_error_hint_from_reason(reason);
+            Some(format!(
+                "[rerank] Reranking skipped: {sanitized}\n[rerank] Hint: {hint}"
+            ))
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Human | OutputFormat::Path) => {
+            let sanitized = sanitize_reason(warning);
+            Some(format!("[rerank] Warning: {sanitized}"))
+        }
+        _ => None,
+    }
+}
+
+/// reason 文字列のパターンから対応するヒントを返す
+fn rerank_error_hint_from_reason(reason: &str) -> &'static str {
+    if reason.contains("Model not found") {
+        "Run `ollama pull <model>` to install, or set rerank.model in config."
+    } else if reason.contains("Network error") {
+        "Is Ollama running? Try `ollama serve`."
+    } else if reason.contains("Request timeout") {
+        "Check Ollama server load."
+    } else if reason.contains("API error") {
+        "Check Ollama logs."
+    } else if reason.contains("Invalid response") {
+        "Check model compatibility."
+    } else if reason.contains("Config error") {
+        "Check rerank settings in commandindex.toml."
+    } else if reason.contains("Timeout") {
+        "Some candidates were not scored due to timeout."
+    } else {
+        "Check Ollama configuration and server status."
+    }
+}
 
 // ---------------------------------------------------------------------------
 // SearchContext
@@ -258,16 +382,19 @@ pub fn run(
     };
 
     // Reranking適用
-    let final_results = if rerank {
-        let reranked = try_rerank(
+    let (final_results, rerank_status) = if rerank {
+        let (reranked, status) = try_rerank(
             final_results,
             &effective_options.query,
             rerank_top_resolved,
             config,
         );
-        reranked.into_iter().take(original_limit).collect()
+        (
+            reranked.into_iter().take(original_limit).collect(),
+            Some(status),
+        )
     } else {
-        final_results
+        (final_results, None)
     };
 
     // トークン予算適用（--max-tokens）
@@ -285,6 +412,14 @@ pub fn run(
     }
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
+
+    // stdout prefix（format_results() の前に出力）
+    if let Some(ref status) = rerank_status
+        && let Some(prefix) = build_rerank_stdout_prefix(status, format)
+    {
+        writeln!(handle, "{prefix}").map_err(OutputError::from)?;
+    }
+
     match format {
         OutputFormat::Human => {
             output::human::format_human(&final_results, &mut handle, snippet_config)?;
@@ -293,6 +428,14 @@ pub fn run(
             output::format_results(&final_results, format, &mut handle, llm_options)?;
         }
     }
+
+    // stderr 警告（human/path のみ）
+    if let Some(ref status) = rerank_status
+        && let Some(msg) = build_rerank_stderr_message(status, format)
+    {
+        eprintln!("{msg}");
+    }
+
     Ok(())
 }
 
@@ -890,13 +1033,13 @@ fn build_symbol_tree(
     Ok(results)
 }
 
-/// Reranking を試行する。失敗時はeprintlnで警告を出し、元の結果をそのまま返す。
+/// Reranking を試行する。失敗時は元の結果と RerankStatus を返す。
 fn try_rerank(
     results: Vec<crate::indexer::reader::SearchResult>,
     query: &str,
     rerank_top: usize,
     config: &AppConfig,
-) -> Vec<crate::indexer::reader::SearchResult> {
+) -> (Vec<crate::indexer::reader::SearchResult>, RerankStatus) {
     // 1. Use config's rerank settings
     let rerank_config = &config.rerank;
 
@@ -904,8 +1047,12 @@ fn try_rerank(
     let provider = match crate::rerank::ollama::create_rerank_provider(rerank_config) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("[rerank] Failed to create provider: {e}");
-            return results;
+            return (
+                results,
+                RerankStatus::Skipped {
+                    reason: e.to_string(),
+                },
+            );
         }
     };
 
@@ -921,23 +1068,43 @@ fn try_rerank(
         .collect();
 
     // 4. Rerank実行
-    let rerank_results = match provider.rerank(query, &candidates) {
-        Ok(r) => r,
+    let (rerank_results, status) = match provider.rerank(query, &candidates) {
+        Ok(r) => (r, RerankStatus::Applied),
+        Err(RerankError::PartialTimeout {
+            results: partial,
+            scored,
+            total,
+        }) => {
+            if partial.is_empty() {
+                return (
+                    results,
+                    RerankStatus::Skipped {
+                        reason: format!("Timeout: no candidates scored (0 of {total})"),
+                    },
+                );
+            }
+            (
+                partial,
+                RerankStatus::AppliedPartially {
+                    warning: format!("Timeout: scored {scored} of {total} candidates"),
+                },
+            )
+        }
         Err(e) => {
-            eprintln!("[rerank] Reranking failed: {e}");
-            return results;
+            return (
+                results,
+                RerankStatus::Skipped {
+                    reason: e.to_string(),
+                },
+            );
         }
     };
 
-    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexは警告+スキップ）
+    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexはスキップ）
     let mut reranked: Vec<crate::indexer::reader::SearchResult> = rerank_results
         .iter()
         .filter_map(|rr| {
             if rr.index >= results.len() {
-                eprintln!(
-                    "[rerank] Warning: provider returned out-of-range index {}, skipping",
-                    rr.index
-                );
                 return None;
             }
             results.get(rr.index).map(|sr| {
@@ -960,5 +1127,140 @@ fn try_rerank(
         }
     }
 
-    reranked
+    (reranked, status)
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rerank_error_hint_all_variants() {
+        // Verify all RerankError variants have a hint
+        let errors: Vec<RerankError> = vec![
+            RerankError::ModelNotFound("llama3".to_string()),
+            RerankError::NetworkError("connection refused".to_string()),
+            RerankError::Timeout,
+            RerankError::ApiError {
+                status: 500,
+                message: "internal".to_string(),
+            },
+            RerankError::InvalidResponse("bad json".to_string()),
+            RerankError::ConfigError("missing field".to_string()),
+            RerankError::PartialTimeout {
+                results: vec![],
+                scored: 0,
+                total: 5,
+            },
+        ];
+        for err in &errors {
+            let hint = rerank_error_hint(err);
+            assert!(
+                !hint.is_empty(),
+                "Hint should not be empty for error: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sanitize_reason_removes_control_chars() {
+        assert_eq!(sanitize_reason("hello\x00world"), "hello world");
+        assert_eq!(sanitize_reason("line1\nline2"), "line1 line2");
+        assert_eq!(sanitize_reason("normal text"), "normal text");
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_json_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Network error: connection refused".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Json);
+        assert!(prefix.is_some());
+        let json: serde_json::Value = serde_json::from_str(&prefix.unwrap()).unwrap();
+        assert_eq!(json["type"], "metadata");
+        assert_eq!(json["rerank_status"], "skipped");
+        assert!(json["rerank_warnings"].is_array());
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_json_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Json);
+        assert!(prefix.is_some());
+        let json: serde_json::Value = serde_json::from_str(&prefix.unwrap()).unwrap();
+        assert_eq!(json["type"], "metadata");
+        assert_eq!(json["rerank_status"], "partial");
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_llm_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Model not found: llama3".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Llm);
+        assert!(prefix.is_some());
+        let prefix = prefix.unwrap();
+        assert!(prefix.starts_with("<!-- rerank skipped:"));
+        assert!(prefix.ends_with("-->"));
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_llm_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Llm);
+        assert!(prefix.is_some());
+        let prefix = prefix.unwrap();
+        assert!(prefix.starts_with("<!-- rerank warning:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_human_returns_none() {
+        let status = RerankStatus::Skipped {
+            reason: "test".to_string(),
+        };
+        assert!(build_rerank_stdout_prefix(&status, OutputFormat::Human).is_none());
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_applied_returns_none() {
+        assert!(build_rerank_stdout_prefix(&RerankStatus::Applied, OutputFormat::Json).is_none());
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_human_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Network error: connection refused".to_string(),
+        };
+        let msg = build_rerank_stderr_message(&status, OutputFormat::Human);
+        assert!(msg.is_some());
+        let msg = msg.unwrap();
+        assert!(msg.contains("[rerank] Reranking skipped:"));
+        assert!(msg.contains("[rerank] Hint:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_human_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let msg = build_rerank_stderr_message(&status, OutputFormat::Human);
+        assert!(msg.is_some());
+        assert!(msg.unwrap().contains("[rerank] Warning:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_json_returns_none() {
+        let status = RerankStatus::Skipped {
+            reason: "test".to_string(),
+        };
+        assert!(build_rerank_stderr_message(&status, OutputFormat::Json).is_none());
+    }
 }

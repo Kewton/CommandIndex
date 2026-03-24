@@ -1,0 +1,20 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "KISS/DRY", "description": "PartialTimeoutとAppliedPartiallyの二段表現で状態が重複。", "suggestion": "provider側は構造化データ(PartialTimeout)のみ返し、warning文字列生成はCLI側に限定。"},
+    {"id": "M2", "category": "SRP", "description": "emit_rerank_status()がwriter書き込みとstderr出力の複数責務を抱える。", "suggestion": "build_rerank_stdout_prefix()とbuild_rerank_stderr_message()のように責務分離。"},
+    {"id": "M3", "category": "YAGNI", "description": "RerankStatus::NotRequestedは実質不要。run()はrerankフラグで分岐可能。", "suggestion": "NotRequestedを外し、statusはrerank実行経路でのみ扱う。"},
+    {"id": "M4", "category": "OCP", "description": "PartialTimeoutにVec<RerankResult>を埋め込むとerror型の責務が膨らむ。", "suggestion": "RerankOutcomeのようなoutcome enumも検討。許容するならerrorは純粋な失敗でなく結果の一部だと明示。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "reason/hint文字列生成の共通化方針が弱い。"},
+    {"id": "S2", "description": "AppliedPartially { warnings: Vec<String> }は先回り。現時点ではwarning: Stringで足りる。"},
+    {"id": "S3", "description": "search.rs内のヒント関数は再利用不能なベタ書きを避ける。"},
+    {"id": "S4", "description": "human/pathはstderrのみ、json/llmはstdout埋め込みの設計理由を明記すべき。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "Display責務分離の判断は維持。方針書に1文で明記。"},
+    {"id": "N2", "description": "format_results()非変更の判断は妥当。"},
+    {"id": "N3", "description": "新規依存なしの判断を維持。"}
+  ],
+  "summary": "部分適用の二重構造(PartialTimeout + AppliedPartially)のDRY/KISS整理とNotRequested削除、warnings Vec→String簡素化が主な改善点。"
+}

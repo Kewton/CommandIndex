@@ -1,0 +1,30 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "API設計 / 後方互換性",
+      "principle": "OCP",
+      "description": "RerankProvider traitの戻り値変更は破壊的変更。将来の他プロバイダー実装時にもwarningsタプルを強制する。",
+      "suggestion": "traitの戻り値は維持し、RerankErrorに PartialTimeout バリアントを追加して呼び出し側で判別する設計にする。"
+    },
+    {
+      "id": "M2",
+      "category": "責務配置",
+      "principle": "SRP",
+      "description": "RerankError::Displayにヒントメッセージを埋め込む設計は責務混在。エラー型のDisplayはエラー事実のみ記述すべき。",
+      "suggestion": "RerankError::Displayはエラー事実のみ。ヒントはCLI層（run()またはtry_rerank()内）で付加する。"
+    }
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "出力制御の設計", "principle": "SRP/KISS", "description": "run()にフォーマット別rerank出力制御を直接記述すると責務膨張。", "suggestion": "emit_rerank_status()ヘルパー関数を切り出す。"},
+    {"id": "S2", "category": "JSON出力の型安全性", "principle": "DRY", "description": "メタデータ行をjson!マクロで直接構築する設計はtypoを検出できない。", "suggestion": "RerankMetadata構造体を定義しSerializeでシリアライズ。"},
+    {"id": "S3", "category": "既存コードとの一貫性", "principle": "DRY", "description": "rerankは一元化、hybridは分散で警告出力パターンが混在。", "suggestion": "将来的なhybrid統一のTODOを記載。"},
+    {"id": "S4", "category": "テスト設計", "principle": "KISS", "description": "テスト環境のOllama前提条件が未明示。", "suggestion": "Ollama未起動前提を明記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "RerankStatusに#[non_exhaustive]属性検討"},
+    {"id": "N2", "description": "プレフィックス文字列の定数化"},
+    {"id": "N3", "description": "JSONL後方互換性ルールの明確化"}
+  ],
+  "summary": "全体として妥当。主な改善点: (1) trait戻り値変更の再検討、(2) ヒントメッセージのCLI層分離。"
+}
