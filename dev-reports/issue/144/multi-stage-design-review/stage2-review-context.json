@@ -1,0 +1,21 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "関数名不一致", "description": "aggregate_by_fileは既存のdeduplicate_by_file(L129)と機能同一。別名で再実装する設計になっている。", "suggestion": "既存のdeduplicate_by_fileの活用方針を明記するか、リネームの旨を記載。"},
+    {"id": "M2", "category": "既存関数見落とし", "description": "aggregate_semantic_by_fileは既存のdeduplicate_by_file_pairs(L312)とほぼ同一ロジック。", "suggestion": "deduplicate_by_file_pairsの存在を反映し、統合方針を明記。"},
+    {"id": "M3", "category": "データフロー矛盾", "description": "既存のsearch_entry_filesは内部でDEDUP_FILE_LIMIT=5件にtruncateする。RRFに渡すBM25候補が不足する。", "suggestion": "RRFに渡す件数をDEDUP_FILE_LIMIT以上に保持し、RRF後にtruncateする設計に修正。"},
+    {"id": "M4", "category": "フロー変更の未記載", "description": "run_suggest L467-476のif分岐をどう書き換えるかの詳細がない。", "suggestion": "具体的な分岐変更（if entry_files.is_empty削除→常時try_semantic_search呼び出し→RRF統合）を明記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "共通化の移動可能性", "description": "enrich_semantic_to_search_resultsはSearchError（CLI層の型）を返す。semantic.rsに移動時のエラー型依存が未記載。", "suggestion": "独自エラー型またはReaderErrorを返す設計を明記。"},
+    {"id": "S2", "category": "設計記述の精度", "description": "try_semantic_fallbackとtry_semantic_searchの関係が不明確。", "suggestion": "リネームか置換か並存かを明記。"},
+    {"id": "S3", "category": "二重適用リスク", "description": "search_entry_filesが内部でapply_file_type_weightを既に適用。新フローで二重適用の恐れ。", "suggestion": "search_entry_filesを分解するか、新フロー内で各ステップを直接呼ぶ方針を記載。"},
+    {"id": "S4", "category": "責務配置", "description": "rrf_merge_filesをsuggest.rs（CLIレイヤー）に置くと責務が混在。", "suggestion": "hybrid.rsに配置するか、判断理由を記載。"},
+    {"id": "S5", "category": "RRF入力の非対称性", "description": "セマンティック側DEDUP_FILE_LIMIT*2=10件、BM25側は異なる件数。非対称性。", "suggestion": "両側の件数を揃える方針を明記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "テスト", "description": "テストファイルがBM25+セマンティック両方に出現するケースの検証不足。", "suggestion": "テストケース追加。"},
+    {"id": "N2", "category": "定数管理", "description": "RRF_K=60の二重管理。", "suggestion": "hybrid.rsのRRF_KをpubにしてRRF_K共有。"},
+    {"id": "N3", "category": "図の正確性", "description": "アーキテクチャ図でreader.rsの正式パスが不正確。", "suggestion": "indexer/reader.rsに修正。"}
+  ],
+  "summary": "既存コードとの整合性に4件のmust_fix。最重要は(1)既存dedup関数の見落とし、(2)search_entry_filesのtruncate問題、(3)フロー変更の具体詳細の欠如。"
+}

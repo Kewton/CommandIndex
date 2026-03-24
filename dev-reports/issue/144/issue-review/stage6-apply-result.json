@@ -1,0 +1,15 @@
+{
+  "stage": 6,
+  "action": "apply_codex_review",
+  "applied_items": [
+    {"id": "M1", "action": "データフロー設計セクションを追加。ファイル単位RRF方針を明記。section-levelのrrf_mergeをそのまま使う方式を明示的に回避"},
+    {"id": "M2", "action": "受け入れ基準2を追加: 英語クエリでBM25単独時と上位候補が変化すること"},
+    {"id": "S1", "action": "受け入れ基準6をsuggest固有のテスト要件に具体化"},
+    {"id": "S2", "action": "影響範囲を「挙動変更」と「コード変更範囲」に分離。search.rsの共通化リファクタを明記"},
+    {"id": "S3", "action": "パフォーマンス考慮を「既存provider timeout利用」に修正"},
+    {"id": "S4", "action": "maybe_add_semantic_stepは維持する方針を明記"},
+    {"id": "N1", "action": "共通化方針を「原則はsrc/search/配下、最小変更ならpub化も可」に修正"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/144"
+}

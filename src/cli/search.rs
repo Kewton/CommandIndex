@@ -937,54 +937,15 @@ fn try_hybrid_search(
 }
 
 /// セマンティック検索結果をSearchResult型に変換する（ハイブリッド検索用）
-/// tantivyからメタデータを取得し、section_headingでマッチングする。
+/// 実装は `crate::search::semantic::enrich_semantic_to_search_results` に移動済み。
 fn enrich_semantic_to_search_results(
     semantic_results: &[crate::embedding::store::EmbeddingSimilarityResult],
     reader: &IndexReaderWrapper,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
-    use std::collections::HashMap;
-
-    // Group by file_path
-    let mut groups: HashMap<&str, Vec<&crate::embedding::store::EmbeddingSimilarityResult>> =
-        HashMap::new();
-    for result in semantic_results {
-        groups.entry(&result.file_path).or_default().push(result);
-    }
-
-    let mut enriched = Vec::new();
-
-    for (file_path, items) in &groups {
-        let sections = reader.search_by_exact_path(file_path)?;
-
-        for item in items {
-            let matched = sections.iter().find(|s| s.heading == item.section_heading);
-
-            if let Some(section) = matched {
-                enriched.push(crate::indexer::reader::SearchResult {
-                    path: section.path.clone(),
-                    heading: section.heading.clone(),
-                    body: section.body.clone(),
-                    tags: section.tags.clone(),
-                    heading_level: section.heading_level,
-                    line_start: section.line_start,
-                    score: 0.0, // RRFマージで上書きされる
-                });
-            } else {
-                // Fallback: minimal result
-                enriched.push(crate::indexer::reader::SearchResult {
-                    path: item.file_path.clone(),
-                    heading: item.section_heading.clone(),
-                    body: String::new(),
-                    tags: String::new(),
-                    heading_level: 0,
-                    line_start: 0,
-                    score: 0.0,
-                });
-            }
-        }
-    }
-
-    Ok(enriched)
+    Ok(crate::search::semantic::enrich_semantic_to_search_results(
+        semantic_results,
+        reader,
+    )?)
 }
 
 fn apply_semantic_filters(

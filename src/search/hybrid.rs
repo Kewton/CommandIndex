@@ -60,6 +60,38 @@ pub fn rrf_merge(
     rrf_merge_multiple(&[bm25_results.to_vec(), semantic_results.to_vec()], limit)
 }
 
+/// ファイルキーのRRFスコアを計算する内部ヘルパー
+fn compute_file_rrf_scores(ranked_lists: &[&[(String, f32)]]) -> HashMap<String, f32> {
+    let mut scores = HashMap::new();
+    for list in ranked_lists {
+        for (rank, (path, _)) in list.iter().enumerate() {
+            *scores.entry(path.clone()).or_insert(0.0) += 1.0 / (RRF_K + rank as f32 + 1.0);
+        }
+    }
+    scores
+}
+
+/// ファイル単位のRRF統合（suggestコマンドから利用）
+///
+/// BM25とセマンティックのファイルランキングをRRFで統合する。
+/// 各リストはスコア降順でソート済みであること。
+pub fn rrf_merge_files(
+    bm25_files: &[(String, f32)],
+    semantic_files: &[(String, f32)],
+    limit: usize,
+) -> Vec<(String, f32)> {
+    let lists: Vec<&[(String, f32)]> = vec![bm25_files, semantic_files];
+    let scores = compute_file_rrf_scores(&lists);
+    let mut merged: Vec<(String, f32)> = scores.into_iter().collect();
+    merged.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    merged.truncate(limit);
+    merged
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,6 +280,67 @@ mod tests {
         let list2 = vec![make_result("c.md", "C", 1.0), make_result("d.md", "D", 2.0)];
         let results = rrf_merge_multiple(&[list1, list2], 2);
         assert_eq!(results.len(), 2);
+    }
+
+    // --- rrf_merge_files tests ---
+
+    #[test]
+    fn test_rrf_merge_files_basic() {
+        // BM25: [A, B, C], Semantic: [B, D, A]
+        // B は両方に出現するため最高スコア
+        let bm25 = vec![
+            ("a.rs".to_string(), 3.0),
+            ("b.rs".to_string(), 2.0),
+            ("c.rs".to_string(), 1.0),
+        ];
+        let semantic = vec![
+            ("b.rs".to_string(), 0.9),
+            ("d.rs".to_string(), 0.8),
+            ("a.rs".to_string(), 0.7),
+        ];
+        let result = rrf_merge_files(&bm25, &semantic, 5);
+        // b.rs は BM25で2位 + semanticで1位 → 最高RRFスコア
+        assert_eq!(result[0].0, "b.rs");
+        // a.rs は BM25で1位 + semanticで3位
+        assert_eq!(result[1].0, "a.rs");
+        assert_eq!(result.len(), 4); // A, B, C, D
+    }
+
+    #[test]
+    fn test_rrf_merge_files_disjoint() {
+        // 共通ファイルなし
+        let bm25 = vec![("a.rs".to_string(), 3.0)];
+        let semantic = vec![("b.rs".to_string(), 0.9)];
+        let result = rrf_merge_files(&bm25, &semantic, 5);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_rrf_merge_files_single_source() {
+        // セマンティック側が空
+        let bm25 = vec![("a.rs".to_string(), 3.0), ("b.rs".to_string(), 2.0)];
+        let semantic: Vec<(String, f32)> = vec![];
+        let result = rrf_merge_files(&bm25, &semantic, 5);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].0, "a.rs");
+    }
+
+    #[test]
+    fn test_rrf_merge_files_empty() {
+        let result = rrf_merge_files(&[], &[], 5);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_rrf_merge_files_limit() {
+        let bm25 = vec![
+            ("a.rs".to_string(), 3.0),
+            ("b.rs".to_string(), 2.0),
+            ("c.rs".to_string(), 1.0),
+        ];
+        let semantic = vec![("d.rs".to_string(), 0.9), ("e.rs".to_string(), 0.8)];
+        let result = rrf_merge_files(&bm25, &semantic, 3);
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
