@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "DocSubtype for stage-specific review files is unspecified",
+      "description": "The issue proposes adding a new regex pattern and has_review edge, but does not specify which DocSubtype variant to use. The existing DocSubtype enum has IssueReview, DesignReview, DesignPolicy, WorkPlan, and ProgressReport. The stage-specific review files are neither issue reviews nor design reviews in the current taxonomy. The implementer must decide whether to add a new DocSubtype variant (e.g., StageReview), reuse DesignReview, or add per-stage variants. This decision affects display_label() in src/cli/issue.rs, sort_order(), and the metadata parser in src/indexer/symbol_store.rs.",
+      "suggestion": "Add a clear specification: either introduce a new DocSubtype::StageReview variant, or specify that DesignReview should be reused. Document the rationale. If a new variant is added, update display_label(), sort_order(), and the metadata deserialization match arm in symbol_store.rs."
+    },
+    {
+      "id": "M2",
+      "title": "Missing acceptance criteria",
+      "description": "The issue lacks explicit acceptance criteria. There is no definition of done -- for example, expected test cases, expected output from commandindexdev issue 299, or verification steps.",
+      "suggestion": "Add acceptance criteria such as: (1) parse_dev_report_path correctly parses dev-reports/review/YYYY-MM-DD-issue{N}-*-stage{M}.md; (2) scan_dev_reports picks up files from dev-reports/review/ directory; (3) commandindexdev issue 299 output includes the four previously-missing review files; (4) existing tests continue to pass."
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "Regex pattern in hypothesis verification is too strict",
+      "description": "The suggested pattern requires the filename to start with a date in YYYY-MM-DD format. If future review files omit the date prefix or use a different format, they will not be matched.",
+      "suggestion": "Either confirm that the date prefix is always present (enforced by tooling) and document this assumption, or use a more lenient pattern like ^dev-reports/review/.*-issue(\\d+)-.*\\.md$."
+    },
+    {
+      "id": "S2",
+      "title": "Multiple review files per issue may produce duplicate display entries",
+      "description": "A single issue can have 4 stage-specific review files. The issue does not address how multiple stage files should be displayed.",
+      "suggestion": "Specify the expected display behavior: should all 4 stage files appear individually, or should they be summarized?"
+    },
+    {
+      "id": "S3",
+      "title": "scan_dev_reports integration test needs updating",
+      "description": "The existing test_scan_dev_reports_with_temp_dir test asserts entries.len() == 3. After adding the new pattern, the test should also verify dev-reports/review/ files.",
+      "suggestion": "Explicitly require updating the test to include dev-reports/review/ files and adjust the expected count."
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Consider extracting stage number from filename",
+      "description": "The filenames contain a stage number that could be useful for ordering or filtering reviews.",
+      "suggestion": "Consider capturing the stage number as additional metadata. Could be a follow-up issue."
+    },
+    {
+      "id": "N2",
+      "title": "Consider caching pattern rules with LazyLock",
+      "description": "build_pattern_rules() is called on every invocation, recompiling all regexes each time.",
+      "suggestion": "Use std::sync::LazyLock to compile patterns once. Minor performance improvement for a separate issue."
+    },
+    {
+      "id": "N3",
+      "title": "Issue references #139 but not the specific code location",
+      "description": "Including exact function and line numbers in the issue body would help future readers.",
+      "suggestion": "Add a note: Target function: build_pattern_rules() in src/indexer/knowledge.rs."
+    }
+  ],
+  "summary": "The issue correctly identifies the root cause: build_pattern_rules() in src/indexer/knowledge.rs lacks a pattern for dev-reports/review/ files. Two critical gaps must be addressed: (1) the DocSubtype variant to use is unspecified; (2) there are no acceptance criteria. The regex pattern should also be reviewed for flexibility."
+}

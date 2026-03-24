@@ -1,0 +1,1 @@
+{"stage": 3, "applied": ["M1/M2: コンパイルエラー/ランタイムエラー防止は同時変更制約に包含", "S1: tests/e2e_issue.rs を変更対象ファイルとテスト計画に追加", "S3: test_scan_dev_reports_with_temp_dirの具体的追加ファイルパスを明記", "N3: test_groupedにStageReview検証追加をテスト計画に追記"], "design_doc_updated": true}

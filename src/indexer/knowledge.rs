@@ -86,6 +86,7 @@ pub enum DocSubtype {
     IssueReview,
     DesignReview,
     ProgressReport,
+    StageReview,
 }
 
 impl DocSubtype {
@@ -96,6 +97,20 @@ impl DocSubtype {
             Self::IssueReview => "issue_review",
             Self::DesignReview => "design_review",
             Self::ProgressReport => "progress_report",
+            Self::StageReview => "stage_review",
+        }
+    }
+
+    /// Parse a doc subtype string from the database. Returns `None` for unknown values.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "design_policy" => Some(Self::DesignPolicy),
+            "work_plan" => Some(Self::WorkPlan),
+            "issue_review" => Some(Self::IssueReview),
+            "design_review" => Some(Self::DesignReview),
+            "progress_report" => Some(Self::ProgressReport),
+            "stage_review" => Some(Self::StageReview),
+            _ => None,
         }
     }
 }
@@ -170,6 +185,15 @@ fn build_pattern_rules() -> Vec<PatternRule> {
             )
             .expect("invalid regex"),
             doc_subtype: DocSubtype::ProgressReport,
+            relation: KnowledgeRelation::HasReview,
+        },
+        // Note: issue{N} uses no hyphen separator, matching the review tool's output naming convention
+        PatternRule {
+            regex: regex::Regex::new(
+                r"^dev-reports/review/\d{4}-\d{2}-\d{2}-issue(\d+)-[^/]*\.md$",
+            )
+            .expect("invalid regex"),
+            doc_subtype: DocSubtype::StageReview,
             relation: KnowledgeRelation::HasReview,
         },
     ]
@@ -358,11 +382,93 @@ mod tests {
         // This should NOT be picked up
         std::fs::write(review_dir.join("stage1-review-context.json"), "{}").unwrap();
 
+        // Stage review file in dev-reports/review/
+        let stage_review_dir = base.join("dev-reports/review");
+        std::fs::create_dir_all(&stage_review_dir).unwrap();
+        std::fs::write(
+            stage_review_dir.join("2024-01-15-issue100-design-review-stage1.md"),
+            "# Stage Review",
+        )
+        .unwrap();
+
         let entries = scan_dev_reports(base);
-        assert_eq!(entries.len(), 3);
+        assert_eq!(entries.len(), 4);
 
         let issue_nums: Vec<&str> = entries.iter().map(|e| e.issue_number.as_str()).collect();
         assert!(issue_nums.iter().all(|n| *n == "100"));
+    }
+
+    #[test]
+    fn test_parse_stage_review() {
+        let result = parse_dev_report_path(
+            "dev-reports/review/2026-02-18-issue299-security-review-stage4.md",
+        );
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.issue_number, "299");
+        assert_eq!(entry.relation, KnowledgeRelation::HasReview);
+        assert_eq!(entry.doc_subtype, DocSubtype::StageReview);
+    }
+
+    #[test]
+    fn test_parse_stage_review_multi_digit_issue() {
+        let result = parse_dev_report_path("dev-reports/review/2024-01-01-issue1234-test.md");
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.issue_number, "1234");
+        assert_eq!(entry.doc_subtype, DocSubtype::StageReview);
+    }
+
+    #[test]
+    fn test_parse_stage_review_hyphenated_desc() {
+        let result = parse_dev_report_path(
+            "dev-reports/review/2024-01-01-issue42-long-desc-with-hyphens-stage1.md",
+        );
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.issue_number, "42");
+        assert_eq!(entry.doc_subtype, DocSubtype::StageReview);
+    }
+
+    #[test]
+    fn test_parse_stage_review_non_matching() {
+        // No date prefix
+        assert!(parse_dev_report_path("dev-reports/review/no-date-issue100.md").is_none());
+        // No issue number
+        assert!(
+            parse_dev_report_path("dev-reports/review/2024-01-01-no-issue-number.md").is_none()
+        );
+        // JSON file
+        assert!(
+            parse_dev_report_path("dev-reports/review/2024-01-01-issue100-test.json").is_none()
+        );
+    }
+
+    #[test]
+    fn test_doc_subtype_parse() {
+        assert_eq!(
+            DocSubtype::parse("design_policy"),
+            Some(DocSubtype::DesignPolicy)
+        );
+        assert_eq!(DocSubtype::parse("work_plan"), Some(DocSubtype::WorkPlan));
+        assert_eq!(
+            DocSubtype::parse("issue_review"),
+            Some(DocSubtype::IssueReview)
+        );
+        assert_eq!(
+            DocSubtype::parse("design_review"),
+            Some(DocSubtype::DesignReview)
+        );
+        assert_eq!(
+            DocSubtype::parse("progress_report"),
+            Some(DocSubtype::ProgressReport)
+        );
+        assert_eq!(
+            DocSubtype::parse("stage_review"),
+            Some(DocSubtype::StageReview)
+        );
+        assert_eq!(DocSubtype::parse("unknown"), None);
+        assert_eq!(DocSubtype::parse(""), None);
     }
 
     #[test]
@@ -414,5 +520,6 @@ mod tests {
         assert_eq!(DocSubtype::IssueReview.as_str(), "issue_review");
         assert_eq!(DocSubtype::DesignReview.as_str(), "design_review");
         assert_eq!(DocSubtype::ProgressReport.as_str(), "progress_report");
+        assert_eq!(DocSubtype::StageReview.as_str(), "stage_review");
     }
 }

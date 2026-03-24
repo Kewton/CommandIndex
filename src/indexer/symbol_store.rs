@@ -905,18 +905,11 @@ impl SymbolStore {
                         reason: format!("Missing doc_subtype in metadata for {file_path}"),
                     }
                 })?;
-                match subtype_str {
-                    "design_policy" => crate::indexer::knowledge::DocSubtype::DesignPolicy,
-                    "work_plan" => crate::indexer::knowledge::DocSubtype::WorkPlan,
-                    "issue_review" => crate::indexer::knowledge::DocSubtype::IssueReview,
-                    "design_review" => crate::indexer::knowledge::DocSubtype::DesignReview,
-                    "progress_report" => crate::indexer::knowledge::DocSubtype::ProgressReport,
-                    other => {
-                        return Err(SymbolStoreError::InvalidEmbedding {
-                            reason: format!("Unknown doc_subtype: {other}"),
-                        });
+                crate::indexer::knowledge::DocSubtype::parse(subtype_str).ok_or_else(|| {
+                    SymbolStoreError::InvalidEmbedding {
+                        reason: format!("Unknown doc_subtype: {subtype_str}"),
                     }
-                }
+                })?
             };
 
             results.push(crate::indexer::knowledge::IssueDocumentEntry {

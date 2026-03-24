@@ -88,7 +88,7 @@ impl IssueDocumentsResult {
 fn display_label(subtype: &DocSubtype) -> &'static str {
     match subtype {
         DocSubtype::DesignPolicy => "設計",
-        DocSubtype::IssueReview | DocSubtype::DesignReview => "レビュー",
+        DocSubtype::IssueReview | DocSubtype::DesignReview | DocSubtype::StageReview => "レビュー",
         DocSubtype::WorkPlan => "作業計画",
         DocSubtype::ProgressReport => "進捗レポート",
     }
@@ -106,6 +106,7 @@ fn sort_order(entry: &IssueDocumentEntry) -> (u8, u8) {
         DocSubtype::DesignReview => 3,
         DocSubtype::WorkPlan => 4,
         DocSubtype::ProgressReport => 5,
+        DocSubtype::StageReview => 6,
     };
     (relation_order, subtype_order)
 }
@@ -249,6 +250,7 @@ mod tests {
         assert_eq!(display_label(&DocSubtype::DesignReview), "レビュー");
         assert_eq!(display_label(&DocSubtype::WorkPlan), "作業計画");
         assert_eq!(display_label(&DocSubtype::ProgressReport), "進捗レポート");
+        assert_eq!(display_label(&DocSubtype::StageReview), "レビュー");
     }
 
     #[test]
@@ -268,8 +270,14 @@ mod tests {
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
         };
+        let stage_review = IssueDocumentEntry {
+            file_path: "d.md".to_string(),
+            relation: KnowledgeRelation::HasReview,
+            doc_subtype: DocSubtype::StageReview,
+        };
         assert!(sort_order(&design) < sort_order(&review));
         assert!(sort_order(&review) < sort_order(&workplan));
+        assert!(sort_order(&review) < sort_order(&stage_review));
     }
 
     #[test]
@@ -292,10 +300,15 @@ mod tests {
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::ProgressReport,
                 },
+                IssueDocumentEntry {
+                    file_path: "stage-review.md".to_string(),
+                    relation: KnowledgeRelation::HasReview,
+                    doc_subtype: DocSubtype::StageReview,
+                },
             ],
         };
         let grouped = result.grouped();
-        assert_eq!(grouped.len(), 3); // 設計, レビュー, 進捗レポート
+        assert_eq!(grouped.len(), 3); // 設計, レビュー (IssueReview + StageReview), 進捗レポート
         assert_eq!(grouped[0].0, "設計");
         assert_eq!(grouped[1].0, "レビュー");
         assert_eq!(grouped[2].0, "進捗レポート");
