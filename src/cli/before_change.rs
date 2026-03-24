@@ -12,12 +12,12 @@ Examples:
 use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
-use std::sync::LazyLock;
 
 use crate::cli::git::GitError;
 use crate::cli::stdin::{StdinError, validate_file_path};
 use crate::embedding::store::{EmbeddingRecord, EmbeddingStore, cosine_similarity};
 use crate::indexer::ResolveIndexPathError;
+use crate::indexer::knowledge::KnowledgeRelation;
 use crate::indexer::symbol_store::{KnowledgeDocResult, SymbolStore, SymbolStoreError};
 use crate::output::{BeforeChangeFinding, BeforeChangeResult, OutputError, OutputFormat};
 
@@ -134,12 +134,6 @@ fn validate_before_change_input(file: &str) -> Result<(), BeforeChangeError> {
 
 /// Extract issue numbers from git log for a file.
 /// Returns unique issue numbers sorted.
-/// Statically compiled regex for issue number extraction.
-static ISSUE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?i)(?:#(\d+)|\(#(\d+)\)|fixes\s+#(\d+)|refs\s+#(\d+))")
-        .expect("ISSUE_RE is a valid regex literal")
-});
-
 fn extract_issues_from_git_log(
     file_path: &str,
     max_commits: usize,
@@ -183,13 +177,8 @@ fn extract_issues_from_git_log(
         let reader = BufReader::new(stdout);
         for line in reader.lines().take(MAX_GIT_OUTPUT_LINES) {
             let line = line.map_err(|_| BeforeChangeError::Git(GitError::CommandFailed))?;
-            for cap in ISSUE_RE.captures_iter(&line) {
-                // Each capture group corresponds to a different pattern
-                for i in 1..=4 {
-                    if let Some(m) = cap.get(i) {
-                        issues.insert(m.as_str().to_string());
-                    }
-                }
+            for num in crate::indexer::knowledge::extract_issue_numbers(&line) {
+                issues.insert(num);
             }
         }
     }
@@ -320,7 +309,8 @@ fn relation_priority(relation: &str) -> u8 {
         "has_design" => 0,
         "has_review" => 1,
         "has_workplan" => 2,
-        _ => 3,
+        "modifies" => 3,
+        _ => 4,
     }
 }
 
@@ -373,7 +363,9 @@ pub fn run_before_change(
     let store = SymbolStore::open(&db_path)?;
 
     // 5. Knowledge graph query
-    let docs = store.find_knowledge_by_issue(&issues)?;
+    let mut docs = store.find_knowledge_by_issue(&issues)?;
+    // Filter out modifies entries (file nodes) - they are not relevant for before-change
+    docs.retain(|d| d.relation != KnowledgeRelation::Modifies);
 
     if docs.is_empty() {
         let result = BeforeChangeResult {

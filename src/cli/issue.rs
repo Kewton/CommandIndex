@@ -99,6 +99,7 @@ fn sort_order(entry: &IssueDocumentEntry) -> (u8, u8) {
         KnowledgeRelation::HasDesign => 1,
         KnowledgeRelation::HasReview => 2,
         KnowledgeRelation::HasWorkplan => 3,
+        KnowledgeRelation::Modifies => 4,
     };
     let subtype_order = match entry.doc_subtype {
         DocSubtype::DesignPolicy => 1,

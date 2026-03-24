@@ -51,6 +51,7 @@ pub enum IndexError {
     SymbolStore(SymbolStoreError),
     Embedding(EmbeddingError),
     EmbeddingStore(EmbeddingStoreError),
+    Knowledge(crate::indexer::knowledge::KnowledgeError),
     IndexNotFound,
     SchemaVersionMismatch,
     IndexCorrupted(String),
@@ -71,6 +72,7 @@ impl fmt::Display for IndexError {
             IndexError::SymbolStore(e) => write!(f, "Symbol store error: {e}"),
             IndexError::Embedding(e) => write!(f, "Embedding error: {e}"),
             IndexError::EmbeddingStore(e) => write!(f, "Embedding store error: {e}"),
+            IndexError::Knowledge(e) => write!(f, "Knowledge error: {e}"),
             IndexError::IndexNotFound => write!(
                 f,
                 "No index found. Run `commandindex index` to build the index first."
@@ -102,6 +104,7 @@ impl std::error::Error for IndexError {
             IndexError::SymbolStore(e) => Some(e),
             IndexError::Embedding(e) => Some(e),
             IndexError::EmbeddingStore(e) => Some(e),
+            IndexError::Knowledge(e) => Some(e),
             IndexError::IndexNotFound
             | IndexError::SchemaVersionMismatch
             | IndexError::IndexCorrupted(_)
@@ -176,6 +179,12 @@ impl From<EmbeddingError> for IndexError {
 impl From<EmbeddingStoreError> for IndexError {
     fn from(e: EmbeddingStoreError) -> Self {
         IndexError::EmbeddingStore(e)
+    }
+}
+
+impl From<crate::indexer::knowledge::KnowledgeError> for IndexError {
+    fn from(e: crate::indexer::knowledge::KnowledgeError) -> Self {
+        IndexError::Knowledge(e)
     }
 }
 
@@ -380,6 +389,14 @@ pub fn run(
         if !entries.is_empty() {
             symbol_store.clear_knowledge_graph()?;
             symbol_store.insert_knowledge_entries(&entries)?;
+        }
+    }
+
+    // 8.6. Build file-modifies knowledge graph
+    {
+        let entries = crate::indexer::knowledge::extract_file_modifies_from_git_log(path)?;
+        if !entries.is_empty() {
+            symbol_store.insert_file_modifies_entries(&entries)?;
         }
     }
 
@@ -843,6 +860,15 @@ pub fn run_incremental(
             if !entries.is_empty() {
                 let _ = symbol_store.insert_knowledge_entries(&entries);
             }
+        }
+    }
+
+    // 13.6. Rebuild file-modifies knowledge graph
+    {
+        symbol_store.clear_file_modifies()?;
+        let entries = crate::indexer::knowledge::extract_file_modifies_from_git_log(path)?;
+        if !entries.is_empty() {
+            symbol_store.insert_file_modifies_entries(&entries)?;
         }
     }
 

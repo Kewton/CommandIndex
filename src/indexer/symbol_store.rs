@@ -955,7 +955,7 @@ impl SymbolStore {
                     kn_doc.title
              FROM knowledge_nodes kn_issue
              JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
-             JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'
+             JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type IN ('document', 'file')
              WHERE kn_issue.type = 'issue'
                AND kn_issue.identifier IN ({in_clause})
              ORDER BY kn_issue.identifier, ke.relation"
@@ -997,6 +997,79 @@ impl SymbolStore {
         Ok(results)
     }
 
+    /// Bulk-insert file-modifies entries (issue → file edges) in a single transaction.
+    /// Each entry creates an issue node (if not exists), a file node (if not exists),
+    /// and a "modifies" edge between them.
+    pub fn insert_file_modifies_entries(
+        &self,
+        entries: &[crate::indexer::knowledge::FileModifiesEntry],
+    ) -> Result<(), SymbolStoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+
+        for entry in entries {
+            // Upsert issue node
+            tx.execute(
+                "INSERT INTO knowledge_nodes (type, identifier)
+                 VALUES ('issue', ?1)
+                 ON CONFLICT(type, identifier) DO NOTHING",
+                params![entry.issue_number],
+            )?;
+            let issue_id: i64 = tx.query_row(
+                "SELECT id FROM knowledge_nodes WHERE type = 'issue' AND identifier = ?1",
+                params![entry.issue_number],
+                |row| row.get(0),
+            )?;
+
+            // Upsert file node
+            tx.execute(
+                "INSERT INTO knowledge_nodes (type, identifier, file_path)
+                 VALUES ('file', ?1, ?1)
+                 ON CONFLICT(type, identifier) DO NOTHING",
+                params![entry.file_path],
+            )?;
+            let file_id: i64 = tx.query_row(
+                "SELECT id FROM knowledge_nodes WHERE type = 'file' AND identifier = ?1",
+                params![entry.file_path],
+                |row| row.get(0),
+            )?;
+
+            // Insert modifies edge
+            tx.execute(
+                "INSERT INTO knowledge_edges (source_id, target_id, relation)
+                 VALUES (?1, ?2, 'modifies')
+                 ON CONFLICT(source_id, target_id, relation) DO NOTHING",
+                params![issue_id, file_id],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Clear all file-modifies data: modifies edges, orphan file nodes, orphan issue nodes.
+    /// File nodes are currently only used as edge targets.
+    /// If file nodes become edge sources in the future, this query needs updating.
+    pub fn clear_file_modifies(&self) -> Result<(), SymbolStoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "DELETE FROM knowledge_edges WHERE relation = 'modifies'",
+            [],
+        )?;
+        tx.execute(
+            "DELETE FROM knowledge_nodes WHERE type = 'file'
+             AND id NOT IN (SELECT target_id FROM knowledge_edges)",
+            [],
+        )?;
+        // Remove issue nodes that no longer have any edges
+        tx.execute(
+            "DELETE FROM knowledge_nodes WHERE type = 'issue'
+             AND id NOT IN (SELECT source_id FROM knowledge_edges)",
+            [],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn find_knowledge_related(
         &self,
         file_path: &str,
@@ -1010,9 +1083,11 @@ impl SymbolStore {
              JOIN knowledge_edges ke1 ON ke1.target_id = kn_doc.id
              JOIN knowledge_nodes kn_issue ON ke1.source_id = kn_issue.id AND kn_issue.type = 'issue'
              JOIN knowledge_edges ke2 ON ke2.source_id = kn_issue.id
-             JOIN knowledge_nodes kn_sibling ON ke2.target_id = kn_sibling.id AND kn_sibling.type = 'document'
+             JOIN knowledge_nodes kn_sibling ON ke2.target_id = kn_sibling.id
              WHERE kn_doc.file_path = ?1
-             AND kn_sibling.file_path != ?1",
+             AND kn_sibling.file_path != ?1
+             ORDER BY CASE WHEN ke2.relation = 'modifies' THEN 1 ELSE 0 END, ke2.relation
+             LIMIT 100",
         )?;
 
         let rows = stmt.query_map(params![file_path], |row| {
@@ -2107,5 +2182,267 @@ mod tests {
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].doc_subtype, DocSubtype::ProgressReport);
         assert_eq!(docs[0].relation, KnowledgeRelation::HasReview);
+    }
+
+    // --- insert_file_modifies_entries tests ---
+
+    #[test]
+    fn test_insert_file_modifies_entries_basic() {
+        use crate::indexer::knowledge::FileModifiesEntry;
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/main.rs".to_string(),
+            },
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/lib.rs".to_string(),
+            },
+        ];
+        store.insert_file_modifies_entries(&entries).unwrap();
+
+        // Verify nodes created
+        let count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_nodes WHERE type = 'file'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 2);
+
+        // Verify edges created
+        let edge_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_edges WHERE relation = 'modifies'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(edge_count, 2);
+    }
+
+    #[test]
+    fn test_insert_file_modifies_entries_duplicate() {
+        use crate::indexer::knowledge::FileModifiesEntry;
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&entries).unwrap();
+        // Insert same again - should not fail
+        store.insert_file_modifies_entries(&entries).unwrap();
+
+        let edge_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_edges WHERE relation = 'modifies'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(edge_count, 1);
+    }
+
+    #[test]
+    fn test_insert_file_modifies_entries_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries: Vec<crate::indexer::knowledge::FileModifiesEntry> = vec![];
+        store.insert_file_modifies_entries(&entries).unwrap();
+    }
+
+    // --- clear_file_modifies tests ---
+
+    #[test]
+    fn test_clear_file_modifies() {
+        use crate::indexer::knowledge::FileModifiesEntry;
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/main.rs".to_string(),
+            },
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/lib.rs".to_string(),
+            },
+        ];
+        store.insert_file_modifies_entries(&entries).unwrap();
+
+        store.clear_file_modifies().unwrap();
+
+        let file_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_nodes WHERE type = 'file'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(file_count, 0);
+
+        let edge_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_edges WHERE relation = 'modifies'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(edge_count, 0);
+    }
+
+    #[test]
+    fn test_clear_file_modifies_preserves_document_edges() {
+        use crate::indexer::knowledge::{
+            DocSubtype, FileModifiesEntry, KnowledgeEntry, KnowledgeRelation,
+        };
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert document knowledge entry
+        let doc_entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
+        }];
+        store.insert_knowledge_entries(&doc_entries).unwrap();
+
+        // Insert file-modifies entry for same issue
+        let file_entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        // Clear file-modifies only
+        store.clear_file_modifies().unwrap();
+
+        // Document edges should still exist
+        let doc_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_edges WHERE relation = 'has_design'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(doc_count, 1);
+
+        // Issue node should still exist (has document edges)
+        let issue_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_nodes WHERE type = 'issue'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(issue_count, 1);
+    }
+
+    // --- find_knowledge_related with file nodes ---
+
+    #[test]
+    fn test_find_knowledge_related_file_to_document() {
+        use crate::indexer::knowledge::{
+            DocSubtype, FileModifiesEntry, KnowledgeEntry, KnowledgeRelation,
+        };
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Issue 100 has a design document
+        let doc_entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
+        }];
+        store.insert_knowledge_entries(&doc_entries).unwrap();
+
+        // Issue 100 modifies src/main.rs
+        let file_entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        // Search from file node should find the document
+        let related = store.find_knowledge_related("src/main.rs").unwrap();
+        assert!(!related.is_empty());
+        let doc_paths: Vec<&str> = related.iter().map(|r| r.file_path.as_str()).collect();
+        assert!(doc_paths.contains(&"dev-reports/design/issue-100-design-policy.md"));
+    }
+
+    #[test]
+    fn test_find_knowledge_related_document_to_file() {
+        use crate::indexer::knowledge::{
+            DocSubtype, FileModifiesEntry, KnowledgeEntry, KnowledgeRelation,
+        };
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Issue 100 has a design document
+        let doc_entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
+        }];
+        store.insert_knowledge_entries(&doc_entries).unwrap();
+
+        // Issue 100 modifies src/main.rs
+        let file_entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        // Search from document node should find file nodes too
+        let related = store
+            .find_knowledge_related("dev-reports/design/issue-100-design-policy.md")
+            .unwrap();
+        let file_paths: Vec<&str> = related.iter().map(|r| r.file_path.as_str()).collect();
+        assert!(file_paths.contains(&"src/main.rs"));
+    }
+
+    // --- find_knowledge_by_issue with file nodes ---
+
+    #[test]
+    fn test_find_knowledge_by_issue_includes_file_nodes() {
+        use crate::indexer::knowledge::{FileModifiesEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let file_entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        let results = store.find_knowledge_by_issue(&["100".to_string()]).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].file_path, "src/main.rs");
+        assert_eq!(results[0].relation, KnowledgeRelation::Modifies);
     }
 }
