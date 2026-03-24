@@ -758,8 +758,23 @@ fn help_llm_contains_all_subcommands() {
         .collect();
 
     let expected = [
-        "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
-        "export", "impact", "import", "watch", "suggest", "before-change", "why", "issue",
+        "index",
+        "search",
+        "update",
+        "status",
+        "clean",
+        "diff",
+        "context",
+        "embed",
+        "config",
+        "export",
+        "impact",
+        "import",
+        "watch",
+        "suggest",
+        "before-change",
+        "why",
+        "issue",
     ];
     for name in &expected {
         assert!(
