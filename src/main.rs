@@ -258,6 +258,17 @@ enum Commands {
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
     },
+    /// Explain why a file exists by finding related Issues and design documents
+    #[command(after_help = commandindex::cli::why::WHY_AFTER_HELP)]
+    Why {
+        /// Target file path
+        #[arg(required = true)]
+        files: Vec<String>,
+
+        /// Output format (human, json, path, llm)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+    },
     /// Watch for file changes and auto-update index (daemon mode)
     #[command(after_help = commandindex::cli::watch::WATCH_AFTER_HELP)]
     Watch {
@@ -923,6 +934,15 @@ fn main() {
                 1
             }
         },
+        Commands::Why { files, format } => {
+            match commandindex::cli::why::run_why(&files, format, cli.index_path.as_deref()) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
         Commands::Watch {
             path,
             debounce,

@@ -402,6 +402,40 @@ pub fn format_diff_llm(result: &DiffResult, writer: &mut dyn Write) -> Result<()
     Ok(())
 }
 
+/// why 結果をLLM向けMarkdown形式で出力する
+pub fn format_why_llm(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let file = strip_control_chars(&result.file_path);
+    writeln!(writer, "## Why: {file}")?;
+    writeln!(writer)?;
+
+    if result.issues.is_empty() {
+        writeln!(writer, "No related issues found.")?;
+        return Ok(());
+    }
+
+    for issue in &result.issues {
+        let issue_label = match &issue.title {
+            Some(t) => format!(
+                "Issue #{} ({})",
+                strip_control_chars(&issue.issue_number),
+                strip_control_chars(t)
+            ),
+            None => format!("Issue #{}", strip_control_chars(&issue.issue_number)),
+        };
+        writeln!(writer, "### {issue_label}")?;
+        for doc in &issue.documents {
+            let doc_path = strip_control_chars(&doc.file_path);
+            let relation = strip_control_chars(&doc.relation);
+            writeln!(writer, "- {doc_path} ({relation})")?;
+        }
+        writeln!(writer)?;
+    }
+    Ok(())
+}
+
 /// impacted_by リストをフォーマットする（IMPACTED_BY_DISPLAY_LIMIT 超で省略）
 fn format_impacted_by(impacted_by: &[String]) -> String {
     let cleaned: Vec<String> = impacted_by.iter().map(|s| strip_control_chars(s)).collect();

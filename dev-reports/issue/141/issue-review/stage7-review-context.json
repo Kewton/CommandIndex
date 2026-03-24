@@ -1,0 +1,44 @@
+{
+  "must_fix": [
+    {
+      "title": "help-llmの既存E2Eテストがwhy追加で必ず更新対象になる",
+      "description": "tests/cli_args.rsにはhelp_llm_contains_all_subcommandsがあり、コマンド一覧を固定配列と固定件数14で検証している。why追加でこのテストはそのままでは失敗する。",
+      "suggestion": "tests/cli_args.rsのhelp_llm_contains_all_subcommandsでwhyをexpectedに追加し件数も更新する。help_flag_shows_usageにもwhy追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "出力基盤への変更はtests/output_format.rsまで影響すると明記した方がよい",
+      "description": "既存プロジェクトではtests/output_format.rsで出力系の回帰確認を集中的に行っている。",
+      "suggestion": "テスト方針にtests/output_format.rs相当の追加を明記する。"
+    },
+    {
+      "title": "JSON出力は既存のJSONL系ヘルパーを再利用できない",
+      "description": "既存の検索系JSON出力はJSONL形式が多い一方、why --format jsonは単一JSONオブジェクト。",
+      "suggestion": "why用には単一JSONオブジェクトとして検証する専用アサーションを使う前提をテスト方針に追記する。"
+    },
+    {
+      "title": "共通outputモジュール変更に伴うコンパイル波及",
+      "description": "src/output/mod.rsは複数コマンドから参照される共通ハブ。WhyResultとdispatcher追加で既存output APIのシグネチャ変更があると影響が広がる。",
+      "suggestion": "既存コマンドの挙動変更は想定しないが、共通outputモジュールのためビルド/回帰確認対象は広いと明記する。"
+    },
+    {
+      "title": "progress-reportを含む全sibling返却で結果件数が増える点を注記",
+      "description": "対象範囲を全sibling documentにしたため、Issue配下のprogress-reportが多い場合は出力件数が増える。",
+      "suggestion": "パフォーマンス欄に「DBクエリコストは低いが、Issue配下ドキュメント数に比例して出力件数が増える」と追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "tests/common/mod.rsにrun_why系ヘルパー追加",
+      "description": "既存E2Eはrun_searchやrun_status_jsonなどの共通ヘルパーを経由。whyも共通化した方が保守しやすい。",
+      "suggestion": "run_why()やrun_why_json()のようなテストヘルパー追加を検討する。"
+    },
+    {
+      "title": "依存関係は既存crateで完結と明記",
+      "description": "clap, serde_json, rusqliteの既存依存で足りる。",
+      "suggestion": "依存関係欄に「新規crate不要。既存利用で完結」と書く。"
+    }
+  ],
+  "summary": "前回レビューの主要論点は概ねIssue本文に吸収済み。確実に押さえるべきはhelp-llmとトップレベルhelpの既存テスト更新、共通outputモジュール変更に伴う出力系テスト追加、JSONがJSONLパターンと異なる点。パフォーマンスはインデックス付きSQLite joinのため軽微。"
+}

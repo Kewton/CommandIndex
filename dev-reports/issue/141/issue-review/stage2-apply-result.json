@@ -1,0 +1,36 @@
+{
+  "applied": [
+    {
+      "source": "must_fix",
+      "title": "グラフ走査方向とノードタイプがコードベースと不一致",
+      "action": "SQLクエリを実際のコードベース（document ← issue → document パターン）に修正。使用例もdocumentファイルに変更。"
+    },
+    {
+      "source": "must_fix",
+      "title": "受け入れ基準が未定義",
+      "action": "受け入れ基準セクションを追加（9項目のチェックリスト）。"
+    },
+    {
+      "source": "must_fix",
+      "title": "whyコマンドの対象ファイル範囲が曖昧",
+      "action": "対象をdocumentノードに限定し、使用例をdev-reports配下のファイルに修正。"
+    },
+    {
+      "source": "should_fix",
+      "title": "出力フォーマットに --format path が欠落",
+      "action": "--format path を追加し4フォーマット対応に修正。"
+    },
+    {
+      "source": "should_fix",
+      "title": "エラーハンドリング方針が未記載",
+      "action": "エラーハンドリングセクションを追加（4ケース）。"
+    },
+    {
+      "source": "should_fix",
+      "title": "テスト方針が未記載",
+      "action": "テスト方針セクションを追加。"
+    }
+  ],
+  "skipped": [],
+  "summary": "Must Fix 3件、Should Fix 3件すべて反映完了。"
+}

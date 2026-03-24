@@ -852,7 +852,7 @@ impl SymbolStore {
 
         // Find issue(s) that this file belongs to
         let mut stmt = self.conn.prepare(
-            "SELECT kn_issue.identifier, ke2.relation, kn_sibling.file_path
+            "SELECT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title
              FROM knowledge_nodes kn_doc
              JOIN knowledge_edges ke1 ON ke1.target_id = kn_doc.id
              JOIN knowledge_nodes kn_issue ON ke1.source_id = kn_issue.id AND kn_issue.type = 'issue'
@@ -867,6 +867,7 @@ impl SymbolStore {
                 issue_number: row.get(0)?,
                 relation: row.get(1)?,
                 file_path: row.get(2)?,
+                title: row.get(3)?,
             })
         })?;
 
@@ -1766,6 +1767,44 @@ mod tests {
 
         // All should reference issue 100
         assert!(related.iter().all(|r| r.issue_number == "100"));
+
+        // title should be None (insert_knowledge_entries does not set issue title)
+        assert!(related.iter().all(|r| r.title.is_none()));
+    }
+
+    #[test]
+    fn test_find_knowledge_related_with_title() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/design/issue-200-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/issue/200/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Set the issue title via upsert_knowledge_node
+        store
+            .upsert_knowledge_node("issue", "200", Some("Add why command"), None)
+            .unwrap();
+
+        let related = store
+            .find_knowledge_related("dev-reports/design/issue-200-test-design-policy.md")
+            .unwrap();
+        assert_eq!(related.len(), 1);
+        assert_eq!(related[0].title.as_deref(), Some("Add why command"));
     }
 
     #[test]

@@ -1,0 +1,11 @@
+{
+  "applied": [],
+  "skipped": [
+    {
+      "source": "must_fix",
+      "title": "help-llmの既存E2Eテストがwhy追加で必ず更新対象になる",
+      "reason": "受け入れ基準に「--help および help-llm から why コマンドが参照可能」として既に含まれている。テスト方針にもCLIパーステスト(tests/cli_args.rsパターン)が記載済み。実装時に件数・配列の更新で対応。"
+    }
+  ],
+  "summary": "Must Fix 1件は既にIssue本文でカバー済み。追加のIssue修正なし。"
+}

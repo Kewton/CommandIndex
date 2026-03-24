@@ -1,0 +1,34 @@
+{
+  "must_fix": [
+    {
+      "title": "WhyError に SearchError を含める設計は DIP 違反",
+      "description": "WhyError::Validation(SearchError) は同一レイヤ間の不要な結合。",
+      "suggestion": "WhyError::InvalidArgument(String) を定義し、validate_file_paths の結果を .map_err で変換する。"
+    },
+    {
+      "title": "display_label() の責務配置が SRP に反する",
+      "description": "データ構造に表示ロジックを内包。既存コードでは出力変換は output/ モジュールに委譲。",
+      "suggestion": "display_label() を output/human.rs 側のフォーマッタ内に配置する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "find_knowledge_why() と find_knowledge_related() の SQL クエリ重複は DRY 違反",
+      "suggestion": "KnowledgeRelatedResult に title フィールドを追加して既存メソッドを拡張する。"
+    },
+    {
+      "title": "WhyError::IndexNotFound(PathBuf) は既存パターンと不一致",
+      "suggestion": "ImpactError パターンに合わせて PathBuf なしにする。"
+    },
+    {
+      "title": "内部実装は &[String] を受け取るようにして将来の拡張に備える",
+      "suggestion": "run_why は &[String] を受け取り、CLI側で vec![file] に変換する。"
+    }
+  ],
+  "nice_to_have": [
+    {"title": "output フォーマッタのパターン踏襲"},
+    {"title": "knowledge_nodes の title が NULL の場合の対応"},
+    {"title": "WHY_AFTER_HELP 定数の追加"}
+  ],
+  "summary": "display_label() をデータ型から output 層に移動しSRP維持。WhyErrorのバリアント設計を既存パターンと統一。"
+}

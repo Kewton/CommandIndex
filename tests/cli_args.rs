@@ -22,7 +22,8 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("watch"))
         .stdout(predicate::str::contains("diff"))
         .stdout(predicate::str::contains("help-llm"))
-        .stdout(predicate::str::contains("suggest"));
+        .stdout(predicate::str::contains("suggest"))
+        .stdout(predicate::str::contains("why"));
 }
 
 #[test]
@@ -756,7 +757,7 @@ fn help_llm_contains_all_subcommands() {
 
     let expected = [
         "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
-        "export", "impact", "import", "watch", "suggest",
+        "export", "impact", "import", "watch", "suggest", "why",
     ];
     for name in &expected {
         assert!(
@@ -766,8 +767,8 @@ fn help_llm_contains_all_subcommands() {
     }
     assert_eq!(
         commands.len(),
-        14,
-        "help-llm should have exactly 14 commands"
+        15,
+        "help-llm should have exactly 15 commands"
     );
     // help-llm itself should not be in the commands list
     assert!(
