@@ -73,6 +73,7 @@ impl OllamaProvider {
             "nomic-embed-text" => Some(768),
             "all-minilm" => Some(384),
             "mxbai-embed-large" => Some(1024),
+            "qllama/bge-m3:q8_0" => Some(1024),
             _ => None,
         }
     }
@@ -169,6 +170,9 @@ mod tests {
         assert_eq!(provider.dimension(), 384);
 
         let provider = OllamaProvider::new("mxbai-embed-large", "http://localhost:11434");
+        assert_eq!(provider.dimension(), 1024);
+
+        let provider = OllamaProvider::new("qllama/bge-m3:q8_0", "http://localhost:11434");
         assert_eq!(provider.dimension(), 1024);
     }
 

@@ -1,0 +1,31 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/embed.rs",
+      "line": 146,
+      "severity": "medium",
+      "category": "bug",
+      "description": "旧モデル embedding の一括削除が再生成より先に実行されています。`delete_stale_model_embeddings()` の直後に embedding 生成が失敗すると、既存の有効な embedding を失ったまま DB が空または部分的な状態になります。`src/cli/index.rs` の同処理も同じ問題を持ちます。",
+      "suggestion": "旧モデル削除は新モデルでの再生成成功後に行うか、少なくとも削除と再生成を同一トランザクションまたは一時テーブル/新DBへの切り替えで扱って、失敗時に旧データを残せるようにしてください。"
+    },
+    {
+      "file": "src/embedding/store.rs",
+      "line": 329,
+      "severity": "low",
+      "category": "bug",
+      "description": "空の `current_model` を `EmbeddingStoreError::InvalidEmbedding { expected_bytes: 0, actual_bytes: 0 }` で返しており、設定不正と embedding BLOB 破損を同じエラー種別で表現しています。呼び出し側やログ上で原因が誤解されやすく、異常系の切り分けが難しくなります。",
+      "suggestion": "モデル名不正は専用の `InvalidArgument` あるいは設定系エラーで表現し、BLOB破損系エラーと分離してください。"
+    },
+    {
+      "file": "src/embedding/store.rs",
+      "line": 384,
+      "severity": "low",
+      "category": "bug",
+      "description": "`should_warn_dimension_mismatch()` の判定に使う `total_records` は全レコード数ですが、分子の `skipped_dimension_mismatch` は次元不一致だけを数え、BLOB破損や非finite値で捨てたレコードは含みません。そのため DB 内の大半が実質 unusable でも、警告が出ないケースがあります。",
+      "suggestion": "スキップ理由ごとのカウンタを分けるか、少なくとも警告判定用に `skipped_total` を追加して、ユーザーに実態に近い警告を出せるようにしてください。"
+    }
+  ],
+  "summary": "変更差分に重大な SQL インジェクション、コマンドインジェクション、unsafe 使用、機密情報露出は見当たりませんでした。主なリスクは、モデル切替時の stale embedding 削除を再生成前に実行しているため、生成失敗時に既存データを失うことと、異常系のエラー分類・警告統計がやや不正確な点です。",
+  "requires_fix": true
+}

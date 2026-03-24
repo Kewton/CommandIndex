@@ -1,0 +1,34 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "T1.5の受け入れ基準が曖昧で、根本原因の解消が保証されていない",
+      "description": "has_current_embedding()がsection_pathとfile_hashのみでキャッシュ判定している点が根本原因。T1.5は「SQLにmodel条件を追加する」または「モデル変更を警告する」と書かれているが、警告だけではキャッシュスキップが残り旧embeddingが再利用され続ける。「旧モデルのembeddingレコードをクリーンアップする仕組み」も必須なのか任意なのかが読み取れない。",
+      "suggestion": "T1.5は選択肢ではなく必須要件として定義し直す。1) has_current_embedding(path, file_hash, model)に変更しモデル変更時に必ず再生成、2) 旧モデルのレコードをいつ・どのコマンドで削除するか明記、3) その挙動をユニットテスト/統合テストで確認、を受け入れ基準に入れる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "次元不一致警告の適用範囲が--semanticに閉じると既存コードベースと不整合になる",
+      "description": "EmbeddingStore::search_similar()はsearch --semantic、hybrid search、suggest fallbackの3経路で使われている。呼び出し元の一部だけで警告を出す設計だと、経路によって無言で0件/フォールバックになる挙動が残る。",
+      "suggestion": "警告・統計収集はsearch_similar()の共通返り値にメタ情報を持たせるか、共通ヘルパーで実装し、全経路で一貫して扱う受け入れ基準にする。"
+    },
+    {
+      "id": "S2",
+      "title": "T3の『精度比較テスト』がCIテストなのか手動検証なのか不明",
+      "description": "ローカルモデル・実データ・検索順位に依存する比較はCIでの再現性が低い。自動テストか手動確認かが不明確。",
+      "suggestion": "T3は『CIで走る固定fixtureベースの回帰テスト』と『手元の実モデルで行う評価手順』を分離して定義する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "T4のドキュメント成果物をREADMEのどこに置くかを明記",
+      "description": "現状のREADMEにはEmbeddingセクション自体がない。新設するのか別ドキュメントかで実装者判断になりやすい。",
+      "suggestion": "T4に『README.mdにEmbeddingセクションを新設する』を明記する。"
+    }
+  ],
+  "summary": "1回目レビューで主要な論点はかなり改善。残る本質的な懸念は、T1.5がまだ選択肢ベースで書かれておりモデル変更時のキャッシュ不整合を確実に潰す受け入れ基準になっていない点。次元不一致警告の適用範囲と、T3のテスト自動化/手動評価の分離を明確にすると整合性と再現性が向上。",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)"
+}

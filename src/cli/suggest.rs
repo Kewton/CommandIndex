@@ -278,7 +278,7 @@ fn try_semantic_fallback(ctx: &SearchContext, query: &str) -> Option<Vec<(String
     let query_embedding = query_embeddings.first()?;
 
     // 4. 類似度検索
-    let results = match store.search_similar(query_embedding, SEMANTIC_FALLBACK_LIMIT) {
+    let output = match store.search_similar(query_embedding, SEMANTIC_FALLBACK_LIMIT) {
         Ok(r) => r,
         Err(_) => {
             eprintln!("[suggest] semantic fallback: similarity search failed");
@@ -286,12 +286,21 @@ fn try_semantic_fallback(ctx: &SearchContext, query: &str) -> Option<Vec<(String
         }
     };
 
-    if results.is_empty() {
+    if output.should_warn_dimension_mismatch() {
+        eprintln!(
+            "Warning: {}/{} embeddings were skipped due to dimension mismatch. \
+             Consider re-running 'commandindex embed' after model change.",
+            output.skipped_dimension_mismatch, output.total_records
+        );
+    }
+
+    if output.results.is_empty() {
         return None;
     }
 
     // 5. ファイル単位 dedup（similarity → score として使用）
-    let pairs: Vec<(String, f32)> = results
+    let pairs: Vec<(String, f32)> = output
+        .results
         .into_iter()
         .map(|r| (r.file_path, r.similarity))
         .collect();

@@ -199,32 +199,32 @@ fn test_semantic_search_basic() {
         .expect("test_semantic_search_basic: insert beta");
 
     // Search with QUERY_VEC - should rank alpha (similar) above beta (different)
-    let results = store
+    let output = store
         .search_similar(&QUERY_VEC, 10)
         .expect("test_semantic_search_basic: search_similar");
 
     assert!(
-        results.len() >= 2,
+        output.results.len() >= 2,
         "test_semantic_search_basic: should return at least 2 results, got {}",
-        results.len()
+        output.results.len()
     );
 
     // First result should be alpha.md (higher cosine similarity)
     assert_eq!(
-        results[0].file_path, "alpha.md",
+        output.results[0].file_path, "alpha.md",
         "test_semantic_search_basic: most similar should be alpha.md"
     );
     assert_eq!(
-        results[1].file_path, "beta.md",
+        output.results[1].file_path, "beta.md",
         "test_semantic_search_basic: least similar should be beta.md"
     );
 
     // Verify similarity ordering
     assert!(
-        results[0].similarity > results[1].similarity,
+        output.results[0].similarity > output.results[1].similarity,
         "test_semantic_search_basic: alpha similarity ({}) should be greater than beta similarity ({})",
-        results[0].similarity,
-        results[1].similarity,
+        output.results[0].similarity,
+        output.results[1].similarity,
     );
 }
 
@@ -251,23 +251,23 @@ fn test_semantic_search_top_k() {
         .expect("test_semantic_search_top_k: insert c");
 
     // top_k=2 should return only 2 results
-    let results = store
+    let output = store
         .search_similar(&QUERY_VEC, 2)
         .expect("test_semantic_search_top_k: search_similar with top_k=2");
 
     assert_eq!(
-        results.len(),
+        output.results.len(),
         2,
         "test_semantic_search_top_k: top_k=2 should return exactly 2 results"
     );
 
     // The top 2 should be c.md (exact match, sim=1.0) and a.md (similar)
     assert_eq!(
-        results[0].file_path, "c.md",
+        output.results[0].file_path, "c.md",
         "test_semantic_search_top_k: first result should be c.md (exact match)"
     );
     assert_eq!(
-        results[1].file_path, "a.md",
+        output.results[1].file_path, "a.md",
         "test_semantic_search_top_k: second result should be a.md (similar)"
     );
 }

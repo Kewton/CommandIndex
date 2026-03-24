@@ -1,0 +1,19 @@
+{
+  "stage": 1,
+  "type": "設計原則レビュー (SOLID/KISS/YAGNI/DRY)",
+  "reviewer": "Claude (opus)",
+  "must_fix": [
+    {"id": "M1", "title": "suggest.rsの影響範囲が誤記載", "description": "suggest.rsはsearch_similar()を使用しているが「不使用のため変更なし」と記載"},
+    {"id": "M2", "title": "delete_stale_model_embeddings()の冪等性・トランザクション安全性が未記載", "description": "embed.rsとindex.rsの両方で呼ぶ設計で二重呼び出し。トランザクション制御なし"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "known_dimension()のハードコード拡張はOCP違反", "suggestion": "将来的にHashMap化をTODOとして記録"},
+    {"id": "S2", "title": "警告表示の閾値ロジックが複数箇所に散在（DRY違反）", "suggestion": "SimilaritySearchOutput自身のメソッドとして実装"},
+    {"id": "S3", "title": "search_similar()のDB全件スキャン性能リスク未記載"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "削除件数のユーザー通知"},
+    {"id": "N2", "title": "モデル名バリエーション対応"},
+    {"id": "N3", "title": "SimilaritySearchOutputのtotal_records定義明確化"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    {"id": "M1", "action": "T2に次元不整合検知・警告の要件を追加"},
+    {"id": "S1", "action": "今後の検討事項にモデル名バリエーション対応を追記"},
+    {"id": "S2", "action": "T3にtop-5以内の合否基準を追加"},
+    {"id": "S3", "action": "今後の検討事項にMAX_TEXT_LENGTH整合性確認を追記"},
+    {"id": "N1", "action": "T1にテスト追加を明記"},
+    {"id": "N2", "action": "今後の検討事項セクションを新設しデフォルトモデル変更検討を追記"},
+    {"id": "N3", "action": "T4の成果物をREADMEのEmbeddingセクションに明確化"}
+  ],
+  "issue_updated": true
+}

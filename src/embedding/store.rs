@@ -17,6 +17,22 @@ pub struct EmbeddingSimilarityResult {
     pub similarity: f32,
 }
 
+/// Semantic search output with metadata about skipped records.
+#[derive(Debug)]
+pub struct SimilaritySearchOutput {
+    pub results: Vec<EmbeddingSimilarityResult>,
+    pub total_records: usize,
+    pub skipped_dimension_mismatch: usize,
+}
+
+impl SimilaritySearchOutput {
+    /// Returns true if more than half of total records were skipped due to
+    /// dimension mismatch, indicating the user should re-generate embeddings.
+    pub fn should_warn_dimension_mismatch(&self) -> bool {
+        self.total_records > 0 && self.skipped_dimension_mismatch > self.total_records / 2
+    }
+}
+
 /// A single embedding record retrieved from the database.
 #[derive(Debug, Clone)]
 pub struct EmbeddingRecord {
@@ -293,10 +309,11 @@ impl EmbeddingStore {
         &self,
         path: &str,
         file_hash: &str,
+        model: &str,
     ) -> Result<bool, EmbeddingStoreError> {
         let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM embeddings WHERE section_path = ?1 AND file_hash = ?2",
-            params![path, file_hash],
+            "SELECT COUNT(*) FROM embeddings WHERE section_path = ?1 AND file_hash = ?2 AND model = ?3",
+            params![path, file_hash, model],
             |row| row.get(0),
         )?;
         Ok(count > 0)
@@ -319,6 +336,25 @@ impl EmbeddingStore {
                 Err(e)
             }
         }
+    }
+
+    /// 現在のモデルと異なるembeddingを一括削除する。
+    /// 削除した行数を返す。空文字列が渡された場合はエラーを返す。
+    pub fn delete_stale_model_embeddings(
+        &self,
+        current_model: &str,
+    ) -> Result<usize, EmbeddingStoreError> {
+        if current_model.is_empty() {
+            return Err(EmbeddingStoreError::InvalidEmbedding {
+                expected_bytes: 0,
+                actual_bytes: 0,
+            });
+        }
+        let deleted = self.conn.execute(
+            "DELETE FROM embeddings WHERE model != ?1",
+            params![current_model],
+        )?;
+        Ok(deleted)
     }
 
     /// ファイルのembeddingを削除
@@ -357,13 +393,15 @@ impl EmbeddingStore {
         &self,
         query_embedding: &[f32],
         top_k: usize,
-    ) -> Result<Vec<EmbeddingSimilarityResult>, EmbeddingStoreError> {
+    ) -> Result<SimilaritySearchOutput, EmbeddingStoreError> {
         let query_dim = query_embedding.len();
         let mut stmt = self.conn.prepare(
             "SELECT section_path, section_heading, embedding, dimension FROM embeddings",
         )?;
 
         let mut results: Vec<EmbeddingSimilarityResult> = Vec::new();
+        let mut total_records: usize = 0;
+        let mut skipped_dimension_mismatch: usize = 0;
 
         let rows = stmt.query_map([], |row| {
             let section_path: String = row.get(0)?;
@@ -375,6 +413,7 @@ impl EmbeddingStore {
 
         for row_result in rows {
             let (section_path, section_heading, blob, dimension) = row_result?;
+            total_records += 1;
 
             // Validate BLOB size against stored dimension
             let stored_embedding = match blob_to_embedding(&blob, dimension) {
@@ -386,6 +425,7 @@ impl EmbeddingStore {
 
             // Filter out dimension mismatches with query
             if stored_embedding.len() != query_dim {
+                skipped_dimension_mismatch += 1;
                 continue;
             }
 
@@ -410,7 +450,11 @@ impl EmbeddingStore {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         results.truncate(top_k);
-        Ok(results)
+        Ok(SimilaritySearchOutput {
+            results,
+            total_records,
+            skipped_dimension_mismatch,
+        })
     }
 }
 
@@ -508,7 +552,7 @@ mod tests {
 
         assert!(
             store
-                .has_current_embedding("src/main.rs", "hash123")
+                .has_current_embedding("src/main.rs", "hash123", "nomic")
                 .unwrap()
         );
     }
@@ -524,7 +568,7 @@ mod tests {
 
         assert!(
             !store
-                .has_current_embedding("src/main.rs", "hash456")
+                .has_current_embedding("src/main.rs", "hash456", "nomic")
                 .unwrap()
         );
     }
@@ -536,7 +580,24 @@ mod tests {
 
         assert!(
             !store
-                .has_current_embedding("nonexistent.rs", "hash123")
+                .has_current_embedding("nonexistent.rs", "hash123", "nomic")
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_has_current_embedding_false_different_model() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        store
+            .upsert_embedding("src/main.rs", "main", &[0.1], 1, "nomic", "hash123")
+            .unwrap();
+
+        // Same path and hash, but different model
+        assert!(
+            !store
+                .has_current_embedding("src/main.rs", "hash123", "bge-m3")
                 .unwrap()
         );
     }
@@ -668,12 +729,14 @@ mod tests {
             .unwrap();
 
         let query = [1.0_f32, 0.0, 0.0, 0.0];
-        let results = store.search_similar(&query, 10).unwrap();
+        let output = store.search_similar(&query, 10).unwrap();
 
-        assert_eq!(results.len(), 2);
-        assert_eq!(results[0].file_path, "alpha.md");
-        assert_eq!(results[1].file_path, "beta.md");
-        assert!(results[0].similarity > results[1].similarity);
+        assert_eq!(output.results.len(), 2);
+        assert_eq!(output.results[0].file_path, "alpha.md");
+        assert_eq!(output.results[1].file_path, "beta.md");
+        assert!(output.results[0].similarity > output.results[1].similarity);
+        assert_eq!(output.total_records, 2);
+        assert_eq!(output.skipped_dimension_mismatch, 0);
     }
 
     #[test]
@@ -692,12 +755,12 @@ mod tests {
             .unwrap();
 
         let query = [1.0_f32, 0.0, 0.0, 0.0];
-        let results = store.search_similar(&query, 2).unwrap();
+        let output = store.search_similar(&query, 2).unwrap();
 
-        assert_eq!(results.len(), 2);
+        assert_eq!(output.results.len(), 2);
         // c.md is exact match (sim=1.0), a.md is similar
-        assert_eq!(results[0].file_path, "c.md");
-        assert_eq!(results[1].file_path, "a.md");
+        assert_eq!(output.results[0].file_path, "c.md");
+        assert_eq!(output.results[1].file_path, "a.md");
     }
 
     #[test]
@@ -716,10 +779,12 @@ mod tests {
 
         // Query with 4 dimensions - should only match b.md
         let query = [1.0_f32, 0.0, 0.0, 0.0];
-        let results = store.search_similar(&query, 10).unwrap();
+        let output = store.search_similar(&query, 10).unwrap();
 
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].file_path, "b.md");
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].file_path, "b.md");
+        assert_eq!(output.total_records, 2);
+        assert_eq!(output.skipped_dimension_mismatch, 1);
     }
 
     #[test]
@@ -728,8 +793,88 @@ mod tests {
         store.create_tables().unwrap();
 
         let query = [1.0_f32, 0.0, 0.0];
-        let results = store.search_similar(&query, 10).unwrap();
-        assert!(results.is_empty());
+        let output = store.search_similar(&query, 10).unwrap();
+        assert!(output.results.is_empty());
+        assert_eq!(output.total_records, 0);
+        assert_eq!(output.skipped_dimension_mismatch, 0);
+    }
+
+    #[test]
+    fn test_search_similar_output_skipped_count() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert 3 embeddings with dimension 3
+        store
+            .upsert_embedding("a.md", "A", &[1.0, 0.0, 0.0], 3, "old-model", "h1")
+            .unwrap();
+        store
+            .upsert_embedding("b.md", "B", &[0.0, 1.0, 0.0], 3, "old-model", "h2")
+            .unwrap();
+        // Insert 1 embedding with dimension 4
+        store
+            .upsert_embedding("c.md", "C", &[1.0, 0.0, 0.0, 0.0], 4, "new-model", "h3")
+            .unwrap();
+
+        // Query with 4 dimensions - only c.md matches, a.md and b.md are skipped
+        let query = [1.0_f32, 0.0, 0.0, 0.0];
+        let output = store.search_similar(&query, 10).unwrap();
+
+        assert_eq!(output.results.len(), 1);
+        assert_eq!(output.results[0].file_path, "c.md");
+        assert_eq!(output.total_records, 3);
+        assert_eq!(output.skipped_dimension_mismatch, 2);
+    }
+
+    #[test]
+    fn test_should_warn_dimension_mismatch() {
+        // No records: no warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 0,
+            skipped_dimension_mismatch: 0,
+        };
+        assert!(!output.should_warn_dimension_mismatch());
+
+        // 1 of 3 skipped (1 > 3/2 = 1? no, 1 > 1 is false): no warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 3,
+            skipped_dimension_mismatch: 1,
+        };
+        assert!(!output.should_warn_dimension_mismatch());
+
+        // 2 of 3 skipped (2 > 3/2 = 1? yes): warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 3,
+            skipped_dimension_mismatch: 2,
+        };
+        assert!(output.should_warn_dimension_mismatch());
+
+        // All skipped: warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 4,
+            skipped_dimension_mismatch: 4,
+        };
+        assert!(output.should_warn_dimension_mismatch());
+
+        // Exactly half (2 of 4, 2 > 4/2 = 2? no): no warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 4,
+            skipped_dimension_mismatch: 2,
+        };
+        assert!(!output.should_warn_dimension_mismatch());
+
+        // More than half (3 of 4): warning
+        let output = SimilaritySearchOutput {
+            results: vec![],
+            total_records: 4,
+            skipped_dimension_mismatch: 3,
+        };
+        assert!(output.should_warn_dimension_mismatch());
     }
 
     #[test]
@@ -864,5 +1009,68 @@ mod tests {
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].file_hash, "hash2");
         assert_eq!(results[1].file_hash, "hash2");
+    }
+
+    #[test]
+    fn test_delete_stale_model_embeddings() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert embeddings with old model
+        store
+            .upsert_embedding("a.md", "A", &[0.1], 1, "old-model", "h1")
+            .unwrap();
+        store
+            .upsert_embedding("b.md", "B", &[0.2], 1, "old-model", "h2")
+            .unwrap();
+        // Insert embedding with current model
+        store
+            .upsert_embedding("c.md", "C", &[0.3], 1, "new-model", "h3")
+            .unwrap();
+
+        assert_eq!(store.count().unwrap(), 3);
+
+        let deleted = store.delete_stale_model_embeddings("new-model").unwrap();
+        assert_eq!(deleted, 2);
+        assert_eq!(store.count().unwrap(), 1);
+
+        // Remaining record should be the new-model one
+        let records = store.find_by_path("c.md").unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].model, "new-model");
+    }
+
+    #[test]
+    fn test_delete_stale_model_embeddings_empty_model() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let result = store.delete_stale_model_embeddings("");
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EmbeddingStoreError::InvalidEmbedding { .. } => {}
+            other => panic!("Expected InvalidEmbedding, got: {other}"),
+        }
+    }
+
+    #[test]
+    fn test_delete_stale_model_embeddings_idempotent() {
+        let store = EmbeddingStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        store
+            .upsert_embedding("a.md", "A", &[0.1], 1, "current", "h1")
+            .unwrap();
+
+        // First call: nothing to delete
+        let deleted = store.delete_stale_model_embeddings("current").unwrap();
+        assert_eq!(deleted, 0);
+
+        // Second call: still nothing to delete
+        let deleted = store.delete_stale_model_embeddings("current").unwrap();
+        assert_eq!(deleted, 0);
+
+        // Record still exists
+        assert_eq!(store.count().unwrap(), 1);
     }
 }
