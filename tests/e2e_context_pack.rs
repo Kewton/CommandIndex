@@ -8,10 +8,17 @@ fn setup_context_docs() -> tempfile::TempDir {
     let src = dir.path().join("src");
     std::fs::create_dir_all(&src).unwrap();
 
-    // a.md: tags rust, search; links to b.md
+    // a.md: tags rust, search; links to b.md and e.md
     std::fs::write(
         docs.join("a.md"),
-        "---\ntags: rust search\n---\n# Page A\nSee [Page B](b.md)\nSome content about searching.\n",
+        "---\ntags: rust search\n---\n# Page A\nSee [Page B](b.md) and [Page E](e.md)\nSome content about searching.\n",
+    )
+    .unwrap();
+
+    // e.md: tags search; standalone page linked from a.md
+    std::fs::write(
+        docs.join("e.md"),
+        "---\ntags: search\n---\n# Page E\nExtra documentation page for testing.\n",
     )
     .unwrap();
 

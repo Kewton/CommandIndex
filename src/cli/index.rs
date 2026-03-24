@@ -222,6 +222,39 @@ fn is_indexable_link(link: &crate::parser::link::Link) -> bool {
     true
 }
 
+/// Resolve a link target relative to the source file's parent directory,
+/// then normalize the result (strip `./`, collapse `..`).
+/// e.g. parent="workspace/v0.0.0", target="./ci-cd-plan.md"
+///   → "workspace/v0.0.0/ci-cd-plan.md"
+fn resolve_link_target(source_parent: &std::path::Path, target: &str) -> String {
+    // Strip fragment (#section) and query (?params)
+    let path_part = target.split('#').next().unwrap_or(target);
+    let path_part = path_part.split('?').next().unwrap_or(path_part);
+
+    if path_part.is_empty() {
+        return target.to_string();
+    }
+
+    // Join with parent directory and normalize
+    let joined = source_parent.join(path_part);
+    let mut components = Vec::new();
+    for comp in joined.components() {
+        match comp {
+            std::path::Component::Normal(c) => components.push(c.to_string_lossy().to_string()),
+            std::path::Component::ParentDir => {
+                components.pop();
+            }
+            std::path::Component::CurDir => {} // skip "."
+            _ => {}
+        }
+    }
+    if components.is_empty() {
+        target.to_string()
+    } else {
+        components.join("/")
+    }
+}
+
 /// parser::code::SymbolInfo を symbol_store::SymbolInfo に変換する
 fn convert_symbol(
     src: &crate::parser::code::SymbolInfo,
@@ -432,14 +465,23 @@ fn index_markdown_file(
             );
             filtered_links.truncate(MAX_FILE_LINKS);
         }
+        // Resolve link targets relative to the source file's parent directory
+        // e.g. source="workspace/v0.0.0/README.md", target="./ci-cd-plan.md"
+        //   → resolved="workspace/v0.0.0/ci-cd-plan.md"
+        let source_parent = std::path::Path::new(rel_path)
+            .parent()
+            .unwrap_or(std::path::Path::new(""));
         let file_links: Vec<_> = filtered_links
             .iter()
-            .map(|l| crate::indexer::symbol_store::FileLinkInfo {
-                id: None,
-                source_file: rel_path.to_string(),
-                target_file: l.target.clone(),
-                link_type: l.link_type.to_string(),
-                file_hash: hash.clone(),
+            .map(|l| {
+                let resolved_target = resolve_link_target(source_parent, &l.target);
+                crate::indexer::symbol_store::FileLinkInfo {
+                    id: None,
+                    source_file: rel_path.to_string(),
+                    target_file: resolved_target,
+                    link_type: l.link_type.to_string(),
+                    file_hash: hash.clone(),
+                }
             })
             .collect();
         if !file_links.is_empty()

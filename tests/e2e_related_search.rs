@@ -702,3 +702,36 @@ fn related_reverse_import_resolves_correctly() {
         "utils.ts should be related to helper.ts (forward import), got: {paths:?}"
     );
 }
+
+// --- Issue #123 UAT fix: markdown link paths should resolve to indexed paths ---
+
+#[test]
+fn related_markdown_link_with_snippet_returns_nonempty() {
+    let dir = setup_linked_docs();
+    let results = run_related_search_with_args(dir.path(), "docs/a.md", &["--with-snippet"]);
+    assert!(
+        !results.is_empty(),
+        "should find related files for docs/a.md"
+    );
+
+    // b.md should be in results with a real indexed path (not bare "b.md")
+    let b_result = results
+        .iter()
+        .find(|r| r["path"].as_str().is_some_and(|p| p.contains("b.md")));
+    assert!(
+        b_result.is_some(),
+        "b.md should be in results, got: {:?}",
+        result_paths(&results)
+    );
+    let b = b_result.unwrap();
+    let path = b["path"].as_str().unwrap();
+    assert_eq!(
+        path, "docs/b.md",
+        "markdown link target should resolve to indexed path"
+    );
+    let snippet = b.get("snippet").and_then(|s| s.as_str());
+    assert!(
+        snippet.is_some_and(|s| !s.is_empty()),
+        "snippet should be non-empty for markdown-linked file docs/b.md, got: {snippet:?}"
+    );
+}
