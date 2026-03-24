@@ -1,0 +1,21 @@
+{
+  "issue_number": 151,
+  "title": "ナレッジグラフ: fileノードとmodifiesエッジの実装",
+  "design_policy": "dev-reports/design/issue-151-file-modifies-design-policy.md",
+  "work_plan": "dev-reports/issue/151/work-plan.md",
+  "phases": [
+    "Phase 1: ISSUE_RE共有化（リファクタリング）",
+    "Phase 2: 型定義（KnowledgeRelation::Modifies, FileModifiesEntry）",
+    "Phase 3: コアロジック（extract_file_modifies_from_git_log, insert_file_modifies_entries, clear_file_modifies）",
+    "Phase 4: SQLクエリ修正（find_knowledge_related, find_knowledge_by_issue）",
+    "Phase 5: コマンド統合（index, before_change, why）",
+    "Phase 6: テスト・品質確認"
+  ],
+  "key_files": [
+    "src/indexer/knowledge.rs",
+    "src/indexer/symbol_store.rs",
+    "src/cli/index.rs",
+    "src/cli/before_change.rs",
+    "src/cli/why.rs"
+  ]
+}

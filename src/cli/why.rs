@@ -104,6 +104,8 @@ pub fn run_why(
 
     // 5. Issue別グルーピング → WhyResult 変換
     let mut issue_map: BTreeMap<String, (Option<String>, Vec<WhyDocumentEntry>)> = BTreeMap::new();
+    // Count modifies entries per issue for summary display
+    let mut modifies_counts: BTreeMap<String, usize> = BTreeMap::new();
     for r in &related {
         let entry = issue_map
             .entry(r.issue_number.clone())
@@ -112,10 +114,24 @@ pub fn run_why(
         if entry.0.is_none() && r.title.is_some() {
             entry.0.clone_from(&r.title);
         }
-        entry.1.push(WhyDocumentEntry {
-            file_path: r.file_path.clone(),
-            relation: r.relation.clone(),
-        });
+        if r.relation == "modifies" {
+            *modifies_counts.entry(r.issue_number.clone()).or_insert(0) += 1;
+        } else {
+            entry.1.push(WhyDocumentEntry {
+                file_path: r.file_path.clone(),
+                relation: r.relation.clone(),
+            });
+        }
+    }
+
+    // Add a summary entry for modifies relations
+    for (issue_number, count) in &modifies_counts {
+        if let Some(entry) = issue_map.get_mut(issue_number) {
+            entry.1.push(WhyDocumentEntry {
+                file_path: format!("modifies: {count} files"),
+                relation: "modifies".to_string(),
+            });
+        }
     }
 
     let issues: Vec<WhyIssueEntry> = issue_map

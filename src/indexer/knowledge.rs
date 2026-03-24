@@ -1,5 +1,8 @@
+use std::collections::HashSet;
 use std::fmt;
+use std::io::{BufRead, BufReader, Read as _};
 use std::path::Path;
+use std::sync::LazyLock;
 
 use serde::Serialize;
 
@@ -14,6 +17,7 @@ pub enum KnowledgeError {
     Io(std::io::Error),
     Store(SymbolStoreError),
     PathValidation(String),
+    GitLog(String),
 }
 
 impl fmt::Display for KnowledgeError {
@@ -21,6 +25,7 @@ impl fmt::Display for KnowledgeError {
         match self {
             Self::Io(e) => write!(f, "I/O error: {e}"),
             Self::Store(e) => write!(f, "Symbol store error: {e}"),
+            Self::GitLog(e) => write!(f, "Git log error: {e}"),
             Self::PathValidation(msg) => write!(f, "Path validation error: {msg}"),
         }
     }
@@ -41,6 +46,33 @@ impl From<SymbolStoreError> for KnowledgeError {
 }
 
 // ---------------------------------------------------------------------------
+// Shared ISSUE_RE regex and extraction
+// ---------------------------------------------------------------------------
+
+/// Statically compiled regex for issue number extraction.
+/// Shared between `before_change.rs` and `knowledge.rs`.
+pub static ISSUE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?i)(?:#(\d+)|\(#(\d+)\)|fixes\s+#(\d+)|refs\s+#(\d+))")
+        .expect("ISSUE_RE is a valid regex literal")
+});
+
+/// Extract issue numbers from text using `ISSUE_RE`.
+/// Returns a list of issue number strings (may contain duplicates if the same
+/// issue appears multiple times in different patterns).
+pub fn extract_issue_numbers(text: &str) -> Vec<String> {
+    ISSUE_RE
+        .captures_iter(text)
+        .filter_map(|cap| {
+            cap.get(1)
+                .or(cap.get(2))
+                .or(cap.get(3))
+                .or(cap.get(4))
+                .map(|m| m.as_str().to_string())
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -50,6 +82,7 @@ pub enum KnowledgeRelation {
     HasDesign,
     HasReview,
     HasWorkplan,
+    Modifies,
 }
 
 impl KnowledgeRelation {
@@ -58,6 +91,7 @@ impl KnowledgeRelation {
             Self::HasDesign => "has_design",
             Self::HasReview => "has_review",
             Self::HasWorkplan => "has_workplan",
+            Self::Modifies => "modifies",
         }
     }
 
@@ -67,6 +101,7 @@ impl KnowledgeRelation {
             "has_design" => Some(Self::HasDesign),
             "has_review" => Some(Self::HasReview),
             "has_workplan" => Some(Self::HasWorkplan),
+            "modifies" => Some(Self::Modifies),
             _ => None,
         }
     }
@@ -139,6 +174,169 @@ pub struct KnowledgeRelatedResult {
     pub relation: String,
     pub issue_number: String,
     pub title: Option<String>,
+}
+
+/// git log から抽出した (issue, file) ペア
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileModifiesEntry {
+    pub issue_number: String,
+    pub file_path: String,
+}
+
+// ---------------------------------------------------------------------------
+// git log → file-modifies extraction
+// ---------------------------------------------------------------------------
+
+/// Maximum lines to read from git log output for file-modifies extraction.
+const MAX_GIT_OUTPUT_LINES: usize = 50_000;
+
+/// Maximum number of (issue, file) entries to keep.
+const MAX_ENTRIES: usize = 100_000;
+
+/// Validate a file path from git log output.
+/// Rejects paths with `..`, absolute paths, null bytes, and overly long paths.
+fn validate_git_file_path(path: &str) -> bool {
+    if path.is_empty() {
+        return false;
+    }
+    if path.len() > 1024 {
+        return false;
+    }
+    if path.contains('\0') {
+        return false;
+    }
+    if path.starts_with('/') || path.starts_with('\\') {
+        return false;
+    }
+    if path.contains("..") {
+        return false;
+    }
+    true
+}
+
+/// Extract (issue_number, file_path) pairs from git log.
+///
+/// Runs `git log --all --format='COMMIT_START%n%s%n%b%nCOMMIT_END' --name-only`
+/// and parses commit messages for issue references, associating them with changed files.
+pub fn extract_file_modifies_from_git_log(
+    repo_path: &Path,
+) -> Result<Vec<FileModifiesEntry>, KnowledgeError> {
+    use std::process::{Command, Stdio};
+
+    let mut child = Command::new("git")
+        .args([
+            "log",
+            "--all",
+            "--format=COMMIT_START%n%s%n%b%nCOMMIT_END",
+            "--name-only",
+        ])
+        .current_dir(repo_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| KnowledgeError::Io(std::io::Error::other("Failed to capture stdout")))?;
+    let stderr_pipe = child.stderr.take();
+
+    // Read stderr in a separate thread to prevent deadlock
+    let stderr_thread = std::thread::spawn(move || -> String {
+        let Some(stderr) = stderr_pipe else {
+            return String::new();
+        };
+        let mut buf = String::new();
+        let mut reader = BufReader::new(stderr);
+        let _ = reader.read_to_string(&mut buf);
+        buf
+    });
+
+    let mut seen = HashSet::new();
+    let mut current_issues: Vec<String> = Vec::new();
+    let mut in_commit = false;
+    let mut reading_files = false;
+    let mut line_count = 0;
+
+    let reader = BufReader::new(stdout);
+    for line_result in reader.lines() {
+        line_count += 1;
+        if line_count > MAX_GIT_OUTPUT_LINES {
+            break;
+        }
+        let line = line_result?;
+
+        if line == "COMMIT_START" {
+            in_commit = true;
+            reading_files = false;
+            current_issues.clear();
+            continue;
+        }
+
+        if line == "COMMIT_END" {
+            reading_files = true;
+            in_commit = false;
+            continue;
+        }
+
+        if in_commit {
+            // Parse subject/body lines for issue numbers
+            let nums = extract_issue_numbers(&line);
+            for num in nums {
+                if !current_issues.contains(&num) {
+                    current_issues.push(num);
+                }
+            }
+            continue;
+        }
+
+        if reading_files {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                // Empty line between commits => next commit coming
+                reading_files = false;
+                continue;
+            }
+
+            if validate_git_file_path(trimmed) {
+                for issue in &current_issues {
+                    let key = (issue.clone(), trimmed.to_string());
+                    if seen.len() < MAX_ENTRIES && seen.insert(key) {
+                        // inserted new entry
+                    }
+                }
+            }
+        }
+    }
+
+    let status = child
+        .wait()
+        .map_err(|e| KnowledgeError::GitLog(e.to_string()))?;
+    let stderr_output = stderr_thread.join().unwrap_or_default();
+
+    if !status.success() {
+        // Non-zero exit is not fatal for modifies graph — log a warning but return
+        // whatever we collected so far. Common cause: shallow clone or missing refs.
+        eprintln!(
+            "Warning: git log exited with status {}{}",
+            status,
+            if stderr_output.is_empty() {
+                String::new()
+            } else {
+                format!(": {}", stderr_output.trim())
+            }
+        );
+    }
+
+    let entries: Vec<FileModifiesEntry> = seen
+        .into_iter()
+        .map(|(issue_number, file_path)| FileModifiesEntry {
+            issue_number,
+            file_path,
+        })
+        .collect();
+
+    Ok(entries)
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +681,7 @@ mod tests {
         assert_eq!(KnowledgeRelation::HasDesign.as_str(), "has_design");
         assert_eq!(KnowledgeRelation::HasReview.as_str(), "has_review");
         assert_eq!(KnowledgeRelation::HasWorkplan.as_str(), "has_workplan");
+        assert_eq!(KnowledgeRelation::Modifies.as_str(), "modifies");
     }
 
     #[test]
@@ -499,8 +698,20 @@ mod tests {
             KnowledgeRelation::parse("has_workplan"),
             Some(KnowledgeRelation::HasWorkplan)
         );
+        assert_eq!(
+            KnowledgeRelation::parse("modifies"),
+            Some(KnowledgeRelation::Modifies)
+        );
         assert_eq!(KnowledgeRelation::parse("unknown"), None);
         assert_eq!(KnowledgeRelation::parse(""), None);
+    }
+
+    #[test]
+    fn test_knowledge_relation_modifies_roundtrip() {
+        let relation = KnowledgeRelation::Modifies;
+        let s = relation.as_str();
+        let parsed = KnowledgeRelation::parse(s);
+        assert_eq!(parsed, Some(KnowledgeRelation::Modifies));
     }
 
     #[test]
@@ -511,6 +722,100 @@ mod tests {
             format!("{}", KnowledgeRelation::HasWorkplan),
             "has_workplan"
         );
+        assert_eq!(format!("{}", KnowledgeRelation::Modifies), "modifies");
+    }
+
+    // --- extract_issue_numbers tests ---
+
+    #[test]
+    fn test_extract_issue_numbers_hash() {
+        let nums = extract_issue_numbers("fix #123 and #456");
+        assert!(nums.contains(&"123".to_string()));
+        assert!(nums.contains(&"456".to_string()));
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_parens() {
+        let nums = extract_issue_numbers("feat: add feature (#789)");
+        assert_eq!(nums, vec!["789".to_string()]);
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_fixes() {
+        let nums = extract_issue_numbers("fixes #42");
+        assert_eq!(nums, vec!["42".to_string()]);
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_refs() {
+        let nums = extract_issue_numbers("refs #100");
+        assert_eq!(nums, vec!["100".to_string()]);
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_case_insensitive() {
+        let nums = extract_issue_numbers("Fixes #10 REFS #20");
+        assert!(nums.contains(&"10".to_string()));
+        assert!(nums.contains(&"20".to_string()));
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_no_match() {
+        let nums = extract_issue_numbers("no issue reference here");
+        assert!(nums.is_empty());
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_empty() {
+        let nums = extract_issue_numbers("");
+        assert!(nums.is_empty());
+    }
+
+    #[test]
+    fn test_extract_issue_numbers_multiple_patterns() {
+        let nums = extract_issue_numbers("#1 (#2) fixes #3 refs #4");
+        assert_eq!(nums.len(), 4);
+        assert!(nums.contains(&"1".to_string()));
+        assert!(nums.contains(&"2".to_string()));
+        assert!(nums.contains(&"3".to_string()));
+        assert!(nums.contains(&"4".to_string()));
+    }
+
+    // --- validate_git_file_path tests ---
+
+    #[test]
+    fn test_validate_git_file_path_normal() {
+        assert!(validate_git_file_path("src/main.rs"));
+        assert!(validate_git_file_path("README.md"));
+        assert!(validate_git_file_path("a/b/c/d.txt"));
+    }
+
+    #[test]
+    fn test_validate_git_file_path_rejects_dotdot() {
+        assert!(!validate_git_file_path("../etc/passwd"));
+        assert!(!validate_git_file_path("src/../secret"));
+    }
+
+    #[test]
+    fn test_validate_git_file_path_rejects_absolute() {
+        assert!(!validate_git_file_path("/etc/passwd"));
+        assert!(!validate_git_file_path("\\windows\\system32"));
+    }
+
+    #[test]
+    fn test_validate_git_file_path_rejects_empty() {
+        assert!(!validate_git_file_path(""));
+    }
+
+    #[test]
+    fn test_validate_git_file_path_rejects_null_byte() {
+        assert!(!validate_git_file_path("src/\0evil.rs"));
+    }
+
+    #[test]
+    fn test_validate_git_file_path_rejects_long_path() {
+        let long_path = "a".repeat(1025);
+        assert!(!validate_git_file_path(&long_path));
     }
 
     #[test]
