@@ -125,6 +125,7 @@ pub enum RelationType {
     TagMatch { matched_tags: Vec<String> },
     PathSimilarity,
     DirectoryProximity,
+    KnowledgeGraph,
 }
 
 /// 関連検索結果を指定フォーマットで出力する

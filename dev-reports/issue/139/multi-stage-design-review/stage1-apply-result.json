@@ -1,0 +1,6 @@
+{
+  "stage": 1,
+  "applied": ["KnowledgeError型定義追加", "SymbolStore impl分離方針追加", "KnowledgeRelatedResult構造体追加", "パターンルール構造化", "score_knowledge_graph Result伝搬", "CLIフロー挿入位置明記"],
+  "must_fix_resolved": 3,
+  "should_fix_resolved": 3
+}

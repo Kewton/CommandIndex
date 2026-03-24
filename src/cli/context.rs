@@ -280,13 +280,16 @@ fn enrich_entry(
     let has_tag_match = relation_types
         .iter()
         .any(|r| matches!(r, RelationType::TagMatch { .. }));
+    let has_knowledge_graph = relation_types
+        .iter()
+        .any(|r| matches!(r, RelationType::KnowledgeGraph));
 
     let mut heading = None;
     let mut snippet = None;
     let mut symbols = None;
 
     // heading と snippet の取得
-    if has_markdown_link || has_tag_match {
+    if has_markdown_link || has_tag_match || has_knowledge_graph {
         if let Ok(docs) = reader.search_by_exact_path(path)
             && let Some(first) = docs.first()
         {
@@ -380,6 +383,11 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
     for rt in relation_types {
         if matches!(rt, RelationType::DirectoryProximity) {
             return "directory_proximity".to_string();
+        }
+    }
+    for rt in relation_types {
+        if matches!(rt, RelationType::KnowledgeGraph) {
+            return "knowledge_graph".to_string();
         }
     }
     "unknown".to_string()

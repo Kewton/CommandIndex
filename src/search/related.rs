@@ -13,6 +13,7 @@ pub const TAG_MATCH_WEIGHT: f32 = 0.5;
 pub const PATH_SIMILARITY_WEIGHT: f32 = 0.4;
 pub const DIR_PROXIMITY_WEIGHT: f32 = 0.2;
 pub const DIR_PROXIMITY_1UP_WEIGHT: f32 = 0.1;
+pub const KNOWLEDGE_GRAPH_WEIGHT: f32 = 0.8;
 
 #[derive(Debug)]
 pub enum RelatedSearchError {
@@ -250,10 +251,13 @@ impl<'a> RelatedSearchEngine<'a> {
         // 2. Import dependencies (bidirectional)
         self.score_import_deps(&target, &mut scores)?;
 
-        // 3. Tag match
+        // 3. Knowledge graph (Issue-based document relationships)
+        self.score_knowledge_graph(&target, &mut scores)?;
+
+        // 4. Tag match
         self.score_tag_match(&target, &mut scores)?;
 
-        // 4. Path proximity (uses all known paths from scores + tantivy)
+        // 5. Path proximity (uses all known paths from scores + tantivy)
         self.score_path_proximity(&target, &mut scores);
 
         // Remove self from results
@@ -445,6 +449,27 @@ impl<'a> RelatedSearchEngine<'a> {
             }
         }
 
+        Ok(())
+    }
+
+    /// Score files related through the knowledge graph (Issue-based document relationships).
+    pub(crate) fn score_knowledge_graph(
+        &self,
+        target: &str,
+        scores: &mut HashMap<String, (f32, Vec<RelationType>)>,
+    ) -> Result<(), RelatedSearchError> {
+        let related = self
+            .store
+            .find_knowledge_related(target)
+            .map_err(RelatedSearchError::SymbolStore)?;
+        for result in related {
+            add_relation(
+                scores,
+                &result.file_path,
+                KNOWLEDGE_GRAPH_WEIGHT,
+                RelationType::KnowledgeGraph,
+            );
+        }
         Ok(())
     }
 

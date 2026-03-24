@@ -1,0 +1,37 @@
+{
+  "stage": 6,
+  "type": "apply_codex_review",
+  "applied_fixes": [
+    {
+      "original": ".json レビュー文書を対象にした設計が現行インデクサの対象拡張子と不整合",
+      "fix": "ナレッジグラフ構築を既存インデクサとは独立した走査パスとして実行する方式に変更。対象をMarkdownサマリーファイルのみに絞り、JSONファイルは除外。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "RelationType::KnowledgeGraph の影響範囲が Issue 本文より広い",
+      "fix": "src/cli/impact.rs と src/cli/context.rs の RelationType 変換処理も更新必須であることを明記。完了条件にも追加。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "file ノードと実装関連エッジの構築方針が未定義",
+      "fix": "初回実装スコープを「Issue→文書群の関連付けまで」に明確化。file ノードと modifies エッジは後続Issueに分割。概要も修正。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "delete_by_file() で孤立した issue ノードの扱い",
+      "fix": "孤立ノードの扱いセクションを追加。issue ノードは残置し、フル再構築時に最新化される方式。",
+      "severity": "should_fix"
+    },
+    {
+      "original": "対象ドキュメント範囲の定義が曖昧",
+      "fix": "対象ファイル一覧と除外対象を明示する表を追加。",
+      "severity": "should_fix"
+    },
+    {
+      "original": "スコア合成ルールの粒度不足",
+      "fix": "既存 add_relation() と同様の加算方式を明記。",
+      "severity": "should_fix"
+    }
+  ],
+  "summary": "Stage 5 Codex レビューの must_fix 3件、should_fix 3件を全て反映。Issue本文更新済み。"
+}

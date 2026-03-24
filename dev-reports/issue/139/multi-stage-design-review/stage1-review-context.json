@@ -1,0 +1,25 @@
+{
+  "stage": 1,
+  "type": "design_principles_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {"title": "KnowledgeError 型が設計書に未定義", "description": "KnowledgeError のバリアント（Io, Regex, PathValidation等）と IndexError への From 変換を明示すべき", "principle": "Error"},
+    {"title": "SymbolStore への責務集中（SRP違反）", "description": "EmbeddingStore 分離の先例に倣い、knowledge CRUD の分離方針を明記すべき", "principle": "SOLID"},
+    {"title": "find_knowledge_related() の戻り値が型安全でない", "description": "Vec<(String, String)> ではなく専用構造体を定義すべき", "principle": "API"}
+  ],
+  "should_fix": [
+    {"title": "DocSubtype の DB永続化方法が不明", "description": "metadata JSON に格納する旨を明記すべき", "principle": "API"},
+    {"title": "score_knowledge_graph のエラー握りつぶし", "description": "既存パターンに合わせて Result 伝搬すべき", "principle": "Error"},
+    {"title": "insert_knowledge_entries() と upsert 系の責務重複", "description": "バッチが個別の合成であることを明記すべき", "principle": "DRY"},
+    {"title": "パスパターン正規表現の拡張性が低い", "description": "パターン定義を構造化すべき（OCP）", "principle": "SOLID"},
+    {"title": "CLI フロー設計の commit タイミング不整合", "description": "具体的な挿入位置を示すべき", "principle": "API"}
+  ],
+  "nice_to_have": [
+    {"title": "KnowledgeRelation の命名混乱", "principle": "KISS"},
+    {"title": "KNOWLEDGE_GRAPH_WEIGHT の設定可能化", "principle": "YAGNI"},
+    {"title": "title カラムの用途不明", "principle": "YAGNI"},
+    {"title": "find_knowledge_related() の結合テスト不足", "principle": "API"},
+    {"title": "created_at/updated_at の更新ロジックなし", "principle": "YAGNI"}
+  ],
+  "summary": "全体として良い設計。主な改善点: (1) KnowledgeError 定義漏れ、(2) SymbolStore のSRP改善、(3) 戻り値の型安全性"
+}

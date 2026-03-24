@@ -1,0 +1,1 @@
+{"stage": 4, "type": "security_review", "reviewer": "Claude Opus", "must_fix": [{"title": "ON DELETE CASCADE テストで明示的に検証すべき"}], "should_fix": [{"title": "パストラバーサル対策の具体実装（canonicalize + starts_with）"}, {"title": "identifier のフォーマットバリデーション"}, {"title": "metadata カラムのサイズ上限"}], "summary": "セキュリティリスクは低い。パストラバーサル対策の実装詳細のみ要対応"}

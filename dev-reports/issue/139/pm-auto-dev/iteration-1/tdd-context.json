@@ -1,0 +1,28 @@
+{
+  "issue_number": 139,
+  "title": "SQLiteベースの簡易ナレッジグラフの実装",
+  "design_policy": "dev-reports/design/issue-139-knowledge-graph-design-policy.md",
+  "work_plan": "dev-reports/issue/139/work-plan.md",
+  "scope": "Issue→文書群（設計書・レビュー・作業計画）の関連付け + search --related 統合",
+  "tasks": [
+    "Task 1.1: 型定義・パーサー (src/indexer/knowledge.rs 新規)",
+    "Task 1.2: スキーマ拡張 v3→v4 (src/indexer/symbol_store.rs)",
+    "Task 1.3: CRUD メソッド追加 (src/indexer/symbol_store.rs)",
+    "Task 2.1: dev-reports 走査・構築ロジック (src/indexer/knowledge.rs)",
+    "Task 2.2: delete_by_file() 拡張 (src/indexer/symbol_store.rs)",
+    "Task 3.1: index コマンド統合 (src/cli/index.rs)",
+    "Task 3.2: update コマンド統合 (src/cli/index.rs)",
+    "Task 4.1: RelationType 拡張 (src/output/)",
+    "Task 4.2: impact.rs / context.rs 対応",
+    "Task 4.3: KG スコアリング追加 (src/search/related.rs)",
+    "Task 5.1: モジュール登録 (src/indexer/mod.rs)",
+    "Task 5.2: 既存テスト修正・E2Eテスト追加",
+    "Task 5.3: 品質チェック"
+  ],
+  "quality_criteria": {
+    "build": "cargo build - エラー0件",
+    "clippy": "cargo clippy --all-targets -- -D warnings - 警告0件",
+    "test": "cargo test --all - 全パス",
+    "fmt": "cargo fmt --all -- --check - 差分なし"
+  }
+}

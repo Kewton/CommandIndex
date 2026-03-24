@@ -374,6 +374,15 @@ pub fn run(
     // 8. Commit index
     writer.commit()?;
 
+    // 8.5. Build knowledge graph
+    {
+        let entries = crate::indexer::knowledge::scan_dev_reports(path);
+        if !entries.is_empty() {
+            symbol_store.clear_knowledge_graph()?;
+            symbol_store.insert_knowledge_entries(&entries)?;
+        }
+    }
+
     // 9. Save manifest
     manifest.save(commandindex_dir)?;
 
@@ -817,6 +826,25 @@ pub fn run_incremental(
 
     // 13. Commit index
     writer.commit()?;
+
+    // 13.5. Update knowledge graph (diff-based)
+    {
+        if let Ok(changes) = crate::indexer::knowledge::detect_dev_reports_changes(path)
+            && !changes.changed_files.is_empty()
+        {
+            for file in &changes.changed_files {
+                let _ = symbol_store.delete_knowledge_by_file(file);
+            }
+            let entries: Vec<_> = changes
+                .changed_files
+                .iter()
+                .filter_map(|f| crate::indexer::knowledge::parse_dev_report_path(f))
+                .collect();
+            if !entries.is_empty() {
+                let _ = symbol_store.insert_knowledge_entries(&entries);
+            }
+        }
+    }
 
     // 14. Save updated manifest
     old_manifest.save(commandindex_dir)?;

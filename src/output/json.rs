@@ -93,6 +93,9 @@ pub fn format_related_json(
                 crate::output::RelationType::DirectoryProximity => {
                     serde_json::json!("directory_proximity")
                 }
+                crate::output::RelationType::KnowledgeGraph => {
+                    serde_json::json!("knowledge_graph")
+                }
             })
             .collect();
         let mut json_value = serde_json::json!({
