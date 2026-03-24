@@ -542,6 +542,27 @@ fn build_commands() -> Vec<CommandInfo> {
             ],
         },
         CommandInfo {
+            name: "why",
+            description: "Explain why a file exists by finding related Issues and design documents",
+            when_to_use: "Understand the origin and context of a file through the knowledge graph",
+            prerequisites: Some("Requires existing index with knowledge graph".to_string()),
+            modes: None,
+            conflicts: None,
+            key_options: Some(vec![
+                "--format <FORMAT>  Output format: human, json, path, llm",
+            ]),
+            output_formats: Some(vec!["human", "json", "path", "llm"]),
+            output: Some("Related Issues and design documents for the specified file"),
+            input: Some("A single file path"),
+            pipe_support: None,
+            subcommands: None,
+            examples: vec![
+                "commandindexdev why dev-reports/design/issue-100-design-policy.md",
+                "commandindexdev why dev-reports/issue/100/work-plan.md --format json",
+                "commandindexdev why dev-reports/design/issue-100-design-policy.md --format path",
+            ],
+        },
+        CommandInfo {
             name: "issue",
             description: "Show documents related to an Issue from knowledge graph",
             when_to_use: "Look up all design docs, reviews, work plans, and progress reports for a specific Issue number",

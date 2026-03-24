@@ -1,0 +1,28 @@
+{
+  "must_fix": [
+    {
+      "title": "validate_file_paths が SearchError を返す",
+      "suggestion": "WhyError::InvalidArgument(String) で .map_err マッピング。"
+    },
+    {
+      "title": "Commands::Why の file は Vec<String> にすべき",
+      "suggestion": "Impact パターンに合わせて files: Vec<String> + validate_file_paths(&files, 1)。"
+    },
+    {
+      "title": "index_path がグローバルとコマンド内で重複",
+      "suggestion": "Impact パターンに合わせてコマンド内に定義。"
+    }
+  ],
+  "should_fix": [
+    {"title": "WhyError のバリアントを ImpactError と揃える"},
+    {"title": "WhyResult の Serialize derive パターン統一"},
+    {"title": "DB層の戻り値型は indexer/knowledge.rs に、表示用型は output/mod.rs に分離"},
+    {"title": "display_label は cli/why.rs 内のプライベート関数として定義"}
+  ],
+  "nice_to_have": [
+    {"title": "WHY_AFTER_HELP 定数"},
+    {"title": "knowledge_nodes の title が NULL でも動作するよう設計"},
+    {"title": "cli/mod.rs への pub mod why 追加"}
+  ],
+  "summary": "file を Vec<String> に変更、WhyError を ImpactError パターンに統一、DB層と表示層の型を分離。"
+}

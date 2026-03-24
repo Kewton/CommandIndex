@@ -1,0 +1,54 @@
+{
+  "must_fix": [
+    {
+      "title": "グラフ走査方向とノードタイプがコードベースと不一致",
+      "description": "Issueに記載されたSQLクエリは file ノードタイプと modifies エッジを前提としているが、実際のコードベースには file ノードタイプも modifies エッジも存在しない。現在のナレッジグラフは issue ノードと document ノードのみで構成され、エッジは issue → document（has_design, has_review, has_workplan）のみ。",
+      "suggestion": "Issueの実装セクションを全面的に書き換える。現在のグラフ構造に基づく正しい走査パターンを記載するか、file ノードタイプと modifies エッジの新規追加をスコープに含める。"
+    },
+    {
+      "title": "受け入れ基準が未定義",
+      "description": "Issueに受け入れ基準が明示されていない。",
+      "suggestion": "受け入れ基準を追加: (1) why <file> で関連Issue・設計ドキュメントが出力される (2) --format human/json/llm/path が動作 (3) ヒットしない場合の適切なメッセージ (4) テスト追加"
+    },
+    {
+      "title": "whyコマンドの対象ファイル範囲が曖昧",
+      "description": "使用例ではソースコードファイルを指定しているが、現在のナレッジグラフにはdocumentノードしか登録されない。ソースコードファイルとIssueを紐づける仕組みが存在しない。",
+      "suggestion": "2つの選択肢を明確にする: (A) スコープをdocumentに限定 (B) file ノードタイプとmodifiesエッジを追加する"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "出力フォーマットに --format path が欠落",
+      "description": "既存のOutputFormatには Path も含まれており4種類ある。",
+      "suggestion": "--format path を追加するか、除外理由を明記する。"
+    },
+    {
+      "title": "エラーハンドリング方針が未記載",
+      "description": "インデックス未作成、グラフ空、ファイル不存在時の挙動が未定義。",
+      "suggestion": "各エラーケースの期待挙動を定義する。"
+    },
+    {
+      "title": "テスト方針が未記載",
+      "description": "テストレベルやテスト対象についての方針がない。",
+      "suggestion": "ナレッジグラフ走査の単体テスト、CLIパーステスト、出力フォーマットテストを定義する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "設計根拠の要約スニペット表示",
+      "description": "設計ドキュメントの冒頭をスニペットとして含めると便利。",
+      "suggestion": "将来的な拡張として検討。"
+    },
+    {
+      "title": "複数ファイル指定の対応",
+      "description": "複数ファイル一括の設計根拠取得。",
+      "suggestion": "初回は単一ファイルに限定。"
+    },
+    {
+      "title": "knowledge_edges の metadata 活用",
+      "description": "doc_subtypeを表示に活用する。",
+      "suggestion": "出力にドキュメントサブタイプ情報を含めることを検討。"
+    }
+  ],
+  "summary": "Issue #141はグラフ走査パターンが実コードベースと不一致。fileノード・modifiesエッジは存在せず、現在はissue→documentのみ。受け入れ基準、エラーハンドリング、テスト方針も未定義。コードベースのインフラは整備されており、Issue修正後は実装可能。"
+}

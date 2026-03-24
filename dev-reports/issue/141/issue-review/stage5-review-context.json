@@ -1,0 +1,44 @@
+{
+  "must_fix": [
+    {
+      "title": "対象ドキュメント範囲が既存ナレッジグラフとまだずれている",
+      "description": "実装済みのparse_dev_report_pathはprogress-reportもdocumentとして登録しhas_review扱いにする。find_knowledge_related()をそのまま使うと期待例にないprogress reportまでwhy結果に混入する可能性がある。",
+      "suggestion": "whyが返す対象を明示する。design_policy/issue-review summary/multi-stage-design-review summary/work-planのみに限定するのか、全sibling documentを返すのかを固定し、必要ならフィルタ方針を追記する。"
+    },
+    {
+      "title": "「存在しないファイルパスへのバリデーション」が既存APIの実態と不一致",
+      "description": "validate_file_pathsは相対パス・長さ・..・バックスラッシュ等の文字列検証のみでファイル実在確認は行わない。受け入れ基準の記載と現行コードの責務分担が不一致。",
+      "suggestion": "要件を「パス文字列の妥当性検証」と「ファイル未登録/未存在時の実行時メッセージ」に分離する。物理ファイルの存在確認まで行うのか、グラフ照合結果だけで扱うのかを明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "既存API再利用方針だけでは期待出力に必要なデータが不足",
+      "description": "find_knowledge_related()の戻り値はissue_number/relation/file_pathだけで、Issueタイトルやrelationごとのグルーピング情報を持っていない。",
+      "suggestion": "why用の専用結果型を定義するか、find_knowledge_relatedをissue titleを含む形へ拡張する方針を明記する。"
+    },
+    {
+      "title": "受け入れ基準がhuman以外の出力仕様まで定義し切れていない",
+      "description": "jsonのキー構造、llmの最小表現、pathが対象以外のsibling pathのみか入力pathを含むかが未定義。",
+      "suggestion": "各フォーマットの最小サンプルをIssueに追加する。JSONスキーマ、pathの1行1パス規約、llmでrelation名やIssue番号を残すかを明文化する。"
+    },
+    {
+      "title": "変更対象モジュールの網羅性がIssue本文から読み取りにくい",
+      "description": "新規サブコマンド追加時にmain.rsのCommands・dispatch、cli/mod.rsのmodule export、tests/cli_args.rs、help_llm.rsの更新が必要だが明示されていない。",
+      "suggestion": "実装方針に「CLI定義・dispatch・help-llm・CLI helpテスト更新」を追記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "relation表示名の正規化ルール",
+      "description": "has_design/has_review/has_workplanを設計/レビュー/作業計画に変換するルールを1か所に寄せる。",
+      "suggestion": "why専用の表示ラベル変換表を1か所に集約する方針を追記する。"
+    },
+    {
+      "title": "doc subtypeをJSONに含める余地",
+      "description": "JSON出力にrelationに加えてdoc_subtypeを含めると後方互換を壊しにくい。",
+      "suggestion": "初版で必須にしなくてもJSONにdoc_subtypeフィールドを含める案を検討する。"
+    }
+  ],
+  "summary": "1回目で大きな不整合は概ね解消。再チェックでは、progress-reportも現行グラフに含まれる点とvalidate_file_pathsは存在確認をしない点の2点が要修正。find_knowledge_related再利用だけでは期待出力に必要な情報が足りないため、why用の結果モデルと各フォーマットの出力契約をもう一段具体化する必要がある。"
+}

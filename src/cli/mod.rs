@@ -17,6 +17,7 @@ pub mod status;
 pub mod stdin;
 pub mod suggest;
 pub mod watch;
+pub mod why;
 pub mod workspace;
 
 /// Common file path validation for CLI handlers.

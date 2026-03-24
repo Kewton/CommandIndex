@@ -1,0 +1,19 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "title": "SQLクエリにLIMIT句が未設定（DoSリスク）",
+      "suggestion": "LIMIT 1000 等を追加するか、Rust側で上限チェック。"
+    },
+    {
+      "title": "SymbolStoreError の Display による内部パス露出の可能性",
+      "suggestion": "ユーザー向けには汎用メッセージを表示。"
+    }
+  ],
+  "nice_to_have": [
+    {"title": "シンボリックリンク考慮（現状不要）"},
+    {"title": "NULLバイト拒否"},
+    {"title": "読み取り専用DB接続"}
+  ],
+  "summary": "must_fix なし。セキュリティ設計は良好。ローカルCLIツールとしてリスクレベルは低い。"
+}

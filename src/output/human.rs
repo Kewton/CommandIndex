@@ -194,6 +194,58 @@ pub fn format_impact_human(
     Ok(())
 }
 
+/// why 結果をhuman形式で出力する
+pub fn format_why_human(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let file = strip_control_chars(&result.file_path);
+    writeln!(writer, "{}", format!("Why: {file}").bold())?;
+    writeln!(writer)?;
+
+    if result.issues.is_empty() {
+        writeln!(writer, "  No related issues found.")?;
+        return Ok(());
+    }
+
+    for (i, issue) in result.issues.iter().enumerate() {
+        if i > 0 {
+            writeln!(writer)?;
+        }
+        let issue_label = match &issue.title {
+            Some(t) => format!(
+                "Issue #{} ({})",
+                strip_control_chars(&issue.issue_number),
+                strip_control_chars(t)
+            ),
+            None => format!("Issue #{}", strip_control_chars(&issue.issue_number)),
+        };
+        writeln!(writer, "  {}", issue_label.green())?;
+
+        for doc in &issue.documents {
+            let relation_label = relation_display_label(&doc.relation);
+            let doc_path = strip_control_chars(&doc.file_path);
+            writeln!(
+                writer,
+                "    {} {}",
+                format!("[{relation_label}]").dimmed(),
+                doc_path
+            )?;
+        }
+    }
+    Ok(())
+}
+
+/// relation文字列を人間が読みやすいラベルに変換する
+fn relation_display_label(relation: &str) -> &str {
+    match relation {
+        "has_design" => "design",
+        "has_review" => "review",
+        "has_workplan" => "workplan",
+        other => other,
+    }
+}
+
 /// セマンティック検索結果をhuman形式で出力する
 pub fn format_semantic_human(
     results: &[SemanticSearchResult],

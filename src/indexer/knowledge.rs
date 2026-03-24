@@ -107,6 +107,7 @@ pub struct KnowledgeRelatedResult {
     pub file_path: String,
     pub relation: String,
     pub issue_number: String,
+    pub title: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

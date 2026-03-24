@@ -1,0 +1,23 @@
+{
+  "must_fix": [
+    {
+      "title": "help_llm_contains_all_subcommands テストの件数更新が必要",
+      "suggestion": "expected 配列に 'why' を追加し件数を 14→15 に更新。"
+    },
+    {
+      "title": "help_flag_shows_usage テストに why の検証追加",
+      "suggestion": ".stdout(predicate::str::contains(\"why\")) を追加。"
+    }
+  ],
+  "should_fix": [
+    {"title": "SQLクエリのインデックス活用確認"},
+    {"title": "output/mod.rs の OutputFormat match 網羅性確認"},
+    {"title": "symbols.db 不在時のエラーハンドリング"}
+  ],
+  "nice_to_have": [
+    {"title": "新規 crate 追加は不要"},
+    {"title": "コンパイル時間への影響は軽微"},
+    {"title": "help_llm 内部テストの examples 非空確認"}
+  ],
+  "summary": "影響範囲は限定的で安全な加算的変更。テスト件数更新が必須。"
+}
