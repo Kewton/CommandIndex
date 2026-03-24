@@ -143,6 +143,44 @@ fn path_component_suffix_matches(indexed_path: &str, import_suffix: &str) -> boo
         || matches_at_boundary(stem, &format!("{import_suffix}/index"))
 }
 
+/// Resolve a file link target (e.g. `./ci-cd-plan.md`) to an indexed path.
+/// Unlike `resolve_import_path`, this handles paths that already have extensions
+/// and uses component-boundary matching without the external-package heuristic.
+fn resolve_link_path(link_target: &str, indexed_paths: &HashSet<String>) -> Option<String> {
+    if link_target.is_empty() || link_target.len() > 1024 {
+        return None;
+    }
+
+    // 1. Exact match
+    if indexed_paths.contains(link_target) {
+        return Some(link_target.to_string());
+    }
+
+    // 2. Strip relative prefixes
+    let normalized = link_target
+        .trim_start_matches("./")
+        .trim_start_matches("../");
+
+    if normalized.is_empty() {
+        return None;
+    }
+
+    // 3. Exact match after normalization
+    if indexed_paths.contains(normalized) {
+        return Some(normalized.to_string());
+    }
+
+    // 4. Component-boundary suffix match (the file may be nested deeper)
+    let matches_at_boundary = |path: &str, suffix: &str| -> bool {
+        path == suffix || path.ends_with(&format!("/{suffix}"))
+    };
+
+    indexed_paths
+        .iter()
+        .find(|p| matches_at_boundary(p, normalized))
+        .cloned()
+}
+
 // ---------------------------------------------------------------------------
 // Score helper (Task 1.4)
 // ---------------------------------------------------------------------------
@@ -247,12 +285,22 @@ impl<'a> RelatedSearchEngine<'a> {
         target: &str,
         scores: &mut HashMap<String, (f32, Vec<RelationType>)>,
     ) -> Result<(), RelatedSearchError> {
+        let indexed_paths = self.get_indexed_paths()?;
+
         // Files that the target links to (outgoing)
         let outgoing = self.store.find_file_links_by_source(target)?;
         for link in &outgoing {
+            // Resolve target_file to an indexed path if it doesn't match directly
+            let resolved = if indexed_paths.contains(&link.target_file) {
+                link.target_file.clone()
+            } else if let Some(r) = resolve_link_path(&link.target_file, indexed_paths) {
+                r
+            } else {
+                continue;
+            };
             add_relation(
                 scores,
-                &link.target_file,
+                &resolved,
                 MARKDOWN_LINK_WEIGHT,
                 RelationType::MarkdownLink,
             );
@@ -267,6 +315,30 @@ impl<'a> RelatedSearchEngine<'a> {
                 MARKDOWN_LINK_WEIGHT,
                 RelationType::MarkdownLink,
             );
+        }
+
+        // Also check all file_links whose target_file resolves to our target
+        // (handles cases where target_file was stored as a relative path)
+        let all_links = self.store.find_all_file_links()?;
+        for link in &all_links {
+            if link.source_file == target {
+                continue; // already handled above
+            }
+            let resolved = if indexed_paths.contains(&link.target_file) {
+                link.target_file.clone()
+            } else if let Some(r) = resolve_link_path(&link.target_file, indexed_paths) {
+                r
+            } else {
+                continue;
+            };
+            if resolved == target {
+                add_relation(
+                    scores,
+                    &link.source_file,
+                    MARKDOWN_LINK_WEIGHT,
+                    RelationType::MarkdownLink,
+                );
+            }
         }
 
         Ok(())
@@ -658,5 +730,57 @@ mod tests {
         let entry = scores.get("file.ts").unwrap();
         assert!((entry.0 - 1.5).abs() < 0.001);
         assert_eq!(entry.1.len(), 2);
+    }
+
+    // -----------------------------------------------------------------------
+    // resolve_link_path tests (markdown link resolution)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_resolve_link_path_exact_match() {
+        let indexed = make_indexed_paths(&["docs/b.md", "docs/a.md"]);
+        assert_eq!(
+            resolve_link_path("docs/b.md", &indexed),
+            Some("docs/b.md".to_string())
+        );
+    }
+
+    #[test]
+    fn test_resolve_link_path_relative_dot_slash() {
+        let indexed = make_indexed_paths(&["docs/ci-cd-plan.md"]);
+        assert_eq!(
+            resolve_link_path("./ci-cd-plan.md", &indexed),
+            Some("docs/ci-cd-plan.md".to_string())
+        );
+    }
+
+    #[test]
+    fn test_resolve_link_path_relative_dotdot() {
+        let indexed = make_indexed_paths(&["src/c.ts"]);
+        assert_eq!(
+            resolve_link_path("../src/c.ts", &indexed),
+            Some("src/c.ts".to_string())
+        );
+    }
+
+    #[test]
+    fn test_resolve_link_path_bare_filename() {
+        let indexed = make_indexed_paths(&["docs/b.md"]);
+        assert_eq!(
+            resolve_link_path("b.md", &indexed),
+            Some("docs/b.md".to_string())
+        );
+    }
+
+    #[test]
+    fn test_resolve_link_path_nonexistent() {
+        let indexed = make_indexed_paths(&["docs/a.md"]);
+        assert_eq!(resolve_link_path("nonexistent.md", &indexed), None);
+    }
+
+    #[test]
+    fn test_resolve_link_path_empty() {
+        let indexed = make_indexed_paths(&["docs/a.md"]);
+        assert_eq!(resolve_link_path("", &indexed), None);
     }
 }

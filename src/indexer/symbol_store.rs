@@ -559,6 +559,16 @@ impl SymbolStore {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Retrieve all file link records from the database.
+    pub fn find_all_file_links(&self) -> Result<Vec<FileLinkInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_file, link_type, file_hash
+             FROM file_links",
+        )?;
+        let rows = stmt.query_map([], file_link_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
     /// Bulk-insert embedding records inside a single transaction.
     ///
     /// Uses `INSERT OR REPLACE` so that duplicate `(file_path, section_heading)`
