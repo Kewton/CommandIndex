@@ -1,0 +1,7 @@
+{
+  "applied": [
+    {"id": "S2-M1", "action": "search_entry_files()のコード例を正確なlet束縛形式に修正"},
+    {"id": "S2-M2", "action": "is_test_file()判定をセパレータ付きパターンに変更。test_utils.rsのテストケースを修正（test_プレフィックスとして検出）"},
+    {"id": "S2-S1", "action": "命名をboost→weightに変更（TEST_FILE_WEIGHT/DOC_FILE_WEIGHT, apply_file_type_weight）"}
+  ]
+}

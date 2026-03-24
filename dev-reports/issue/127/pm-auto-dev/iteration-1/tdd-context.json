@@ -1,0 +1,15 @@
+{
+  "issue_number": 127,
+  "title": "[BUG] suggest の英語入力でキーワード部分一致により無関係ファイルを推薦",
+  "design_policy": "dev-reports/design/issue-127-suggest-keyword-design-policy.md",
+  "work_plan": "dev-reports/issue/127/work-plan.md",
+  "target_file": "src/cli/suggest.rs",
+  "tasks": [
+    "Task 1.1: 定数 TEST_FILE_WEIGHT=0.3, DOC_FILE_WEIGHT=0.5 を追加",
+    "Task 1.2: is_test_file() をセパレータ付きパターンで実装 + テスト5件",
+    "Task 1.3: is_doc_file() を dev-reports/docs/ルート定型ドキュメント限定で実装 + テスト5件",
+    "Task 1.4: file_type_weight_factor() を実装 + テスト1件",
+    "Task 1.5: apply_file_type_weight() を実装 + テスト3件",
+    "Task 1.6: search_entry_files() を変更（dedup limit拡大 + apply_file_type_weight追加）"
+  ]
+}

@@ -29,6 +29,12 @@ const BM25_SEARCH_LIMIT: usize = 20;
 /// ファイル単位dedupの上限
 const DEDUP_FILE_LIMIT: usize = 5;
 
+/// テストファイルのスコア係数（BM25スコアに乗算、1.0未満は減衰）
+const TEST_FILE_WEIGHT: f32 = 0.3;
+
+/// ドキュメント/レポートファイルのスコア係数
+const DOC_FILE_WEIGHT: f32 = 0.5;
+
 // ---------------------------------------------------------------------------
 // Error type
 // ---------------------------------------------------------------------------
@@ -113,7 +119,8 @@ fn search_entry_files(
     query: &str,
 ) -> Result<Vec<(String, f32)>, SuggestError> {
     let results = reader.search(query, BM25_SEARCH_LIMIT)?;
-    Ok(deduplicate_by_file(results, DEDUP_FILE_LIMIT))
+    let deduped = deduplicate_by_file(results, BM25_SEARCH_LIMIT);
+    Ok(apply_file_type_weight(deduped, DEDUP_FILE_LIMIT))
 }
 
 /// BM25検索結果をファイル単位に正規化・重複排除
@@ -127,6 +134,98 @@ fn deduplicate_by_file(results: Vec<SearchResult>, limit: usize) -> Vec<(String,
     sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     sorted.truncate(limit);
     sorted
+}
+
+// ---------------------------------------------------------------------------
+// File type weight
+// ---------------------------------------------------------------------------
+
+/// テストファイルかどうかをパスベースで判定（小文字化済みパスを受け取る）
+///
+/// 判定基準（セパレータ付きパターンで誤検知を防止）:
+/// - ファイル名が "_test." / ".test." / "_spec." / ".spec." パターンを含む
+/// - ファイル名が "test_" で始まる（test_helper等）
+/// - パスに "/tests/" または "/__tests__/" ディレクトリを含む
+fn is_test_file(lower_path: &str) -> bool {
+    let file_name = Path::new(lower_path)
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or("");
+
+    // セパレータ付きパターンで誤検知防止（contest.rs, latest.rs等を除外）
+    file_name.contains("_test.")
+        || file_name.contains(".test.")
+        || file_name.contains("_spec.")
+        || file_name.contains(".spec.")
+        || file_name.starts_with("test_")
+        || lower_path.contains("/tests/")
+        || lower_path.starts_with("tests/")
+        || lower_path.contains("/__tests__/")
+        || lower_path.starts_with("__tests__/")
+}
+
+/// ドキュメント/レポートファイルかどうかをパスベースで判定（小文字化済みパスを受け取る）
+///
+/// 判定基準:
+/// - パスに "dev-reports/" を含む（プロジェクト固有の判定基準）
+/// - プロジェクトルート直下の定型ドキュメント（readme.md, changelog.md等）
+///
+/// 注意: src/配下の.mdファイルはナレッジとして有用なため、一律減衰しない
+fn is_doc_file(lower_path: &str) -> bool {
+    // プロジェクト固有のレポートディレクトリ
+    if lower_path.contains("dev-reports/") {
+        return true;
+    }
+
+    // .mdファイルのうち、docs/配下またはルート直下の定型ドキュメントのみ
+    if lower_path.ends_with(".md") {
+        let file_name = Path::new(lower_path)
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("");
+        // ルート直下の定型ドキュメント（ディレクトリ区切りがない＝ルート直下）
+        let is_root_doc = !lower_path.contains('/')
+            && matches!(
+                file_name,
+                "readme.md" | "changelog.md" | "contributing.md" | "license.md" | "claude.md"
+            );
+        // docs/ ディレクトリ配下
+        let is_docs_dir = lower_path.contains("/docs/") || lower_path.starts_with("docs/");
+        return is_root_doc || is_docs_dir;
+    }
+
+    false
+}
+
+/// ファイルパスからスコア係数を判定する
+///
+/// - テストファイル: TEST_FILE_WEIGHT (0.3)
+/// - ドキュメント/レポート: DOC_FILE_WEIGHT (0.5)
+/// - ソースコードファイル: 1.0（調整なし）
+fn file_type_weight_factor(path: &str) -> f32 {
+    // パス区切り文字を正規化（Windows `\` → `/`）してOS非依存にする
+    let lower = path.to_lowercase().replace('\\', "/");
+    if is_test_file(&lower) {
+        TEST_FILE_WEIGHT
+    } else if is_doc_file(&lower) {
+        DOC_FILE_WEIGHT
+    } else {
+        1.0
+    }
+}
+
+/// BM25スコアにファイル種別ごとの係数を適用し、再ソート・truncateする
+fn apply_file_type_weight(files: Vec<(String, f32)>, limit: usize) -> Vec<(String, f32)> {
+    let mut weighted: Vec<(String, f32)> = files
+        .into_iter()
+        .map(|(path, score)| {
+            let factor = file_type_weight_factor(&path);
+            (path, score * factor)
+        })
+        .collect();
+    weighted.sort_by(|a, b| b.1.total_cmp(&a.1));
+    weighted.truncate(limit);
+    weighted
 }
 
 // ---------------------------------------------------------------------------
@@ -486,6 +585,133 @@ mod tests {
     fn fallback_strategy_has_no_embeddings() {
         let result = build_fallback_strategy();
         assert!(!result.has_embeddings);
+    }
+
+    // --- is_test_file tests ---
+
+    #[test]
+    fn is_test_file_detects_separator_patterns() {
+        assert!(is_test_file("foo_test.ts"));
+        assert!(is_test_file("foo.test.ts"));
+        assert!(is_test_file("foo_spec.py"));
+        assert!(is_test_file("foo.spec.tsx"));
+    }
+
+    #[test]
+    fn is_test_file_detects_test_prefix() {
+        assert!(is_test_file("test_helper.rs"));
+        assert!(is_test_file("test_utils.ts"));
+    }
+
+    #[test]
+    fn is_test_file_detects_tests_directory() {
+        assert!(is_test_file("tests/unit/foo.rs"));
+        assert!(is_test_file("__tests__/bar.ts"));
+    }
+
+    #[test]
+    fn is_test_file_ignores_non_test_files() {
+        assert!(!is_test_file("src/auth.rs"));
+        assert!(!is_test_file("src/contest.rs"));
+        assert!(!is_test_file("src/latest.rs"));
+    }
+
+    #[test]
+    fn is_test_file_empty_path() {
+        assert!(!is_test_file(""));
+    }
+
+    // --- is_doc_file tests ---
+
+    #[test]
+    fn is_doc_file_detects_dev_reports() {
+        assert!(is_doc_file("dev-reports/review.json"));
+        assert!(is_doc_file("dev-reports/design/policy.md"));
+    }
+
+    #[test]
+    fn is_doc_file_detects_docs_directory() {
+        assert!(is_doc_file("docs/guide.md"));
+    }
+
+    #[test]
+    fn is_doc_file_detects_root_docs() {
+        assert!(is_doc_file("readme.md"));
+        assert!(is_doc_file("changelog.md"));
+    }
+
+    #[test]
+    fn is_doc_file_ignores_nested_root_doc_names() {
+        // ルート直下でないreadme.md/changelog.mdは対象外
+        assert!(!is_doc_file("src/readme.md"));
+        assert!(!is_doc_file("guide/changelog.md"));
+    }
+
+    #[test]
+    fn is_doc_file_ignores_source_markdown() {
+        assert!(!is_doc_file("src/notes.md"));
+    }
+
+    #[test]
+    fn is_doc_file_ignores_source_files() {
+        assert!(!is_doc_file("src/main.rs"));
+    }
+
+    // --- file_type_weight_factor tests ---
+
+    #[test]
+    fn file_type_weight_factor_values() {
+        assert!(
+            (file_type_weight_factor("src/foo_test.ts") - TEST_FILE_WEIGHT).abs() < f32::EPSILON
+        );
+        assert!(
+            (file_type_weight_factor("dev-reports/review.json") - DOC_FILE_WEIGHT).abs()
+                < f32::EPSILON
+        );
+        assert!((file_type_weight_factor("src/main.rs") - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn file_type_weight_factor_normalizes_windows_paths() {
+        // Windows形式のパス区切りでもテストファイルとして判定される
+        assert!(
+            (file_type_weight_factor("tests\\unit\\foo.rs") - TEST_FILE_WEIGHT).abs()
+                < f32::EPSILON
+        );
+        assert!(
+            (file_type_weight_factor("dev-reports\\review.json") - DOC_FILE_WEIGHT).abs()
+                < f32::EPSILON
+        );
+    }
+
+    // --- apply_file_type_weight tests ---
+
+    #[test]
+    fn apply_file_type_weight_reorders() {
+        let input = vec![
+            ("src/foo_test.ts".to_string(), 2.0),
+            ("src/main.rs".to_string(), 1.5),
+        ];
+        let result = apply_file_type_weight(input, 10);
+        assert_eq!(result[0].0, "src/main.rs");
+        assert_eq!(result[1].0, "src/foo_test.ts");
+    }
+
+    #[test]
+    fn apply_file_type_weight_truncates() {
+        let input = vec![
+            ("a.rs".to_string(), 3.0),
+            ("b.rs".to_string(), 2.0),
+            ("c.rs".to_string(), 1.0),
+        ];
+        let result = apply_file_type_weight(input, 2);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn apply_file_type_weight_empty_input() {
+        let result = apply_file_type_weight(vec![], 10);
+        assert!(result.is_empty());
     }
 
     // --- format tests ---
