@@ -1,0 +1,19 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "モジュール境界", "description": "enrich_semantic_to_search_resultsはSearchError（CLI層の型）を返す。semantic.rsに移動時にレイヤー違反。", "suggestion": "semantic.rsではReaderErrorまたは独自エラー型を返し、CLI層でSearchErrorに変換。"},
+    {"id": "M2", "category": "モジュール境界", "description": "enrich_semantic_to_search_resultsは非pub関数。移動時にsearch.rsのtry_hybrid_search呼び出し箇所の変更が必要。", "suggestion": "search.rsの変更箇所を具体的に列挙する。"},
+    {"id": "M3", "category": "回帰リスク", "description": "BM25結果有無に関係なくセマンティック検索を試行する設計。embedding未構築でgraceful degradationが正しく動作しないと既存テスト6件すべてが破壊される。", "suggestion": "embeddings.db不在チェックを最初の分岐として配置し、既存のtry_semantic_fallbackと同じ早期returnパターンを維持。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "外部IF", "description": "出力形式の互換性について明示的記載がない。", "suggestion": "出力スキーマ互換を明記。"},
+    {"id": "S2", "category": "回帰リスク", "description": "embedding未構築環境で毎回embeddings.db存在チェックが走る。不要なeeprintlnログが混入するリスク。", "suggestion": "db不在時はログなしでNoneを返すことを明記。"},
+    {"id": "S3", "category": "DRY", "description": "deduplicate_by_file_pairsとaggregate_semantic_by_fileの重複が未解決。", "suggestion": "統合方針を明記。"},
+    {"id": "S4", "category": "テスト", "description": "search_entry_filesの変更有無が不明確。回帰検出困難。", "suggestion": "search_entry_filesは変更しない方針を明記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "テスト", "description": "K=60の選択根拠が未記載。"},
+    {"id": "N2", "category": "テスト", "description": "provider障害テストの実現方法が未記載。"},
+    {"id": "N3", "category": "コード品質", "description": "RRFロジック2箇所分散のリスク。"}
+  ],
+  "summary": "最大リスクは(M1)エラー型レイヤー違反と(M3)既存e2eテスト回帰。graceful degradationの早期returnが鍵。"
+}

@@ -1,0 +1,55 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "型変換の不整合",
+      "description": "hybrid.rsのrrf_mergeはSearchResult型のリストを受け取るが、suggest.rsはBM25結果を(String, f32)タプルに変換して処理している。rrf_mergeを直接活用するには型変換が必要。",
+      "suggestion": "suggest.rsではBM25のSearchResultとセマンティックのSearchResultをrrf_mergeに渡し、その後にファイル単位dedup+ファイルタイプ重み付けを適用する。"
+    },
+    {
+      "id": "M2",
+      "category": "ファイルタイプ重み付けの適用タイミング",
+      "description": "RRFはランク順位ベースのスコアリングであり、元のスコア値は使用されない。重み付けでスコアを変更してもRRF結果に影響しない。重み付けを反映するには、RRF前にランク順を変更（重み適用後に再ソート）するか、RRF後に重み付けを適用する必要がある。",
+      "suggestion": "BM25結果・セマンティック結果それぞれにfile_type_weightでスコアを乗算→再ソートしてからrrf_mergeに渡す。これによりRRFのランク入力が重み付け反映済みとなる。"
+    },
+    {
+      "id": "M3",
+      "category": "セマンティック結果のSearchResult変換",
+      "description": "rrf_mergeはSearchResult型を要求するが、EmbeddingStore.search_similarはEmbeddingSimilarityResult型を返す。変換ロジックが必要。",
+      "suggestion": "search.rsのenrich_semantic_to_search_results関数をpub化するか、共通モジュールに移動。または軽量変換関数を用意する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "パフォーマンス",
+      "description": "常時セマンティック検索でOllama APIコールが毎回発生。レイテンシ増加の懸念。",
+      "suggestion": "embedding DB未構築時のgraceful degradation維持。セマンティック検索タイムアウト設定。search.rsのtry_hybrid_searchパターン踏襲。"
+    },
+    {
+      "id": "S2",
+      "category": "既存テストへの影響",
+      "description": "e2e_suggest.rsの既存テスト（6件）はembedding未構築環境で実行。graceful degradationが正しく実装されていれば壊れない。",
+      "suggestion": "RRF統合ロジックのモックベース単体テストを追加。"
+    },
+    {
+      "id": "S3",
+      "category": "コード重複",
+      "description": "suggest.rsのtry_semantic_fallbackとsearch.rsのtry_hybrid_searchでセマンティック検索パターンが重複。",
+      "suggestion": "共通のセマンティック検索ヘルパーをモジュールに抽出。"
+    },
+    {
+      "id": "S4",
+      "category": "戦略生成ロジックの変更",
+      "description": "ハイブリッド化後はsuggest内部でセマンティック結果統合済みのため、戦略ステップの--semanticコマンド提案が冗長になる可能性。",
+      "suggestion": "ハイブリッド化後の戦略生成ロジック見直し。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "依存関係", "description": "Cargo.toml変更不要。外部クレート追加なし。"},
+    {"id": "N2", "category": "searchコマンド波及", "description": "search.rsへの直接影響なし。pub化時のAPI境界に注意。"},
+    {"id": "N3", "category": "DEDUP_FILE_LIMIT", "description": "ハイブリッド化で結果数増加の可能性。リミット調整検討。"},
+    {"id": "N4", "category": "ログ一貫性", "description": "[suggest/hybrid]プレフィックスでログ明示を推奨。"}
+  ],
+  "summary": "変更はsrc/cli/suggest.rsに閉じており波及は限定的。技術的課題は(1)型変換(SearchResult型への統一)、(2)RRFランクベースでのファイルタイプ重み付け適用タイミング、(3)セマンティック結果変換の共有化の3点。外部依存追加不要。"
+}

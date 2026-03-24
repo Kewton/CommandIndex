@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "type": "apply",
+  "applied_fixes": [
+    {"id": "M1", "action": "テスト計画セクションを追加（cli_args.rs, e2e_issue.rs）"},
+    {"id": "M2", "action": "SQLクエリのORDER BYにjson_extract(ke.metadata, '$.doc_subtype')を追加"}
+  ],
+  "additional_improvements": [
+    {"id": "S1", "action": "help-llmの実装箇所にbuild_use_cases, build_workflows追加を明記"},
+    {"id": "S3", "action": "出力フォーマッタ4ファイルの個別関数を実装箇所に明記"},
+    {"id": "N1", "action": "エラーメッセージを 'No documents found for issue #<N>' に改善"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/140"
+}

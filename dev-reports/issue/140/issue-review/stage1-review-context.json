@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "SQLクエリのノードtype/relationが実装と乖離",
+      "description": "Issue記載のSQLクエリでは n2.type に design_policy, review, work_plan, file を使用しているが、実装ではノードtypeは issue と document の2種類のみ。ドキュメント種別は knowledge_edges.metadata のJSON内に doc_subtype として格納。relation も has_design / has_review / has_workplan の3種であり、Issue記載のCASE式とは異なる。",
+      "suggestion": "正しいクエリに修正:\nSELECT kn_doc.file_path, ke.relation, ke.metadata\nFROM knowledge_nodes kn_issue\nJOIN knowledge_edges ke ON ke.source_id = kn_issue.id\nJOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'\nWHERE kn_issue.type = 'issue' AND kn_issue.identifier = ?1\nORDER BY CASE ke.relation WHEN 'has_design' THEN 1 WHEN 'has_review' THEN 2 WHEN 'has_workplan' THEN 3 END;\n表示時の分類にはmetadata内の doc_subtype をパースして使用する。"
+    },
+    {
+      "id": "M2",
+      "title": "「変更ファイル」カテゴリの取得元が未定義",
+      "description": "使用例の出力に「変更ファイル」セクションがあるが、現在のナレッジグラフにはソースコード変更ファイルとIssueの関連を格納する仕組みが存在しない。knowledge_nodesには issue と document typeしかなく、file typeのノードもエッジも作成されていない。",
+      "suggestion": "MVPでは「変更ファイル」は対象外としてスコープ外にし、別Issueに切り出す。"
+    },
+    {
+      "id": "M3",
+      "title": "レビューファイルのパスパターンがIssue記載と実装で不一致",
+      "description": "Issue使用例では dev-reports/review/2026-02-18-issue299-*.md のようなパスを期待しているが、実装のknowledge.rsでは dev-reports/issue/<N>/issue-review/summary-report.md や dev-reports/issue/<N>/multi-stage-design-review/summary-report.md のパターンのみ認識する。",
+      "suggestion": "使用例の出力パスを実装に合わせて修正する。"
+    },
+    {
+      "id": "M4",
+      "title": "受け入れ基準（Acceptance Criteria）が未記載",
+      "description": "Issueに明示的な受け入れ基準がなく、テスト可能な条件が不明確。",
+      "suggestion": "受け入れ基準を追加: issue <N> で関連ドキュメント一覧表示、--format json/llm対応、存在しないIssue番号のエラー処理、未インデックス時のエラー、cargo test全パス"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "エラーハンドリング仕様が未記載",
+      "description": "Issue番号不在、symbols.db不在、非数値入力時の仕様がない。",
+      "suggestion": "各エラーケースの期待動作を明記する。"
+    },
+    {
+      "id": "S2",
+      "title": "CLIコマンド名の整合性",
+      "description": "Commands enumへの追加、引数設計（位置引数かオプションか）、--format/--index-pathの対応詳細が不足。",
+      "suggestion": "CLI定義を明記: commandindexdev issue <NUMBER> [--format human|json|llm] [--index-path <PATH>]"
+    },
+    {
+      "id": "S3",
+      "title": "symbol_store.rsにIssue番号指定クエリ関数が未実装",
+      "description": "find_knowledge_related はファイルパスベース。Issue番号指定の関数が必要。",
+      "suggestion": "find_documents_by_issue 関数のシグネチャを明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "出力フォーマットの新規型定義が必要",
+      "description": "既存の型はIssueコマンドの出力構造と合わない。新しい出力型が必要。",
+      "suggestion": "IssueDocResult等の型を追加し、各フォーマッタでの出力仕様を定義する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Issueタイトルの取得方法が未定義",
+      "description": "knowledge_nodesのissueノードにはtitleがNULL。使用例ではタイトル表示あり。",
+      "suggestion": "MVPではタイトルなしで Issue #N のみ表示。"
+    },
+    {
+      "id": "N2",
+      "title": "progress_reportの出力カテゴリが未定義",
+      "description": "DocSubtype::ProgressReportが存在するが出力例に含まれていない。",
+      "suggestion": "出力カテゴリに追加するか除外の旨を明記。"
+    },
+    {
+      "id": "N3",
+      "title": "help-llmへの反映",
+      "description": "help-llmサブコマンドにissueコマンド情報の追加が必要。",
+      "suggestion": "help_llm.rsの出力にissueコマンドの説明を追加する。"
+    },
+    {
+      "id": "N4",
+      "title": "--format pathの動作定義",
+      "description": "OutputFormatにPathが含まれるがIssueでは言及なし。",
+      "suggestion": "--format pathでは関連ドキュメントのファイルパスを1行1パスで出力。"
+    }
+  ],
+  "summary": "最大の問題はSQLクエリとノードtype/relation名が実装と大幅に乖離していること。「変更ファイル」はナレッジグラフに未実装で、スコープ再定義が必要。レビューファイルのパスパターンも不一致。受け入れ基準とエラーハンドリング仕様の追加が実装着手前に必須。アーキテクチャ面での障壁はない。"
+}

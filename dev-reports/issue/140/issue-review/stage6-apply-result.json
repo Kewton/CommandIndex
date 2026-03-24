@@ -1,0 +1,18 @@
+{
+  "stage": 6,
+  "type": "apply",
+  "applied_fixes": [
+    {"id": "M1", "action": "CLI定義をcommandindex（グローバル--index-path）に修正。エラーメッセージもcommandindex基準に統一"},
+    {"id": "M2", "action": "SQLのORDER BYにdoc_subtype別CASE式を追加。出力カテゴリに表示順列を追加"}
+  ],
+  "additional_improvements": [
+    {"id": "S1", "action": "テスト計画にhelp-llm JSON出力検証・コマンド総数検証を追加"},
+    {"id": "S2", "action": "main.rsの実装箇所にmatch分岐追加を明記"},
+    {"id": "S3", "action": "JSON/LLM/path各フォーマットの出力例を追加"},
+    {"id": "S4", "action": "受け入れ基準にhelp-llm反映、カテゴリ分類正確性、progress_report分類を追加"},
+    {"id": "N1", "action": "find_documents_by_issueの戻り値型をIssueDocumentEntry DTOとして明記"},
+    {"id": "N2", "action": "受け入れ基準に変更ファイルは本Issueの対象外を追加"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/140"
+}

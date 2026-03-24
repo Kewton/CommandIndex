@@ -10,6 +10,7 @@ pub mod help_llm;
 pub mod impact;
 pub mod import_index;
 pub mod index;
+pub mod issue;
 pub mod search;
 pub mod snippet_helper;
 pub mod status;

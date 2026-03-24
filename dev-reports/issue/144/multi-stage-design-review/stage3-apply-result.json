@@ -1,0 +1,1 @@
+{"stage": 3, "applied": ["M1: enrich_semantic_to_search_resultsの戻りをReaderErrorに変更。CLI層でFrom impl変換と明記", "M2: search.rsの具体的変更箇所（import変更）を記載", "M3: embeddings.db不在チェックを最初の分岐に配置、ログなしでNone返却を明記", "S1: 出力スキーマ互換を影響範囲に明記", "S2: db不在時はログなしでNone返却を明記", "S3: deduplicate_by_file_pairsとaggregate_semantic_by_fileの統合を明記", "S4: search_entry_filesは変更しない方針を明記"]}

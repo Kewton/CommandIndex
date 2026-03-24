@@ -1,0 +1,16 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "category": "ネットワーク", "description": "OpenAI endpointにHTTPS強制がない。APIキーが平文送信されるリスク。", "suggestion": "非localhostならHTTPS必須にする。"},
+    {"id": "S2", "category": "APIキー", "description": "config.tomlに平文APIキー記載への警告不足。", "suggestion": "環境変数利用を推奨する警告を検討。"},
+    {"id": "S3", "category": "入力バリデーション", "description": "validate_inputの500制限はバイト数だが設計書では文字数と記載。", "suggestion": "設計書の記載を「500バイト」に修正。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "TLS", "description": "reqwestのデフォルトTLS検証は有効。現状OK。"},
+    {"id": "N2", "category": "unsafe", "description": "テストコード内のset_varのみ。プロダクションにunsafeなし。"},
+    {"id": "N3", "category": "パストラバーサル", "description": "既存のSearchContextで防御済み。"},
+    {"id": "N4", "category": "シェルインジェクション", "description": "shell_quoteで適切に対策済み。"},
+    {"id": "N5", "category": "APIキー", "description": "エラーレスポンスにAPIキーが含まれる可能性は低いが、truncate推奨。"}
+  ],
+  "summary": "must_fixなし。セキュリティ水準は良好。OpenAI HTTPS強制とAPIキー平文警告が主な改善点だが、ローカルCLI特性上リスクは低い。"
+}

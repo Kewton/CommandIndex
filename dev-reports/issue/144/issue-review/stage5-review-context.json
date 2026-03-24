@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "実装方針の妥当性",
+      "description": "Issueのデータフロー案は「RRF統合後にファイル単位dedup + truncate」としているが、既存のsrc/search/hybrid.rsのrrf_mergeは(path, heading)単位で結果を統合する実装です。さらにセマンティック検索結果はEmbeddingSimilarityResult { file_path, section_heading, similarity }でセクション単位です。このまま後段でだけファイルdedupすると、同一ファイルの複数セクションがRRFスコアに重複寄与し、suggestが必要とする「ファイル候補ランキング」を歪める可能性があります。",
+      "suggestion": "suggestではRRF入力をファイル単位に正規化してから統合する方針を明記してください。具体的には、BM25結果・セマンティック結果の双方を先にpath単位でdedup/集約してからRRFするか、suggest専用にファイルキーで統合するヘルパーを追加するのが安全です。少なくとも「section-levelのrrf_mergeをそのまま使って後段dedupする」案は避けるべきです。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準の網羅性と明確性",
+      "description": "受け入れ基準は追加されたものの、Issueの主目的である「英語クエリでの推薦精度改善」を客観的に確認する条件がまだ不足しています。現状の基準は「RRFを使うこと」「日本語が劣化しないこと」「フォールバックすること」は確認できますが、英語で実際に順位改善したかは判定できません。",
+      "suggestion": "英語クエリ改善を検証する決定的な受け入れ基準を追加してください。例: 「BM25単独では汎用語一致ファイルが上位だが、ハイブリッド後は目的ファイルが上位3件以内に入る」「BM25>0かつsemanticありの英語クエリで、BM25単独時と上位候補が変化する」など。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "受け入れ基準の網羅性と明確性",
+      "description": "受け入れ基準5の「RRF統合ロジックの単体テストが存在すること」は、既存コードベースのsrc/search/hybrid.rsとtests/e2e_semantic_hybrid.rsで既にかなり満たされています。この条件だけではsuggestへの配線変更が正しく入ったかを担保できません。",
+      "suggestion": "suggest固有のテスト要件に置き換えるか追記してください。例: 「BM25>0でもsemanticを併用することを確認するテスト」「embedding未構築時のBM25-only継続」「Ollama不達時にsuggestがエラー終了せず戦略を返す」「file_type_weightとdedup順序が意図どおり働く」など。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性・正確性",
+      "description": "影響範囲の「波及なし: searchコマンド」は表現がやや不正確です。Issue本文自身がsrc/cli/search.rsのセマンティック結果変換関数のpub化または移動を前提にしており、少なくともモジュール境界/APIレベルではsearch周辺に変更が波及します。",
+      "suggestion": "「searchコマンドのユーザー向け挙動変更は想定しないが、src/cli/search.rsの共通化リファクタは発生する」に修正してください。影響範囲は「挙動」と「コード変更範囲」を分けて書くと誤解が減ります。"
+    },
+    {
+      "id": "S3",
+      "category": "整合性・正確性",
+      "description": "パフォーマンス考慮の「セマンティック検索にはタイムアウトを設定」は方向性として正しい一方、既存コードベースではembedding provider側に既にHTTP timeoutがあります（src/embedding/ollama.rs, src/embedding/openai.rs）。Issueの書き方だとsuggest専用の新たなタイムアウト制御を追加するのか、既存のprovider timeoutを流用するのかが曖昧です。",
+      "suggestion": "「既存のembedding provider timeoutをそのまま利用し、timeout/ネットワーク失敗時はBM25にgraceful degradationする」と明記してください。"
+    },
+    {
+      "id": "S4",
+      "category": "実装方針の妥当性",
+      "description": "「maybe_add_semantic_stepの要否を見直す」は論点としては妥当ですが、現状のsuggestは「検索結果そのもの」ではなく「次に叩くコマンド戦略」を返す機能です。そのため、内部でハイブリッド検索を使うようになっても、ユーザー向けにsearch --semanticを探索ステップとして残す価値はなおあり得ます。",
+      "suggestion": "このIssue内での判断を明記してください。例えば「内部ではハイブリッド検索を使うが、調査の横展開としてsearch --semantic提案は維持する」または「冗長なので削除する」のどちらかまで決めておくと、実装者が迷いません。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "実装方針の妥当性",
+      "description": "共通化方針としてsrc/cli/search.rsの関数をpub化する案は実装コストは低いですが、CLI層のヘルパーを他CLIから呼ぶ形になりやすく、責務の置き場としてはやや不自然です。",
+      "suggestion": "可能ならsrc/search/配下に共通ユーティリティを移して、search/suggestの両方から使う形にするとレイヤリングがきれいです。Issue本文では「pub化でも可」ではなく「原則は共通モジュール化、最小変更ならpub化も可」くらいに優先度を付けるとよいです。"
+    }
+  ],
+  "summary": "1回目レビューで指摘された主要点のうち、「フォールバックから常時RRFハイブリッドへ」「既存hybrid.rs活用」「受け入れ基準追加」は概ね反映されています。一方で、実装案にはまだ重要な設計上の穴があります。最大の懸念は、suggestが欲しいのはファイル単位ランキングなのに、既存rrf_mergeは(path, heading)単位である点で、Issue本文どおり「RRF後にファイルdedup」だと同一ファイルの複数セクションが過剰に効く可能性があります。また、受け入れ基準は機構確認に寄っており、英語推薦精度そのものの改善を証明する条件が不足しています。加えて、search.rs共通化や既存provider timeoutの扱いなど、コードベースとの接続部をもう少し正確に書くと、実装者が迷わず着手できるIssueになります。"
+}

@@ -1,0 +1,18 @@
+{
+  "must_fix": [
+    {"id": "M1", "title": "resolve_commandindex_dir() は main.rs の private 関数で cli::issue から参照不可", "suggestion": "main.rs 側で解決して渡すか、cli::issue で load_config + resolve_index_path を直接行う"},
+    {"id": "M2", "title": "SymbolStore::open() はDB未存在時に新規作成するため未インデックス検出不可", "suggestion": "symbols.db の存在確認を明示的に行う（impact/search パターン準拠）"},
+    {"id": "M3", "title": "KnowledgeRelation/DocSubtype に Serialize が未実装でコンパイル不可", "suggestion": "enum に Serialize 追加するか、JSON出力専用DTOに変換"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "既存テスト波及を必須レベルで明記すべき"},
+    {"id": "S2", "title": "src/lib.rs の追加変更が不要であることを明記すべき"},
+    {"id": "S3", "title": "CorruptedMetadata のエラー表示でも file_path をサニタイズすべき"},
+    {"id": "S4", "title": "LIMIT 100 到達時の警告または切り捨て許容の明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "find_documents_by_issue() の単体テスト追加"},
+    {"id": "N2", "title": "--index-path 経路のE2Eテスト追加"}
+  ],
+  "summary": "resolve_commandindex_dir のアクセス可能性、SymbolStore::open の挙動、enum の Serialize 波及が主な修正点。"
+}

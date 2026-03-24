@@ -174,6 +174,10 @@ fn build_use_cases() -> Vec<UseCaseItem> {
             name: "Watch for changes",
             command: "commandindexdev watch --path .",
         },
+        UseCaseItem {
+            name: "Issue documents",
+            command: "commandindexdev issue 140",
+        },
     ]
 }
 
@@ -196,6 +200,7 @@ fn build_workflows() -> Vec<Workflow> {
                 "commandindexdev search --related src/target.rs --format json",
                 "commandindexdev impact src/target.rs --format json",
                 "commandindexdev context src/target.rs --max-files 20",
+                "commandindexdev issue 140 --format json",
             ],
         },
         Workflow {
@@ -555,6 +560,28 @@ fn build_commands() -> Vec<CommandInfo> {
                 "commandindexdev why dev-reports/design/issue-100-design-policy.md",
                 "commandindexdev why dev-reports/issue/100/work-plan.md --format json",
                 "commandindexdev why dev-reports/design/issue-100-design-policy.md --format path",
+            ],
+        },
+        CommandInfo {
+            name: "issue",
+            description: "Show documents related to an Issue from knowledge graph",
+            when_to_use: "Look up all design docs, reviews, work plans, and progress reports for a specific Issue number",
+            prerequisites: Some("Requires existing index with knowledge graph data (run `index` first)".to_string()),
+            modes: None,
+            conflicts: None,
+            key_options: Some(vec![
+                "<NUMBER>  Issue number (required, positive integer)",
+                "--format <FORMAT>  Output format: human, json, path, llm",
+            ]),
+            output_formats: Some(vec!["human", "json", "path", "llm"]),
+            output: Some("List of related documents grouped by category"),
+            input: None,
+            pipe_support: None,
+            subcommands: None,
+            examples: vec![
+                "commandindexdev issue 140",
+                "commandindexdev issue 140 --format json",
+                "commandindexdev issue 140 --format path",
             ],
         },
         CommandInfo {
