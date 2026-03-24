@@ -1,0 +1,40 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "index --with-embedding / update --with-embedding への影響がIssueに明示されていない",
+      "description": "has_current_embedding()はsrc/cli/embed.rsだけでなくsrc/cli/index.rsのgenerate_embeddings_for_manifest()からも使われている。T1.5でシグネチャを変えるとindex --with-embeddingの挙動にも直接影響。Issue本文では旧モデル削除をembedコマンド実行時に限定しているが、既存機能の整合性としてindex --with-embedding側でも同等の処理が必要。",
+      "suggestion": "影響範囲としてembed以外のembedding生成経路（index --with-embedding, update --with-embedding）も対象に含め、T1.5の受け入れ基準に「embedding生成の全経路でモデル変更時に再生成・旧モデル削除が一貫して行われること」を追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "search_similar()の返り値変更による呼び出し側・テストへの影響を具体化",
+      "description": "返り値変更はEmbeddingStoreのユニットテストとtests/e2e_semantic_hybrid.rsの既存テストにも影響する。",
+      "suggestion": "テスト影響として具体的なテストファイル更新を明記。返り値変更を避けるなら別メソッドや結果構造体に切り出す設計も検討。"
+    },
+    {
+      "id": "S2",
+      "title": "パフォーマンス影響がembed時のDELETE+再生成にも広がる",
+      "description": "モデル変更時に旧レコードDELETE→全セクション再生成のため、embed実行時間とDB書き込み量に影響。",
+      "suggestion": "READMEのEmbeddingセクションに「モデル変更時は再生成に時間がかかる」旨を追記。"
+    },
+    {
+      "id": "S3",
+      "title": "外部実行環境依存の明示",
+      "description": "Ollama上にqllama/bge-m3:q8_0が存在することが前提。634MB・初回pullが必要。",
+      "suggestion": "依存関係として「Rustの依存追加なし」「外部依存としてOllamaモデルの事前pullが必要」を明記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "statusやドキュメント表示面への影響補足",
+      "description": "statusは設定上のembedding modelを表示している。利用者視点の変更範囲明確化。",
+      "suggestion": "status出力確認とREADME更新を成果物に含める。"
+    }
+  ],
+  "summary": "embed以外のembedding生成経路、search_similar()返り値変更に伴う既存テスト群、モデル切替時の再生成コストまで明示したほうが安全。依存関係はcrate追加不要だがOllama上のBGE-M3モデル配備が新しい運用依存。CLI経路の横断影響をIssueに明記すると実装漏れを防げる。",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)"
+}

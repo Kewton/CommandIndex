@@ -1,0 +1,17 @@
+{
+  "stage": 5,
+  "type": "通常レビュー（2回目）",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {"id": "M1", "title": "warn_if_dimension_mismatch()がストレージ層にCLI副作用を持ち込みSRP違反", "suggestion": "SimilaritySearchOutputは純粋なデータ構造に留め、should_warn_dimension_mismatch()のような副作用なしメソッドのみ。eprintln!はCLI層で行う"},
+    {"id": "M2", "title": "delete_stale_model_embeddings()の空文字列ガードがエラーを握りつぶし、Fail Fast違反", "suggestion": "空文字列はエラーとして明示的に失敗させる"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "SimilaritySearchOutputの統計定義が不整合", "suggestion": "skipped_invalid_blob等も分けて持たせるか、skipped_totalを追加"},
+    {"id": "S2", "title": "旧モデル削除の呼び出しが分散しDRY違反", "suggestion": "embedding生成前の共通準備をヘルパー関数に集約"},
+    {"id": "S3", "title": "search_similar()のbreaking change方針が未明記", "suggestion": "内部APIなのでbreaking change許容と明記"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "known_dimensionの完全一致維持方針を明記"}
+  ]
+}

@@ -1,0 +1,10 @@
+{"stage": "1-4 一括反映", "applied_fixes": [
+  {"source": "Stage1-M1,Stage2-M1,Stage3-M1", "action": "suggest.rsを変更対象に追加。影響テーブル、アーキテクチャ図、変更対象ファイル全て修正"},
+  {"source": "Stage1-M2,Stage3-S2", "action": "delete_stale_model_embeddings()に空文字列ガード追加、冪等性の明記、データ消失リスク対策追記"},
+  {"source": "Stage2-M2", "action": "影響範囲テーブルにsuggest.rs追加"},
+  {"source": "Stage3-M2", "action": "symbol_store.rsを変更なしファイルに理由付きで追加"},
+  {"source": "Stage1-S2", "action": "警告表示ロジックをSimilaritySearchOutput.warn_if_dimension_mismatch()メソッドに集約（DRY原則）"},
+  {"source": "Stage2-S3,S4,Stage3-S1,S3,S4", "action": "テスト戦略に既存テスト修正8件（has_current_embedding 3件 + search_similar 5件）とe2e 2箇所を具体化"},
+  {"source": "Stage4-S1", "action": "セキュリティ設計に設定ミスによるデータ喪失対策とリモートendpointリスクを追記"},
+  {"source": "Stage1-N3,Stage2-N2", "action": "SimilaritySearchOutputのtotal_recordsとskipped_dimension_mismatchの定義をdocコメントで明確化"}
+]}

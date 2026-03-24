@@ -45,6 +45,41 @@ commandindex diff src/auth/jwt.rs src/auth/middleware.rs --format json
 
 > **注意:** v0.0.0 時点ではコマンドは未実装です。Phase 1 以降で順次実装されます。
 
+## Embedding（セマンティック検索）
+
+セマンティック検索を利用するには、Ollama でサポートされている embedding モデルが必要です。
+
+### 対応モデル
+
+| モデル | 次元数 | 特徴 |
+|---|---|---|
+| `nomic-embed-text` | 768 | デフォルト。英語中心 |
+| `qllama/bge-m3:q8_0` | 1024 | 多言語対応（日本語に強い） |
+
+### 前提条件
+
+1. [Ollama](https://ollama.com/) をインストール・起動
+2. 使用するモデルを事前に pull
+
+```bash
+# デフォルトモデル
+ollama pull nomic-embed-text
+
+# 日本語対応モデル
+ollama pull qllama/bge-m3:q8_0
+```
+
+### モデル変更手順
+
+`commandindex.toml` の `[embedding]` セクションでモデルを変更した場合、次回の `commandindex embed` または `commandindex index --with-embedding` 実行時に旧モデルの embedding が自動的に削除され、新モデルで再生成されます。
+
+```toml
+[embedding]
+model = "qllama/bge-m3:q8_0"
+```
+
+> **注意:** モデル変更後の再生成にはファイル数に応じた時間がかかります。
+
 ## 開発
 
 ### 前提条件
