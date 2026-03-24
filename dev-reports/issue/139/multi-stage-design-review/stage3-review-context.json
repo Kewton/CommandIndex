@@ -1,0 +1,1 @@
+{"stage": 3, "type": "impact_analysis", "reviewer": "Claude Opus", "must_fix": [{"title": "context.rs enrich_entry() に KnowledgeGraph 対応追加必須"}, {"title": "exhaustive matchの全箇所更新（context.rs は if matches! のため要注意）"}, {"title": "スキーマv3→v4でユーザーにclean→index再実行のガイダンス必要"}], "should_fix_count": 5, "summary": "影響範囲は限定的だが context.rs の暗黙的無視に注意"}

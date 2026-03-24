@@ -347,6 +347,7 @@ pub fn format_related_llm(
                 }
                 crate::output::RelationType::PathSimilarity => "path".to_string(),
                 crate::output::RelationType::DirectoryProximity => "dir".to_string(),
+                crate::output::RelationType::KnowledgeGraph => "knowledge".to_string(),
             })
             .collect();
         writeln!(writer, "- {path} ({})", relations.join(", "))?;

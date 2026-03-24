@@ -289,5 +289,6 @@ fn relation_type_to_string(rt: &crate::output::RelationType) -> String {
         crate::output::RelationType::TagMatch { .. } => "tag_match".to_string(),
         crate::output::RelationType::PathSimilarity => "path_similarity".to_string(),
         crate::output::RelationType::DirectoryProximity => "directory_proximity".to_string(),
+        crate::output::RelationType::KnowledgeGraph => "knowledge_graph".to_string(),
     }
 }

@@ -1,0 +1,27 @@
+{
+  "stage": 8,
+  "type": "apply_codex_impact_review",
+  "applied_fixes": [
+    {
+      "original": "update の差分更新経路が既存の manifest/拡張子スキャンと別になる",
+      "fix": "index/update における処理フローセクションを追加。フル構築（全削除→再構築）と差分更新（git diff ベース独立処理）を明確に分離。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "impact と context の結果も実質的に変わる",
+      "fix": "impact/context への出力変化についてセクションを追加。許容される副作用として明記。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "delete_by_file() と full rebuild の整合性",
+      "fix": "index 時は全削除→再構築、update 時はファイル単位削除→再構築を明記。完了条件も更新。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "テスト影響にフォーマッタ単体テストも含めるべき",
+      "fix": "tests/output_format.rs をテスト影響一覧に追加。",
+      "severity": "should_fix"
+    }
+  ],
+  "summary": "Stage 7 Codex 影響範囲レビューの must_fix 3件、should_fix 1件を全て反映。Issue本文更新済み。"
+}

@@ -1,0 +1,32 @@
+{
+  "stage": 4,
+  "type": "apply_impact_review",
+  "applied_fixes": [
+    {
+      "original": "スキーマバージョンの二重管理に注意",
+      "fix": "IndexState の CURRENT_SCHEMA_VERSION は変更しないことを明記。完了条件にも追加。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "delete_by_file() の knowledge_nodes/edges 削除ロジック必須",
+      "fix": "file_path ベースの DELETE + ON DELETE CASCADE による連鎖削除方式を明記",
+      "severity": "must_fix"
+    },
+    {
+      "original": "RelationType に KnowledgeGraph バリアント追加時、全出力フォーマッタの更新必須",
+      "fix": "スコープに全出力フォーマッタ（human/json/llm）の更新を追加。完了条件にも追加。",
+      "severity": "must_fix"
+    },
+    {
+      "original": "既存テストへの影響",
+      "fix": "影響を受けるテスト一覧と対応方針をセクション追加",
+      "severity": "should_fix"
+    },
+    {
+      "original": "インデックス構築時間への影響",
+      "fix": "トランザクションバッチ処理を設計方針に追加",
+      "severity": "nice_to_have"
+    }
+  ],
+  "summary": "Stage 3 の must_fix 3件、should_fix の主要ポイントを反映。Issue本文更新済み。"
+}

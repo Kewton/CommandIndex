@@ -1,0 +1,52 @@
+{
+  "stage": 5,
+  "type": "normal_review_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "title": ".json レビュー文書を対象にした設計が、現行インデクサの対象拡張子と不整合",
+      "description": "Issue本文では dev-reports/issue/XXX/issue-review/*.json と multi-stage-design-review/*.json を knowledge graph の主要入力としているが、現行のフル/差分インデクサは md/ts/tsx/py しか走査しない。このままでは commandindexdev index でも update でも当該 JSON 文書を検出・更新できず、完了条件の「自動構築」「git diffから差分更新」は満たせない。スコープを Markdown のみに絞るか、JSON を走査対象に含める設計変更が必要。",
+      "affected_area": "src/indexer/manifest.rs, src/indexer/diff.rs, src/cli/index.rs"
+    },
+    {
+      "title": "RelationType::KnowledgeGraph の影響範囲が Issue 本文より広い",
+      "description": "Issue本文では src/output/human.rs, json.rs, llm.rs の更新必須とあるが、実際には src/cli/impact.rs と src/cli/context.rs にも RelationType の網羅的な変換処理があり、新バリアント追加時はここも更新しないとビルド不能になる。impact/context を機能スコープ外にしていても、型追加の波及先として受け入れ基準に含める必要がある。",
+      "affected_area": "src/output/mod.rs, src/output/human.rs, src/output/json.rs, src/output/llm.rs, src/cli/impact.rs, src/cli/context.rs"
+    },
+    {
+      "title": "file ノードと実装関連エッジの構築方針が未定義",
+      "description": "概要ではライフサイクル全体を構造化するとあるが、自動構築ルールで生成されるのは issue と document のみで、file ノードや modifies 相当の実装リンクは定義されていない。初回実装を「Issue→文書群の関連付けまで」に狭めるか、実装ファイルとの接続方法を明記すべき。",
+      "affected_area": "概要, ノードタイプ定義, ノード・エッジの自動構築, 完了条件"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "delete_by_file() で孤立した issue ノードをどう扱うかが未定義",
+      "description": "knowledge_nodes.file_path を使った削除と ON DELETE CASCADE で文書ノードとエッジは消せるが、issue ノードは file_path を持たないため、最後の関連文書が消えた後も孤立ノードとして残る。孤立ノードを残置するのか差分更新時にクリーンアップするのかを明確にすべき。",
+      "affected_area": "src/indexer/symbol_store.rs (delete_by_file), スキーマ設計"
+    },
+    {
+      "title": "対象ドキュメント範囲の定義が曖昧",
+      "description": "summary-report.md, hypothesis-verification.md, original-issue.json, pm-auto-dev/iteration-1/* など複数系統の成果物が存在するが、Issue本文では has_design/has_review/has_workplan だけが明示。初回リリースでどこまでを knowledge graph 化するのか、除外対象も含めて固定すべき。",
+      "affected_area": "ファイル名パースによるエンティティ抽出, エッジの抽出ソース"
+    },
+    {
+      "title": "スコア合成ルールの粒度が不足",
+      "description": "重み 0.8 は定義されているが、同一ファイルに対して複数エッジがある場合に加算するのか一度だけ加点するのか、他 relation との重複時の扱いが未定義。現行 add_relation() の実装挙動に合わせるならその挙動を Issue に明示すべき。",
+      "affected_area": "src/search/related.rs, 既存機能との統合"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "Knowledge graph 専用の E2E データセットの追加",
+      "description": "dev-reports/design と dev-reports/issue/<n>/... を含む最小 fixture を追加して、設計書からレビュー・作業計画が返ることを固定すると保守しやすい。",
+      "affected_area": "tests/e2e_related_search.rs"
+    },
+    {
+      "title": "knowledge_edges.metadata の必須キーの固定",
+      "description": "doc_subtype, stage, date の例はあるが、初回実装で使うキーだけでも固定しておくと実装が安定する。",
+      "affected_area": "スキーマ, 実装方針"
+    }
+  ],
+  "summary": "1回目レビューの主要指摘はかなり整理されているが、現行コードベースと照合するとまだ3点が重い。特に dev-reports/.../*.json は現状の index/update の走査対象外で、このままでは完了条件を実現できない。また RelationType 追加の波及先は出力フォーマッタだけではなく impact/context にも及ぶ。加えて、Issueのゴールは「実装」まで含むと書かれているのに、実際の自動構築設計は文書関連付けまでに留まっている。"
+}

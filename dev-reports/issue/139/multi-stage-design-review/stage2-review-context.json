@@ -1,0 +1,24 @@
+{
+  "stage": 2,
+  "type": "consistency_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {"title": "update.rs は存在しない - レイヤー構成図が不正確", "affected_area": "設計書セクション2"},
+    {"title": "delete_by_file() の設計例の正確性", "affected_area": "設計書セクション4"},
+    {"title": "context.rs の RelationType が if matches! パターンで match ではない", "affected_area": "設計書セクション5"}
+  ],
+  "should_fix": [
+    {"title": "context.rs の if matches! で KnowledgeGraph が暗黙的に無視される", "affected_area": "src/cli/context.rs"},
+    {"title": "conn プライベートフィールドと将来の分離方針", "affected_area": "src/indexer/symbol_store.rs"},
+    {"title": "ON DELETE CASCADE の前提条件(PRAGMA foreign_keys=ON)を明記", "affected_area": "スキーマ設計"},
+    {"title": "find_related()でのscore順序確認", "affected_area": "src/search/related.rs"},
+    {"title": "KG構築タイミングを writer.commit() 直後に変更すべき", "affected_area": "src/cli/index.rs"}
+  ],
+  "nice_to_have": [
+    {"title": "KnowledgeRelatedResult.relation を enum にする検討"},
+    {"title": "Lazy パターンの統一（LazyLock vs once_cell）"},
+    {"title": "スキーマバージョン変更時のエラーメッセージ確認"},
+    {"title": "regex クレートの依存確認"}
+  ],
+  "summary": "全体的に高い整合性。must_fix 3件: update.rs不在、delete_by_file例の正確性、context.rsのmatchパターン差異。"
+}

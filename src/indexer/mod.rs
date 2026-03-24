@@ -1,4 +1,5 @@
 pub mod diff;
+pub mod knowledge;
 pub mod manifest;
 pub mod reader;
 pub mod schema;

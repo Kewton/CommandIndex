@@ -1,0 +1,31 @@
+{
+  "stage": 7,
+  "type": "impact_review_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "title": "commandindexdev update の差分更新経路が既存のmanifest/拡張子スキャンと別になるため、更新責務の分離を明記すべき",
+      "description": "現行の update は scan_files() と manifest ベースで通常インデックス対象のみを差分検知している。dev-reports/ 用の独立差分処理を追加しない限り、update 時に knowledge graph だけが更新漏れする。index/update の制御フロー変更が必須。",
+      "affected_area": "src/cli/index.rs, src/indexer/diff.rs, src/indexer/manifest.rs"
+    },
+    {
+      "title": "search --related への統合により impact と context の結果も変わる点を影響範囲として固定すべき",
+      "description": "impact/context へのグラフ走査自体は後続 Issue だが、find_related() を利用しているため重み 0.8 の追加だけで出力順位・relation 表示が変わる。出力変化を許容する前提を明記すべき。",
+      "affected_area": "src/search/related.rs, src/cli/impact.rs, src/cli/context.rs"
+    },
+    {
+      "title": "独立走査パスの追加に伴う delete_by_file() と full rebuild の整合性を仕様化すべき",
+      "description": "フル構築時に knowledge テーブルを全削除して再投入するのか、ファイル単位で差分削除するのかを固定しないと既存挙動とズレる。index と update で削除戦略を明確にすべき。",
+      "affected_area": "src/indexer/symbol_store.rs, src/cli/index.rs"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "テスト影響にフォーマッタ単体テストも含めるべき",
+      "description": "RelationType に新バリアントを追加すると output/human.rs, json.rs, llm.rs の表現差分を検証している tests/output_format.rs も更新対象になる。",
+      "affected_area": "tests/output_format.rs"
+    }
+  ],
+  "nice_to_have": [],
+  "summary": "影響範囲の主要ポイントは (1) update 時の独立差分処理の追加、(2) impact/context への出力変化の許容明記、(3) フル構築と差分更新での削除戦略の統一。"
+}
