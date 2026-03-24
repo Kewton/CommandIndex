@@ -84,6 +84,7 @@ pub enum SearchError {
     SchemaVersionMismatch,
     RelatedSearch(crate::search::related::RelatedSearchError),
     Embedding(crate::embedding::EmbeddingError),
+    EmbeddingStore(crate::embedding::store::EmbeddingStoreError),
     NoEmbeddings,
     Config(String),
     Workspace(crate::config::workspace::WorkspaceConfigError),
@@ -120,6 +121,7 @@ impl fmt::Display for SearchError {
                 }
                 _ => write!(f, "Embedding error: {e}"),
             },
+            SearchError::EmbeddingStore(e) => write!(f, "Embedding store error: {e}"),
             SearchError::NoEmbeddings => {
                 write!(f, "No embeddings found. Run `commandindex embed` first.")
             }
@@ -142,6 +144,7 @@ impl std::error::Error for SearchError {
             SearchError::SchemaVersionMismatch => None,
             SearchError::RelatedSearch(e) => Some(e),
             SearchError::Embedding(e) => Some(e),
+            SearchError::EmbeddingStore(e) => Some(e),
             SearchError::NoEmbeddings => None,
             SearchError::Config(_) => None,
             SearchError::Workspace(e) => Some(e),
@@ -180,6 +183,19 @@ impl From<SymbolStoreError> for SearchError {
 impl From<crate::embedding::EmbeddingError> for SearchError {
     fn from(e: crate::embedding::EmbeddingError) -> Self {
         SearchError::Embedding(e)
+    }
+}
+
+impl From<crate::embedding::store::EmbeddingStoreError> for SearchError {
+    fn from(e: crate::embedding::store::EmbeddingStoreError) -> Self {
+        // Map "no such table" SQLite errors to NoEmbeddings
+        if let crate::embedding::store::EmbeddingStoreError::Sqlite(ref sqlite_err) = e {
+            let msg = sqlite_err.to_string();
+            if msg.contains("no such table: embeddings") {
+                return SearchError::NoEmbeddings;
+            }
+        }
+        SearchError::EmbeddingStore(e)
     }
 }
 
@@ -508,28 +524,34 @@ pub fn run_semantic_search(
         ));
     }
 
-    let (tantivy_dir, db_path, config) = if let Some(c) = ctx {
-        (c.index_dir(), c.symbol_db_path(), c.config.clone())
+    let (tantivy_dir, embeddings_db_path, config) = if let Some(c) = ctx {
+        (c.index_dir(), c.embeddings_db_path(), c.config.clone())
     } else {
         let default_dir = Path::new(".").join(crate::INDEX_DIR_NAME);
         let cfg = load_config(Path::new("."))?;
         (
             crate::indexer::index_dir(&default_dir),
-            crate::indexer::symbol_db_path(&default_dir),
+            crate::indexer::embeddings_db_path(&default_dir),
             cfg,
         )
     };
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
-    if !db_path.exists() {
-        return Err(SearchError::SymbolDbNotFound);
+    if !embeddings_db_path.exists() {
+        return Err(SearchError::NoEmbeddings);
     }
     let provider = crate::embedding::create_provider(&config.embedding)?;
 
-    // Check embeddings exist (db_path already validated above)
-    let store = SymbolStore::open(&db_path)?;
-    if store.count_embeddings()? == 0 {
+    // Check embeddings exist
+    let emb_store = match crate::embedding::store::EmbeddingStore::open(&embeddings_db_path) {
+        Ok(s) => s,
+        Err(crate::embedding::store::EmbeddingStoreError::SchemaVersionMismatch { .. }) => {
+            return Err(SearchError::SchemaVersionMismatch);
+        }
+        Err(e) => return Err(e.into()),
+    };
+    if emb_store.count()? == 0 {
         return Err(SearchError::NoEmbeddings);
     }
 
@@ -541,7 +563,7 @@ pub fn run_semantic_search(
     })?;
 
     // Search similar with oversampling
-    let similar_results = store.search_similar(query_embedding, limit.saturating_mul(5))?;
+    let similar_results = emb_store.search_similar(query_embedding, limit.saturating_mul(5))?;
 
     // Enrich with metadata from tantivy
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
@@ -574,13 +596,13 @@ pub fn run_semantic_search(
 }
 
 fn enrich_with_metadata(
-    similar_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    similar_results: &[crate::embedding::store::EmbeddingSimilarityResult],
     reader: &IndexReaderWrapper,
 ) -> Result<Vec<SemanticSearchResult>, SearchError> {
     use std::collections::HashMap;
 
     // Group by file_path
-    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+    let mut groups: HashMap<&str, Vec<&crate::embedding::store::EmbeddingSimilarityResult>> =
         HashMap::new();
     for result in similar_results {
         groups.entry(&result.file_path).or_default().push(result);
@@ -639,11 +661,15 @@ fn try_hybrid_search(
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
 
-    // 1. SymbolStore を開く
-    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
-    let store = match crate::indexer::symbol_store::SymbolStore::open(&db_path) {
+    // 1. EmbeddingStore を開く
+    let embeddings_db_path = crate::indexer::embeddings_db_path(commandindex_dir);
+    if !embeddings_db_path.exists() {
+        eprintln!("[hybrid] Embedding database not found, using BM25 only.");
+        return Ok(bm25_results);
+    }
+    let emb_store = match crate::embedding::store::EmbeddingStore::open(&embeddings_db_path) {
         Ok(s) => s,
-        Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
+        Err(crate::embedding::store::EmbeddingStoreError::SchemaVersionMismatch { .. }) => {
             return Err(SearchError::SchemaVersionMismatch);
         }
         Err(_) => {
@@ -653,7 +679,7 @@ fn try_hybrid_search(
     };
 
     // 2. Embeddingが存在するか確認
-    match store.count_embeddings() {
+    match emb_store.count() {
         Ok(0) => {
             eprintln!("[hybrid] No embeddings found, using BM25 only.");
             return Ok(bm25_results);
@@ -692,7 +718,7 @@ fn try_hybrid_search(
     };
 
     // 5. 類似検索（オーバーサンプリング付き）
-    let similar_results = match store.search_similar(
+    let similar_results = match emb_store.search_similar(
         query_embedding,
         options.limit.saturating_mul(HYBRID_OVERSAMPLING_FACTOR),
     ) {
@@ -754,13 +780,13 @@ fn try_hybrid_search(
 /// セマンティック検索結果をSearchResult型に変換する（ハイブリッド検索用）
 /// tantivyからメタデータを取得し、section_headingでマッチングする。
 fn enrich_semantic_to_search_results(
-    semantic_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    semantic_results: &[crate::embedding::store::EmbeddingSimilarityResult],
     reader: &IndexReaderWrapper,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use std::collections::HashMap;
 
     // Group by file_path
-    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+    let mut groups: HashMap<&str, Vec<&crate::embedding::store::EmbeddingSimilarityResult>> =
         HashMap::new();
     for result in semantic_results {
         groups.entry(&result.file_path).or_default().push(result);

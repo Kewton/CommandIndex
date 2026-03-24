@@ -1,0 +1,14 @@
+{
+  "stage": 6,
+  "type": "apply_review_2nd",
+  "applied_items": ["MF-1", "MF-2", "SF-1", "SF-2", "SF-3", "NH-1"],
+  "issue_updated": true,
+  "changes": [
+    "hybrid_rerank() → try_hybrid_search() に関数名修正",
+    "修正方針にembeddings.db未存在・テーブル未作成時の扱いを明記",
+    "EmbeddingStore既存API(count())活用を明記、count_embeddings()新設を削除",
+    "search_similar()にSymbolStore同等のバリデーション・ソート契約維持を追記",
+    "AC-6として見出し・本文・タグ補完の維持を追加",
+    "設計書更新の具体的な責務分担記述を備考に追加"
+  ]
+}

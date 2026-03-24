@@ -1,0 +1,58 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "category": "根本原因の正確性",
+      "description": "Issueの「可能性のある原因」セクションが推測レベルに留まっており、仮説検証で確定した根本原因が明記されていない。",
+      "suggestion": "「確定した根本原因」セクションに書き換え: (1) embedコマンドの書き込み先: embeddings.db, (2) searchの読み取り先: symbols.db, (3) statusは正しくembeddings.dbを参照"
+    },
+    {
+      "id": "MF-2",
+      "category": "受け入れ基準の欠如",
+      "description": "明確な受け入れ基準が未定義",
+      "suggestion": "AC-1〜AC-5を追加: semantic検索動作, hybrid検索動作, 後方互換性, エラーメッセージ, テスト・clippy"
+    },
+    {
+      "id": "MF-3",
+      "category": "修正方針の明示",
+      "description": "修正方針が記載されていない",
+      "suggestion": "2つの選択肢を明記: (A) searchをembeddings.dbから読むよう変更(推奨), (B) embedをsymbols.dbに統合(別Issue)"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "category": "影響範囲の網羅性",
+      "description": "hybrid検索パス(src/cli/search.rs:640-666)も同じ問題を抱えている",
+      "suggestion": "影響箇所: run_semantic_search()とhybrid_rerank()を明記"
+    },
+    {
+      "id": "SF-2",
+      "category": "テスト戦略",
+      "description": "既存E2Eテスト(tests/e2e_semantic_hybrid.rs)がsymbols.dbに直接embeddingsを挿入しており、修正でテスト変更が必要",
+      "suggestion": "テスト影響分析をIssueに記載"
+    },
+    {
+      "id": "SF-3",
+      "category": "設計経緯の記録",
+      "description": "設計書と実装の乖離が原因",
+      "suggestion": "設計書(dev-reports)の更新も修正対象に含める"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "category": "将来的な改善",
+      "description": "二重管理の解消を別Issueで管理"
+    },
+    {
+      "id": "NH-2",
+      "category": "診断改善",
+      "description": "エラーメッセージの改善"
+    }
+  ],
+  "summary": "根本原因の明記、受け入れ基準の定義、修正方針の提示が必要"
+}

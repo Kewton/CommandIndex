@@ -1,0 +1,1 @@
+{"stage":1,"type":"design_principles","reviewer":"Claude Opus","must_fix_count":3,"should_fix_count":3,"nice_to_have_count":3,"key_issues":["DRY: cosine_similarity/BLOB変換の重複防止方針が不明確","SRP: SymbolStoreのembedding関連メソッド残存の解消計画が不十分","KISS: 全件ロード方式の意図的判断として明記が必要"]}

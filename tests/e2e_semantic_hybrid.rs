@@ -5,8 +5,8 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+use commandindex::embedding::store::EmbeddingStore;
 use commandindex::indexer::reader::SearchResult;
-use commandindex::indexer::symbol_store::{EmbeddingInfo, SymbolStore};
 use commandindex::search::hybrid::rrf_merge;
 
 // ---------------------------------------------------------------------------
@@ -65,14 +65,32 @@ Use pip to install packages.
     Ok((dir, commandindex_dir))
 }
 
-/// Open SymbolStore, create tables, and insert embeddings.
+/// A test embedding record for insertion.
+struct TestEmbedding {
+    file_path: String,
+    section_heading: String,
+    embedding: Vec<f32>,
+    model: String,
+    file_hash: String,
+}
+
+/// Open EmbeddingStore, create tables, and insert embeddings.
 fn insert_test_embeddings(
-    symbols_db_path: &std::path::Path,
-    embeddings: &[EmbeddingInfo],
+    embeddings_db_path: &std::path::Path,
+    embeddings: &[TestEmbedding],
 ) -> Result<(), Box<dyn Error>> {
-    let store = SymbolStore::open(symbols_db_path)?;
+    let store = EmbeddingStore::open(embeddings_db_path)?;
     store.create_tables()?;
-    store.insert_embeddings(embeddings)?;
+    for emb in embeddings {
+        store.upsert_embedding(
+            &emb.file_path,
+            &emb.section_heading,
+            &emb.embedding,
+            emb.embedding.len(),
+            &emb.model,
+            &emb.file_hash,
+        )?;
+    }
     Ok(())
 }
 
@@ -114,17 +132,17 @@ fn make_search_result(path: &str, heading: &str, score: f32) -> SearchResult {
 #[test]
 fn test_embedding_insert_and_count() {
     let dir = tempfile::tempdir().expect("test_embedding_insert_and_count: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store =
-        SymbolStore::open(&db_path).expect("test_embedding_insert_and_count: open SymbolStore");
+    let store = EmbeddingStore::open(&db_path)
+        .expect("test_embedding_insert_and_count: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_embedding_insert_and_count: create tables");
 
     // Initially zero embeddings
     let count = store
-        .count_embeddings()
+        .count()
         .expect("test_embedding_insert_and_count: count before insert");
     assert_eq!(
         count, 0,
@@ -132,30 +150,29 @@ fn test_embedding_insert_and_count() {
     );
 
     // Insert 2 embeddings
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "alpha.md".to_string(),
-            section_heading: "Alpha Document".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "beta.md".to_string(),
-            section_heading: "Beta Document".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_embedding_insert_and_count: insert embeddings");
+        .upsert_embedding(
+            "alpha.md",
+            "Alpha Document",
+            &SIMILAR_VEC,
+            4,
+            "test-model",
+            "hash_a",
+        )
+        .expect("test_embedding_insert_and_count: insert alpha");
+    store
+        .upsert_embedding(
+            "beta.md",
+            "Beta Document",
+            &DIFFERENT_VEC,
+            4,
+            "test-model",
+            "hash_b",
+        )
+        .expect("test_embedding_insert_and_count: insert beta");
 
     let count = store
-        .count_embeddings()
+        .count()
         .expect("test_embedding_insert_and_count: count after insert");
     assert_eq!(
         count, 2,
@@ -166,34 +183,20 @@ fn test_embedding_insert_and_count() {
 #[test]
 fn test_semantic_search_basic() {
     let dir = tempfile::tempdir().expect("test_semantic_search_basic: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store = SymbolStore::open(&db_path).expect("test_semantic_search_basic: open SymbolStore");
+    let store =
+        EmbeddingStore::open(&db_path).expect("test_semantic_search_basic: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_semantic_search_basic: create tables");
 
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "alpha.md".to_string(),
-            section_heading: "Alpha".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "beta.md".to_string(),
-            section_heading: "Beta".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_semantic_search_basic: insert embeddings");
+        .upsert_embedding("alpha.md", "Alpha", &SIMILAR_VEC, 4, "test-model", "hash_a")
+        .expect("test_semantic_search_basic: insert alpha");
+    store
+        .upsert_embedding("beta.md", "Beta", &DIFFERENT_VEC, 4, "test-model", "hash_b")
+        .expect("test_semantic_search_basic: insert beta");
 
     // Search with QUERY_VEC - should rank alpha (similar) above beta (different)
     let results = store
@@ -228,43 +231,24 @@ fn test_semantic_search_basic() {
 #[test]
 fn test_semantic_search_top_k() {
     let dir = tempfile::tempdir().expect("test_semantic_search_top_k: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store = SymbolStore::open(&db_path).expect("test_semantic_search_top_k: open SymbolStore");
+    let store =
+        EmbeddingStore::open(&db_path).expect("test_semantic_search_top_k: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_semantic_search_top_k: create tables");
 
     // Insert 3 embeddings
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "a.md".to_string(),
-            section_heading: "A".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "b.md".to_string(),
-            section_heading: "B".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "c.md".to_string(),
-            section_heading: "C".to_string(),
-            embedding: QUERY_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_c".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_semantic_search_top_k: insert embeddings");
+        .upsert_embedding("a.md", "A", &SIMILAR_VEC, 4, "test-model", "hash_a")
+        .expect("test_semantic_search_top_k: insert a");
+    store
+        .upsert_embedding("b.md", "B", &DIFFERENT_VEC, 4, "test-model", "hash_b")
+        .expect("test_semantic_search_top_k: insert b");
+    store
+        .upsert_embedding("c.md", "C", &QUERY_VEC, 4, "test-model", "hash_c")
+        .expect("test_semantic_search_top_k: insert c");
 
     // top_k=2 should return only 2 results
     let results = store
@@ -455,25 +439,23 @@ fn test_context_with_embeddings() {
     let (dir, commandindex_dir) =
         setup_semantic_test_dir().expect("test_context_with_embeddings: setup");
 
-    // Insert embeddings into the symbols.db
-    let symbols_db = commandindex_dir.join("symbols.db");
+    // Insert embeddings into the embeddings.db
+    let embeddings_db = commandindex_dir.join("embeddings.db");
     insert_test_embeddings(
-        &symbols_db,
+        &embeddings_db,
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha Document".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta Document".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],
@@ -517,24 +499,22 @@ fn test_hybrid_auto_switch() {
 
     create_test_config(&commandindex_dir).expect("test_hybrid_auto_switch: create config");
 
-    // Insert fixture embeddings into symbols.db so hybrid path is triggered
+    // Insert fixture embeddings into embeddings.db so hybrid path is triggered
     insert_test_embeddings(
-        &commandindex_dir.join("symbols.db"),
+        &commandindex_dir.join("embeddings.db"),
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],
@@ -566,24 +546,22 @@ fn test_hybrid_bm25_fallback() {
 
     create_test_config(&commandindex_dir).expect("test_hybrid_bm25_fallback: create config");
 
-    // Insert fixture embeddings into symbols.db so hybrid path is triggered
+    // Insert fixture embeddings into embeddings.db so hybrid path is triggered
     insert_test_embeddings(
-        &commandindex_dir.join("symbols.db"),
+        &commandindex_dir.join("embeddings.db"),
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],
