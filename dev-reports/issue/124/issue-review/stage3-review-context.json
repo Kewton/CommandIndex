@@ -1,0 +1,32 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {"id": "M1", "title": "EmbeddingStoreにsearch_similar()メソッドが不足", "risk": "high"},
+    {"id": "M2", "title": "EmbeddingStoreにcount_embeddings()相当メソッドが不足（count()は存在するが名前が異なる）", "risk": "medium"},
+    {"id": "M3", "title": "run_semantic_search()のDB参照先をembeddings.dbに変更", "risk": "high"},
+    {"id": "M4", "title": "try_hybrid_search()のDB参照先をembeddings.dbに変更", "risk": "high"},
+    {"id": "M5", "title": "EmbeddingSimilarityResult型をEmbeddingStoreから利用可能にする", "risk": "high"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "e2e_semantic_hybrid.rsテストをEmbeddingStore使用に更新", "risk": "medium"},
+    {"id": "S2", "title": "cosine_similarity関数をembedding/store.rsに追加", "risk": "low"},
+    {"id": "S3", "title": "EmbeddingStoreError -> SearchErrorの変換実装", "risk": "medium"},
+    {"id": "S4", "title": "blob_to_embedding検証ヘルパーの追加", "risk": "low"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "SymbolStoreのembeddingsテーブルを将来的に削除"},
+    {"id": "N2", "title": "共通モジュールにcosine_similarityとEmbeddingSimilarityResultを抽出"},
+    {"id": "N3", "title": "パフォーマンス: 全件スキャンは現在のスケールでは問題なし"}
+  ],
+  "key_findings": {
+    "schema_differences": {
+      "symbol_store": {"columns": ["file_path", "section_heading", "model_name"]},
+      "embedding_store": {"columns": ["section_path", "section_heading", "model"]}
+    },
+    "missing_api": ["search_similar()", "count_embeddings()", "EmbeddingSimilarityResult"],
+    "test_impact": "6 tests in e2e_semantic_hybrid.rs need updating"
+  },
+  "summary": "EmbeddingStoreにsearch_similar()等のAPIを追加し、search.rsの2箇所のDB参照先を変更し、テストを更新する必要がある"
+}

@@ -8,14 +8,15 @@ Examples:
   commandindexdev suggest --for \"fix login bug\" --format json
   commandindexdev suggest --for \"refactor database layer\" --format path";
 
-use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 
 use crate::cli::search::SearchContext;
-use crate::indexer::reader::{IndexReaderWrapper, SearchResult};
-use crate::indexer::symbol_store::SymbolStore;
+use crate::indexer::reader::IndexReaderWrapper;
 use crate::output::{self, OutputFormat, SuggestResult, SuggestStep};
+use crate::search::hybrid::rrf_merge_files;
+use crate::search::ranking;
+use crate::search::semantic;
 
 /// バイナリ名の定数化（DRY: 一箇所管理）
 const BINARY_NAME: &str = "commandindexdev";
@@ -25,6 +26,9 @@ const MAX_INPUT_LENGTH: usize = 500;
 
 /// BM25検索のデフォルトlimit
 const BM25_SEARCH_LIMIT: usize = 20;
+
+/// セマンティックフォールバック時の検索上限
+const SEMANTIC_FALLBACK_LIMIT: usize = 20;
 
 /// ファイル単位dedupの上限
 const DEDUP_FILE_LIMIT: usize = 5;
@@ -104,32 +108,6 @@ pub(crate) fn shell_quote(input: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// BM25 search & dedup
-// ---------------------------------------------------------------------------
-
-/// BM25検索を実行してファイルパスのリストを返す
-fn search_entry_files(
-    reader: &IndexReaderWrapper,
-    query: &str,
-) -> Result<Vec<(String, f32)>, SuggestError> {
-    let results = reader.search(query, BM25_SEARCH_LIMIT)?;
-    Ok(deduplicate_by_file(results, DEDUP_FILE_LIMIT))
-}
-
-/// BM25検索結果をファイル単位に正規化・重複排除
-fn deduplicate_by_file(results: Vec<SearchResult>, limit: usize) -> Vec<(String, f32)> {
-    let mut file_scores: HashMap<String, f32> = HashMap::new();
-    for result in results {
-        let entry = file_scores.entry(result.path.clone()).or_insert(0.0);
-        *entry = entry.max(result.score);
-    }
-    let mut sorted: Vec<(String, f32)> = file_scores.into_iter().collect();
-    sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    sorted.truncate(limit);
-    sorted
-}
-
-// ---------------------------------------------------------------------------
 // Strategy building
 // ---------------------------------------------------------------------------
 
@@ -138,7 +116,7 @@ fn deduplicate_by_file(results: Vec<SearchResult>, limit: usize) -> Vec<(String,
 /// `store` が `Some` の場合はセマンティック検索ステップも追加する。
 /// `None` の場合はBM25ベースのステップのみ生成する（W2対応）。
 fn build_strategy(
-    store: Option<&SymbolStore>,
+    emb_store: Option<&crate::embedding::store::EmbeddingStore>,
     entry_files: &[(String, f32)],
     original_query: &str,
 ) -> SuggestResult {
@@ -164,9 +142,7 @@ fn build_strategy(
     }
 
     // semantic search (条件付き) — 元の task description を使う
-    let has_embeddings = store
-        .map(|s| maybe_add_semantic_step(&mut steps, s, original_query))
-        .unwrap_or(false);
+    let has_embeddings = maybe_add_semantic_step(&mut steps, emb_store, original_query);
 
     // 追加のエントリーファイルがあれば context を追加
     for (file, _) in entry_files.iter().skip(1).take(2) {
@@ -185,7 +161,10 @@ fn build_strategy(
 }
 
 /// BM25結果が0件の場合のフォールバック戦略
-fn build_fallback_strategy() -> SuggestResult {
+///
+/// `has_embeddings` — embeddings.db 上にデータが存在するか。
+/// semantic fallback 失敗時でも、DB にデータがあれば true を維持する。
+fn build_fallback_strategy(has_embeddings: bool) -> SuggestResult {
     let steps = vec![
         SuggestStep {
             command: format!("{BINARY_NAME} status --detail"),
@@ -198,15 +177,20 @@ fn build_fallback_strategy() -> SuggestResult {
     ];
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
-        has_embeddings: false,
+        has_embeddings,
         strategy: steps,
     }
 }
 
 /// Embedding構築済みの場合のみsemantic検索ステップを追加
 /// Returns whether embeddings are available.
-fn maybe_add_semantic_step(steps: &mut Vec<SuggestStep>, store: &SymbolStore, query: &str) -> bool {
-    if let Ok(count) = store.count_embeddings()
+fn maybe_add_semantic_step(
+    steps: &mut Vec<SuggestStep>,
+    emb_store: Option<&crate::embedding::store::EmbeddingStore>,
+    query: &str,
+) -> bool {
+    if let Some(store) = emb_store
+        && let Ok(count) = store.count()
         && count > 0
     {
         let quoted = shell_quote(query);
@@ -247,28 +231,71 @@ pub fn run_suggest(
     }
     let reader = IndexReaderWrapper::open(&index_dir)?;
 
-    // SymbolStore はオプショナル: DBが存在しない場合もBM25ベースで戦略を返す（W2対応）
-    let store = {
-        let db_path = ctx.symbol_db_path();
+    // EmbeddingStore はオプショナル: DBが存在しない場合もBM25ベースで戦略を返す（W2対応）
+    let emb_store = {
+        let db_path = ctx.embeddings_db_path();
         if db_path.exists() {
-            SymbolStore::open(&db_path).ok()
+            crate::embedding::store::EmbeddingStore::open(&db_path).ok()
         } else {
             None
         }
     };
 
     // 4. BM25検索 → ファイル単位dedup
-    let entry_files = search_entry_files(&reader, &query)?;
+    let bm25_results = reader
+        .search(&query, BM25_SEARCH_LIMIT)
+        .map_err(SuggestError::Reader)?;
+    let bm25_files = ranking::aggregate_by_file(bm25_results, BM25_SEARCH_LIMIT);
+    let bm25_files = ranking::apply_file_type_weight(bm25_files, DEDUP_FILE_LIMIT * 3);
 
-    // 5. 戦略生成
+    // 5. セマンティック検索を常に試行
+    let semantic_files = match semantic::query_semantic(
+        &ctx.embeddings_db_path(),
+        &ctx.config,
+        &query,
+        SEMANTIC_FALLBACK_LIMIT,
+    ) {
+        Ok(Some(results)) => {
+            let files = ranking::aggregate_similarity_by_file(results, DEDUP_FILE_LIMIT * 3);
+            Some(ranking::apply_file_type_weight(files, DEDUP_FILE_LIMIT * 3))
+        }
+        Ok(None) => None,
+        Err(e) => {
+            eprintln!("[suggest] semantic search failed: {e}");
+            None
+        }
+    };
+
+    // 6. 結果統合
+    let entry_files = match semantic_files {
+        Some(ref sem) if !bm25_files.is_empty() => {
+            rrf_merge_files(&bm25_files, sem, DEDUP_FILE_LIMIT)
+        }
+        Some(mut sem) if bm25_files.is_empty() => {
+            sem.truncate(DEDUP_FILE_LIMIT);
+            sem
+        }
+        _ => {
+            let mut files = bm25_files;
+            files.truncate(DEDUP_FILE_LIMIT);
+            files
+        }
+    };
+
+    // 7. 戦略生成
+    let has_embeddings = emb_store
+        .as_ref()
+        .and_then(|s| s.count().ok())
+        .is_some_and(|c| c > 0);
+
     let mut result = if entry_files.is_empty() {
-        build_fallback_strategy()
+        build_fallback_strategy(has_embeddings)
     } else {
-        build_strategy(store.as_ref(), &entry_files, &query)
+        build_strategy(emb_store.as_ref(), &entry_files, &query)
     };
     result.query = query;
 
-    // 6. 出力
+    // 8. 出力
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
     output::format_suggest_results(&result, format, &mut writer)?;
@@ -382,95 +409,11 @@ mod tests {
         assert_eq!(result, "'a file with spaces.rs'");
     }
 
-    // --- deduplicate_by_file tests ---
-
-    #[test]
-    fn dedup_removes_duplicates_keeps_max_score() {
-        let results = vec![
-            SearchResult {
-                path: "a.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 0,
-                score: 1.0,
-            },
-            SearchResult {
-                path: "a.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 10,
-                score: 2.0,
-            },
-            SearchResult {
-                path: "b.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 0,
-                score: 0.5,
-            },
-        ];
-        let deduped = deduplicate_by_file(results, 10);
-        assert_eq!(deduped.len(), 2);
-        // a.rs should have max score 2.0 and be first
-        assert_eq!(deduped[0].0, "a.rs");
-        assert!((deduped[0].1 - 2.0).abs() < f32::EPSILON);
-        assert_eq!(deduped[1].0, "b.rs");
-    }
-
-    #[test]
-    fn dedup_respects_limit() {
-        let results = vec![
-            SearchResult {
-                path: "a.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 0,
-                score: 3.0,
-            },
-            SearchResult {
-                path: "b.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 0,
-                score: 2.0,
-            },
-            SearchResult {
-                path: "c.rs".to_string(),
-                heading: String::new(),
-                body: String::new(),
-                tags: String::new(),
-                heading_level: 0,
-                line_start: 0,
-                score: 1.0,
-            },
-        ];
-        let deduped = deduplicate_by_file(results, 2);
-        assert_eq!(deduped.len(), 2);
-        assert_eq!(deduped[0].0, "a.rs");
-        assert_eq!(deduped[1].0, "b.rs");
-    }
-
-    #[test]
-    fn dedup_empty_input() {
-        let deduped = deduplicate_by_file(vec![], 10);
-        assert!(deduped.is_empty());
-    }
-
     // --- build_fallback_strategy tests ---
 
     #[test]
     fn fallback_strategy_has_valid_commands() {
-        let result = build_fallback_strategy();
+        let result = build_fallback_strategy(false);
         assert!(!result.strategy.is_empty(), "Fallback should have steps");
         for step in &result.strategy {
             assert!(
@@ -484,7 +427,7 @@ mod tests {
 
     #[test]
     fn fallback_strategy_has_no_embeddings() {
-        let result = build_fallback_strategy();
+        let result = build_fallback_strategy(false);
         assert!(!result.has_embeddings);
     }
 

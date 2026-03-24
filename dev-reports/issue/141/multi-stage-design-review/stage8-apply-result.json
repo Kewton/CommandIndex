@@ -1,0 +1,1 @@
+{"applied": [{"title": "--index-pathをグローバルCli::index_pathに統一、サブコマンド定義から削除"}, {"title": "ターミナルインジェクション対策（strip_control_chars）をセキュリティ設計に追加"}], "summary": "Stage 7 Must Fix 2件反映完了"}

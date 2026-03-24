@@ -1,0 +1,1 @@
+{"stage":6,"type":"apply_review","applied_items":["入力検証をvalidate_file_path()共通利用に変更","BeforeChangeErrorにResolveIndexPath,Ioを追加、EmbeddingStoreErrorは除外（非致命）","IndexNotFound/SymbolDbNotFoundをunit variantに変更","KnowledgeDocResult.relationをKnowledgeRelation enumに変更","Embedding系エラーの致命/非致命分類表を追加","reject_symlink()をread-onlyコマンドには不要と明記","フォーマッタAPIをBeforeChangeResultを受ける形に統一"]}

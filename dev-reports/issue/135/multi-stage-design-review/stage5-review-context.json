@@ -1,0 +1,38 @@
+{
+  "stage": "Stage 5: 通常レビュー2回目 (Codex)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "sections と embeddings の件数不一致を検出しないままDELETE+INSERTすると欠損を正規状態としてCOMMITしうる",
+      "detail": "zipは短い側で黙って打ち切られる。provider.embed()が不足件数を返した場合、古いデータを消したうえで一部sectionだけ保存して正常終了し、has_current_embedding()とも不整合になる。",
+      "suggestion": "トランザクション開始前またはclosure冒頭でsections.len() == embeddings.len()を検証し、不一致なら専用エラーを返してROLLBACKする。"
+    },
+    {
+      "id": "M2",
+      "title": "ROLLBACK失敗をeprintln!で握りつぶす設計はストア層のAPIとして不十分",
+      "detail": "ストア層に出力責務を持ち込んでおり、SRPに反する。呼び出し元は元の処理失敗とrollback失敗を区別できない。",
+      "suggestion": "EmbeddingStoreErrorにtransaction failure用のvariantを追加し、元エラーとrollbackエラーの両方を保持。ログ出力はCLI層に寄せる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "汎用execute_in_transaction()はCLI層にトランザクション制御を漏らしている",
+      "detail": "用途特化のreplace_file_embeddings()の方がKISS/SRP的に自然。",
+      "suggestion": "execute_in_transactionは内部ユーティリティとし、公開APIはreplace_file_embeddings()にする。"
+    },
+    {
+      "id": "S2",
+      "title": "embed.rsとindex.rsに同じDELETE+INSERTループを持たせるのはDRY違反",
+      "suggestion": "共通の保存処理をEmbeddingStoreまたは共有ヘルパーに寄せる。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "ネストトランザクションの挙動をテスト計画に追加",
+      "suggestion": "execute_in_transactionネスト呼び出し時のエラーを単体テストに追加。"
+    }
+  ],
+  "summary": "2点の重要な穴: zipによる件数不一致の黙殺とrollback失敗のログ出力握りつぶし。公開APIを用途特化にするかも検討の余地あり。"
+}

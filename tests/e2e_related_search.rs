@@ -616,3 +616,122 @@ fn related_stdin_respects_limit() {
     let results = common::parse_jsonl(&stdout);
     assert!(results.len() <= 1, "should respect limit=1");
 }
+
+// --- Issue #123: --with-snippet bug fix tests ---
+
+#[test]
+fn related_import_with_snippet_returns_nonempty_snippet() {
+    let dir = setup_import_chain();
+    let results = run_related_search_with_args(dir.path(), "src/main.ts", &["--with-snippet"]);
+    assert!(
+        !results.is_empty(),
+        "should find related files for src/main.ts"
+    );
+
+    // helper.ts should be in results with a non-empty snippet
+    let helper = find_result_by_path(&results, "helper");
+    assert!(
+        helper.is_some(),
+        "helper.ts should be in results, got: {:?}",
+        result_paths(&results)
+    );
+    let helper = helper.unwrap();
+    let snippet = helper.get("snippet").and_then(|s| s.as_str());
+    assert!(
+        snippet.is_some_and(|s| !s.is_empty()),
+        "snippet should be non-empty for helper.ts (issue #123), got: {snippet:?}"
+    );
+}
+
+#[test]
+fn related_import_file_path_is_real_indexed_path() {
+    let dir = setup_import_chain();
+    let results = run_related_search(dir.path(), "src/main.ts");
+    assert!(
+        !results.is_empty(),
+        "should find related files for src/main.ts"
+    );
+
+    // All result paths should be real file paths (not import paths like './helper')
+    for result in &results {
+        let path = result["path"].as_str().unwrap();
+        assert!(
+            !path.starts_with("./") && !path.starts_with("@/") && !path.starts_with("~/"),
+            "result path should be a real file path, not an import path: {path}"
+        );
+        // Path should end with a known extension
+        assert!(
+            path.ends_with(".ts")
+                || path.ends_with(".tsx")
+                || path.ends_with(".js")
+                || path.ends_with(".jsx")
+                || path.ends_with(".md")
+                || path.ends_with(".py"),
+            "result path should have a file extension: {path}"
+        );
+    }
+
+    // Specifically check helper.ts is returned as "src/helper.ts"
+    let helper = find_result_by_path(&results, "helper");
+    assert!(helper.is_some(), "helper.ts should be in results");
+    let helper_path = helper.unwrap()["path"].as_str().unwrap();
+    assert_eq!(
+        helper_path, "src/helper.ts",
+        "helper should be returned as real file path"
+    );
+}
+
+#[test]
+fn related_reverse_import_resolves_correctly() {
+    let dir = setup_import_chain();
+    // helper.ts is imported by main.ts, so searching from helper should find main
+    let results = run_related_search(dir.path(), "src/helper.ts");
+    assert!(
+        !results.is_empty(),
+        "should find related files for src/helper.ts"
+    );
+
+    let paths = result_paths(&results);
+    assert!(
+        paths.iter().any(|p| p.contains("main.ts")),
+        "main.ts should be related to helper.ts (reverse import), got: {paths:?}"
+    );
+    // Also utils.ts (forward import from helper)
+    assert!(
+        paths.iter().any(|p| p.contains("utils.ts")),
+        "utils.ts should be related to helper.ts (forward import), got: {paths:?}"
+    );
+}
+
+// --- Issue #123 UAT fix: markdown link paths should resolve to indexed paths ---
+
+#[test]
+fn related_markdown_link_with_snippet_returns_nonempty() {
+    let dir = setup_linked_docs();
+    let results = run_related_search_with_args(dir.path(), "docs/a.md", &["--with-snippet"]);
+    assert!(
+        !results.is_empty(),
+        "should find related files for docs/a.md"
+    );
+
+    // b.md should be in results with a real indexed path (not bare "b.md")
+    let b_result = results
+        .iter()
+        .find(|r| r["path"].as_str().is_some_and(|p| p.contains("b.md")));
+    assert!(
+        b_result.is_some(),
+        "b.md should be in results, got: {:?}",
+        result_paths(&results)
+    );
+    let b = b_result.unwrap();
+    let path = b["path"].as_str().unwrap();
+    assert_eq!(
+        path, "docs/b.md",
+        "markdown link target should resolve to indexed path"
+    );
+    let snippet = b.get("snippet").and_then(|s| s.as_str());
+    assert!(
+        snippet.is_some_and(|s| !s.is_empty()),
+        "snippet should be non-empty for markdown-linked file docs/b.md, got: {snippet:?}"
+    );
+}

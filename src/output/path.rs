@@ -6,12 +6,19 @@ use crate::output::{
     WorkspaceSearchResult,
 };
 
+/// Remove control characters (except tab) from a string for safe terminal output.
+fn sanitize_path(s: &str) -> String {
+    s.chars()
+        .filter(|c| !c.is_control() || *c == '\t')
+        .collect()
+}
+
 /// Path形式で検索結果を出力する（重複除去）
 pub fn format_path(results: &[SearchResult], writer: &mut dyn Write) -> Result<(), OutputError> {
     let mut seen = std::collections::HashSet::new();
     for result in results {
         if seen.insert(&result.path) {
-            writeln!(writer, "{}", result.path)?;
+            writeln!(writer, "{}", sanitize_path(&result.path))?;
         }
     }
     Ok(())
@@ -29,7 +36,8 @@ pub fn format_workspace_path(
             writeln!(
                 writer,
                 "[{}] {}",
-                ws_result.repository, ws_result.result.path
+                sanitize_path(&ws_result.repository),
+                sanitize_path(&ws_result.result.path)
             )?;
         }
     }
@@ -44,7 +52,7 @@ pub fn format_semantic_path(
     let mut seen = std::collections::HashSet::new();
     for result in results {
         if seen.insert(&result.path) {
-            writeln!(writer, "{}", result.path)?;
+            writeln!(writer, "{}", sanitize_path(&result.path))?;
         }
     }
     Ok(())
@@ -58,7 +66,7 @@ pub fn format_related_path(
     let mut seen = std::collections::HashSet::new();
     for result in results {
         if seen.insert(&result.file_path) {
-            writeln!(writer, "{}", result.file_path)?;
+            writeln!(writer, "{}", sanitize_path(&result.file_path))?;
         }
     }
     Ok(())
@@ -72,7 +80,41 @@ pub fn format_impact_path(
     let mut seen = std::collections::HashSet::new();
     for file in &result.impacted_files {
         if seen.insert(&file.file_path) {
-            writeln!(writer, "{}", file.file_path)?;
+            writeln!(writer, "{}", sanitize_path(&file.file_path))?;
+        }
+    }
+    Ok(())
+}
+
+/// before-change 結果をpath形式で出力する（重複除去）
+pub fn format_before_change_path(
+    result: &crate::output::BeforeChangeResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let mut seen = std::collections::HashSet::new();
+    for finding in &result.findings {
+        if seen.insert(&finding.doc_path) {
+            writeln!(writer, "{}", sanitize_path(&finding.doc_path))?;
+        }
+    }
+    Ok(())
+}
+
+/// why 結果をpath形式で出力する（入力ファイル含む、1行1パス）
+pub fn format_why_path(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let mut seen = std::collections::HashSet::new();
+    // Include the input file itself
+    if seen.insert(result.file_path.clone()) {
+        writeln!(writer, "{}", result.file_path)?;
+    }
+    for issue in &result.issues {
+        for doc in &issue.documents {
+            if seen.insert(doc.file_path.clone()) {
+                writeln!(writer, "{}", doc.file_path)?;
+            }
         }
     }
     Ok(())
@@ -87,7 +129,7 @@ pub fn format_symbol_path(
     for result in results {
         let entry = format!("{}:{}", result.file_path, result.line_start);
         if seen.insert(entry.clone()) {
-            writeln!(writer, "{entry}")?;
+            writeln!(writer, "{}", sanitize_path(&entry))?;
         }
     }
     Ok(())
@@ -96,7 +138,7 @@ pub fn format_symbol_path(
 /// Diff結果をpath形式で出力する（overlapのみ）
 pub fn format_diff_path(result: &DiffResult, writer: &mut dyn Write) -> Result<(), OutputError> {
     for path in &result.overlap {
-        writeln!(writer, "{}", path)?;
+        writeln!(writer, "{}", sanitize_path(path))?;
     }
     Ok(())
 }

@@ -1,0 +1,19 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "パフォーマンス", "description": "all_indexed_paths()をRelatedSearchEngineでキャッシュ必須。impactで最大500回呼ばれる。"},
+    {"id": "M2", "category": "正確性", "description": "マッチング優先順位の明確な定義が必要（完全一致→拡張子追加→/index.ts→エイリアス）。"},
+    {"id": "M3", "category": "双方向性", "description": "逆方向ルックアップの修正方法を設計に明記すべき。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "description": "既存テストの更新（部分一致→完全一致検証）。"},
+    {"id": "S2", "description": "context.rs enrich_entry内のfind_imports_by_targetも同じ問題。"},
+    {"id": "S3", "description": "fetch_snippet空文字列時はNoneにする。"},
+    {"id": "S4", "description": "all_indexed_paths()エラー時はスコアリングスキップ。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "パス末尾コンポーネントのHashMapで高速ルックアップ。"},
+    {"id": "N2", "description": "初回リリースは相対パスのみ。エイリアスは案B対応。"}
+  ]
+}

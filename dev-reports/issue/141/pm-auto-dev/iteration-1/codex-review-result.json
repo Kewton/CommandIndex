@@ -1,0 +1,31 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/why.rs",
+      "line": 85,
+      "severity": "medium",
+      "category": "security",
+      "description": "`resolve_index_path()` の失敗を `unwrap_or_else` で握りつぶし、常にデフォルトの `.commandindex` へフォールバックしています。これにより `--index-path` や設定ファイルの不正値、パストラバーサル検出、symlink 検出などの異常がユーザーに通知されず、意図しない別インデックスを参照してしまいます。",
+      "suggestion": "`resolve_index_path()` のエラーを握りつぶさず `WhyError` に変換して返してください。少なくともパストラバーサルや symlink 関連の失敗は明示的にエラー扱いにするべきです。"
+    },
+    {
+      "file": "src/cli/why.rs",
+      "line": 83,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`load_config(Path::new(\".\")).ok()` で設定読み込みエラーを無視しています。設定ファイルが壊れていても既定値で続行するため、`why` だけが他コマンドと異なるインデックスを見に行ったように見えたり、原因不明の `Index not found` を返したりする未処理エラー隠蔽になります。",
+      "suggestion": "設定読み込み失敗を `WhyError` として表面化し、設定不備とインデックス未作成を区別してください。少なくともログやエラーメッセージで設定読み込み失敗を示すべきです。"
+    },
+    {
+      "file": "src/cli/why.rs",
+      "line": 7,
+      "severity": "low",
+      "category": "bug",
+      "description": "`why` の help/LLM help の使用例が `src/cli/why.rs` を対象にしていますが、現在のナレッジグラフは document ノードしか登録しておらず、ソースコードファイルを指定しても通常はヒットしません。ヘルプどおりに実行すると常に空結果になり、機能不良のように見えます。",
+      "suggestion": "使用例は `dev-reports/design/...` や `dev-reports/issue/.../work-plan.md` のような、実際に knowledge graph に載るドキュメントパスへ差し替えてください。`src/cli/help_llm.rs` の例も同様に修正が必要です。"
+    }
+  ],
+  "summary": "重大なパニック・unsafe・SQLインジェクションは見当たりませんでした。主な懸念は `why` コマンドの index path / config 解決エラーを握りつぶして既定の `.commandindex` にフォールバックしている点で、これは誤動作とパストラバーサル検出の無効化につながります。加えて help の使用例が現行 knowledge graph の対象外ファイルを指しており、ユーザーに誤解を与えます。",
+  "requires_fix": true
+}

@@ -21,7 +21,9 @@ use crate::cli::stdin::{
 };
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
-use crate::output::{self, ImpactFileResult, ImpactResult, OutputError, OutputFormat};
+use crate::output::{
+    self, ImpactFileResult, ImpactResult, LlmFormatOptions, OutputError, OutputFormat,
+};
 use crate::search::related::{RelatedSearchEngine, RelatedSearchError};
 
 const MAX_INPUT_FILES: usize = 500;
@@ -115,6 +117,8 @@ pub fn run_impact(
     limit: Option<usize>,
     index_path: Option<&Path>,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), ImpactError> {
     // 1. ファイルリスト取得（引数優先、なければstdin）
     let input_files = if files.is_empty() {
@@ -164,10 +168,23 @@ pub fn run_impact(
         format,
     );
 
+    // 4.6 トークン予算適用（--max-tokens）
+    if let Some(max_tok) = max_tokens {
+        result.impacted_files =
+            crate::output::token_budget::apply_token_budget(result.impacted_files, max_tok, |r| {
+                let mut tokens = crate::output::estimate_tokens(&r.file_path);
+                if let Some(ref snippet) = r.snippet {
+                    tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+                }
+                tokens
+            });
+        result.total_impacted_files = result.impacted_files.len();
+    }
+
     // 5. 出力
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_impact_results(&result, format, &mut handle)?;
+    output::format_impact_results(&result, format, &mut handle, llm_options)?;
     Ok(())
 }
 
@@ -272,5 +289,6 @@ fn relation_type_to_string(rt: &crate::output::RelationType) -> String {
         crate::output::RelationType::TagMatch { .. } => "tag_match".to_string(),
         crate::output::RelationType::PathSimilarity => "path_similarity".to_string(),
         crate::output::RelationType::DirectoryProximity => "directory_proximity".to_string(),
+        crate::output::RelationType::KnowledgeGraph => "knowledge_graph".to_string(),
     }
 }

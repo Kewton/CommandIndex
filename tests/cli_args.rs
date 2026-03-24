@@ -22,7 +22,10 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("watch"))
         .stdout(predicate::str::contains("diff"))
         .stdout(predicate::str::contains("help-llm"))
-        .stdout(predicate::str::contains("suggest"));
+        .stdout(predicate::str::contains("suggest"))
+        .stdout(predicate::str::contains("before-change"))
+        .stdout(predicate::str::contains("why"))
+        .stdout(predicate::str::contains("issue"));
 }
 
 #[test]
@@ -755,8 +758,23 @@ fn help_llm_contains_all_subcommands() {
         .collect();
 
     let expected = [
-        "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
-        "export", "impact", "import", "watch", "suggest",
+        "index",
+        "search",
+        "update",
+        "status",
+        "clean",
+        "diff",
+        "context",
+        "embed",
+        "config",
+        "export",
+        "impact",
+        "import",
+        "watch",
+        "suggest",
+        "before-change",
+        "why",
+        "issue",
     ];
     for name in &expected {
         assert!(
@@ -766,8 +784,8 @@ fn help_llm_contains_all_subcommands() {
     }
     assert_eq!(
         commands.len(),
-        14,
-        "help-llm should have exactly 14 commands"
+        17,
+        "help-llm should have exactly 17 commands"
     );
     // help-llm itself should not be in the commands list
     assert!(
@@ -799,4 +817,187 @@ fn help_llm_version_matches_cargo() {
         env!("CARGO_PKG_VERSION"),
         "help-llm version should match Cargo.toml version"
     );
+}
+
+// --- --max-tokens CLI option tests ---
+
+#[test]
+fn search_max_tokens_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "100"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn impact_max_tokens_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["impact", "src/test.rs", "--max-tokens", "100"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn search_max_tokens_zero_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--max-tokens", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn search_max_tokens_over_limit_rejected() {
+    common::cmd()
+        .args(["search", "test query", "--max-tokens", "1000001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn impact_max_tokens_zero_rejected() {
+    common::cmd()
+        .args(["impact", "src/test.rs", "--max-tokens", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn impact_max_tokens_over_limit_rejected() {
+    common::cmd()
+        .args(["impact", "src/test.rs", "--max-tokens", "1000001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn search_max_tokens_with_limit_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "search",
+            "test query",
+            "--limit",
+            "5",
+            "--max-tokens",
+            "100",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+#[test]
+fn search_max_tokens_boundary_values() {
+    // Test min value (1) is accepted
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+
+    // Test max value (1000000) is accepted
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["search", "test query", "--max-tokens", "1000000"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Index not found"));
+}
+
+// --- before-change CLI option tests ---
+
+#[test]
+fn before_change_help_shows_usage() {
+    common::cmd()
+        .args(["before-change", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("before-change"))
+        .stdout(predicate::str::contains("--format"))
+        .stdout(predicate::str::contains("--limit"))
+        .stdout(predicate::str::contains("--max-commits"));
+}
+
+#[test]
+fn before_change_max_commits_zero_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--max-commits", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn before_change_max_commits_over_limit_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--max-commits", "10001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+// --- issue CLI option tests ---
+
+#[test]
+fn issue_help_shows_usage() {
+    common::cmd()
+        .args(["issue", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Issue"))
+        .stdout(predicate::str::contains("format"));
+}
+
+#[test]
+fn issue_accepts_number() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "140"])
+        .assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("Symbol database not found")
+                .or(predicate::str::contains("No documents found")),
+        );
+}
+
+#[test]
+fn issue_rejects_zero() {
+    common::cmd()
+        .args(["issue", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn issue_rejects_non_numeric() {
+    common::cmd()
+        .args(["issue", "abc"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn issue_accepts_format_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "140", "--format", "json"])
+        .assert()
+        .failure();
 }

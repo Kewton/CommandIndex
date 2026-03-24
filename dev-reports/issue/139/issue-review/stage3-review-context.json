@@ -1,0 +1,67 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "title": "スキーマバージョンの二重管理に注意",
+      "description": "symbols.db の CURRENT_SYMBOL_SCHEMA_VERSION(=3) と IndexState の CURRENT_SCHEMA_VERSION(=1) は独立管理。Issue では symbols.db のみ v3→v4 に変更し、IndexState は変更不要であることを明確にすべき。",
+      "affected_area": "src/indexer/symbol_store.rs, src/indexer/state.rs"
+    },
+    {
+      "title": "delete_by_file() の knowledge_nodes/edges 削除ロジック必須",
+      "description": "現在の delete_by_file() は4テーブル削除。knowledge_nodes に file_path カラムがあるため、file_path ベースの DELETE + ON DELETE CASCADE でエッジも連鎖削除可能。",
+      "affected_area": "src/indexer/symbol_store.rs (delete_by_file)"
+    },
+    {
+      "title": "RelationType に KnowledgeGraph バリアント追加時、全出力フォーマッタの更新必須",
+      "description": "output/human.rs, json.rs, llm.rs の match 文を同時更新しないとコンパイルエラー。Rust の exhaustive match が安全装置。",
+      "affected_area": "src/output/mod.rs, human.rs, json.rs, llm.rs"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "test_schema_version_v3 テストの更新",
+      "description": "スキーマバージョンを v4 に変更するとテスト名とアサーション値の更新が必要。",
+      "affected_area": "src/indexer/symbol_store.rs テストモジュール"
+    },
+    {
+      "title": "v3→v4 マイグレーション不可のドキュメント",
+      "description": "clean → index の再構築が必須であることをユーザーに周知すべき。",
+      "affected_area": "src/indexer/symbol_store.rs (open, create_tables)"
+    },
+    {
+      "title": "KnowledgeGraph 重み 0.8 追加による既存順位変動",
+      "description": "e2e_related_search.rs のテストで特定の順序やスコアを期待している可能性。",
+      "affected_area": "src/search/related.rs, tests/e2e_related_search.rs"
+    },
+    {
+      "title": "impact / context コマンドが find_related() を使用するため出力変化",
+      "description": "KnowledgeGraph スコアリングが追加されると impact/context の結果も変化する。",
+      "affected_area": "src/cli/impact.rs, src/cli/context.rs"
+    },
+    {
+      "title": "clean コマンドの --keep-embeddings との整合性確認",
+      "description": "symbols.db ごと削除されるため knowledge_graph も消える。現時点では問題なし。",
+      "affected_area": "src/cli/clean.rs"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "Cargo.toml への新規依存不要の確認",
+      "description": "既存の rusqlite 0.31 のみで実装可能。",
+      "affected_area": "Cargo.toml"
+    },
+    {
+      "title": "インデックス構築時間への影響計測",
+      "description": "トランザクションバッチ処理を適用すべき。",
+      "affected_area": "src/cli/index.rs"
+    },
+    {
+      "title": "find_related() の結合ロジック複雑化",
+      "description": "knowledge_edges と dependencies/file_links の両方を参照する際のクエリパフォーマンスをテストで担保すべき。",
+      "affected_area": "src/search/related.rs"
+    }
+  ],
+  "summary": "影響範囲は中程度。主要変更は (1) symbols.db 2テーブル追加とスキーマv3→v4、(2) delete_by_file() 削除ロジック追加、(3) RelationType enum 拡張と全出力フォーマッタ更新、(4) search --related スコアリング拡張。既存テストへの影響は schema_version テスト、e2e_related_search、e2e_impact、e2e_context_pack が対象。"
+}

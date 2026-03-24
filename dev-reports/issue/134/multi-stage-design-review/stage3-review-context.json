@@ -1,0 +1,20 @@
+{
+  "stage": 3,
+  "type": "影響分析レビュー",
+  "reviewer": "Claude (opus)",
+  "must_fix": [
+    {"id": "M1", "title": "suggest.rsのsearch_similar()呼び出し元が設計方針書に記載されていない"},
+    {"id": "M2", "title": "symbol_store.rsにも同名のsearch_similar()が存在するが設計方針書に記載なし"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "e2e_semantic_hybrid.rsのテスト影響範囲が過小評価"},
+    {"id": "S2", "title": "delete_stale時のデータ消失リスク（Ollama未起動時）"},
+    {"id": "S3", "title": "store.rsユニットテストhas_current_embeddingの3テスト修正が必要"},
+    {"id": "S4", "title": "search_similarのstore.rsユニットテスト5件の修正が必要"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "delete_stale_model_embeddingsの全件スキャンパフォーマンス"},
+    {"id": "N2", "title": "has_current_embeddingのインデックス効率"},
+    {"id": "N3", "title": "known_dimensionのモデル名パターン柔軟性"}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "stage": 4,
+  "action": "apply_impact_review",
+  "applied_items": [
+    {"id": "M1", "action": "改善方針にdeduplicate_by_fileのシグネチャ変更なし、後段にスコア減衰関数を適用するパイプライン構成を明記"},
+    {"id": "M2", "action": "改善方針にreader.rsへの変更なし（search/impact/relatedへの影響ゼロ）を明記。影響範囲テーブルを追加"},
+    {"id": "M3", "action": "受け入れ基準にis_test_file/is_doc_fileのユニットテスト追加を明記。改善方針に純粋関数として切り出す方針を記載"},
+    {"id": "S1", "action": "E2Eテスト追加は設計方針書・作業計画で詳細化予定"},
+    {"id": "S3", "action": "減衰係数の定数化（TEST_FILE_PENALTY, DOC_FILE_PENALTY）を改善方針に明記"},
+    {"id": "S4", "action": "スコア減衰関数の再利用可能設計を技術的制約に追記。searchコマンドへの適用はPhase 2以降と明記"}
+  ],
+  "skipped_items": [
+    {"id": "S2", "reason": "build_strategyの順序テストは作業計画・実装フェーズで詳細化"},
+    {"id": "N2", "reason": "manifest.rsのFileType活用は改善方針に検討事項として記載済み"}
+  ],
+  "issue_updated": true,
+  "must_fix_total": 0,
+  "skip_stage_5_8": true,
+  "skip_reason": "1回目レビュー（Stage 1-4）のMust Fix指摘は全て反映済み。2回目のMust Fix合計が0件のため Stage 5-8 をスキップ"
+}

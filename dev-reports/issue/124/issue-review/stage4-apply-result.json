@@ -1,0 +1,12 @@
+{
+  "stage": 4,
+  "type": "apply_impact_review",
+  "applied_items": ["M1", "M2", "M3", "M4", "M5", "S1", "S2", "S3"],
+  "issue_updated": true,
+  "changes": [
+    "影響箇所セクションを「コード変更が必要な箇所」と「テスト変更が必要な箇所」に詳細化",
+    "スキーマ差異テーブル（SymbolStore vs EmbeddingStore）を追加",
+    "修正方針にEmbeddingStoreへのAPI追加を明記",
+    "備考にSymbolStore embeddings削除の別Issue化を追記"
+  ]
+}

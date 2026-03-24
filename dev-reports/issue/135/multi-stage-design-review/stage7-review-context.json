@@ -1,0 +1,14 @@
+{
+  "stage": "Stage 7: 整合性・影響分析レビュー2回目 (Codex)",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "ROLLBACK失敗を無視する設計がEmbeddingStoreErrorベースのエラー伝播と不整合"},
+    {"id": "S2", "title": "CLI層/統合テストの観点が不足（orphan削除、件数不一致、incremental経路）"},
+    {"id": "S3", "title": "影響を受けないファイルの記述が強すぎる（回帰確認対象と明記すべき）"},
+    {"id": "S4", "title": "セキュリティ設計にOllama負荷増加による可用性リスクの記述がない"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "影響範囲を書き込み/読み取り/テスト依存で分類"}
+  ],
+  "summary": "must_fix 0件。ROLLBACK失敗処理の整合性、テスト計画の拡充、影響範囲の記述精度向上が推奨。"
+}

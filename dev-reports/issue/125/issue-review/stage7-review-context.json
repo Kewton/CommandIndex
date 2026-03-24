@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能への影響",
+      "description": "RerankProvider::rerank()の戻り値変更はtrait定義、ollama実装、try_rerank()、run()に波及する。将来のprovider追加にも影響。",
+      "suggestion": "影響対象をIssueに明記し、trait変更を受け入れ基準に含めること。"
+    },
+    {
+      "id": "M2",
+      "category": "テストへの影響",
+      "description": "JSONL先頭にmetadata行追加でtests/common/mod.rsのparse_jsonl()等が影響を受ける。",
+      "suggestion": "受け入れ基準にテストユーティリティ更新を追加。検索結果行だけを抽出する補助関数を分ける。"
+    },
+    {
+      "id": "M3",
+      "category": "既存機能への影響",
+      "description": "llmフォーマットの先頭コメント順序変更が既存テストや下流パーサーに影響。",
+      "suggestion": "llmの先頭コメント順序変更を影響範囲として明記。"
+    },
+    {
+      "id": "M4",
+      "category": "パフォーマンスへの影響",
+      "description": "性能特性は据え置き。追加コストはメタデータ整形とwarning収集のみ。Issueでこの点が未言及。",
+      "suggestion": "性能特性据え置き・パフォーマンス改善はスコープ外であることを明記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "依存関係への影響",
+      "description": "外部crate追加不要。reqwest timeout挙動に依存したエラー分類のテスト固定が必要。",
+      "suggestion": "Cargo依存追加なしを明記。timeout種別のテスト方針を記載。"
+    },
+    {
+      "id": "S2",
+      "category": "既存機能への影響",
+      "description": "human/pathはstdoutを変えずstderrのみ変更。stderrを監視しているスクリプトに影響の可能性。",
+      "suggestion": "[rerank]プレフィックスを維持。stdout契約維持・stderr文言改善を明記。"
+    },
+    {
+      "id": "S3",
+      "category": "テストへの影響",
+      "description": "E2Eだけでなく単体テストでRerankProviderとtry_rerank()の状態遷移を検証すべき。",
+      "suggestion": "E2E拡充に加え、単体テスト追加を検討。特にpartial applyとmetadata出力順序。"
+    },
+    {
+      "id": "S4",
+      "category": "既存機能への影響",
+      "description": "workspace検索には影響しない。通常searchのrerank経路に限定。",
+      "suggestion": "変更対象が通常searchに限定されることを明記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "パフォーマンス",
+      "description": "追加処理のオーバーヘッドは軽微。ボトルネックはOllamaへの逐次リクエスト。",
+      "suggestion": "特段の最適化不要。"
+    },
+    {
+      "id": "N2",
+      "category": "依存関係",
+      "description": "新規crate追加なし。ビルドサイズ・ライセンス・セキュリティの追加リスクなし。",
+      "suggestion": "新規依存なしを明記。"
+    },
+    {
+      "id": "N3",
+      "category": "テスト",
+      "description": "llm出力のコメント順序やJSONメタデータ行は回帰しやすい仕様。",
+      "suggestion": "スナップショットまたは文字列先頭一致テストで回帰防止。"
+    }
+  ],
+  "summary": "影響範囲はsrc/rerank/mod.rs trait契約、ollama.rs provider実装、search.rsのtry_rerank()とrun()、search出力系テスト。最大の影響はJSONLとLLM出力の先頭表現変更。パフォーマンス影響は軽微。新規crate追加不要。"
+}

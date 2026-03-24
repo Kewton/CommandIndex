@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "type": "apply",
+  "applied_items": [
+    "Should Fix: 打ち切りロジック共通モジュール化方針を明記（output/token_budget.rs）",
+    "Should Fix: 各出力型のトークン推定対象フィールドを表で明記",
+    "Should Fix: suggest を Phase 1 スコープから除外",
+    "Should Fix: テスト要件を受け入れ基準に追加（基準11）",
+    "Nice to Have: related_stdin を対象コマンド表に追加",
+    "Nice to Have: --max-tokens の型（u64）と範囲制限（1..=1_000_000）を明記"
+  ],
+  "issue_updated": true
+}

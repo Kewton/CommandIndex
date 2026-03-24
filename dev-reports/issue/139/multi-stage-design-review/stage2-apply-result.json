@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["update.rs削除・index.rsに統合", "context.rsのif matches!パターン注意追加", "KG構築タイミングをwriter.commit()直後に変更"], "must_fix_resolved": 3}

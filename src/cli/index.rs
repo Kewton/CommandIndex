@@ -222,6 +222,39 @@ fn is_indexable_link(link: &crate::parser::link::Link) -> bool {
     true
 }
 
+/// Resolve a link target relative to the source file's parent directory,
+/// then normalize the result (strip `./`, collapse `..`).
+/// e.g. parent="workspace/v0.0.0", target="./ci-cd-plan.md"
+///   → "workspace/v0.0.0/ci-cd-plan.md"
+fn resolve_link_target(source_parent: &std::path::Path, target: &str) -> String {
+    // Strip fragment (#section) and query (?params)
+    let path_part = target.split('#').next().unwrap_or(target);
+    let path_part = path_part.split('?').next().unwrap_or(path_part);
+
+    if path_part.is_empty() {
+        return target.to_string();
+    }
+
+    // Join with parent directory and normalize
+    let joined = source_parent.join(path_part);
+    let mut components = Vec::new();
+    for comp in joined.components() {
+        match comp {
+            std::path::Component::Normal(c) => components.push(c.to_string_lossy().to_string()),
+            std::path::Component::ParentDir => {
+                components.pop();
+            }
+            std::path::Component::CurDir => {} // skip "."
+            _ => {}
+        }
+    }
+    if components.is_empty() {
+        target.to_string()
+    } else {
+        components.join("/")
+    }
+}
+
 /// parser::code::SymbolInfo を symbol_store::SymbolInfo に変換する
 fn convert_symbol(
     src: &crate::parser::code::SymbolInfo,
@@ -341,6 +374,15 @@ pub fn run(
     // 8. Commit index
     writer.commit()?;
 
+    // 8.5. Build knowledge graph
+    {
+        let entries = crate::indexer::knowledge::scan_dev_reports(path);
+        if !entries.is_empty() {
+            symbol_store.clear_knowledge_graph()?;
+            symbol_store.insert_knowledge_entries(&entries)?;
+        }
+    }
+
     // 9. Save manifest
     manifest.save(commandindex_dir)?;
 
@@ -432,14 +474,23 @@ fn index_markdown_file(
             );
             filtered_links.truncate(MAX_FILE_LINKS);
         }
+        // Resolve link targets relative to the source file's parent directory
+        // e.g. source="workspace/v0.0.0/README.md", target="./ci-cd-plan.md"
+        //   → resolved="workspace/v0.0.0/ci-cd-plan.md"
+        let source_parent = std::path::Path::new(rel_path)
+            .parent()
+            .unwrap_or(std::path::Path::new(""));
         let file_links: Vec<_> = filtered_links
             .iter()
-            .map(|l| crate::indexer::symbol_store::FileLinkInfo {
-                id: None,
-                source_file: rel_path.to_string(),
-                target_file: l.target.clone(),
-                link_type: l.link_type.to_string(),
-                file_hash: hash.clone(),
+            .map(|l| {
+                let resolved_target = resolve_link_target(source_parent, &l.target);
+                crate::indexer::symbol_store::FileLinkInfo {
+                    id: None,
+                    source_file: rel_path.to_string(),
+                    target_file: resolved_target,
+                    link_type: l.link_type.to_string(),
+                    file_hash: hash.clone(),
+                }
             })
             .collect();
         if !file_links.is_empty()
@@ -776,6 +827,25 @@ pub fn run_incremental(
     // 13. Commit index
     writer.commit()?;
 
+    // 13.5. Update knowledge graph (diff-based)
+    {
+        if let Ok(changes) = crate::indexer::knowledge::detect_dev_reports_changes(path)
+            && !changes.changed_files.is_empty()
+        {
+            for file in &changes.changed_files {
+                let _ = symbol_store.delete_knowledge_by_file(file);
+            }
+            let entries: Vec<_> = changes
+                .changed_files
+                .iter()
+                .filter_map(|f| crate::indexer::knowledge::parse_dev_report_path(f))
+                .collect();
+            if !entries.is_empty() {
+                let _ = symbol_store.insert_knowledge_entries(&entries);
+            }
+        }
+    }
+
     // 14. Save updated manifest
     old_manifest.save(commandindex_dir)?;
 
@@ -833,13 +903,20 @@ fn generate_embeddings_for_manifest(
     let store = EmbeddingStore::open(&db_path)?;
     store.create_tables()?;
 
+    // Delete stale embeddings from previous model
+    let model_name = provider.model_name();
+    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
+    if stale_deleted > 0 {
+        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
+    }
+
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir).map_err(|e| {
         IndexError::IndexCorrupted(format!("Failed to open tantivy for embedding: {e}"))
     })?;
 
     for entry in &manifest.files {
-        if store.has_current_embedding(&entry.path, &entry.hash)? {
+        if store.has_current_embedding(&entry.path, &entry.hash, model_name)? {
             continue;
         }
 
@@ -865,20 +942,31 @@ fn generate_embeddings_for_manifest(
             Ok(embeddings) => {
                 let dimension = provider.dimension();
                 let model = provider.model_name();
-                for (section, embedding) in sections.iter().zip(embeddings.iter()) {
-                    if let Err(e) = store.upsert_embedding(
-                        &entry.path,
-                        &section.heading,
-                        embedding,
-                        dimension,
-                        model,
-                        &entry.hash,
-                    ) {
-                        eprintln!(
-                            "Warning: failed to store embedding for {}#{}: {e}",
-                            entry.path, section.heading
-                        );
+                if sections.len() != embeddings.len() {
+                    eprintln!(
+                        "Warning: section/embedding count mismatch for {}: {} sections, {} embeddings",
+                        entry.path,
+                        sections.len(),
+                        embeddings.len()
+                    );
+                } else if let Err(e) = store.execute_in_transaction(|store| {
+                    store.delete_by_path(&entry.path)?;
+                    for (section, embedding) in sections.iter().zip(embeddings.iter()) {
+                        store.upsert_embedding(
+                            &entry.path,
+                            &section.heading,
+                            embedding,
+                            dimension,
+                            model,
+                            &entry.hash,
+                        )?;
                     }
+                    Ok(())
+                }) {
+                    eprintln!(
+                        "Warning: failed to store embeddings for {}: {e}",
+                        entry.path
+                    );
                 }
             }
             Err(e) => {

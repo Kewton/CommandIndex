@@ -1,0 +1,11 @@
+{
+  "applied": [
+    {"id": "M1", "action": "sections.len() != embeddings.len() の件数検証をembed.rs/index.rsのコード例に追加。不一致時はトランザクション開始前にエラー処理"},
+    {"id": "M2", "action": "eprintln!をexecute_in_transactionから除去。ROLLBACK失敗は元エラー優先で返す。ストア層はログ出力しない方針を明記"}
+  ],
+  "skipped": [
+    {"id": "S1", "reason": "replace_file_embeddings()への用途特化はDRYの共通化と合わせて検討するが、本Issueではexecute_in_transaction公開方式を維持（KISS）"},
+    {"id": "S2", "reason": "DRY共通化はスコープ外。別Issueで対応"},
+    {"id": "N1", "reason": "ネストテストはテスト計画に追加済み（Stage 1-4反映時）"}
+  ]
+}

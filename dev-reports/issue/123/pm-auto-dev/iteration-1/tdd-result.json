@@ -1,0 +1,48 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: IndexReaderWrapper.all_indexed_paths() added to src/indexer/reader.rs",
+    "Task 1.2: SymbolStore.find_all_imports() added to src/indexer/symbol_store.rs",
+    "Task 1.3: resolve_import_path() and path_component_suffix_matches() implemented in src/search/related.rs",
+    "Task 1.4: add_relation() common helper added and existing score methods refactored in src/search/related.rs",
+    "Task 1.5: RelatedSearchEngine updated with indexed_paths OnceCell and score_import_deps() fixed to resolve import paths",
+    "Task 2.1: Unit tests for resolve_import_path and path_component_suffix_matches added",
+    "Task 2.2: E2E tests for --with-snippet snippet non-empty and real file path verification added"
+  ],
+  "tests_added": [
+    "test_resolve_import_path_exact_match",
+    "test_resolve_import_path_relative",
+    "test_resolve_import_path_alias",
+    "test_resolve_import_path_tilde_alias",
+    "test_resolve_import_path_external_package_none",
+    "test_resolve_import_path_index_ts_pattern",
+    "test_resolve_import_path_empty",
+    "test_resolve_import_path_too_long",
+    "test_resolve_import_path_dotdot_relative",
+    "test_suffix_match_auth_vs_oauth",
+    "test_suffix_match_auth_matches",
+    "test_suffix_match_extension_complement",
+    "test_suffix_match_full_path_with_ext",
+    "test_suffix_match_index_pattern",
+    "test_suffix_match_no_false_substring",
+    "test_add_relation_accumulates_score",
+    "test_add_relation_different_types",
+    "related_import_with_snippet_returns_nonempty_snippet",
+    "related_import_file_path_is_real_indexed_path",
+    "related_reverse_import_resolves_correctly",
+    "impact_with_snippet_ts_returns_nonempty_snippets"
+  ],
+  "files_modified": [
+    "src/indexer/reader.rs",
+    "src/indexer/symbol_store.rs",
+    "src/search/related.rs",
+    "tests/e2e_related_search.rs",
+    "tests/e2e_impact.rs"
+  ],
+  "test_results": "All tests pass (24 unit tests, 28 related E2E tests, 13 impact E2E tests). Only pre-existing failure: test_embed_without_ollama_fails (unrelated to this change).",
+  "clippy_results": "cargo clippy --all-targets -- -D warnings: 0 warnings",
+  "issues_found": [
+    "Pre-existing: test_embed_without_ollama_fails fails on main branch (ollama-related, not related to this fix)",
+    "Pre-existing: Markdown link targets in file_links table use relative paths (e.g. 'b.md') rather than indexed paths (e.g. 'docs/b.md'), causing snippet lookup failures for markdown-link-based impact results. This is a separate issue from #123."
+  ]
+}

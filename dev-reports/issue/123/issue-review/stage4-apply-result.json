@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": ["S1_テスト不足", "S2_context影響", "S3_impact波及", "N1_パフォーマンス"],
+  "changes": [
+    "影響範囲にcontextサブコマンドを追加",
+    "影響を受けないコマンドセクションを追加（keyword/symbol/semantic search）",
+    "受け入れ基準にimpact検索結果の項目追加（#6）",
+    "受け入れ基準にE2Eテスト追加要件追加（#9）",
+    "解決方針にパフォーマンス考慮を追加",
+    "案Bを将来対応として位置づけ"
+  ],
+  "status": "completed"
+}

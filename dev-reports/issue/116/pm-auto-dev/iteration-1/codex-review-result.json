@@ -1,0 +1,32 @@
+{
+  "critical": [
+    {
+      "file": "src/main.rs",
+      "line": 478,
+      "severity": "critical",
+      "category": "bug",
+      "description": "The full-text search path always passes `&LlmFormatOptions::default()` into `search::run(...)`, so the user-supplied `--snippet-lines` value never affects `--format llm`. The new truncation feature is effectively unreachable from the CLI, which is a functional regression for the intended optimization path.",
+      "suggestion": "Build `LlmFormatOptions` from the parsed search CLI arguments before dispatch and pass that value into `search::run(...)` instead of `LlmFormatOptions::default()`."
+    }
+  ],
+  "warnings": [
+    {
+      "file": "src/output/llm.rs",
+      "line": 133,
+      "severity": "medium",
+      "category": "bug",
+      "description": "The estimated token comment is computed from the deduplicated original bodies before truncation is applied. When `max_body_lines` is set, the emitted `<!-- estimated tokens: ... -->` can significantly overstate the actual prompt size, which can mislead callers and invalidate optimization checks.",
+      "suggestion": "Compute the token estimate from the same transformed content that will actually be written, after deduplication and truncation decisions have been applied."
+    },
+    {
+      "file": "src/output/llm.rs",
+      "line": 161,
+      "severity": "medium",
+      "category": "security",
+      "description": "Repository-controlled `path`, `heading`, relation strings, and `impacted_by` entries are rendered directly into Markdown/LLM output with only control characters stripped. This does not neutralize prompt-injection-style content such as hostile Markdown, HTML comments, or instruction text embedded in indexed files/paths, so untrusted repository content can still shape downstream LLM behavior.",
+      "suggestion": "If this output is consumed from untrusted repositories, add escaping or stronger delimiting for non-code metadata fields, or document that `--format llm` output must be treated as untrusted prompt material."
+    }
+  ],
+  "summary": "One functional issue requires fixing: the new LLM truncation option is not wired from the search CLI into the actual formatter path, so `--snippet-lines` has no effect for `search --format llm`. In addition, the token estimate is calculated from pre-truncation content, and the formatter still emits repository-controlled text into LLM-oriented Markdown without mitigating prompt-injection-style content beyond stripping control characters.",
+  "requires_fix": true
+}

@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "LlmFormatOptions導入の波及範囲を明確化",
+      "description": "src/output/llm.rs にはworkspace/semantic/diff/symbolも同居しており、共通ヘルパーのシグネチャ変更で想定以上にコンパイル影響が広がる。",
+      "suggestion": "LlmFormatOptionsをsearch/related/impactのみで使うのか全LLM formatterで共有するのか固定する。workspace/semantic/symbol/diffは動作変更なし確認対象としてテスト方針に追加。"
+    },
+    {
+      "id": "M2",
+      "title": "影響テスト範囲がunit testだけでなくCLI/E2Eまで及ぶ",
+      "description": "tests/output_format.rs、tests/cli_args.rs、tests/e2e_impact.rsが更新対象。",
+      "suggestion": "影響テスト一覧をIssueに追記する。"
+    },
+    {
+      "id": "M3",
+      "title": "impacted_by省略はLLM出力のみの変更であることを明示",
+      "description": "ImpactResult自体を変えるとJSON/Human出力まで壊れる。",
+      "suggestion": "format_impact_llmの表示ロジックに限定し、データ構造やJSON/Human出力は変更しないと明記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "パフォーマンス影響の記載",
+      "description": "出力整形のO(n)相当の追加処理のみ。検索・DB・インデックスには影響なし。",
+      "suggestion": "パフォーマンス影響欄を追記。"
+    },
+    {
+      "id": "S2",
+      "title": "--snippet-linesの意味がHumanとLLMで共有されることの整理",
+      "description": "CLIオプションの適用先が拡張される。",
+      "suggestion": "search.snippet_lines設定が--format llmにも反映されるのかCLI指定時のみなのかを仕様化。"
+    },
+    {
+      "id": "S3",
+      "title": "contextコマンドが対象外であることの明記",
+      "description": "P6にcontextが含まれるが本Issueの対象外。",
+      "suggestion": "context出力仕様は変更しないと明記。"
+    },
+    {
+      "id": "S4",
+      "title": "help文・ドキュメント生成への影響",
+      "description": "help-llm JSON、after_help文の説明更新が必要になる可能性。",
+      "suggestion": "src/cli/help_llm.rs等も確認対象に追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "LLM出力専用の回帰テスト分離",
+      "description": "LLM最適化観点のテスト群を分離すると保守しやすい。",
+      "suggestion": "default unchanged と option applied を対にしたテストモジュール。"
+    },
+    {
+      "id": "N2",
+      "title": "出力サイズアサーション追加",
+      "description": "プロンプトサイズ削減目的なので機能テストだけでは不十分。",
+      "suggestion": "output.len()や推定トークン数の上限確認テスト追加。"
+    },
+    {
+      "id": "N3",
+      "title": "外部依存追加不要の明文化",
+      "description": "新規crate追加なし、既存の output/config/CLI 層の内部変更のみ。",
+      "suggestion": "依存関係への影響欄に明記。"
+    }
+  ],
+  "summary": "変更はsrc/output/llm.rs中心だが、影響範囲はmod.rs、cli/search.rs、main.rs、help文、既存LLM出力テストまで広がる。最大リスクはLLM専用変更がJSON/Humanや他コマンドへ漏れること。impacted_by省略はformat_impact_llm表示ロジックに限定すべき。"
+}

@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "データフロー不整合",
+      "description": "score_import_deps() が imp.target_module をscoresキーに使用。tantivyのファイルパスと不一致。",
+      "suggestion": "score_import_deps 内でインポートパス→ファイルパス変換層を追加（案A推奨）"
+    },
+    {
+      "id": "M2",
+      "category": "逆方向ルックアップ不整合",
+      "description": "find_imports_by_target はファイルパスで検索するがtarget_moduleにはインポートパスが格納。",
+      "suggestion": "ファイルパスからインポートパス候補を生成するか、スキーマ拡張"
+    },
+    {
+      "id": "M3",
+      "category": "snippet取得失敗",
+      "description": "M1修正で連鎖的に解決される。fetch_snippet自体の修正は不要。",
+      "suggestion": "M1の修正で解決"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テスト不足",
+      "description": "e2e_related_search のimport依存テストがfile_path形式を検証していない。--with-snippet付きテストも未存在。",
+      "suggestion": "E2Eテスト追加"
+    },
+    {
+      "id": "S2",
+      "category": "context.rs への影響",
+      "description": "context.rs の enrich_entry 内 find_imports_by_source も影響。M1修正で連鎖解決。",
+      "suggestion": "context E2Eテストで symbols フィールド検証追加"
+    },
+    {
+      "id": "S3",
+      "category": "impact.rs への波及",
+      "description": "aggregate_impact も find_related 結果をそのまま使用。M1修正で解決。",
+      "suggestion": "パス正規化整合性テスト追加"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "パフォーマンス",
+      "description": "ファジーマッチでtantivy追加クエリ発生の可能性。",
+      "suggestion": "resolve結果キャッシュまたはメモリ上マッチング"
+    },
+    {
+      "id": "N2",
+      "category": "既存検索機能への影響確認",
+      "description": "keyword/symbol/semantic searchは影響なし確認済み。",
+      "suggestion": "cargo test --all で確認"
+    },
+    {
+      "id": "N3",
+      "category": "出力形式への影響",
+      "description": "フォーマッタはfile_pathを受け取るだけ。修正後は正しいパスが渡される。",
+      "suggestion": "破壊的変更ではなくバグ修正。CHANGELOGに記載"
+    }
+  ],
+  "summary": "影響範囲はrelated/impact/contextの3コマンドに限定。keyword/symbol/semantic searchは影響なし。案Aが最も局所的かつ安全。テスト追加が必要。"
+}

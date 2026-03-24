@@ -1,0 +1,13 @@
+{
+  "critical": [],
+  "warnings": [
+    {"file": "src/cli/before_change.rs", "line": 182, "severity": "medium", "category": "bug", "description": "git logのstderrを読み出す前にwait()でハング可能性", "suggestion": "wait_with_output()を使うかstdout/stderrを並行に読む"},
+    {"file": "src/cli/before_change.rs", "line": 246, "severity": "medium", "category": "bug", "description": "max_simを0.0で初期化。負の類似度が0.0に丸められる", "suggestion": "f32::NEG_INFINITYで初期化"},
+    {"file": "src/cli/before_change.rs", "line": 386, "severity": "medium", "category": "bug", "description": "embedding取得失敗をunwrap_or_default()で握りつぶし", "suggestion": "Errをwarning付きで明示的に分岐"},
+    {"file": "src/output/path.rs", "line": 88, "severity": "low", "category": "security", "description": "path出力でdoc_pathを無加工出力。制御文字混入リスク", "suggestion": "制御文字除去を入れる"},
+    {"file": "src/indexer/symbol_store.rs", "line": 912, "severity": "low", "category": "security", "description": "未知relation warningでDB由来文字列をそのままstderr出力", "suggestion": "制御文字除去またはエスケープ"},
+    {"file": "src/cli/before_change.rs", "line": 163, "severity": "low", "category": "bug", "description": "正規表現生成にexpect使用。パターン変更時にパニック", "suggestion": "LazyLock<Regex>またはエラー化"}
+  ],
+  "summary": "重大な脆弱性なし。medium 3件（stderrハング、負cosine similarity、embedding失敗握りつぶし）+ low 3件。",
+  "requires_fix": false
+}

@@ -17,9 +17,7 @@ pub(crate) fn fetch_snippet(
 ) -> String {
     match reader.search_by_exact_path(path) {
         Ok(docs) => {
-            if let Some(first) = docs.first()
-                && !first.body.is_empty()
-            {
+            if let Some(doc) = docs.iter().find(|d| !d.body.is_empty()) {
                 let lines = if config.lines == 0 {
                     usize::MAX
                 } else {
@@ -30,7 +28,7 @@ pub(crate) fn fetch_snippet(
                 } else {
                     config.chars
                 };
-                let truncated = truncate_body(&first.body, lines, chars);
+                let truncated = truncate_body(&doc.body, lines, chars);
                 let cleaned = strip_control_chars(&truncated);
                 if !cleaned.is_empty() {
                     return cleaned;

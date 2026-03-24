@@ -1,0 +1,10 @@
+{
+  "applied": true,
+  "changes": [
+    "M1: 新規CLIフラグ --max-snippet-lines を廃止し、既存の --snippet-lines を --format llm にも適用する方針に変更",
+    "M2: 受け入れ基準を具体的な検証可能条件に書き直し（10KB目標を削除し、個別機能の検証基準に分解）",
+    "M3: related/impact のスニペット最適化を本Issue対象外と明記（現行LLM出力がスニペット非出力のため）",
+    "S1: impacted_by省略ルールを具体化: 4件以上で a.rs, b.rs, c.rs, ... (+N more) 形式",
+    "S3: 重複統合の判定キーを path + heading + body 完全一致と定義"
+  ]
+}

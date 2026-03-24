@@ -30,6 +30,7 @@ pub fn run_changed_since(
     format: OutputFormat,
     limit: Option<usize>,
     index_path: Option<&Path>,
+    max_tokens: Option<usize>,
 ) -> Result<(), ChangedSinceError> {
     // 1. Git から変更ファイル取得
     let changed_files = get_changed_files(Path::new("."), since).map_err(ChangedSinceError::Git)?;
@@ -45,6 +46,8 @@ pub fn run_changed_since(
         limit,
         index_path,
         crate::cli::snippet_helper::SnippetOptions::default(),
+        max_tokens,
+        &crate::output::LlmFormatOptions::default(),
     )
     .map_err(ChangedSinceError::Impact)
 }

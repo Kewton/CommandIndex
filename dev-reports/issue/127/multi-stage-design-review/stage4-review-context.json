@@ -1,0 +1,29 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "入力検証",
+      "description": "validate_inputのtrimmed.len()はバイト長。日本語等でエラーメッセージ'max 500 characters'と乖離。",
+      "suggestion": "chars().count()に変更するかエラーメッセージを修正。"
+    },
+    {
+      "id": "S2",
+      "category": "パストラバーサル",
+      "description": "is_test_file/is_doc_fileでパス正規化を行わない。../を含むパスで判定が不正確。",
+      "suggestion": "Path::new(path).components()で正規化後にパターンマッチ。"
+    },
+    {
+      "id": "S3",
+      "category": "入力検証",
+      "description": "is_test_fileのtest_utils.rs偽陽性問題（Stage 1-2と同じ指摘）。",
+      "suggestion": "セパレータ付きパターンに限定。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "SuggestError::IndexNotFoundの内部パス情報露出。ローカルCLIなので許容。"},
+    {"id": "N2", "description": "shell_quoteが表示専用であることをドキュメントに明記。"},
+    {"id": "N3", "description": ".rst/.txt等の他ドキュメント形式は判定対象外。Phase 1では十分。"}
+  ],
+  "summary": "重大なセキュリティ脆弱性なし。unsafe使用なし。改善点: validate_inputのバイト長問題、パス正規化、is_test_file偽陽性。"
+}

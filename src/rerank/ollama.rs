@@ -68,15 +68,19 @@ impl RerankProvider for OllamaRerankProvider {
         let mut results = Vec::with_capacity(documents.len());
         let url = format!("{}/api/generate", self.endpoint);
 
-        for doc in documents {
+        for (i, doc) in documents.iter().enumerate() {
             // Check timeout before each request
             if Instant::now() >= deadline {
-                eprintln!(
-                    "[rerank] Timeout reached after scoring {} of {} candidates",
-                    results.len(),
-                    documents.len()
-                );
-                break;
+                results.sort_by(|a: &RerankResult, b: &RerankResult| {
+                    b.score
+                        .partial_cmp(&a.score)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+                return Err(RerankError::PartialTimeout {
+                    results,
+                    scored: i,
+                    total: documents.len(),
+                });
             }
 
             let prompt = build_prompt(query, &doc.document_text);

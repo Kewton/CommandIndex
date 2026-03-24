@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "CLI定義の--index-pathとコマンド名が現行CLI実装と不整合",
+      "description": "Issueではcommandindexdev issue <NUMBER> [--format ...] [--index-path <PATH>]をサブコマンド固有オプションのように記載しているが、現行実装では--index-pathはsrc/main.rsのグローバル引数であり、各サブコマンドに個別定義していない。また実際のCLI名はcommandindexで、テストもcargo_bin(\"commandindex\")を前提にしている。エラーメッセージ例のRun 'commandindexdev index' first.も既存実装の文言とずれる。",
+      "suggestion": "CLI表記は現行実装に合わせる。--index-pathがグローバルオプションであることを明記する。エラーメッセージも既存のIndex not found. Run 'commandindex index' first.系に寄せる。"
+    },
+    {
+      "id": "M2",
+      "title": "SQLの並び順と使用例の出力順が食い違っている",
+      "description": "記載されたSQLはORDER BY relation, json_extract(metadata, '$.doc_subtype')相当で、レビュー系はdesign_review→issue_review→progress_reportの順になりうる。一方、使用例はissue-review→multi-stage-design-review→progress-reportの順で表示しており、Issue本文内で順序仕様が矛盾している。",
+      "suggestion": "doc_subtypeに対してもCASEで明示順を定義する。例: design_policy=1, issue_review=2, design_review=3, work_plan=4, progress_report=5。もしくは使用例と受け入れ基準から順序期待を外し、カテゴリ内はソート順未保証と明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "help-llm変更に対するテスト影響がテスト計画に含まれていない",
+      "description": "既存tests/cli_args.rsにはhelp-llmのコマンド一覧と件数を固定で検証するテストがある。新コマンド追加時はこのテスト更新が必須だが、テスト計画に含まれていない。",
+      "suggestion": "テスト計画にtests/cli_args.rsのhelp-llm JSON出力検証更新を追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "main.rs側の実行ディスパッチ追加が実装箇所に抜けている",
+      "description": "Commands enum追加だけでは不十分で、main.rsのmatch cli.commandに新しい分岐を追加しindex path解決・エラー処理・出力実行まで接続する必要がある。",
+      "suggestion": "src/main.rsについてはCommands enum追加に加えmatch分岐の追加を明記する。"
+    },
+    {
+      "id": "S3",
+      "title": "JSON/LLM/pathの出力仕様が粒度不足",
+      "description": "JSONが単一オブジェクトかJSONLか、LLM出力でカテゴリ見出しをどう表現するか、pathでカテゴリ順を保持するかなどが未定義。",
+      "suggestion": "各フォーマットの出力例を追加し、テスト可能なレベルまで仕様化する。"
+    },
+    {
+      "id": "S4",
+      "title": "受け入れ基準にhelp-llm反映と順序・カテゴリ分離の検証がない",
+      "description": "help-llm更新はIssue本文で実装対象に含まれているのに、受け入れ基準には反映確認がない。カテゴリ分類の正確性検証も欠けている。",
+      "suggestion": "受け入れ基準にprogress_reportが進捗レポートカテゴリに出ること、help-llmにissueコマンドが含まれること、出力順が仕様通りであることを追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "find_documents_by_issue()の戻り値型を明示",
+      "description": "戻り値が生SQL行なのかDTOなのかが未定義。",
+      "suggestion": "IssueDocumentEntry { file_path, relation, doc_subtype }のような専用型を返す方針を明記する。"
+    },
+    {
+      "id": "N2",
+      "title": "未対応範囲の切り分けをAcceptance Criteriaにも反映",
+      "description": "本文には変更ファイルは別Issueとあるが、受け入れ基準側には非対象であることが明示されていない。",
+      "suggestion": "受け入れ基準に変更ファイルは本Issueの対象外を明記する。"
+    }
+  ],
+  "summary": "1回目で指摘された主要な乖離は概ね解消されているが、CLI仕様が現行コードベースと完全には揃っておらず、--index-pathはグローバル引数であること、実バイナリ名とエラーメッセージがcommandindex基準であることをIssue本文に反映すべき。SQLのソート条件と使用例の表示順が矛盾しておりテスト可能な仕様としては不十分。"
+}

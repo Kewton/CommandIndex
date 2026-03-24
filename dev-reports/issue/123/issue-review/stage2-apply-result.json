@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": ["M1", "M2", "M3", "S2", "S3"],
+  "changes": [
+    "根本原因セクションを3つの問題に分離（file_pathの問題、逆方向ルックアップ、snippet空）",
+    "受け入れ基準セクションを7項目で追加",
+    "影響範囲にimpactサブコマンドを追加",
+    "解決方針案を3案追加",
+    "期待される動作にfile_pathの正しい形式を明記"
+  ],
+  "status": "completed"
+}

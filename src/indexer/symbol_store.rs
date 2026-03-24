@@ -3,7 +3,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, params};
 
-const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 3;
+const CURRENT_SYMBOL_SCHEMA_VERSION: u32 = 4;
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -59,6 +59,15 @@ pub struct EmbeddingSimilarityResult {
     pub file_path: String,
     pub section_heading: String,
     pub similarity: f32,
+}
+
+/// ナレッジグラフ Issue → ドキュメント検索の結果構造体
+#[derive(Debug, Clone, PartialEq)]
+pub struct KnowledgeDocResult {
+    pub issue_number: String,
+    pub relation: crate::indexer::knowledge::KnowledgeRelation,
+    pub file_path: String,
+    pub title: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -330,7 +339,35 @@ impl SymbolStore {
 
             CREATE INDEX IF NOT EXISTS idx_embeddings_path ON embeddings(file_path);
             CREATE INDEX IF NOT EXISTS idx_embeddings_hash ON embeddings(file_hash);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_path_section ON embeddings(file_path, section_heading);",
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_path_section ON embeddings(file_path, section_heading);
+
+            CREATE TABLE IF NOT EXISTS knowledge_nodes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL,
+                identifier TEXT NOT NULL,
+                title TEXT,
+                file_path TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(type, identifier)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_kn_type ON knowledge_nodes(type);
+            CREATE INDEX IF NOT EXISTS idx_kn_identifier ON knowledge_nodes(identifier);
+            CREATE INDEX IF NOT EXISTS idx_kn_file_path ON knowledge_nodes(file_path);
+
+            CREATE TABLE IF NOT EXISTS knowledge_edges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_id INTEGER NOT NULL REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
+                target_id INTEGER NOT NULL REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
+                relation TEXT NOT NULL,
+                metadata TEXT,
+                UNIQUE(source_id, target_id, relation)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_ke_source ON knowledge_edges(source_id);
+            CREATE INDEX IF NOT EXISTS idx_ke_target ON knowledge_edges(target_id);
+            CREATE INDEX IF NOT EXISTS idx_ke_relation ON knowledge_edges(relation);",
         )?;
 
         self.conn.execute(
@@ -431,6 +468,11 @@ impl SymbolStore {
         )?;
         tx.execute(
             "DELETE FROM embeddings WHERE file_path = ?1",
+            params![file_path],
+        )?;
+        // Knowledge nodes (ON DELETE CASCADE removes edges automatically)
+        tx.execute(
+            "DELETE FROM knowledge_nodes WHERE file_path = ?1",
             params![file_path],
         )?;
         tx.commit()?;
@@ -535,6 +577,16 @@ impl SymbolStore {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Retrieve all import (dependency) records from the database.
+    pub fn find_all_imports(&self) -> Result<Vec<ImportInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_module, imported_names, file_hash
+             FROM dependencies",
+        )?;
+        let rows = stmt.query_map([], import_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
     /// Find file links where the given file is the target.
     /// Returns all files that link to the given target file.
     pub fn find_file_links_by_target(
@@ -546,6 +598,16 @@ impl SymbolStore {
              FROM file_links WHERE target_file = ?1",
         )?;
         let rows = stmt.query_map(params![target_file], file_link_from_row)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    /// Retrieve all file link records from the database.
+    pub fn find_all_file_links(&self) -> Result<Vec<FileLinkInfo>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, source_file, target_file, link_type, file_hash
+             FROM file_links",
+        )?;
+        let rows = stmt.query_map([], file_link_from_row)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
@@ -665,6 +727,306 @@ impl SymbolStore {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         results.truncate(top_k);
+        Ok(results)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Graph Methods
+// ---------------------------------------------------------------------------
+
+impl SymbolStore {
+    /// Insert or update a knowledge node. Returns the node ID.
+    pub fn upsert_knowledge_node(
+        &self,
+        node_type: &str,
+        identifier: &str,
+        title: Option<&str>,
+        file_path: Option<&str>,
+    ) -> Result<i64, SymbolStoreError> {
+        self.conn.execute(
+            "INSERT INTO knowledge_nodes (type, identifier, title, file_path)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(type, identifier) DO UPDATE SET
+                title = excluded.title,
+                file_path = excluded.file_path,
+                updated_at = datetime('now')",
+            params![node_type, identifier, title, file_path],
+        )?;
+        let id = self.conn.query_row(
+            "SELECT id FROM knowledge_nodes WHERE type = ?1 AND identifier = ?2",
+            params![node_type, identifier],
+            |row| row.get(0),
+        )?;
+        Ok(id)
+    }
+
+    /// Insert or update a knowledge edge.
+    pub fn upsert_knowledge_edge(
+        &self,
+        source_id: i64,
+        target_id: i64,
+        relation: &str,
+        metadata: Option<&str>,
+    ) -> Result<(), SymbolStoreError> {
+        self.conn.execute(
+            "INSERT INTO knowledge_edges (source_id, target_id, relation, metadata)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(source_id, target_id, relation) DO UPDATE SET
+                metadata = excluded.metadata",
+            params![source_id, target_id, relation, metadata],
+        )?;
+        Ok(())
+    }
+
+    /// Bulk-insert knowledge entries in a single transaction.
+    pub fn insert_knowledge_entries(
+        &self,
+        entries: &[crate::indexer::knowledge::KnowledgeEntry],
+    ) -> Result<(), SymbolStoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+
+        for entry in entries {
+            // Upsert issue node
+            tx.execute(
+                "INSERT INTO knowledge_nodes (type, identifier)
+                 VALUES ('issue', ?1)
+                 ON CONFLICT(type, identifier) DO NOTHING",
+                params![entry.issue_number],
+            )?;
+            let issue_id: i64 = tx.query_row(
+                "SELECT id FROM knowledge_nodes WHERE type = 'issue' AND identifier = ?1",
+                params![entry.issue_number],
+                |row| row.get(0),
+            )?;
+
+            // Upsert document node
+            tx.execute(
+                "INSERT INTO knowledge_nodes (type, identifier, file_path)
+                 VALUES ('document', ?1, ?1)
+                 ON CONFLICT(type, identifier) DO UPDATE SET
+                    file_path = excluded.file_path,
+                    updated_at = datetime('now')",
+                params![entry.file_path],
+            )?;
+            let doc_id: i64 = tx.query_row(
+                "SELECT id FROM knowledge_nodes WHERE type = 'document' AND identifier = ?1",
+                params![entry.file_path],
+                |row| row.get(0),
+            )?;
+
+            // Upsert edge
+            let metadata =
+                serde_json::json!({"doc_subtype": entry.doc_subtype.as_str()}).to_string();
+            tx.execute(
+                "INSERT INTO knowledge_edges (source_id, target_id, relation, metadata)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(source_id, target_id, relation) DO UPDATE SET
+                    metadata = excluded.metadata",
+                params![issue_id, doc_id, entry.relation.as_str(), metadata],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Delete all knowledge nodes and edges.
+    pub fn clear_knowledge_graph(&self) -> Result<(), SymbolStoreError> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "DELETE FROM knowledge_edges;
+             DELETE FROM knowledge_nodes;",
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Delete knowledge nodes by file_path (ON DELETE CASCADE removes edges).
+    pub fn delete_knowledge_by_file(&self, file_path: &str) -> Result<(), SymbolStoreError> {
+        self.conn.execute(
+            "DELETE FROM knowledge_nodes WHERE file_path = ?1",
+            params![file_path],
+        )?;
+        Ok(())
+    }
+
+    /// Find all documents related to a given Issue number through the knowledge graph.
+    pub fn find_documents_by_issue(
+        &self,
+        issue_number: &str,
+    ) -> Result<Vec<crate::indexer::knowledge::IssueDocumentEntry>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT kn_doc.file_path, ke.relation, ke.metadata
+             FROM knowledge_nodes kn_issue
+             JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
+             JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'
+             WHERE kn_issue.type = 'issue' AND kn_issue.identifier = ?1
+             LIMIT 100",
+        )?;
+
+        let mut results = Vec::new();
+        let rows = stmt.query_map(params![issue_number], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })?;
+
+        for row in rows {
+            let (file_path, relation_str, metadata_opt) = row?;
+
+            let relation = match relation_str.as_str() {
+                "has_design" => crate::indexer::knowledge::KnowledgeRelation::HasDesign,
+                "has_review" => crate::indexer::knowledge::KnowledgeRelation::HasReview,
+                "has_workplan" => crate::indexer::knowledge::KnowledgeRelation::HasWorkplan,
+                other => {
+                    return Err(SymbolStoreError::InvalidEmbedding {
+                        reason: format!("Unknown relation type: {other}"),
+                    });
+                }
+            };
+
+            let metadata_str = metadata_opt.unwrap_or_default();
+            let doc_subtype = if metadata_str.is_empty() {
+                return Err(SymbolStoreError::InvalidEmbedding {
+                    reason: format!("Missing metadata for document: {file_path}"),
+                });
+            } else {
+                let parsed: serde_json::Value =
+                    serde_json::from_str(&metadata_str).map_err(|e| {
+                        SymbolStoreError::InvalidEmbedding {
+                            reason: format!("Failed to parse metadata for {file_path}: {e}"),
+                        }
+                    })?;
+                let subtype_str = parsed["doc_subtype"].as_str().ok_or_else(|| {
+                    SymbolStoreError::InvalidEmbedding {
+                        reason: format!("Missing doc_subtype in metadata for {file_path}"),
+                    }
+                })?;
+                match subtype_str {
+                    "design_policy" => crate::indexer::knowledge::DocSubtype::DesignPolicy,
+                    "work_plan" => crate::indexer::knowledge::DocSubtype::WorkPlan,
+                    "issue_review" => crate::indexer::knowledge::DocSubtype::IssueReview,
+                    "design_review" => crate::indexer::knowledge::DocSubtype::DesignReview,
+                    "progress_report" => crate::indexer::knowledge::DocSubtype::ProgressReport,
+                    other => {
+                        return Err(SymbolStoreError::InvalidEmbedding {
+                            reason: format!("Unknown doc_subtype: {other}"),
+                        });
+                    }
+                }
+            };
+
+            results.push(crate::indexer::knowledge::IssueDocumentEntry {
+                file_path,
+                relation,
+                doc_subtype,
+            });
+        }
+
+        Ok(results)
+    }
+
+    /// Find documents related to the given file through the knowledge graph.
+    /// If the file is a document node, find its issue and return all sibling documents.
+    /// Issue番号群からナレッジグラフ経由でドキュメントを検索する。
+    /// Issue → document の 1ホップ走査。
+    pub fn find_knowledge_by_issue(
+        &self,
+        issue_numbers: &[String],
+    ) -> Result<Vec<KnowledgeDocResult>, SymbolStoreError> {
+        if issue_numbers.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Build IN clause with placeholders
+        let placeholders: Vec<String> = issue_numbers
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("?{}", i + 1))
+            .collect();
+        let in_clause = placeholders.join(", ");
+        let sql = format!(
+            "SELECT kn_issue.identifier AS issue_number,
+                    ke.relation,
+                    kn_doc.file_path,
+                    kn_doc.title
+             FROM knowledge_nodes kn_issue
+             JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
+             JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'
+             WHERE kn_issue.type = 'issue'
+               AND kn_issue.identifier IN ({in_clause})
+             ORDER BY kn_issue.identifier, ke.relation"
+        );
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::types::ToSql> = issue_numbers
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
+        let rows = stmt.query_map(params.as_slice(), |row| {
+            let issue_number: String = row.get(0)?;
+            let relation_str: String = row.get(1)?;
+            let file_path: String = row.get(2)?;
+            let title: Option<String> = row.get(3)?;
+            Ok((issue_number, relation_str, file_path, title))
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let (issue_number, relation_str, file_path, title) = row?;
+            if let Some(relation) =
+                crate::indexer::knowledge::KnowledgeRelation::parse(&relation_str)
+            {
+                results.push(KnowledgeDocResult {
+                    issue_number,
+                    relation,
+                    file_path,
+                    title,
+                });
+            } else {
+                let sanitized: String = relation_str
+                    .chars()
+                    .map(|c| if c.is_control() { '\u{FFFD}' } else { c })
+                    .collect();
+                eprintln!("Warning: unknown knowledge relation '{sanitized}', skipping");
+            }
+        }
+        Ok(results)
+    }
+
+    pub fn find_knowledge_related(
+        &self,
+        file_path: &str,
+    ) -> Result<Vec<crate::indexer::knowledge::KnowledgeRelatedResult>, SymbolStoreError> {
+        let mut results = Vec::new();
+
+        // Find issue(s) that this file belongs to
+        let mut stmt = self.conn.prepare(
+            "SELECT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title
+             FROM knowledge_nodes kn_doc
+             JOIN knowledge_edges ke1 ON ke1.target_id = kn_doc.id
+             JOIN knowledge_nodes kn_issue ON ke1.source_id = kn_issue.id AND kn_issue.type = 'issue'
+             JOIN knowledge_edges ke2 ON ke2.source_id = kn_issue.id
+             JOIN knowledge_nodes kn_sibling ON ke2.target_id = kn_sibling.id AND kn_sibling.type = 'document'
+             WHERE kn_doc.file_path = ?1
+             AND kn_sibling.file_path != ?1",
+        )?;
+
+        let rows = stmt.query_map(params![file_path], |row| {
+            Ok(crate::indexer::knowledge::KnowledgeRelatedResult {
+                issue_number: row.get(0)?,
+                relation: row.get(1)?,
+                file_path: row.get(2)?,
+                title: row.get(3)?,
+            })
+        })?;
+
+        for row in rows {
+            results.push(row?);
+        }
         Ok(results)
     }
 }
@@ -1317,7 +1679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_schema_version_v3() {
+    fn test_schema_version_v4() {
         let store = SymbolStore::open_in_memory().unwrap();
         store.create_tables().unwrap();
 
@@ -1329,6 +1691,421 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, "3");
+        assert_eq!(version, "4");
+    }
+
+    #[test]
+    fn test_knowledge_tables_created() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Verify knowledge_nodes table exists
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_nodes", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+
+        // Verify knowledge_edges table exists
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_edges", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_upsert_knowledge_node() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let id1 = store
+            .upsert_knowledge_node("issue", "299", None, None)
+            .unwrap();
+        assert!(id1 > 0);
+
+        // Upsert same node returns same id
+        let id2 = store
+            .upsert_knowledge_node("issue", "299", Some("Updated"), None)
+            .unwrap();
+        assert_eq!(id1, id2);
+
+        // Different node gets different id
+        let id3 = store
+            .upsert_knowledge_node("document", "path/to/file.md", None, Some("path/to/file.md"))
+            .unwrap();
+        assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_upsert_knowledge_edge() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let src = store
+            .upsert_knowledge_node("issue", "100", None, None)
+            .unwrap();
+        let tgt = store
+            .upsert_knowledge_node("document", "doc.md", None, Some("doc.md"))
+            .unwrap();
+
+        store
+            .upsert_knowledge_edge(
+                src,
+                tgt,
+                "has_design",
+                Some(r#"{"doc_subtype":"design_policy"}"#),
+            )
+            .unwrap();
+
+        // Verify edge exists
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_edges", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_insert_knowledge_entries() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // 1 issue node + 2 document nodes = 3 nodes
+        let node_count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_nodes", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(node_count, 3);
+
+        // 2 edges
+        let edge_count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_edges", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(edge_count, 2);
+    }
+
+    #[test]
+    fn test_clear_knowledge_graph() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+            relation: KnowledgeRelation::HasWorkplan,
+            doc_subtype: DocSubtype::WorkPlan,
+        }];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        store.clear_knowledge_graph().unwrap();
+
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_nodes", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_delete_knowledge_by_file_cascades() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+            relation: KnowledgeRelation::HasWorkplan,
+            doc_subtype: DocSubtype::WorkPlan,
+        }];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Delete the document node by file path
+        store
+            .delete_knowledge_by_file("dev-reports/issue/100/work-plan.md")
+            .unwrap();
+
+        // Document node should be gone
+        let doc_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_nodes WHERE type = 'document'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(doc_count, 0);
+
+        // Edge should be cascade-deleted
+        let edge_count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM knowledge_edges", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(edge_count, 0);
+
+        // Issue node should remain (orphan)
+        let issue_count: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM knowledge_nodes WHERE type = 'issue'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(issue_count, 1);
+    }
+
+    #[test]
+    fn test_find_knowledge_related() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/issue-review/summary-report.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Query from design policy -> should find work-plan and issue-review
+        let related = store
+            .find_knowledge_related("dev-reports/design/issue-100-test-design-policy.md")
+            .unwrap();
+        assert_eq!(related.len(), 2);
+
+        let paths: Vec<&str> = related.iter().map(|r| r.file_path.as_str()).collect();
+        assert!(paths.contains(&"dev-reports/issue/100/work-plan.md"));
+        assert!(paths.contains(&"dev-reports/issue/100/issue-review/summary-report.md"));
+
+        // All should reference issue 100
+        assert!(related.iter().all(|r| r.issue_number == "100"));
+
+        // title should be None (insert_knowledge_entries does not set issue title)
+        assert!(related.iter().all(|r| r.title.is_none()));
+    }
+
+    #[test]
+    fn test_find_knowledge_related_with_title() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/design/issue-200-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/issue/200/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Set the issue title via upsert_knowledge_node
+        store
+            .upsert_knowledge_node("issue", "200", Some("Add why command"), None)
+            .unwrap();
+
+        let related = store
+            .find_knowledge_related("dev-reports/design/issue-200-test-design-policy.md")
+            .unwrap();
+        assert_eq!(related.len(), 1);
+        assert_eq!(related[0].title.as_deref(), Some("Add why command"));
+    }
+
+    #[test]
+    fn test_find_knowledge_related_no_results() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let related = store.find_knowledge_related("src/main.rs").unwrap();
+        assert!(related.is_empty());
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_normal() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/design/issue-200-feature-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Query for issue 100
+        let results = store.find_knowledge_by_issue(&["100".to_string()]).unwrap();
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.issue_number == "100"));
+
+        // Query for issue 200
+        let results = store.find_knowledge_by_issue(&["200".to_string()]).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].issue_number, "200");
+
+        // Query for both
+        let results = store
+            .find_knowledge_by_issue(&["100".to_string(), "200".to_string()])
+            .unwrap();
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_empty_input() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.find_knowledge_by_issue(&[]).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_find_knowledge_by_issue_no_match() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let results = store.find_knowledge_by_issue(&["999".to_string()]).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_find_documents_by_issue() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "140".to_string(),
+                file_path: "dev-reports/design/issue-140-issue-cmd-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "140".to_string(),
+                file_path: "dev-reports/issue/140/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            KnowledgeEntry {
+                issue_number: "140".to_string(),
+                file_path: "dev-reports/issue/140/issue-review/summary-report.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        let docs = store.find_documents_by_issue("140").unwrap();
+        assert_eq!(docs.len(), 3);
+
+        let paths: Vec<&str> = docs.iter().map(|d| d.file_path.as_str()).collect();
+        assert!(paths.contains(&"dev-reports/design/issue-140-issue-cmd-design-policy.md"));
+        assert!(paths.contains(&"dev-reports/issue/140/work-plan.md"));
+        assert!(paths.contains(&"dev-reports/issue/140/issue-review/summary-report.md"));
+
+        // Verify relation types
+        let design = docs
+            .iter()
+            .find(|d| d.doc_subtype == DocSubtype::DesignPolicy)
+            .unwrap();
+        assert_eq!(design.relation, KnowledgeRelation::HasDesign);
+    }
+
+    #[test]
+    fn test_find_documents_by_issue_no_results() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let docs = store.find_documents_by_issue("999").unwrap();
+        assert!(docs.is_empty());
+    }
+
+    #[test]
+    fn test_find_documents_by_issue_metadata_parsed() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![KnowledgeEntry {
+            issue_number: "42".to_string(),
+            file_path: "dev-reports/issue/42/pm-auto-dev/iteration-1/progress-report.md"
+                .to_string(),
+            relation: KnowledgeRelation::HasReview,
+            doc_subtype: DocSubtype::ProgressReport,
+        }];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        let docs = store.find_documents_by_issue("42").unwrap();
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].doc_subtype, DocSubtype::ProgressReport);
+        assert_eq!(docs[0].relation, KnowledgeRelation::HasReview);
     }
 }

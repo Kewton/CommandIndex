@@ -1,0 +1,8 @@
+{
+  "status": "success",
+  "tests_added": 14,
+  "tests_passed": 14,
+  "clippy_warnings": 0,
+  "fmt_issues": 0,
+  "summary": "Issue #127 ファイル種別スコア減衰を実装。is_test_file(), is_doc_file(), file_type_weight_factor(), apply_file_type_weight() の4関数を追加し、search_entry_files() を変更してdedup全件にweight適用後にtruncateする方式に修正。新規テスト14件全パス、既存テスト全パス、clippy警告0件、fmt差分なし。唯一のテスト失敗 test_embed_without_ollama_fails は本変更と無関係（Ollama未起動による既存の環境依存テスト）。"
+}

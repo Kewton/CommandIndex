@@ -1,0 +1,20 @@
+{
+  "stage": 2,
+  "type": "整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "category": "データフロー整合性", "description": "外部パッケージ(react等)の解決失敗時の挙動が未定義。スキップ推奨。"},
+    {"id": "M2", "category": "tantivy API整合性", "description": "all_indexed_paths()の実装方式をterm dictionary APIまたは全ドキュメント走査で明確化。"},
+    {"id": "M3", "category": "逆方向ルックアップ", "description": "find_imports_by_targetの解決に全importスキャンが必要。symbol_store.rsの変更が不可避。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "変更範囲の矛盾", "description": "symbol_store.rsを「変更しない」リストから除外すべき。"},
+    {"id": "S2", "category": "エイリアス解決", "description": "@/→src/プレフィックス変換→サフィックスマッチのフォールバック。"},
+    {"id": "S3", "category": "拡張子解決", "description": "index.ts(barrel export)パターンの対応が必要。"},
+    {"id": "S4", "category": "エラー型", "description": "resolve_import_pathはOption<String>が適切。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "description": "OnceCell<Vec<String>>でキャッシュ。"},
+    {"id": "N2", "description": "ユニットテストケース列挙。"},
+    {"id": "N3", "description": "context.rsへの波及を明示的に記載。"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "SOLID/KISS", "description": "semantic.rsの責務定義が矛盾。query_semanticは「エラーをNone吸収」だが、enrich_semantic_to_search_resultsは「ReaderError返却」。検索レイヤとしてResult返却かgraceful degradation吸収か不統一。", "suggestion": "検索レイヤはResultで失敗を返し、graceful degradationの判断はCLI層（suggest.rs/search.rs）に置く。または吸収方針なら統一しエラー型記述を削除。"},
+    {"id": "M2", "category": "DRY/KISS", "description": "rrf_merge_by_keyの設計が過度に汎化。用途は2つだけなのに完全ジェネリックAPIを導入するとKISSを壊す。", "suggestion": "共通化は最小限に。hybrid.rsには非公開の小さな共通関数を置き、公開APIはrrf_mergeとrrf_merge_filesの2本に絞る。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "YAGNI", "description": "semantic.rsにI/O伴う問い合わせ処理と純粋な変換・集約ロジックが同居。", "suggestion": "query executionとresult transformationの責務境界を明確にする。"},
+    {"id": "S2", "category": "DRY", "description": "ranking.rsのaggregate_by_fileとsemantic.rsのaggregate_semantic_by_fileで集約責務が二重化。", "suggestion": "集約ロジックはranking.rsに一本化。semantic.rsはraw resultsを返すだけにする。"},
+    {"id": "S3", "category": "KISS", "description": "hybrid.rs+semantic.rs+ranking.rsの3モジュール追加は変更規模に対して大きい。", "suggestion": "新規モジュールは最小単位に。ranking.rsの内容はsemantic.rsにまとめる案も検討。"},
+    {"id": "S4", "category": "SOLID", "description": "hybrid.rsの責務境界が曖昧。SearchResult専用かアルゴリズム汎用か不明確。", "suggestion": "hybrid.rsは「RRFアルゴリズムの置き場」と明示。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "DRY", "description": "RRF_Kをpub constにすると他モジュールが直接依存。", "suggestion": "pub(crate)にして疎結合を維持。"},
+    {"id": "N2", "category": "KISS", "description": "各関数がpure/I/Oか区別が弱い。", "suggestion": "モジュール責務表にpure/I/Oを一言添える。"}
+  ],
+  "summary": "1回目反映で大幅改善。残課題は(1)semantic.rsのエラー方針不統一(吸収vsResult返却の混在)、(2)rrf_merge_by_keyの過度な汎化。モジュール分割はやや過剰(KISS観点)でranking.rsとsemantic.rsの統合も検討余地あり。"
+}

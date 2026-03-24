@@ -1,0 +1,16 @@
+{
+  "stage": 4,
+  "type": "セキュリティレビュー",
+  "reviewer": "Claude (opus)",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "delete_stale_model_embeddings()に確認なし一括削除のリスク", "suggestion": "空文字列バリデーション、削除件数ログ出力"},
+    {"id": "S2", "title": "Ollama通信がHTTP平文で行われる点の明記不足"},
+    {"id": "S3", "title": "APIレスポンスボディをそのままエラーメッセージに含める"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "テストコード内のunsafe env操作の安全性注記"},
+    {"id": "N2", "title": "警告メッセージにモデル名・次元数がなく診断しにくい"},
+    {"id": "N3", "title": "known_dimensionのバリアント管理の仕組みがない"}
+  ]
+}

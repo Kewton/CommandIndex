@@ -1,0 +1,1 @@
+{"applied": true, "changes": ["M1: src/cli/workspace.rsを変更対象に追加", "M2: format_suggest_resultsを変更なし確認対象に明記", "M3: 全ディスパッチ関数（8個）のシグネチャ変更を明記", "S1: テスト影響数を~30個に修正、format_to_stringヘルパー経由の影響を明記", "S2: cli/search.rs run関数へのllm_options受け渡しを設計", "S3: e2e_impact.rsにLLMフォーマットE2Eテスト追加を計画", "S4: suggest.rs内テスト3個の影響を明記"]}

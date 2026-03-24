@@ -21,14 +21,139 @@ Examples:
   commandindex search --related src/auth.rs --with-snippet --format json";
 
 use std::fmt;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::config::{AppConfig, ConfigError, load_config};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError, SearchFilters, SearchOptions};
 use crate::indexer::symbol_store::{SymbolInfo, SymbolStore, SymbolStoreError};
 use crate::output::{
-    self, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig, SymbolSearchResult,
+    self, LlmFormatOptions, OutputError, OutputFormat, SemanticSearchResult, SnippetConfig,
+    SymbolSearchResult,
 };
+use crate::rerank::RerankError;
+
+// ---------------------------------------------------------------------------
+// RerankStatus (private to CLI layer)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
+enum RerankStatus {
+    Applied,
+    AppliedPartially { warning: String },
+    Skipped { reason: String },
+}
+
+// ---------------------------------------------------------------------------
+// Rerank output helpers
+// ---------------------------------------------------------------------------
+
+/// RerankError に対応するユーザー向けヒント文字列を返す（テスト用）
+#[cfg(test)]
+fn rerank_error_hint(err: &RerankError) -> &'static str {
+    match err {
+        RerankError::ModelNotFound(_) => {
+            "Run `ollama pull <model>` to install, or set rerank.model in config."
+        }
+        RerankError::NetworkError(_) => "Is Ollama running? Try `ollama serve`.",
+        RerankError::Timeout => "Check Ollama server load.",
+        RerankError::ApiError { .. } => "Check Ollama logs.",
+        RerankError::InvalidResponse(_) => "Check model compatibility.",
+        RerankError::ConfigError(_) => "Check rerank settings in commandindex.toml.",
+        RerankError::PartialTimeout { .. } => "Some candidates were not scored due to timeout.",
+    }
+}
+
+/// reason 文字列をサニタイズする（制御文字除去、HTMLコメント破壊防止、長さ制限）
+fn sanitize_reason(reason: &str) -> String {
+    let sanitized: String = reason
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    // HTMLコメント破壊防止: --> をエスケープ
+    let sanitized = sanitized.replace("-->", "--&gt;");
+    // 長さ制限（200文字）
+    if sanitized.len() > 200 {
+        format!("{}...", &sanitized[..197])
+    } else {
+        sanitized
+    }
+}
+
+/// stdout 向けメタデータを生成する（json/llm のみ）
+fn build_rerank_stdout_prefix(status: &RerankStatus, format: OutputFormat) -> Option<String> {
+    match (status, format) {
+        (RerankStatus::Skipped { reason }, OutputFormat::Json) => {
+            let sanitized = sanitize_reason(reason);
+            let meta = serde_json::json!({
+                "type": "metadata",
+                "rerank_status": "skipped",
+                "rerank_warnings": [sanitized],
+            });
+            serde_json::to_string(&meta).ok()
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Json) => {
+            let sanitized = sanitize_reason(warning);
+            let meta = serde_json::json!({
+                "type": "metadata",
+                "rerank_status": "partial",
+                "rerank_warnings": [sanitized],
+            });
+            serde_json::to_string(&meta).ok()
+        }
+        (RerankStatus::Skipped { reason }, OutputFormat::Llm) => {
+            let sanitized = sanitize_reason(reason);
+            Some(format!("<!-- rerank skipped: {sanitized} -->"))
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Llm) => {
+            let sanitized = sanitize_reason(warning);
+            Some(format!("<!-- rerank warning: {sanitized} -->"))
+        }
+        _ => None,
+    }
+}
+
+/// stderr 向け警告メッセージを生成する（human/path のみ）
+fn build_rerank_stderr_message(status: &RerankStatus, format: OutputFormat) -> Option<String> {
+    match (status, format) {
+        (RerankStatus::Skipped { reason }, OutputFormat::Human | OutputFormat::Path) => {
+            let sanitized = sanitize_reason(reason);
+            let hint = rerank_error_hint_from_reason(reason);
+            Some(format!(
+                "[rerank] Reranking skipped: {sanitized}\n[rerank] Hint: {hint}"
+            ))
+        }
+        (RerankStatus::AppliedPartially { warning }, OutputFormat::Human | OutputFormat::Path) => {
+            let sanitized = sanitize_reason(warning);
+            Some(format!("[rerank] Warning: {sanitized}"))
+        }
+        _ => None,
+    }
+}
+
+/// reason 文字列のパターンから対応するヒントを返す
+fn rerank_error_hint_from_reason(reason: &str) -> &'static str {
+    if reason.contains("Model not found") {
+        "Run `ollama pull <model>` to install, or set rerank.model in config."
+    } else if reason.contains("Network error") {
+        "Is Ollama running? Try `ollama serve`."
+    } else if reason.contains("Request timeout") {
+        "Check Ollama server load."
+    } else if reason.contains("API error") {
+        "Check Ollama logs."
+    } else if reason.contains("Invalid response") {
+        "Check model compatibility."
+    } else if reason.contains("Config error") {
+        "Check rerank settings in commandindex.toml."
+    } else if reason.contains("Timeout") {
+        "Some candidates were not scored due to timeout."
+    } else {
+        "Check Ollama configuration and server status."
+    }
+}
 
 // ---------------------------------------------------------------------------
 // SearchContext
@@ -83,6 +208,7 @@ pub enum SearchError {
     SchemaVersionMismatch,
     RelatedSearch(crate::search::related::RelatedSearchError),
     Embedding(crate::embedding::EmbeddingError),
+    EmbeddingStore(crate::embedding::store::EmbeddingStoreError),
     NoEmbeddings,
     Config(String),
     Workspace(crate::config::workspace::WorkspaceConfigError),
@@ -119,6 +245,7 @@ impl fmt::Display for SearchError {
                 }
                 _ => write!(f, "Embedding error: {e}"),
             },
+            SearchError::EmbeddingStore(e) => write!(f, "Embedding store error: {e}"),
             SearchError::NoEmbeddings => {
                 write!(f, "No embeddings found. Run `commandindex embed` first.")
             }
@@ -141,6 +268,7 @@ impl std::error::Error for SearchError {
             SearchError::SchemaVersionMismatch => None,
             SearchError::RelatedSearch(e) => Some(e),
             SearchError::Embedding(e) => Some(e),
+            SearchError::EmbeddingStore(e) => Some(e),
             SearchError::NoEmbeddings => None,
             SearchError::Config(_) => None,
             SearchError::Workspace(e) => Some(e),
@@ -182,6 +310,19 @@ impl From<crate::embedding::EmbeddingError> for SearchError {
     }
 }
 
+impl From<crate::embedding::store::EmbeddingStoreError> for SearchError {
+    fn from(e: crate::embedding::store::EmbeddingStoreError) -> Self {
+        // Map "no such table" SQLite errors to NoEmbeddings
+        if let crate::embedding::store::EmbeddingStoreError::Sqlite(ref sqlite_err) = e {
+            let msg = sqlite_err.to_string();
+            if msg.contains("no such table: embeddings") {
+                return SearchError::NoEmbeddings;
+            }
+        }
+        SearchError::EmbeddingStore(e)
+    }
+}
+
 impl From<ConfigError> for SearchError {
     fn from(e: ConfigError) -> Self {
         SearchError::Config(e.to_string())
@@ -206,6 +347,7 @@ impl From<crate::indexer::ResolveIndexPathError> for SearchError {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     ctx: &SearchContext,
     options: &SearchOptions,
@@ -214,6 +356,8 @@ pub fn run(
     snippet_config: SnippetConfig,
     rerank: bool,
     rerank_top: Option<usize>,
+    max_tokens: Option<usize>,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), SearchError> {
     let tantivy_dir = ctx.index_dir();
     if !tantivy_dir.exists() {
@@ -254,31 +398,60 @@ pub fn run(
     };
 
     // Reranking適用
-    let final_results = if rerank {
-        let reranked = try_rerank(
+    let (final_results, rerank_status) = if rerank {
+        let (reranked, status) = try_rerank(
             final_results,
             &effective_options.query,
             rerank_top_resolved,
             config,
         );
-        reranked.into_iter().take(original_limit).collect()
+        (
+            reranked.into_iter().take(original_limit).collect(),
+            Some(status),
+        )
+    } else {
+        (final_results, None)
+    };
+
+    // トークン予算適用（--max-tokens）
+    let final_results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(final_results, max_tok, |r| {
+            crate::output::estimate_tokens(&r.body)
+        })
     } else {
         final_results
     };
+
     if final_results.is_empty() {
         eprintln!("No results found.");
         return Ok(());
     }
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
+
+    // stdout prefix（format_results() の前に出力）
+    if let Some(ref status) = rerank_status
+        && let Some(prefix) = build_rerank_stdout_prefix(status, format)
+    {
+        writeln!(handle, "{prefix}").map_err(OutputError::from)?;
+    }
+
     match format {
         OutputFormat::Human => {
             output::human::format_human(&final_results, &mut handle, snippet_config)?;
         }
         _ => {
-            output::format_results(&final_results, format, &mut handle)?;
+            output::format_results(&final_results, format, &mut handle, llm_options)?;
         }
     }
+
+    // stderr 警告（human/path のみ）
+    if let Some(ref status) = rerank_status
+        && let Some(msg) = build_rerank_stderr_message(status, format)
+    {
+        eprintln!("{msg}");
+    }
+
     Ok(())
 }
 
@@ -287,6 +460,7 @@ pub fn run_symbol_search(
     limit: usize,
     format: OutputFormat,
     ctx: Option<&SearchContext>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     if symbol_name.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -318,6 +492,15 @@ pub fn run_symbol_search(
         return Ok(());
     }
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            estimate_symbol_result_tokens(r)
+        })
+    } else {
+        results
+    };
+
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_symbol_results(&results, format, &mut handle)?;
@@ -330,6 +513,7 @@ pub fn run_related_search(
     format: OutputFormat,
     ctx: Option<&SearchContext>,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     super::validate_file_paths(file_paths, 100)?;
 
@@ -373,6 +557,19 @@ pub fn run_related_search(
         format,
     );
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            let mut tokens = crate::output::estimate_tokens(&r.file_path);
+            if let Some(ref snippet) = r.snippet {
+                tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+            }
+            tokens
+        })
+    } else {
+        results
+    };
+
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     output::format_related_results(&results, format, &mut handle)?;
@@ -384,6 +581,7 @@ pub fn run_related_search_from_stdin(
     limit: usize,
     format: OutputFormat,
     snippet_options: crate::cli::snippet_helper::SnippetOptions,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     let files = crate::cli::stdin::read_file_paths_from_stdin(500)?;
 
@@ -434,6 +632,19 @@ pub fn run_related_search_from_stdin(
         format,
     );
 
+    // トークン予算適用（--max-tokens）
+    let results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(results, max_tok, |r| {
+            let mut tokens = crate::output::estimate_tokens(&r.file_path);
+            if let Some(ref snippet) = r.snippet {
+                tokens = tokens.saturating_add(crate::output::estimate_tokens(snippet));
+            }
+            tokens
+        })
+    } else {
+        results
+    };
+
     // 既存の format_related_results で出力
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
@@ -448,6 +659,7 @@ pub fn run_semantic_search(
     tag: Option<&str>,
     filters: &SearchFilters,
     ctx: Option<&SearchContext>,
+    max_tokens: Option<usize>,
 ) -> Result<(), SearchError> {
     if query.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -455,28 +667,34 @@ pub fn run_semantic_search(
         ));
     }
 
-    let (tantivy_dir, db_path, config) = if let Some(c) = ctx {
-        (c.index_dir(), c.symbol_db_path(), c.config.clone())
+    let (tantivy_dir, embeddings_db_path, config) = if let Some(c) = ctx {
+        (c.index_dir(), c.embeddings_db_path(), c.config.clone())
     } else {
         let default_dir = Path::new(".").join(crate::INDEX_DIR_NAME);
         let cfg = load_config(Path::new("."))?;
         (
             crate::indexer::index_dir(&default_dir),
-            crate::indexer::symbol_db_path(&default_dir),
+            crate::indexer::embeddings_db_path(&default_dir),
             cfg,
         )
     };
     if !tantivy_dir.exists() {
         return Err(SearchError::IndexNotFound);
     }
-    if !db_path.exists() {
-        return Err(SearchError::SymbolDbNotFound);
+    if !embeddings_db_path.exists() {
+        return Err(SearchError::NoEmbeddings);
     }
     let provider = crate::embedding::create_provider(&config.embedding)?;
 
-    // Check embeddings exist (db_path already validated above)
-    let store = SymbolStore::open(&db_path)?;
-    if store.count_embeddings()? == 0 {
+    // Check embeddings exist
+    let emb_store = match crate::embedding::store::EmbeddingStore::open(&embeddings_db_path) {
+        Ok(s) => s,
+        Err(crate::embedding::store::EmbeddingStoreError::SchemaVersionMismatch { .. }) => {
+            return Err(SearchError::SchemaVersionMismatch);
+        }
+        Err(e) => return Err(e.into()),
+    };
+    if emb_store.count()? == 0 {
         return Err(SearchError::NoEmbeddings);
     }
 
@@ -488,7 +706,15 @@ pub fn run_semantic_search(
     })?;
 
     // Search similar with oversampling
-    let similar_results = store.search_similar(query_embedding, limit.saturating_mul(5))?;
+    let search_output = emb_store.search_similar(query_embedding, limit.saturating_mul(5))?;
+    if search_output.should_warn_dimension_mismatch() {
+        eprintln!(
+            "Warning: {}/{} embeddings were skipped due to dimension mismatch. \
+             Consider re-running 'commandindex embed' after model change.",
+            search_output.skipped_dimension_mismatch, search_output.total_records
+        );
+    }
+    let similar_results = search_output.results;
 
     // Enrich with metadata from tantivy
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
@@ -499,6 +725,15 @@ pub fn run_semantic_search(
         .into_iter()
         .take(limit)
         .collect();
+
+    // トークン予算適用（--max-tokens）
+    let final_results = if let Some(max_tok) = max_tokens {
+        crate::output::token_budget::apply_token_budget(final_results, max_tok, |r| {
+            crate::output::estimate_tokens(&r.body)
+        })
+    } else {
+        final_results
+    };
 
     if final_results.is_empty() {
         eprintln!("No results found.");
@@ -512,13 +747,13 @@ pub fn run_semantic_search(
 }
 
 fn enrich_with_metadata(
-    similar_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    similar_results: &[crate::embedding::store::EmbeddingSimilarityResult],
     reader: &IndexReaderWrapper,
 ) -> Result<Vec<SemanticSearchResult>, SearchError> {
     use std::collections::HashMap;
 
     // Group by file_path
-    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
+    let mut groups: HashMap<&str, Vec<&crate::embedding::store::EmbeddingSimilarityResult>> =
         HashMap::new();
     for result in similar_results {
         groups.entry(&result.file_path).or_default().push(result);
@@ -577,11 +812,15 @@ fn try_hybrid_search(
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
     use crate::search::hybrid::{HYBRID_OVERSAMPLING_FACTOR, rrf_merge};
 
-    // 1. SymbolStore を開く
-    let db_path = crate::indexer::symbol_db_path(commandindex_dir);
-    let store = match crate::indexer::symbol_store::SymbolStore::open(&db_path) {
+    // 1. EmbeddingStore を開く
+    let embeddings_db_path = crate::indexer::embeddings_db_path(commandindex_dir);
+    if !embeddings_db_path.exists() {
+        eprintln!("[hybrid] Embedding database not found, using BM25 only.");
+        return Ok(bm25_results);
+    }
+    let emb_store = match crate::embedding::store::EmbeddingStore::open(&embeddings_db_path) {
         Ok(s) => s,
-        Err(crate::indexer::symbol_store::SymbolStoreError::SchemaVersionMismatch { .. }) => {
+        Err(crate::embedding::store::EmbeddingStoreError::SchemaVersionMismatch { .. }) => {
             return Err(SearchError::SchemaVersionMismatch);
         }
         Err(_) => {
@@ -591,7 +830,7 @@ fn try_hybrid_search(
     };
 
     // 2. Embeddingが存在するか確認
-    match store.count_embeddings() {
+    match emb_store.count() {
         Ok(0) => {
             eprintln!("[hybrid] No embeddings found, using BM25 only.");
             return Ok(bm25_results);
@@ -630,7 +869,7 @@ fn try_hybrid_search(
     };
 
     // 5. 類似検索（オーバーサンプリング付き）
-    let similar_results = match store.search_similar(
+    let search_output = match emb_store.search_similar(
         query_embedding,
         options.limit.saturating_mul(HYBRID_OVERSAMPLING_FACTOR),
     ) {
@@ -640,6 +879,14 @@ fn try_hybrid_search(
             return Ok(bm25_results);
         }
     };
+    if search_output.should_warn_dimension_mismatch() {
+        eprintln!(
+            "Warning: {}/{} embeddings were skipped due to dimension mismatch. \
+             Consider re-running 'commandindex embed' after model change.",
+            search_output.skipped_dimension_mismatch, search_output.total_records
+        );
+    }
+    let similar_results = search_output.results;
 
     // 6. セマンティック結果をSearchResult型に変換
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
@@ -690,54 +937,15 @@ fn try_hybrid_search(
 }
 
 /// セマンティック検索結果をSearchResult型に変換する（ハイブリッド検索用）
-/// tantivyからメタデータを取得し、section_headingでマッチングする。
+/// 実装は `crate::search::semantic::enrich_semantic_to_search_results` に移動済み。
 fn enrich_semantic_to_search_results(
-    semantic_results: &[crate::indexer::symbol_store::EmbeddingSimilarityResult],
+    semantic_results: &[crate::embedding::store::EmbeddingSimilarityResult],
     reader: &IndexReaderWrapper,
 ) -> Result<Vec<crate::indexer::reader::SearchResult>, SearchError> {
-    use std::collections::HashMap;
-
-    // Group by file_path
-    let mut groups: HashMap<&str, Vec<&crate::indexer::symbol_store::EmbeddingSimilarityResult>> =
-        HashMap::new();
-    for result in semantic_results {
-        groups.entry(&result.file_path).or_default().push(result);
-    }
-
-    let mut enriched = Vec::new();
-
-    for (file_path, items) in &groups {
-        let sections = reader.search_by_exact_path(file_path)?;
-
-        for item in items {
-            let matched = sections.iter().find(|s| s.heading == item.section_heading);
-
-            if let Some(section) = matched {
-                enriched.push(crate::indexer::reader::SearchResult {
-                    path: section.path.clone(),
-                    heading: section.heading.clone(),
-                    body: section.body.clone(),
-                    tags: section.tags.clone(),
-                    heading_level: section.heading_level,
-                    line_start: section.line_start,
-                    score: 0.0, // RRFマージで上書きされる
-                });
-            } else {
-                // Fallback: minimal result
-                enriched.push(crate::indexer::reader::SearchResult {
-                    path: item.file_path.clone(),
-                    heading: item.section_heading.clone(),
-                    body: String::new(),
-                    tags: String::new(),
-                    heading_level: 0,
-                    line_start: 0,
-                    score: 0.0,
-                });
-            }
-        }
-    }
-
-    Ok(enriched)
+    Ok(crate::search::semantic::enrich_semantic_to_search_results(
+        semantic_results,
+        reader,
+    )?)
 }
 
 fn apply_semantic_filters(
@@ -777,6 +985,20 @@ fn apply_semantic_filters(
         .collect()
 }
 
+/// シンボル検索結果のトークン数を推定する（非再帰版）
+fn estimate_symbol_result_tokens(r: &SymbolSearchResult) -> usize {
+    let text = format!("{} {} {}", r.name, r.kind, r.file_path);
+    let children_tokens: usize = r
+        .children
+        .iter()
+        .map(|c| {
+            let child_text = format!("{} {} {}", c.name, c.kind, c.file_path);
+            crate::output::estimate_tokens(&child_text)
+        })
+        .sum();
+    crate::output::estimate_tokens(&text) + children_tokens
+}
+
 fn build_symbol_tree(
     store: &SymbolStore,
     symbols: &[SymbolInfo],
@@ -814,13 +1036,13 @@ fn build_symbol_tree(
     Ok(results)
 }
 
-/// Reranking を試行する。失敗時はeprintlnで警告を出し、元の結果をそのまま返す。
+/// Reranking を試行する。失敗時は元の結果と RerankStatus を返す。
 fn try_rerank(
     results: Vec<crate::indexer::reader::SearchResult>,
     query: &str,
     rerank_top: usize,
     config: &AppConfig,
-) -> Vec<crate::indexer::reader::SearchResult> {
+) -> (Vec<crate::indexer::reader::SearchResult>, RerankStatus) {
     // 1. Use config's rerank settings
     let rerank_config = &config.rerank;
 
@@ -828,8 +1050,12 @@ fn try_rerank(
     let provider = match crate::rerank::ollama::create_rerank_provider(rerank_config) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("[rerank] Failed to create provider: {e}");
-            return results;
+            return (
+                results,
+                RerankStatus::Skipped {
+                    reason: e.to_string(),
+                },
+            );
         }
     };
 
@@ -845,23 +1071,43 @@ fn try_rerank(
         .collect();
 
     // 4. Rerank実行
-    let rerank_results = match provider.rerank(query, &candidates) {
-        Ok(r) => r,
+    let (rerank_results, status) = match provider.rerank(query, &candidates) {
+        Ok(r) => (r, RerankStatus::Applied),
+        Err(RerankError::PartialTimeout {
+            results: partial,
+            scored,
+            total,
+        }) => {
+            if partial.is_empty() {
+                return (
+                    results,
+                    RerankStatus::Skipped {
+                        reason: format!("Timeout: no candidates scored (0 of {total})"),
+                    },
+                );
+            }
+            (
+                partial,
+                RerankStatus::AppliedPartially {
+                    warning: format!("Timeout: scored {scored} of {total} candidates"),
+                },
+            )
+        }
         Err(e) => {
-            eprintln!("[rerank] Reranking failed: {e}");
-            return results;
+            return (
+                results,
+                RerankStatus::Skipped {
+                    reason: e.to_string(),
+                },
+            );
         }
     };
 
-    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexは警告+スキップ）
+    // 5. Rerankされた順序でSearchResultを再構築（範囲外indexはスキップ）
     let mut reranked: Vec<crate::indexer::reader::SearchResult> = rerank_results
         .iter()
         .filter_map(|rr| {
             if rr.index >= results.len() {
-                eprintln!(
-                    "[rerank] Warning: provider returned out-of-range index {}, skipping",
-                    rr.index
-                );
                 return None;
             }
             results.get(rr.index).map(|sr| {
@@ -884,5 +1130,140 @@ fn try_rerank(
         }
     }
 
-    reranked
+    (reranked, status)
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rerank_error_hint_all_variants() {
+        // Verify all RerankError variants have a hint
+        let errors: Vec<RerankError> = vec![
+            RerankError::ModelNotFound("llama3".to_string()),
+            RerankError::NetworkError("connection refused".to_string()),
+            RerankError::Timeout,
+            RerankError::ApiError {
+                status: 500,
+                message: "internal".to_string(),
+            },
+            RerankError::InvalidResponse("bad json".to_string()),
+            RerankError::ConfigError("missing field".to_string()),
+            RerankError::PartialTimeout {
+                results: vec![],
+                scored: 0,
+                total: 5,
+            },
+        ];
+        for err in &errors {
+            let hint = rerank_error_hint(err);
+            assert!(
+                !hint.is_empty(),
+                "Hint should not be empty for error: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sanitize_reason_removes_control_chars() {
+        assert_eq!(sanitize_reason("hello\x00world"), "hello world");
+        assert_eq!(sanitize_reason("line1\nline2"), "line1 line2");
+        assert_eq!(sanitize_reason("normal text"), "normal text");
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_json_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Network error: connection refused".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Json);
+        assert!(prefix.is_some());
+        let json: serde_json::Value = serde_json::from_str(&prefix.unwrap()).unwrap();
+        assert_eq!(json["type"], "metadata");
+        assert_eq!(json["rerank_status"], "skipped");
+        assert!(json["rerank_warnings"].is_array());
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_json_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Json);
+        assert!(prefix.is_some());
+        let json: serde_json::Value = serde_json::from_str(&prefix.unwrap()).unwrap();
+        assert_eq!(json["type"], "metadata");
+        assert_eq!(json["rerank_status"], "partial");
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_llm_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Model not found: llama3".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Llm);
+        assert!(prefix.is_some());
+        let prefix = prefix.unwrap();
+        assert!(prefix.starts_with("<!-- rerank skipped:"));
+        assert!(prefix.ends_with("-->"));
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_llm_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let prefix = build_rerank_stdout_prefix(&status, OutputFormat::Llm);
+        assert!(prefix.is_some());
+        let prefix = prefix.unwrap();
+        assert!(prefix.starts_with("<!-- rerank warning:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_human_returns_none() {
+        let status = RerankStatus::Skipped {
+            reason: "test".to_string(),
+        };
+        assert!(build_rerank_stdout_prefix(&status, OutputFormat::Human).is_none());
+    }
+
+    #[test]
+    fn test_build_rerank_stdout_prefix_applied_returns_none() {
+        assert!(build_rerank_stdout_prefix(&RerankStatus::Applied, OutputFormat::Json).is_none());
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_human_skipped() {
+        let status = RerankStatus::Skipped {
+            reason: "Network error: connection refused".to_string(),
+        };
+        let msg = build_rerank_stderr_message(&status, OutputFormat::Human);
+        assert!(msg.is_some());
+        let msg = msg.unwrap();
+        assert!(msg.contains("[rerank] Reranking skipped:"));
+        assert!(msg.contains("[rerank] Hint:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_human_partial() {
+        let status = RerankStatus::AppliedPartially {
+            warning: "Timeout: scored 3 of 10 candidates".to_string(),
+        };
+        let msg = build_rerank_stderr_message(&status, OutputFormat::Human);
+        assert!(msg.is_some());
+        assert!(msg.unwrap().contains("[rerank] Warning:"));
+    }
+
+    #[test]
+    fn test_build_rerank_stderr_message_json_returns_none() {
+        let status = RerankStatus::Skipped {
+            reason: "test".to_string(),
+        };
+        assert!(build_rerank_stderr_message(&status, OutputFormat::Json).is_none());
+    }
 }

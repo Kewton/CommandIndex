@@ -1,0 +1,22 @@
+{
+  "status": "success",
+  "tests_passed": true,
+  "clippy_passed": true,
+  "fmt_passed": true,
+  "new_tests_count": 10,
+  "files_changed": [
+    "src/output/mod.rs",
+    "src/output/llm.rs",
+    "src/cli/search.rs",
+    "src/cli/impact.rs",
+    "src/cli/changed_since.rs",
+    "src/main.rs",
+    "tests/output_format.rs"
+  ],
+  "codex_review": {
+    "critical_fixed": 1,
+    "warnings": 2,
+    "critical_fix": "LlmFormatOptions now receives snippet_lines from CLI instead of default()"
+  },
+  "summary": "LlmFormatOptions構造体導入、format_results/format_impact_resultsのシグネチャ変更、format_llmに重複除去・トランケーション、format_impact_llmにimpacted_by省略を実装。Codexレビューで指摘されたCLI引数の受け渡し漏れを修正。"
+}

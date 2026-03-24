@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "依存関係への影響",
+      "description": "Issueのパフォーマンス・フォールバック記述が実質的にOllama前提だが、既存コードのcreate_providerはOpenAIも選択可能。embedding構築済み環境ではsuggestが毎回embedding providerに依存するようになり、OpenAI設定時は外部API呼び出し・認証・課金・レート制限の影響を新たに受ける。",
+      "suggestion": "影響範囲に「コード上の新規依存追加はないが、embedding provider設定に応じてsuggestの実行時依存が強まる。OpenAI利用時はAPI到達性・APIキー・コスト・レート制限の影響を受ける」と明記。Ollama未起動時だけでなく、OpenAI失敗時もBM25 degrade対象であることを記載。"
+    },
+    {
+      "id": "M2",
+      "category": "既存機能への影響",
+      "description": "今回の変更はembeddingが存在する環境ではsuggestのランキングロジックそのものを常時変更するため、英語クエリだけでなく日本語クエリや既存の英語クエリの出力順・トップファイル・生成されるstrategy内容にも直接影響する。suggestはトップファイルに基づいてcontext/related/impactコマンドを組み立てるため、順位変化はそのまま提案コマンド列の変化に波及する。",
+      "suggestion": "影響範囲に「ユーザー向け挙動変更」として、embedding利用時のsuggest出力順位とstrategy内容が変わることを明記。受け入れ基準も「生成されるstrategyが妥当なトップファイルに追従すること」まで確認対象に含める。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テストへの影響",
+      "description": "既存のtests/e2e_suggest.rsはembedding未構築前提の経路しかカバーしていない。BM25>0でもsemanticを使う経路をまったくカバーしていない。",
+      "suggestion": "tests/e2e_suggest.rsの拡張、もしくは新規のembedding付きsuggest統合テスト追加を影響範囲に明記。BM25-only既存テストは維持しつつ、embeddingあり・provider失敗・file-level dedup/RRFの3系統を追加対象として示す。"
+    },
+    {
+      "id": "S2",
+      "category": "テストへの影響",
+      "description": "search.rsからsearch/へ共通ユーティリティを移す方針は、searchコマンドの挙動変更がなくても、コンパイル単位・可視性・モジュール構成に影響する。",
+      "suggestion": "影響範囲に「search周辺の単体/統合テストも回帰確認対象」と追記。"
+    },
+    {
+      "id": "S3",
+      "category": "パフォーマンスへの影響",
+      "description": "変更後はembedding DBが存在するだけで毎回provider呼び出しとsimilarity searchが入るため、ローカル即応コマンドからI/O待ち込みのコマンドに変わる。provider timeoutはOllamaで60秒、OpenAIで30秒。",
+      "suggestion": "パフォーマンス影響として「provider障害時の最悪待ち時間増加」を明記。将来的な改善余地（suggest用の短いtimeoutや条件付きsemantic実行）は別Issueに分けて管理。"
+    },
+    {
+      "id": "S4",
+      "category": "依存関係への影響",
+      "description": "「外部依存追加なし」は正しいが、実行時依存としてembedding DB・provider設定・ネットワーク到達性への依存が強まる。",
+      "suggestion": "依存関係の節を「ビルド時依存追加なし」と「実行時依存の変化」に分けて記述。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "既存機能への影響",
+      "description": "内部でもsemanticを使い、さらに探索ステップでもsearch --semanticを提案するため、ユーザーによっては重複感が出る可能性がある。",
+      "suggestion": "ヘルプやリリースノートに「内部ランキング改善」と「明示的なsemantic探索ステップ提案」は目的が異なることを補足。"
+    },
+    {
+      "id": "N2",
+      "category": "テストへの影響",
+      "description": "受け入れ基準2は「上位候補が変化すること」で、改善確認としては弱め。",
+      "suggestion": "fixtureベースで「望ましいファイルが上位に来る」期待値まで置けるなら、その方が将来の回帰検知に有効。"
+    }
+  ],
+  "summary": "コード変更自体はsrc/cli/suggest.rs中心で共通化のためにsrc/search/へ一部ロジックを移す程度に収まるが、影響は限定的ではない。embeddingが存在する環境ではsuggestの挙動が常時変わり、トップ候補の変化がそのままstrategyに波及。テスト面では既存のe2e_suggestだけでは新経路をカバーできず、embeddingあり/なし、provider失敗、file-level RRFの追加検証が必須。パフォーマンスと依存関係についても、ビルド時の外部依存追加はない一方で、実行時にはembedding providerへの依存が強まる。"
+}

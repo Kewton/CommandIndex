@@ -1,0 +1,55 @@
+{
+  "stage": 5,
+  "type": "normal_review_2nd",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {
+      "issue": "擬似コードのAPI呼び出しが既存実装と一致していない。SymbolStore::open(index_path) / EmbeddingStore::open(index_path) は誤り。既存実装はresolve_index_path → symbol_db_path() / embeddings_db_path() 経由。find_by_path()はファイル単位で複数section embeddingを返す。",
+      "reason": "実装者が存在しない/不正確なAPI前提で着手しやすい。根拠: src/indexer/mod.rs:63、src/embedding/store.rs:183、src/embedding/store.rs:286。",
+      "suggestion": "擬似コードをresolve_index_path → symbol_db_path / embeddings_db_pathベースに修正し、ランキング方針も『対象ファイルの複数section embeddingと文書の複数section embeddingをどう集約するか（max/avg など）』まで明記。"
+    },
+    {
+      "issue": "『ナレッジグラフの2ホップ走査』という説明が実データモデルとずれている。Issue起点にfind_knowledge_by_issue()を追加するなら実質はissue → documentの1ホップ取得。",
+      "reason": "実装方針の説明と実データモデルの対応が曖昧だと、不要に複雑なSQLやAPIを設計しやすい。根拠: src/indexer/symbol_store.rs:847。",
+      "suggestion": "Issue本文では『before-change全体は file → git log → issue → knowledge docs の多段フロー』と書き分け、知識グラフ部分自体は『Issue起点の文書取得』として表現を修正。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "--index-path の優先順位説明が既存CLIの実装実態と揃っていない",
+      "reason": "impact分岐は実際にはサブコマンド側のindex_pathをrun_impactに渡しており、main.rsのグローバルcli.index_pathはその分岐では使っていない。根拠: src/main.rs:10、src/main.rs:206、src/main.rs:691。",
+      "suggestion": "before-changeはSearchContext/resolve_index_pathベースの統一挙動に寄せるか、impact互換にするかを先に決め、優先順位をIssueに明文化。"
+    },
+    {
+      "issue": "モジュール構成の記述が不足。新規サブコマンド追加にはsrc/cli/mod.rsとsrc/main.rsの登録変更が必要。",
+      "reason": "現状のCLIはsrc/cli/mod.rsでモジュール公開し、src/main.rsでclap subcommandを列挙する構造。根拠: src/cli/mod.rs:1、src/main.rs:21。",
+      "suggestion": "変更対象にsrc/cli/mod.rsとsrc/main.rsを追加。"
+    },
+    {
+      "issue": "help-llmへの反映は受け入れ基準にあるが、既存テストはコマンド数を固定で検証しているため、テストも更新が必要。",
+      "reason": "根拠: tests/cli_args.rs:745以降。",
+      "suggestion": "受け入れ基準に『help-llm のコマンド一覧・件数テストを更新すること』を追加。"
+    },
+    {
+      "issue": "git実行を伴うコマンドなのに、入力バリデーションとgitエラー系の受け入れ基準が不足。",
+      "reason": "空文字、..、絶対パス、先頭-、非gitリポジトリ時の挙動が未定義。根拠: src/cli/mod.rs:21、src/cli/git.rs:28。",
+      "suggestion": "受け入れ基準に『不正なファイルパスを拒否すること』『gitリポジトリ外では明確なエラーを返すこと』を追加。"
+    },
+    {
+      "issue": "--limitの意味が未定義。全体件数に掛けるのかカテゴリごとに掛けるのか不明。",
+      "reason": "出力仕様が曖昧だと実装とテストで解釈が割れる。",
+      "suggestion": "--limitは『全体上位N』か『カテゴリ別上位N』かをIssueで固定。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "コミットメッセージからIssue番号を抽出する規則が粗い。#NNNだけだとPR番号や単なる参照まで拾う可能性。",
+      "suggestion": "抽出対象をfixes #NNN / refs #NNN / (#NNN)などに広げるか厳しくするかを決め、重複・複数Issue・merge commitの扱いも補足。"
+    },
+    {
+      "issue": "セマンティック検索がオプショナルである点は良いが、warning条件が曖昧。",
+      "suggestion": "warning条件をケース分けして明記。DB不存在はwarning、対象ファイルembedding欠如はinfo、関連文書embedding欠如は未ランクとして末尾表示など。"
+    }
+  ],
+  "summary": "Issueの方向性は既存コードベースに乗せやすいが、APIレベルの不正確さと知識グラフ『2ホップ』表現のズレがある。--index-pathの優先順位、CLI登録ファイル、help-llm固定テスト、git入力バリデーション、--limitの定義まで受け入れ基準に落とし込む必要あり。"
+}

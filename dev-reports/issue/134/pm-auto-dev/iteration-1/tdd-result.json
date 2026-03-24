@@ -1,0 +1,117 @@
+{
+  "issue": 134,
+  "title": "多言語embeddingモデル対応 (BGE-M3)",
+  "branch": "feature/issue-134-bge-m3",
+  "iteration": 1,
+  "status": "success",
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "SimilaritySearchOutput構造体の追加とsearch_similar()返り値変更",
+      "file": "src/embedding/store.rs",
+      "status": "done",
+      "tests_added": [
+        "test_search_similar_output_skipped_count",
+        "test_should_warn_dimension_mismatch"
+      ],
+      "tests_modified": [
+        "test_search_similar_basic",
+        "test_search_similar_top_k",
+        "test_search_similar_dimension_mismatch",
+        "test_search_similar_empty_db"
+      ]
+    },
+    {
+      "id": "1.2",
+      "title": "has_current_embedding()のmodel引数追加",
+      "file": "src/embedding/store.rs",
+      "status": "done",
+      "tests_added": [
+        "test_has_current_embedding_false_different_model"
+      ],
+      "tests_modified": [
+        "test_has_current_embedding_true",
+        "test_has_current_embedding_false_different_hash",
+        "test_has_current_embedding_false_no_record"
+      ]
+    },
+    {
+      "id": "1.3",
+      "title": "delete_stale_model_embeddings()の追加",
+      "file": "src/embedding/store.rs",
+      "status": "done",
+      "tests_added": [
+        "test_delete_stale_model_embeddings",
+        "test_delete_stale_model_embeddings_empty_model",
+        "test_delete_stale_model_embeddings_idempotent"
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "BGE-M3のknown_dimension追加",
+      "file": "src/embedding/ollama.rs",
+      "status": "done",
+      "tests_modified": [
+        "test_dimension_known_models"
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "embed.rsの更新",
+      "file": "src/cli/embed.rs",
+      "status": "done"
+    },
+    {
+      "id": "3.2",
+      "title": "index.rsの更新",
+      "file": "src/cli/index.rs",
+      "status": "done"
+    },
+    {
+      "id": "3.3",
+      "title": "search.rsの更新",
+      "file": "src/cli/search.rs",
+      "status": "done"
+    },
+    {
+      "id": "3.4",
+      "title": "suggest.rsの更新",
+      "file": "src/cli/suggest.rs",
+      "status": "done"
+    },
+    {
+      "id": "4.1",
+      "title": "e2eテスト修正",
+      "file": "tests/e2e_semantic_hybrid.rs",
+      "status": "done",
+      "tests_modified": [
+        "test_semantic_search_basic",
+        "test_semantic_search_top_k"
+      ]
+    },
+    {
+      "id": "5.1",
+      "title": "README.mdにEmbeddingセクション新設",
+      "file": "README.md",
+      "status": "done"
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass",
+    "cargo_fmt": "pass",
+    "cargo_test": "pass (1 pre-existing env-dependent failure: test_embed_without_ollama_fails - requires Ollama to be stopped)"
+  },
+  "changed_files": [
+    "src/embedding/store.rs",
+    "src/embedding/ollama.rs",
+    "src/cli/embed.rs",
+    "src/cli/index.rs",
+    "src/cli/search.rs",
+    "src/cli/suggest.rs",
+    "tests/e2e_semantic_hybrid.rs",
+    "README.md"
+  ],
+  "new_tests_count": 6,
+  "modified_tests_count": 10
+}

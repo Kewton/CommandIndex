@@ -1,0 +1,28 @@
+{
+  "issue_number": 117,
+  "title": "複数コマンド併用時の合計トークン量制御",
+  "design_policy": "dev-reports/design/issue-117-total-token-control-design-policy.md",
+  "work_plan": "dev-reports/issue/117/work-plan.md",
+  "scope": "search/impact コマンドに --max-tokens オプション追加",
+  "tasks": [
+    "Task 1.1: output/token_budget.rs 新規作成 + ユニットテスト",
+    "Task 1.2: context.rs からのユーティリティ移動",
+    "Task 2.1: main.rs に --max-tokens 引数追加",
+    "Task 2.2: CLI引数パーステスト",
+    "Task 3.1: impact.rs に --max-tokens 追加",
+    "Task 3.2: changed_since.rs に max_tokens 伝達",
+    "Task 3.3: impact E2E テスト",
+    "Task 4.1: search.rs の全モードに --max-tokens 追加",
+    "Task 4.2: workspace.rs に max_tokens 伝達",
+    "Task 4.3: search E2E テスト",
+    "Task 5.1: help_llm.rs 更新"
+  ],
+  "key_design_decisions": {
+    "token_estimation": "estimate_tokens (chars().count() / 4) を再利用",
+    "truncation_strategy": "アイテム単位打ち切り（文字列単位切り詰めなし）",
+    "first_entry_exception": "max_tokens超過でも最初のエントリは必ず含める",
+    "overflow_protection": "saturating_add使用",
+    "max_tokens_zero": "空Vec早期リターン",
+    "module_placement": "token_budget.rs は汎用関数のみ、estimate関数はクロージャ注入"
+  }
+}

@@ -141,6 +141,13 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
+    // 6.5. Delete stale embeddings from previous model
+    let model_name = provider.model_name();
+    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
+    if stale_deleted > 0 {
+        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
+    }
+
     let mut total_sections: u64 = 0;
     let mut generated: u64 = 0;
     let mut cached: u64 = 0;
@@ -149,7 +156,7 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
     // 7. Process each file entry
     for entry in &manifest.files {
         // Check cache: if embedding already exists for this hash, skip
-        if store.has_current_embedding(&entry.path, &entry.hash)? {
+        if store.has_current_embedding(&entry.path, &entry.hash, model_name)? {
             cached += entry.sections;
             total_sections += entry.sections;
             continue;
@@ -178,25 +185,40 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
         // Generate embeddings
         match provider.embed(&texts) {
             Ok(embeddings) => {
-                let dimension = provider.dimension();
-                let model = provider.model_name();
-                for (section, embedding) in sections.iter().zip(embeddings.iter()) {
-                    if let Err(e) = store.upsert_embedding(
-                        &entry.path,
-                        &section.heading,
-                        embedding,
-                        dimension,
-                        model,
-                        &entry.hash,
-                    ) {
-                        eprintln!(
-                            "Warning: failed to store embedding for {}#{}: {e}",
-                            entry.path, section.heading
-                        );
-                        failed += 1;
-                        continue;
+                if sections.len() != embeddings.len() {
+                    eprintln!(
+                        "Warning: section/embedding count mismatch for {}: {} sections, {} embeddings",
+                        entry.path,
+                        sections.len(),
+                        embeddings.len()
+                    );
+                    failed += sections.len() as u64;
+                } else {
+                    let dimension = provider.dimension();
+                    let model = provider.model_name();
+                    match store.execute_in_transaction(|store| {
+                        store.delete_by_path(&entry.path)?;
+                        for (section, embedding) in sections.iter().zip(embeddings.iter()) {
+                            store.upsert_embedding(
+                                &entry.path,
+                                &section.heading,
+                                embedding,
+                                dimension,
+                                model,
+                                &entry.hash,
+                            )?;
+                        }
+                        Ok(sections.len() as u64)
+                    }) {
+                        Ok(count) => generated += count,
+                        Err(e) => {
+                            eprintln!(
+                                "Warning: failed to store embeddings for {}: {e}",
+                                entry.path
+                            );
+                            failed += sections.len() as u64;
+                        }
                     }
-                    generated += 1;
                 }
             }
             Err(e) => {

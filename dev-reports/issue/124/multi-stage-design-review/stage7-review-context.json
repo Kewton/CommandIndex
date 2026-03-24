@@ -1,0 +1,22 @@
+{
+  "stage": 7,
+  "type": "consistency_impact_2nd",
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {"id": "MF-1", "description": "判断5と判断7で#[deprecated]方針が矛盾"},
+    {"id": "MF-2", "description": "suggest.rsの変更影響が過小評価（run_suggest()/build_strategy()のシグネチャ変更も必要）"},
+    {"id": "MF-3", "description": "SearchError::exit_code()は現行コードに存在しない可能性"},
+    {"id": "MF-4", "description": "no such table文字列判定は脆い。暫定策としてリスク明記が必要"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "description": "suggest関連テストとEmbeddingStore新規ユニットテストの影響を追加"},
+    {"id": "SF-2", "description": "擬似コードにPath::exists()事前チェックを反映"},
+    {"id": "SF-3", "description": "パストラバーサル対策の表現を修正"},
+    {"id": "SF-4", "description": "cli/suggest -> embedding/storeの新規依存も追記"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "description": "NaN/Infフィルタのテスト追加"},
+    {"id": "NH-2", "description": "責務境界を設計書に明記"}
+  ],
+  "summary": "#[deprecated]方針の矛盾修正、suggest変更波及範囲の追加、文字列判定リスク明記が主な改善点"
+}

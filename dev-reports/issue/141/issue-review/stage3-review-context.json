@@ -1,0 +1,36 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "title": "cli_args.rs テストに why サブコマンドの存在確認を追加",
+      "description": "tests/cli_args.rs の help_flag_shows_usage テストに why の存在チェックを追加する。"
+    },
+    {
+      "title": "help_llm.rs に why コマンドの定義を追加",
+      "description": "HelpLlmOutput に why コマンドのエントリを追加する。"
+    },
+    {
+      "title": "find_knowledge_related の走査方向限定",
+      "description": "document ノードのみ対象。ソースコードファイルが指定された場合は結果が空になる点を明記。"
+    },
+    {
+      "title": "output モジュールへの WhyResult 型追加",
+      "description": "output/mod.rs に WhyResult 構造体と4フォーマッタの追加が必要。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "suggest コマンドへの why 追加検討",
+      "description": "Phase 2 以降で検討。"
+    },
+    {
+      "title": "KnowledgeRelatedResult に doc_subtype フィールド追加",
+      "description": "表示情報を充実させるため。"
+    },
+    {
+      "title": "validate_file_paths の再利用",
+      "description": "max_files=1 で呼び出して一貫性を保つ。"
+    }
+  ],
+  "summary": "純粋な追加変更で既存機能への影響は極めて小さい。新規crate不要。主な作業はCLIバリアント追加、cli/why.rs新規作成、output追加、テスト追加。パフォーマンス問題なし。"
+}

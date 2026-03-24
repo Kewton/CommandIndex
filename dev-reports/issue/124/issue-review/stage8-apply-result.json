@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "type": "apply_impact_review_2nd",
+  "applied_items": ["M1", "M2", "M3", "M4", "S1", "S2", "S3", "S4"],
+  "issue_updated": true,
+  "changes": [
+    "異常系契約を明記（run_semantic_search→NoEmbeddings, try_hybrid_search→graceful fallback）",
+    "テスト変更対象を個別テスト名で列挙（通常+ignoredの6件）",
+    "EmbeddingStore側のユニットテスト追加を明記",
+    "新規依存関係セクション追加（cli/search→embedding/store, 外部依存なし）",
+    "性能影響: brute-force全件走査であること、大規模DBでの退行測定対象を明記",
+    "statusコマンドは機能変更なしを備考に追記",
+    "SymbolStore残置の判断理由を明記"
+  ]
+}

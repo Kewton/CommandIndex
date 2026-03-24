@@ -1,3 +1,4 @@
+pub mod before_change;
 pub mod changed_since;
 pub mod clean;
 pub mod config;
@@ -10,12 +11,14 @@ pub mod help_llm;
 pub mod impact;
 pub mod import_index;
 pub mod index;
+pub mod issue;
 pub mod search;
 pub mod snippet_helper;
 pub mod status;
 pub mod stdin;
 pub mod suggest;
 pub mod watch;
+pub mod why;
 pub mod workspace;
 
 /// Common file path validation for CLI handlers.

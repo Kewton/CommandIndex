@@ -1,0 +1,14 @@
+{
+  "applied": [
+    {"id": "M1", "action": "影響範囲にindex.rsのincremental更新経路を明示"},
+    {"id": "M2", "action": "T2にエラー時振る舞いの変更（section単位スキップ→ファイル単位ROLLBACK）を明記"},
+    {"id": "S1", "action": "影響範囲の整理にincremental経路を含めた"},
+    {"id": "S2", "action": "受け入れ基準にtransaction commit/rollback単体テスト追加を明記"},
+    {"id": "S3", "action": "パフォーマンス影響に正常系/異常系を分離して記載"},
+    {"id": "S4", "action": "外部コンポーネントへの影響セクションを新設"},
+    {"id": "N1", "action": "読み取り系の回帰確認推奨を注記追加"}
+  ],
+  "skipped": [
+    {"id": "N2", "reason": "ベンチマーク詳細手順は実装フェーズで対応"}
+  ]
+}

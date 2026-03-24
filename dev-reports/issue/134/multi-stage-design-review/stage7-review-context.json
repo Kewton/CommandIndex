@@ -1,0 +1,18 @@
+{
+  "stage": 7,
+  "type": "整合性・影響分析レビュー（2回目）",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {"id": "M1", "title": "EmbeddingStoreError::InvalidArgumentが現行コードに存在しない", "suggestion": "InvalidArgument(String)の追加を明記するか、Config側で弾く方針に統一"},
+    {"id": "M2", "title": "設計書内でAPI名が不一致（should_warn vs warn_if）", "suggestion": "should_warn_dimension_mismatch()に統一"},
+    {"id": "M3", "title": "テスト戦略が本文方針と矛盾（空文字列で0件返す vs エラー返す）", "suggestion": "テスト戦略をInvalidArgument返却に修正"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "help_llm.rs等のhelp文言との整合確認が影響範囲に含まれていない"},
+    {"id": "S2", "title": "stderr出力追加に伴う既存アサーション影響の確認が不足"},
+    {"id": "S3", "title": "index --with-embeddingの旧モデル自動削除が既存運用への影響大"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "ログ出力にクエリ文字列や設定値を含めない方針の明文化"}
+  ]
+}

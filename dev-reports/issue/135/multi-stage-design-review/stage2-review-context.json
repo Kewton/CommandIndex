@@ -1,0 +1,19 @@
+{
+  "stage": "Stage 2: 整合性レビュー",
+  "must_fix": [
+    {"id": "M1", "title": "embed.rsのbeforeコードにgenerated += 1が欠落", "suggestion": "before snippetを正確に更新"},
+    {"id": "M2", "title": "failedカウンタの粒度変更（per-section→per-file）が未文書化", "suggestion": "振る舞い変更として明記"},
+    {"id": "M3", "title": "rusqlite::Transaction拒否理由の説明が不正確", "suggestion": "Connection::transaction(&mut self)とexecute_batch(&self)の区別を正確に記載"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "index.rsのbefore/afterコード例がない（embed.rsと異なるエラーハンドリング）"},
+    {"id": "S2", "title": "COMMIT失敗時のエッジケースが未考慮"},
+    {"id": "S3", "title": "ollama.rsの既存テストがバッチ動作をカバーしていない点の記載"},
+    {"id": "S4", "title": "conn fieldのモジュールプライベートの記載"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "WAL mode最適化を将来課題として記載"},
+    {"id": "N2", "title": "ネスト呼び出し時のSQLiteエラー動作を文書化"}
+  ],
+  "summary": "must_fix 3件。beforeコードの不正確さ、failedカウンタ粒度変更の未文書化、rusqliteの制約説明の不正確さ。"
+}

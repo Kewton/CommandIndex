@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "モデル変更時の次元不整合に対する保護が受け入れ基準に欠如",
+      "description": "現在のsearch_similar実装は次元不一致のembeddingをスキップするため、nomic-embed-text(768次元)からBGE-M3(1024次元)に変更した場合、既存のembeddingは全て無視され検索結果が0件になる。T2の受け入れ基準に「既存embeddingが残っている場合のエラーハンドリングまたは警告」が含まれていない。",
+      "suggestion": "T2の受け入れ基準に「モデル変更後にcleanせず検索した場合、既存embeddingの次元不一致を検知して警告メッセージを表示すること」を追加する。embedコマンド実行時に既存DBのembedding次元と新モデルの次元が異なる場合に警告を出すタスクの追加を検討。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "known_dimensionのモデル名パターン網羅不足",
+      "description": "ユーザーが qllama/bge-m3（タグなし）や bge-m3 等の類似名で設定する可能性がある。完全一致のため次元数が0になりフォールバック動作に依存するリスクがある。",
+      "suggestion": "T1に「bge-m3系のバリエーション考慮、またはフォールバック動作の確認」を追記する。"
+    },
+    {
+      "id": "S2",
+      "title": "T3の精度比較テストの合否基準が未定義",
+      "description": "テストクエリと期待結果はあるが、top-kの何位以内に含まれればpassか等の定量基準がない。",
+      "suggestion": "「top-5以内に期待ドキュメントが含まれること」等の基準を追加する。"
+    },
+    {
+      "id": "S3",
+      "title": "MAX_TEXT_LENGTHとBGE-M3コンテキスト長の整合性",
+      "description": "BGE-M3のコンテキスト長は8192トークンだが、OllamaProviderのMAX_TEXT_LENGTHは8192文字。日本語では1文字が複数トークンになるため超過する可能性がある。",
+      "suggestion": "T2に「長い日本語ドキュメントのembedding生成確認」を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "T1のユニットテスト追加の明記",
+      "description": "test_dimension_known_modelsテストにBGE-M3のアサーション追加が必要。",
+      "suggestion": "T1にテスト追加を含める。"
+    },
+    {
+      "id": "N2",
+      "title": "デフォルトモデルの変更検討への言及",
+      "description": "BGE-M3が優れているがデフォルトはnomic-embed-textのまま。",
+      "suggestion": "今後の検討事項として記載。"
+    },
+    {
+      "id": "N3",
+      "title": "T4のドキュメント成果物が不明確",
+      "description": "どこにドキュメントを配置するか未指定。",
+      "suggestion": "具体的な成果物を明記する。"
+    }
+  ],
+  "summary": "Issue #134は全体として明確で実装コストも低い良いIssue。最も重要な指摘（M1）は、モデル変更時にcleanを忘れた場合のサイレント障害リスク。その他、モデル名バリエーション対応、精度テストの定量基準、日本語テキストのトークン長問題は品質担保のため対応推奨。"
+}

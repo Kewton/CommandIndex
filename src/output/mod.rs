@@ -3,6 +3,7 @@ pub mod human;
 pub mod json;
 pub mod llm;
 pub mod path;
+pub(crate) mod token_budget;
 
 use std::fmt;
 use std::io::Write;
@@ -26,6 +27,13 @@ impl Default for SnippetConfig {
             chars: 120,
         }
     }
+}
+
+/// LLM出力フォーマットオプション
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LlmFormatOptions {
+    /// body の最大行数（None = 無制限）
+    pub max_body_lines: Option<usize>,
 }
 
 /// 出力フォーマット
@@ -117,6 +125,7 @@ pub enum RelationType {
     TagMatch { matched_tags: Vec<String> },
     PathSimilarity,
     DirectoryProximity,
+    KnowledgeGraph,
 }
 
 /// 関連検索結果を指定フォーマットで出力する
@@ -210,12 +219,13 @@ pub fn format_results(
     results: &[SearchResult],
     format: OutputFormat,
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => human::format_human(results, writer, SnippetConfig::default()),
         OutputFormat::Json => json::format_json(results, writer),
         OutputFormat::Path => path::format_path(results, writer),
-        OutputFormat::Llm => llm::format_llm(results, writer),
+        OutputFormat::Llm => llm::format_llm(results, writer, llm_options),
     }
 }
 
@@ -283,12 +293,46 @@ pub fn format_impact_results(
     result: &ImpactResult,
     format: OutputFormat,
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => human::format_impact_human(result, writer),
         OutputFormat::Json => json::format_impact_json(result, writer),
         OutputFormat::Path => path::format_impact_path(result, writer),
-        OutputFormat::Llm => llm::format_impact_llm(result, writer),
+        OutputFormat::Llm => llm::format_impact_llm(result, writer, llm_options),
+    }
+}
+
+/// before-change サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct BeforeChangeResult {
+    pub file_path: String,
+    pub findings: Vec<BeforeChangeFinding>,
+    pub total_issues: usize,
+    pub has_embeddings: bool,
+}
+
+/// before-change の個別ドキュメント結果
+#[derive(Debug, Clone, Serialize)]
+pub struct BeforeChangeFinding {
+    pub issue_number: String,
+    pub relation: String,
+    pub doc_path: String,
+    pub doc_title: Option<String>,
+    pub similarity: Option<f32>,
+}
+
+/// before-change 結果を指定フォーマットで出力する
+pub fn format_before_change_results(
+    result: &BeforeChangeResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_before_change_human(result, writer),
+        OutputFormat::Json => json::format_before_change_json(result, writer),
+        OutputFormat::Path => path::format_before_change_path(result, writer),
+        OutputFormat::Llm => llm::format_before_change_llm(result, writer),
     }
 }
 
@@ -338,6 +382,43 @@ fn format_suggest_json(result: &SuggestResult, writer: &mut dyn Write) -> Result
     let json = serde_json::to_string_pretty(result)?;
     writeln!(writer, "{json}")?;
     Ok(())
+}
+
+/// why サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyResult {
+    pub file_path: String,
+    pub issues: Vec<WhyIssueEntry>,
+}
+
+/// why の Issue エントリ
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyIssueEntry {
+    pub issue_number: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub documents: Vec<WhyDocumentEntry>,
+}
+
+/// why の Document エントリ
+#[derive(Debug, Clone, Serialize)]
+pub struct WhyDocumentEntry {
+    pub file_path: String,
+    pub relation: String,
+}
+
+/// why 結果を指定フォーマットで出力する
+pub fn format_why_results(
+    result: &WhyResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_why_human(result, writer),
+        OutputFormat::Json => json::format_why_json(result, writer),
+        OutputFormat::Path => path::format_why_path(result, writer),
+        OutputFormat::Llm => llm::format_why_llm(result, writer),
+    }
 }
 
 /// AI向け文脈パッケージ

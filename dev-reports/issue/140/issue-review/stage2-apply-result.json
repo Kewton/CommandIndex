@@ -1,0 +1,21 @@
+{
+  "stage": 2,
+  "type": "apply",
+  "applied_fixes": [
+    {"id": "M1", "action": "SQLクエリを実装のスキーマに合わせて修正。type/relation/metadata構造を反映"},
+    {"id": "M2", "action": "「変更ファイル」カテゴリをスコープ外とし、Noteで明記。出力例から削除"},
+    {"id": "M3", "action": "レビューファイルのパスパターンを実装に合わせて修正"},
+    {"id": "M4", "action": "受け入れ基準セクションを追加（8項目）"}
+  ],
+  "additional_improvements": [
+    {"id": "S1", "action": "エラーハンドリングセクションを追加（3ケース）"},
+    {"id": "S2", "action": "CLI定義セクションを追加（引数、オプション詳細）"},
+    {"id": "S3", "action": "実装箇所セクションにfind_documents_by_issue関数追加を明記"},
+    {"id": "S4", "action": "出力カテゴリとdoc_subtypeの対応表を追加"},
+    {"id": "N2", "action": "進捗レポートカテゴリを出力例に追加"},
+    {"id": "N3", "action": "help_llm.rsへの反映を実装箇所に追加"},
+    {"id": "N4", "action": "--format path の仕様を追加"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/140"
+}

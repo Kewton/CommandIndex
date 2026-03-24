@@ -1,0 +1,14 @@
+{
+  "stage": 8,
+  "action": "apply_codex_impact_review",
+  "applied_items": [
+    {"id": "M1", "action": "影響範囲に実行時依存の変化を追加。OpenAI利用時のAPI到達性・認証・コスト・レート制限を明記"},
+    {"id": "M2", "action": "ユーザー向け挙動変更セクションを追加。strategy変化の波及を明記。受け入れ基準3に追加"},
+    {"id": "S1", "action": "テスト追加をコード変更範囲に明記。embeddingあり/provider失敗/file-level RRFの3系統"},
+    {"id": "S2", "action": "受け入れ基準8にsearch周辺テストの回帰確認を追加"},
+    {"id": "S3", "action": "パフォーマンス考慮にprovider障害時の最悪待ち時間増加を明記"},
+    {"id": "S4", "action": "依存関係をビルド時/実行時に分離して記述"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/144"
+}

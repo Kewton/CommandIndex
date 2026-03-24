@@ -1,0 +1,82 @@
+{
+  "stage": 1,
+  "type": "normal_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "title": "ノードタイプの不整合: Issueの設計方針と本文が矛盾",
+      "description": "設計方針セクションでは「ノードタイプは issue, file, document の3種類から開始」と記載されているが、スキーマのCREATE TABLE定義のコメントでは type カラムに 'issue', 'design_policy', 'review', 'work_plan', 'file' の5種類が列挙されている。3種類で開始するなら、design_policy/review/work_plan をどう扱うか明記すべき。",
+      "affected_area": "スキーマ設計 / 設計方針セクション"
+    },
+    {
+      "title": "スキーマバージョン管理の記載なし",
+      "description": "既存の symbols.db は CURRENT_SYMBOL_SCHEMA_VERSION = 3 で管理されており、新テーブル追加時にはバージョンを 4 にインクリメントする必要がある。マイグレーション戦略の記載がなく、既存インデックスを壊すリスクがある。",
+      "affected_area": "src/indexer/symbol_store.rs (CURRENT_SYMBOL_SCHEMA_VERSION, open(), create_tables())"
+    },
+    {
+      "title": "delete_by_file() にナレッジグラフ削除処理が未考慮",
+      "description": "既存の SymbolStore::delete_by_file() は symbols, dependencies, file_links, embeddings の4テーブルから当該ファイルのレコードを削除する。knowledge_nodes/knowledge_edges への削除ロジックが未考慮。",
+      "affected_area": "src/indexer/symbol_store.rs (delete_by_file)"
+    },
+    {
+      "title": "完了条件のコマンド名が既存コードと不一致",
+      "description": "index と update の両コマンドでの動作を明確にすべき。",
+      "affected_area": "完了条件セクション"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "FOREIGN KEY制約によるパフォーマンスへの影響考慮",
+      "description": "既存テーブルは外部キー制約を使用していない。FK制約を採用する理由を明記すべき。",
+      "affected_area": "スキーマ設計"
+    },
+    {
+      "title": "既存テーブルからのエッジ抽出でデータの二重管理リスク",
+      "description": "dependencies/file_links は既に search --related で利用されている。knowledge_edges に重複格納するのか、両方を走査するのか不明確。",
+      "affected_area": "エッジの抽出ソースセクション"
+    },
+    {
+      "title": "search --related へのスコアリング統合方法が未定義",
+      "description": "ナレッジグラフエッジの重み設定、RelationType enumへの新バリアント追加等の具体設計がない。",
+      "affected_area": "src/search/related.rs / src/output/mod.rs"
+    },
+    {
+      "title": "dev-reports のパースパターンが実際のディレクトリ構造と不一致",
+      "description": "dev-reports/review/ は存在しない。実際は dev-reports/issue/XXX/issue-review/ 等に格納されている。",
+      "affected_area": "ファイル名パースセクション"
+    },
+    {
+      "title": "impact/context/suggest統合のスコープが不明確",
+      "description": "本Issueのスコープ内か後続Issueに分割すべきかを明記すべき。",
+      "affected_area": "既存機能との統合セクション"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "knowledge_nodes への created_at / updated_at カラムの追加",
+      "description": "差分更新時の変更検出やステイルノード検出に有用。",
+      "affected_area": "スキーマ設計"
+    },
+    {
+      "title": "knowledge_edges の metadata カラムのスキーマ定義",
+      "description": "標準フィールド（created_at, confidence等）を事前定義すると実装が安定する。",
+      "affected_area": "スキーマ設計"
+    },
+    {
+      "title": "knowledge_nodes/edges テーブルへの追加インデックス定義",
+      "description": "type カラムや relation カラムでの検索用インデックスが有効。",
+      "affected_area": "スキーマ設計"
+    },
+    {
+      "title": "ON DELETE CASCADE の検討",
+      "description": "ノード削除時のエッジ孤立防止。既存 symbols テーブルに前例あり。",
+      "affected_area": "スキーマ設計"
+    },
+    {
+      "title": "テスト戦略の記載",
+      "description": "完了条件にテストの方針がない。cargo test全パスが必須のプロジェクトルール。",
+      "affected_area": "完了条件セクション"
+    }
+  ],
+  "summary": "Issue #139 は既存の symbols.db を拡張してナレッジグラフ機能を追加する意欲的な提案であり方向性は妥当。ただし (1) ノードタイプの定義矛盾（5種 vs 3種）、(2) スキーマバージョン管理の未記載、(3) delete_by_file() への影響未考慮、(4) コマンド名の曖昧さ、の4点は実装前に解決必須。また dev-reports のパースパターンが実態と合わない点、search --related への統合設計不足が should_fix。スコープが広いため Phase 分割の検討を推奨。"
+}

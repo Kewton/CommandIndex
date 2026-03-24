@@ -1,0 +1,16 @@
+{
+  "stage": 8,
+  "action": "Issue本文更新（Codex影響範囲レビュー2回目反映）",
+  "applied_items": [
+    "M1: RerankProvider trait変更を影響範囲・受け入れ基準に明記",
+    "M2: tests/common/mod.rsのJSONLパースユーティリティ更新を受け入れ基準に追加",
+    "M3: llm先頭コメント順序変更を影響範囲に明記",
+    "M4: パフォーマンス影響（軽微・据え置き）を影響範囲に明記",
+    "S1: 新規crate追加なしを明記",
+    "S2: stderr文言の[rerank]プレフィックス維持を受け入れ基準に明記",
+    "S4: workspace検索・impactコマンドへの影響なしを影響範囲に明記"
+  ],
+  "skipped_items": [
+    "S3: 単体テスト追加は作業計画フェーズで具体化（受け入れ基準はE2E中心で十分）"
+  ]
+}

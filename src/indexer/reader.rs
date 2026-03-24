@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
 use tantivy::collector::TopDocs;
@@ -227,6 +228,34 @@ impl IndexReaderWrapper {
             results.push(self.doc_to_search_result(&doc, score));
         }
         Ok(results)
+    }
+
+    /// tantivy インデックス内の全ドキュメントから path フィールドを取得し、
+    /// 重複排除した HashSet で返す。
+    pub fn all_indexed_paths(&self) -> Result<HashSet<String>, ReaderError> {
+        let reader = self
+            .index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
+            .try_into()?;
+        let searcher = reader.searcher();
+        let mut paths = HashSet::new();
+
+        let all_query = tantivy::query::AllQuery;
+        let top_docs = searcher.search(&all_query, &TopDocs::with_limit(1_000_000))?;
+        for (_score, doc_address) in top_docs {
+            let doc: tantivy::TantivyDocument = searcher.doc(doc_address)?;
+            let path = doc
+                .get_first(self.schema.path)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if !path.is_empty() {
+                paths.insert(path);
+            }
+        }
+
+        Ok(paths)
     }
 }
 

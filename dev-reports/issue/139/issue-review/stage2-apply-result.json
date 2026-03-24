@@ -1,0 +1,62 @@
+{
+  "stage": 2,
+  "type": "apply_review",
+  "applied_fixes": [
+    {
+      "original": "ノードタイプの不整合（5種 vs 3種）",
+      "fix": "ノードタイプを issue/document/file の3種に統一。サブタイプはmetadataのdoc_subtypeで区別する方式に変更",
+      "severity": "must_fix"
+    },
+    {
+      "original": "スキーマバージョン管理の記載なし",
+      "fix": "スキーマバージョン管理セクションを追加。CURRENT_SYMBOL_SCHEMA_VERSION 3→4、再構築方式を明記",
+      "severity": "must_fix"
+    },
+    {
+      "original": "delete_by_file() にナレッジグラフ削除処理が未考慮",
+      "fix": "完了条件とスコープにdelete_by_file()対応を追加。ON DELETE CASCADEを設計方針に明記",
+      "severity": "must_fix"
+    },
+    {
+      "original": "完了条件のコマンド名が曖昧",
+      "fix": "index でフル構築、update で差分更新を明記。完了条件をチェックリスト形式に改善",
+      "severity": "must_fix"
+    },
+    {
+      "original": "dev-reports のパースパターンが実態と不一致",
+      "fix": "実際のディレクトリ構造（dev-reports/issue/XXX/issue-review/, multi-stage-design-review/）に基づくパターンに修正",
+      "severity": "should_fix"
+    },
+    {
+      "original": "既存テーブルとのデータ二重管理リスク",
+      "fix": "dependencies/file_linksのデータはknowledge_edgesに複製しない方針を明記",
+      "severity": "should_fix"
+    },
+    {
+      "original": "search --related へのスコアリング統合方法が未定義",
+      "fix": "RelationType::KnowledgeGraph バリアント（重み0.8）を明記",
+      "severity": "should_fix"
+    },
+    {
+      "original": "impact/context/suggest統合のスコープが不明確",
+      "fix": "本Issueのスコープと後続Issue分割を明確に分離",
+      "severity": "should_fix"
+    },
+    {
+      "original": "created_at/updated_at カラムの追加",
+      "fix": "knowledge_nodesにcreated_at/updated_atを追加",
+      "severity": "nice_to_have"
+    },
+    {
+      "original": "ON DELETE CASCADE の検討",
+      "fix": "knowledge_edgesにON DELETE CASCADEを追加",
+      "severity": "nice_to_have"
+    },
+    {
+      "original": "テスト戦略の記載",
+      "fix": "完了条件にcargo test/clippy要件を追加",
+      "severity": "nice_to_have"
+    }
+  ],
+  "summary": "Stage 1の must_fix 4件、should_fix 5件中4件、nice_to_have 5件中3件を反映。Issue本文を更新済み。"
+}

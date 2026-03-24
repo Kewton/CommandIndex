@@ -1,0 +1,12 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    {"id": "M1", "action": "warn_if_dimension_mismatch()をshould_warn_dimension_mismatch()に変更。eprintln!をCLI層に移動。SRP準拠"},
+    {"id": "M2", "action": "空文字列ガードをOk(0)からErr(InvalidArgument)に変更。Fail Fast原則準拠"},
+    {"id": "S3", "action": "API変更方針として「内部APIのためbreaking change許容」を明記"}
+  ],
+  "not_applied": [
+    {"id": "S1", "note": "skipped_invalid_blob等の分離は過剰設計（YAGNI）。現時点ではdimension_mismatchのみで十分"},
+    {"id": "S2", "note": "共通ヘルパー関数は実装時に検討。呼び出し箇所が2箇所で抽象化コストが利点を上回る"}
+  ]
+}

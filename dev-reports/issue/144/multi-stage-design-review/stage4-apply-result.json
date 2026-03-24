@@ -1,0 +1,1 @@
+{"stage": 4, "applied": ["S3: validate_inputのMAX_INPUT_LENGTHはバイト数制限であることをセキュリティ設計に明記"], "deferred": ["S1: OpenAI HTTPS強制は本Issue範囲外", "S2: APIキー平文警告は本Issue範囲外"], "note": "must_fix 0件。セキュリティ水準は良好。"}

@@ -1,0 +1,13 @@
+{
+  "applied": true,
+  "changes": [
+    "M1: 影響範囲セクション追加 - 変更対象ファイルと変更なし確認対象を明記。LlmFormatOptionsはsearch/related/impactのみで使用、workspace/semantic/symbol/diffは変更しない",
+    "M2: テスト影響範囲を明記 - output_format.rs、cli_args.rs、e2e_impact.rsを確認対象に",
+    "M3: impacted_by省略はformat_impact_llm表示ロジックのみと明記。データ構造・JSON/Human出力は変更しない",
+    "S1: パフォーマンス影響セクション追加 - 出力整形O(n)のみ、検索・DB影響なし",
+    "S2: --snippet-linesの適用範囲を仕様化 - CLI引数指定時のみLLMに適用、設定ファイルのsearch.snippet_linesは適用しない",
+    "S3: contextコマンドが対象外であることを設計方針に明記",
+    "S4: help文等の影響はテスト影響範囲のcli_args.rsに包含",
+    "受け入れ基準を10項目に拡充（workspace/semantic/symbol/diff変更なし確認、JSON/Human/Path変更なし確認を追加）"
+  ]
+}

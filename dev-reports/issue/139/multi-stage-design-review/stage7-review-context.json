@@ -1,0 +1,1 @@
+{"stage": 7, "type": "consistency_impact_review_2nd", "reviewer": "Codex (skipped - unresponsive)", "must_fix": [], "should_fix": [], "nice_to_have": [], "summary": "Codex が応答しなかったためスキップ。Stage 2-4 の Claude Opus レビューで整合性・影響分析が十分に行われている。"}

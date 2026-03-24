@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "type": "apply",
+  "applied_items": [
+    "Must Fix: 各出力型のトークン推定関数設計を表として追加",
+    "Must Fix: コンテンツベース推定を公式方針として明記",
+    "Should Fix: related-stdin を対象コマンド表に追加",
+    "Should Fix: workspace横断検索への max_tokens 伝達を追加",
+    "Should Fix: --rerank 併用時の適用順序を明記",
+    "Should Fix: --with-snippet 併用時の順序を明記",
+    "Nice to Have: 最初のエントリ例外設計を明記（context と統一）",
+    "Nice to Have: max_tokens=0 は value_parser で拒否する設計を反映"
+  ],
+  "issue_updated": true
+}

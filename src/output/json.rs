@@ -93,6 +93,9 @@ pub fn format_related_json(
                 crate::output::RelationType::DirectoryProximity => {
                     serde_json::json!("directory_proximity")
                 }
+                crate::output::RelationType::KnowledgeGraph => {
+                    serde_json::json!("knowledge_graph")
+                }
             })
             .collect();
         let mut json_value = serde_json::json!({
@@ -142,6 +145,49 @@ pub fn format_impact_json(
         }).collect::<Vec<_>>(),
     });
     serde_json::to_writer_pretty(&mut *writer, &json_value)?;
+    writeln!(writer)?;
+    Ok(())
+}
+
+/// before-change 結果をJSON形式で出力する
+pub fn format_before_change_json(
+    result: &crate::output::BeforeChangeResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    let json_value = serde_json::json!({
+        "file_path": result.file_path,
+        "total_issues": result.total_issues,
+        "has_embeddings": result.has_embeddings,
+        "findings": result.findings.iter().map(|f| {
+            let mut obj = serde_json::json!({
+                "issue_number": f.issue_number,
+                "relation": f.relation,
+                "doc_path": f.doc_path,
+            });
+            if let Some(ref title) = f.doc_title
+                && let Some(o) = obj.as_object_mut()
+            {
+                o.insert("doc_title".to_string(), serde_json::Value::String(title.clone()));
+            }
+            if let Some(sim) = f.similarity
+                && let Some(o) = obj.as_object_mut()
+            {
+                o.insert("similarity".to_string(), serde_json::json!(sim));
+            }
+            obj
+        }).collect::<Vec<_>>(),
+    });
+    serde_json::to_writer_pretty(&mut *writer, &json_value)?;
+    writeln!(writer)?;
+    Ok(())
+}
+
+/// why 結果をJSON形式で出力する（単一JSONオブジェクト）
+pub fn format_why_json(
+    result: &crate::output::WhyResult,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    serde_json::to_writer_pretty(&mut *writer, result)?;
     writeln!(writer)?;
     Ok(())
 }

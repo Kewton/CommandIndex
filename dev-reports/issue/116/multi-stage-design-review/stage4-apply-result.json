@@ -1,0 +1,1 @@
+{"applied": true, "changes": ["S1: LLMプロンプトインジェクションをセキュリティ設計に追加（LLM側の責務として本Issueでは対応しない）", "S2: HashSetメモリ効率について参照のみ保持と明記", "N3: max_body_lines=Some(0)は許容と明記"]}

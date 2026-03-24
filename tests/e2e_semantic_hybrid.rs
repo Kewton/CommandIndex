@@ -5,8 +5,8 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+use commandindex::embedding::store::EmbeddingStore;
 use commandindex::indexer::reader::SearchResult;
-use commandindex::indexer::symbol_store::{EmbeddingInfo, SymbolStore};
 use commandindex::search::hybrid::rrf_merge;
 
 // ---------------------------------------------------------------------------
@@ -65,14 +65,32 @@ Use pip to install packages.
     Ok((dir, commandindex_dir))
 }
 
-/// Open SymbolStore, create tables, and insert embeddings.
+/// A test embedding record for insertion.
+struct TestEmbedding {
+    file_path: String,
+    section_heading: String,
+    embedding: Vec<f32>,
+    model: String,
+    file_hash: String,
+}
+
+/// Open EmbeddingStore, create tables, and insert embeddings.
 fn insert_test_embeddings(
-    symbols_db_path: &std::path::Path,
-    embeddings: &[EmbeddingInfo],
+    embeddings_db_path: &std::path::Path,
+    embeddings: &[TestEmbedding],
 ) -> Result<(), Box<dyn Error>> {
-    let store = SymbolStore::open(symbols_db_path)?;
+    let store = EmbeddingStore::open(embeddings_db_path)?;
     store.create_tables()?;
-    store.insert_embeddings(embeddings)?;
+    for emb in embeddings {
+        store.upsert_embedding(
+            &emb.file_path,
+            &emb.section_heading,
+            &emb.embedding,
+            emb.embedding.len(),
+            &emb.model,
+            &emb.file_hash,
+        )?;
+    }
     Ok(())
 }
 
@@ -114,17 +132,17 @@ fn make_search_result(path: &str, heading: &str, score: f32) -> SearchResult {
 #[test]
 fn test_embedding_insert_and_count() {
     let dir = tempfile::tempdir().expect("test_embedding_insert_and_count: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store =
-        SymbolStore::open(&db_path).expect("test_embedding_insert_and_count: open SymbolStore");
+    let store = EmbeddingStore::open(&db_path)
+        .expect("test_embedding_insert_and_count: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_embedding_insert_and_count: create tables");
 
     // Initially zero embeddings
     let count = store
-        .count_embeddings()
+        .count()
         .expect("test_embedding_insert_and_count: count before insert");
     assert_eq!(
         count, 0,
@@ -132,30 +150,29 @@ fn test_embedding_insert_and_count() {
     );
 
     // Insert 2 embeddings
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "alpha.md".to_string(),
-            section_heading: "Alpha Document".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "beta.md".to_string(),
-            section_heading: "Beta Document".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_embedding_insert_and_count: insert embeddings");
+        .upsert_embedding(
+            "alpha.md",
+            "Alpha Document",
+            &SIMILAR_VEC,
+            4,
+            "test-model",
+            "hash_a",
+        )
+        .expect("test_embedding_insert_and_count: insert alpha");
+    store
+        .upsert_embedding(
+            "beta.md",
+            "Beta Document",
+            &DIFFERENT_VEC,
+            4,
+            "test-model",
+            "hash_b",
+        )
+        .expect("test_embedding_insert_and_count: insert beta");
 
     let count = store
-        .count_embeddings()
+        .count()
         .expect("test_embedding_insert_and_count: count after insert");
     assert_eq!(
         count, 2,
@@ -166,124 +183,91 @@ fn test_embedding_insert_and_count() {
 #[test]
 fn test_semantic_search_basic() {
     let dir = tempfile::tempdir().expect("test_semantic_search_basic: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store = SymbolStore::open(&db_path).expect("test_semantic_search_basic: open SymbolStore");
+    let store =
+        EmbeddingStore::open(&db_path).expect("test_semantic_search_basic: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_semantic_search_basic: create tables");
 
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "alpha.md".to_string(),
-            section_heading: "Alpha".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "beta.md".to_string(),
-            section_heading: "Beta".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_semantic_search_basic: insert embeddings");
+        .upsert_embedding("alpha.md", "Alpha", &SIMILAR_VEC, 4, "test-model", "hash_a")
+        .expect("test_semantic_search_basic: insert alpha");
+    store
+        .upsert_embedding("beta.md", "Beta", &DIFFERENT_VEC, 4, "test-model", "hash_b")
+        .expect("test_semantic_search_basic: insert beta");
 
     // Search with QUERY_VEC - should rank alpha (similar) above beta (different)
-    let results = store
+    let output = store
         .search_similar(&QUERY_VEC, 10)
         .expect("test_semantic_search_basic: search_similar");
 
     assert!(
-        results.len() >= 2,
+        output.results.len() >= 2,
         "test_semantic_search_basic: should return at least 2 results, got {}",
-        results.len()
+        output.results.len()
     );
 
     // First result should be alpha.md (higher cosine similarity)
     assert_eq!(
-        results[0].file_path, "alpha.md",
+        output.results[0].file_path, "alpha.md",
         "test_semantic_search_basic: most similar should be alpha.md"
     );
     assert_eq!(
-        results[1].file_path, "beta.md",
+        output.results[1].file_path, "beta.md",
         "test_semantic_search_basic: least similar should be beta.md"
     );
 
     // Verify similarity ordering
     assert!(
-        results[0].similarity > results[1].similarity,
+        output.results[0].similarity > output.results[1].similarity,
         "test_semantic_search_basic: alpha similarity ({}) should be greater than beta similarity ({})",
-        results[0].similarity,
-        results[1].similarity,
+        output.results[0].similarity,
+        output.results[1].similarity,
     );
 }
 
 #[test]
 fn test_semantic_search_top_k() {
     let dir = tempfile::tempdir().expect("test_semantic_search_top_k: create temp dir");
-    let db_path = dir.path().join("symbols.db");
+    let db_path = dir.path().join("embeddings.db");
 
-    let store = SymbolStore::open(&db_path).expect("test_semantic_search_top_k: open SymbolStore");
+    let store =
+        EmbeddingStore::open(&db_path).expect("test_semantic_search_top_k: open EmbeddingStore");
     store
         .create_tables()
         .expect("test_semantic_search_top_k: create tables");
 
     // Insert 3 embeddings
-    let embeddings = vec![
-        EmbeddingInfo {
-            id: None,
-            file_path: "a.md".to_string(),
-            section_heading: "A".to_string(),
-            embedding: SIMILAR_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_a".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "b.md".to_string(),
-            section_heading: "B".to_string(),
-            embedding: DIFFERENT_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_b".to_string(),
-        },
-        EmbeddingInfo {
-            id: None,
-            file_path: "c.md".to_string(),
-            section_heading: "C".to_string(),
-            embedding: QUERY_VEC.to_vec(),
-            model_name: "test-model".to_string(),
-            file_hash: "hash_c".to_string(),
-        },
-    ];
     store
-        .insert_embeddings(&embeddings)
-        .expect("test_semantic_search_top_k: insert embeddings");
+        .upsert_embedding("a.md", "A", &SIMILAR_VEC, 4, "test-model", "hash_a")
+        .expect("test_semantic_search_top_k: insert a");
+    store
+        .upsert_embedding("b.md", "B", &DIFFERENT_VEC, 4, "test-model", "hash_b")
+        .expect("test_semantic_search_top_k: insert b");
+    store
+        .upsert_embedding("c.md", "C", &QUERY_VEC, 4, "test-model", "hash_c")
+        .expect("test_semantic_search_top_k: insert c");
 
     // top_k=2 should return only 2 results
-    let results = store
+    let output = store
         .search_similar(&QUERY_VEC, 2)
         .expect("test_semantic_search_top_k: search_similar with top_k=2");
 
     assert_eq!(
-        results.len(),
+        output.results.len(),
         2,
         "test_semantic_search_top_k: top_k=2 should return exactly 2 results"
     );
 
     // The top 2 should be c.md (exact match, sim=1.0) and a.md (similar)
     assert_eq!(
-        results[0].file_path, "c.md",
+        output.results[0].file_path, "c.md",
         "test_semantic_search_top_k: first result should be c.md (exact match)"
     );
     assert_eq!(
-        results[1].file_path, "a.md",
+        output.results[1].file_path, "a.md",
         "test_semantic_search_top_k: second result should be a.md (similar)"
     );
 }
@@ -455,25 +439,23 @@ fn test_context_with_embeddings() {
     let (dir, commandindex_dir) =
         setup_semantic_test_dir().expect("test_context_with_embeddings: setup");
 
-    // Insert embeddings into the symbols.db
-    let symbols_db = commandindex_dir.join("symbols.db");
+    // Insert embeddings into the embeddings.db
+    let embeddings_db = commandindex_dir.join("embeddings.db");
     insert_test_embeddings(
-        &symbols_db,
+        &embeddings_db,
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha Document".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta Document".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],
@@ -505,6 +487,89 @@ fn test_context_with_embeddings() {
 }
 
 // ===========================================================================
+// Rerank fallback tests (no Ollama required)
+// ===========================================================================
+
+#[test]
+fn test_rerank_fallback_stderr_message() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_stderr_message: setup");
+
+    create_test_config(&commandindex_dir)
+        .expect("test_rerank_fallback_stderr_message: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "human"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("[rerank] Reranking skipped:"),
+        "test_rerank_fallback_stderr_message: stderr should contain '[rerank] Reranking skipped:', got: {stderr}"
+    );
+}
+
+#[test]
+fn test_rerank_fallback_json_metadata() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_json_metadata: setup");
+
+    create_test_config(&commandindex_dir)
+        .expect("test_rerank_fallback_json_metadata: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "json"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let metadata = common::parse_jsonl_metadata(&stdout);
+    assert!(
+        metadata.is_some(),
+        "test_rerank_fallback_json_metadata: should have metadata line, got stdout: {stdout}"
+    );
+    let meta = metadata.unwrap();
+    assert_eq!(
+        meta["type"], "metadata",
+        "test_rerank_fallback_json_metadata: type should be 'metadata'"
+    );
+    assert_eq!(
+        meta["rerank_status"], "skipped",
+        "test_rerank_fallback_json_metadata: rerank_status should be 'skipped'"
+    );
+
+    // Verify search results are still present (excluding metadata)
+    let results = common::parse_search_jsonl(&stdout);
+    assert!(
+        !results.is_empty(),
+        "test_rerank_fallback_json_metadata: search results should not be empty"
+    );
+}
+
+#[test]
+fn test_rerank_fallback_llm_comment() {
+    let (dir, commandindex_dir) =
+        setup_semantic_test_dir().expect("test_rerank_fallback_llm_comment: setup");
+
+    create_test_config(&commandindex_dir).expect("test_rerank_fallback_llm_comment: create config");
+
+    let output = common::cmd()
+        .args(["search", "Rust", "--rerank", "--format", "llm"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains("<!-- rerank skipped:"),
+        "test_rerank_fallback_llm_comment: stdout should contain '<!-- rerank skipped:', got: {stdout}"
+    );
+}
+
+// ===========================================================================
 // Environment-dependent tests (require Ollama)
 // ===========================================================================
 
@@ -517,24 +582,22 @@ fn test_hybrid_auto_switch() {
 
     create_test_config(&commandindex_dir).expect("test_hybrid_auto_switch: create config");
 
-    // Insert fixture embeddings into symbols.db so hybrid path is triggered
+    // Insert fixture embeddings into embeddings.db so hybrid path is triggered
     insert_test_embeddings(
-        &commandindex_dir.join("symbols.db"),
+        &commandindex_dir.join("embeddings.db"),
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],
@@ -566,24 +629,22 @@ fn test_hybrid_bm25_fallback() {
 
     create_test_config(&commandindex_dir).expect("test_hybrid_bm25_fallback: create config");
 
-    // Insert fixture embeddings into symbols.db so hybrid path is triggered
+    // Insert fixture embeddings into embeddings.db so hybrid path is triggered
     insert_test_embeddings(
-        &commandindex_dir.join("symbols.db"),
+        &commandindex_dir.join("embeddings.db"),
         &[
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "alpha.md".to_string(),
                 section_heading: "Alpha".to_string(),
                 embedding: SIMILAR_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_a".to_string(),
             },
-            EmbeddingInfo {
-                id: None,
+            TestEmbedding {
                 file_path: "beta.md".to_string(),
                 section_heading: "Beta".to_string(),
                 embedding: DIFFERENT_VEC.to_vec(),
-                model_name: "test-model".to_string(),
+                model: "test-model".to_string(),
                 file_hash: "hash_b".to_string(),
             },
         ],

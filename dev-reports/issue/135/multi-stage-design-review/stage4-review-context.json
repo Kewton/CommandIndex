@@ -1,0 +1,16 @@
+{
+  "stage": "Stage 4: セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "Ollama APIレスポンスにbody size limitがない"},
+    {"id": "S2", "title": "ネストトランザクション防止のランタイムガード"},
+    {"id": "S3", "title": "APIエラーレスポンスがstderrに無サニタイズで出力される"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "ROLLBACK失敗時のログ出力"},
+    {"id": "N2", "title": "エンドポイントURLのスキーム検証"},
+    {"id": "N3", "title": "search_similarの全テーブルスキャンのスケーラビリティ"},
+    {"id": "N4", "title": "テストコードでのunsafe環境変数操作"}
+  ],
+  "summary": "must_fix 0件。セキュリティ面は良好。SQL injection vectorなし。主な改善点: レスポンスサイズ制限、ネスト防止ガード、エラーメッセージサニタイズ。"
+}

@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Transaction methods must handle rusqlite ownership semantics correctly",
+      "detail": "rusqlite's Connection::transaction() returns a Transaction<'_> that borrows &mut Connection. EmbeddingStore holds conn as an owned field, but all current methods take &self. begin_transaction()/commit_transaction() with &mut self would break the API contract.",
+      "suggestion": "Use raw SQL approach: self.conn.execute_batch(\"BEGIN\") and self.conn.execute_batch(\"COMMIT\") through &self. Or provide a with_transaction closure API."
+    },
+    {
+      "id": "M2",
+      "title": "Transaction rollback on error in embed.rs upsert loop",
+      "detail": "In embed.rs lines 183-199, individual upsert failures are logged and skipped. Without explicit ROLLBACK on error, the transaction remains in inconsistent state.",
+      "suggestion": "Ensure the transaction wrapper includes explicit ROLLBACK on error paths."
+    },
+    {
+      "id": "M3",
+      "title": "index.rs also has identical upsert loop that needs same transaction treatment",
+      "detail": "src/cli/index.rs generate_embeddings_for_manifest() (lines 883-933) has an identical per-file embedding upsert loop. If only embed.rs is wrapped, the benefit is lost for `commandindex index --with-embedding`.",
+      "suggestion": "Apply same transaction wrapping to index.rs. Consider extracting shared logic into a helper method."
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "BATCH_SIZE 50 may cause OOM on low-memory machines",
+      "detail": "With BATCH_SIZE=50 and MAX_TEXT_LENGTH=8192 chars per text, a single request could send ~400KB. For larger models this may exceed GPU VRAM.",
+      "suggestion": "Document memory implications. Consider fallback retry with half batch size on failure."
+    },
+    {
+      "id": "S2",
+      "title": "REQUEST_TIMEOUT_SECS 60s may cause poor UX on connection errors",
+      "detail": "Users wait longer before seeing error when Ollama is down.",
+      "suggestion": "Keep connect_timeout low, only increase request timeout."
+    },
+    {
+      "id": "S3",
+      "title": "OpenAI provider timeout inconsistency",
+      "detail": "OpenAI has BATCH_SIZE=100 but timeout=30s. Inconsistency with Ollama at BATCH_SIZE=50/timeout=60s.",
+      "suggestion": "Document why timeouts differ between providers."
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Add unit tests for transaction behavior",
+      "detail": "No existing tests cover transactional behavior.",
+      "suggestion": "Add tests for transaction commit and rollback scenarios."
+    },
+    {
+      "id": "N2",
+      "title": "SQLite WAL mode for further write performance",
+      "detail": "Enabling WAL mode alongside transactions would further reduce I/O overhead.",
+      "suggestion": "Add PRAGMA journal_mode=WAL in EmbeddingStore::open()."
+    }
+  ],
+  "summary": "Three must-fix items: (1) transaction API design must use raw SQL (execute_batch) due to rusqlite borrowing constraints; (2) error handling must include explicit ROLLBACK; (3) index.rs has identical upsert loop that needs same treatment. EmbeddingStore is used in 5 files but only embed.rs and index.rs perform writes."
+}

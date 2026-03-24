@@ -1,0 +1,13 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M1", "action": "InvalidArgumentをInvalidEmbedding(既存variant)に変更。新variant追加不要"},
+    {"id": "M2", "action": "設計書全体でshould_warn_dimension_mismatch()に統一"},
+    {"id": "M3", "action": "テスト戦略の空文字列テストをInvalidEmbeddingエラー返却に修正"}
+  ],
+  "not_applied": [
+    {"id": "S1", "note": "help_llm.rsの確認は実装時に対応。設計方針書の変更対象ファイルとしては追加しない（変更が必要かは実装時に判断）"},
+    {"id": "S2", "note": "stderr出力の既存アサーション影響は実装時にテスト実行で自動検出される"},
+    {"id": "S3", "note": "旧モデル自動削除の影響は既にT1.5の受け入れ基準で記載済み"}
+  ]
+}

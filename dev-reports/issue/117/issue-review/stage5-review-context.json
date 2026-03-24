@@ -1,0 +1,32 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {
+      "issue": "打ち切りロジックの再利用方法（共通モジュール化 vs 個別実装）が未定義",
+      "suggestion": "共通モジュール（例: output/token_limit.rs）に抽出するか、各コマンドで個別実装するかを明記する。"
+    },
+    {
+      "issue": "各出力型のトークン推定対象フィールドが未定義",
+      "suggestion": "SearchResult=body, SymbolSearchResult=name+kind+file_path, RelatedSearchResult=file_path+snippet, SemanticSearchResult=body 等を明記する。"
+    },
+    {
+      "issue": "suggest への --max-tokens 適用の妥当性が低い（出力が通常小さく、途中切断でLLMが不完全な戦略を受け取るリスク）",
+      "suggestion": "Phase 1のスコープから外すことも選択肢。"
+    },
+    {
+      "issue": "テスト要件が不足（--max-tokens が結果件数を実際に削減するかの検証方法が未記載）",
+      "suggestion": "受け入れ基準に検証テストの存在を追加する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "related_stdin モードが対象一覧に明示されていない",
+      "suggestion": "5モード表に注記を追加。"
+    },
+    {
+      "issue": "--max-tokens の型（u64）と範囲制限（1..=1_000_000）が未定義",
+      "suggestion": "context と統一する。"
+    }
+  ],
+  "summary": "must_fix なし。主な改善点: 打ち切りロジック再利用方法の具体化、出力型ごとの推定フィールド明確化、suggest の妥当性再検討、テスト要件明確化。"
+}

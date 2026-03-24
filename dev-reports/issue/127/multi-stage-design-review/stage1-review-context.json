@@ -1,0 +1,36 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "Single Responsibility / KISS",
+      "description": "is_test_file()がファイル名に'test'を含むかで判定するため、test_utils.rs等の補助ファイルも誤検知する。",
+      "suggestion": "ファイル名判定を '_test.' / '.test.' / '_spec.' / '.spec.' パターンに限定。tests/や__tests__/ディレクトリ配下の場合も true。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "Open/Closed",
+      "description": "ブースト係数がconstで直書きされており、新ファイル種別追加のたびにif-else分岐を修正する必要がある。",
+      "suggestion": "Phase 2以降の検討事項としてテーブル駆動方式への拡張を記録。現Phase 1ではYAGNI。"
+    },
+    {
+      "id": "S2",
+      "category": "KISS / 設計判断",
+      "description": "DEDUP_FILE_LIMIT=5に絞った後にブーストを適用しているため、BM25上位6-20位のソースファイルが救済されない。",
+      "suggestion": "deduplicate_by_fileをlimitなしで実行し、apply_file_type_boost後にtruncate(5)する順序に変更。"
+    },
+    {
+      "id": "S3",
+      "category": "DRY",
+      "description": "is_doc_file()の.md判定とreader.rsのmatches_file_type()でファイル種別判定が二系統に分散。",
+      "suggestion": "拡張子判定部分は既存FileTypeの活用を検討。パスパターン判定はsuggest.rsに残す。"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "KISS", "description": "ソートが2回実行される。5件程度なので性能は無視可能。"},
+    {"id": "N2", "category": "YAGNI", "description": "dev-reports/パスのハードコードはプロジェクト固有。.md判定のみで十分な可能性。"},
+    {"id": "N3", "category": "DRY / テスト設計", "description": "rstestパラメタライズテストにまとめられる。外部依存追加のトレードオフあり。"}
+  ],
+  "summary": "設計は堅実。主な指摘: (1) is_test_file()のtest_utils誤検知修正必須、(2) dedup後5件のみブースト適用では不十分な可能性、(3) ファイル種別判定の重複。"
+}

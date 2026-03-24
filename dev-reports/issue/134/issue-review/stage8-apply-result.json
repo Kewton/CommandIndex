@@ -1,0 +1,10 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    {"id": "M1", "action": "T1.5の影響範囲をembed以外（index --with-embedding, update --with-embedding）にも拡大。受け入れ基準に全経路での一貫性を追加"},
+    {"id": "S1", "action": "T2.5に既存テスト影響（EmbeddingStoreユニットテスト、e2e_semantic_hybrid.rs）を明記。代替設計案も追記"},
+    {"id": "S2", "action": "T4に「モデル変更時は再生成に時間がかかる」旨の注意書きを追加"},
+    {"id": "S3", "action": "「依存関係」セクションを新設し、Rust crate追加なし・Ollamaモデル事前pull必要を明記。T3/T4にも前提条件を追加"}
+  ],
+  "issue_updated": true
+}

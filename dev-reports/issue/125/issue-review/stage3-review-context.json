@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "シグネチャ変更の波及",
+      "description": "try_rerank()のシグネチャ変更によりrun()関数内の呼び出し箇所でdestructuringが必要。",
+      "suggestion": "let (reranked, rerank_applied) = try_rerank(...); のように分解代入し、rerank_appliedを出力処理まで伝搬。"
+    },
+    {
+      "id": "M2",
+      "category": "出力関数へのrerank状態伝搬",
+      "description": "現在の出力関数はrerank状態を受け取るインターフェースを持たない。",
+      "suggestion": "run()関数内でフォーマット出力の前後にrerank情報を挿入するアプローチを推奨。llm: format_llm呼び出し前にコメント挿入、json: メタデータ行追加、human/path: eprintln。"
+    },
+    {
+      "id": "M3",
+      "category": "JSON出力の後方互換性",
+      "description": "JSON出力にrerank_appliedを追加する場合、既存のJSONLスキーマが変わる。各レコードに付与するか先頭にメタデータ行を追加するかで設計が分かれる。",
+      "suggestion": "JSONL先頭にメタデータ行を出力する方式を推奨。各レコードに付与する方式だと既存パーサーとの互換性が壊れる。"
+    },
+    {
+      "id": "M4",
+      "category": "workspace検索でのrerank未実装",
+      "description": "workspace.rsのrun_workspace_search()はrerank引数を_rerankとして未使用。--rerankが指定されても無視される。",
+      "suggestion": "今回のスコープ外とするが、workspace検索で--rerank指定時にstderrで未サポート警告を出すことを検討。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "エラー理由の構造化",
+      "description": "boolタプルではフォールバック理由文字列を伝搬できない。",
+      "suggestion": "try_rerank()の戻り値を(Vec<SearchResult>, RerankStatus)にする。enum RerankStatus { Applied, Skipped { reason: String } }。"
+    },
+    {
+      "id": "S2",
+      "category": "既存テストへの影響",
+      "description": "既存テストはstderrメッセージを厳密にアサートしていないため壊れにくいが、スキーマ変更テスト追加が必要。",
+      "suggestion": "json出力スキーマ変更テスト、stderr警告内容テストを追加。"
+    },
+    {
+      "id": "S3",
+      "category": "try_rerank内のeprintln二重出力",
+      "description": "try_rerank内のeprintlnとrun()側での出力が重複するリスクがある。",
+      "suggestion": "try_rerank内のeprintlnを削除し、出力制御はrun()に一元化する。"
+    },
+    {
+      "id": "S4",
+      "category": "impactコマンドへの影響",
+      "description": "impactコマンドはrerankを使用していないため直接の影響はない。",
+      "suggestion": "現時点での変更は不要。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "パフォーマンス",
+      "description": "フォールバック通知追加のオーバーヘッドは無視できるレベル。",
+      "suggestion": "特段の対応不要。"
+    },
+    {
+      "id": "N2",
+      "category": "ヒントメッセージ",
+      "description": "stderrメッセージのフォーマットを既存パターンに統一。",
+      "suggestion": "既存のHintパターンに合わせる。"
+    },
+    {
+      "id": "N3",
+      "category": "help-llm出力",
+      "description": "help-llm出力にrerank_appliedフィールドの説明追加。",
+      "suggestion": "help-llm出力にフォールバック動作の記述を追加。"
+    },
+    {
+      "id": "N4",
+      "category": "RerankError分類活用",
+      "description": "RerankErrorのvariantに応じたヒントメッセージを提供可能。",
+      "suggestion": "ModelNotFound→'ollama pull <model>', NetworkError→'Is Ollama running?', Timeout→'increase timeout_secs'。"
+    }
+  ],
+  "summary": "変更は主にsrc/cli/search.rsに閉じる。最大の影響箇所はtry_rerank()シグネチャ変更、出力フォーマッタへの状態伝搬設計、JSON出力の後方互換性。boolではなくRerankStatus enumで理由を構造化し、try_rerank内のeprintlnをrun()に一元化する設計を推奨。"
+}
