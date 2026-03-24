@@ -23,6 +23,7 @@ fn help_flag_shows_usage() {
         .stdout(predicate::str::contains("diff"))
         .stdout(predicate::str::contains("help-llm"))
         .stdout(predicate::str::contains("suggest"))
+        .stdout(predicate::str::contains("before-change"))
         .stdout(predicate::str::contains("why"))
         .stdout(predicate::str::contains("issue"));
 }
@@ -758,7 +759,7 @@ fn help_llm_contains_all_subcommands() {
 
     let expected = [
         "index", "search", "update", "status", "clean", "diff", "context", "embed", "config",
-        "export", "impact", "import", "watch", "suggest", "why", "issue",
+        "export", "impact", "import", "watch", "suggest", "before-change", "why", "issue",
     ];
     for name in &expected {
         assert!(
@@ -768,8 +769,8 @@ fn help_llm_contains_all_subcommands() {
     }
     assert_eq!(
         commands.len(),
-        16,
-        "help-llm should have exactly 16 commands"
+        17,
+        "help-llm should have exactly 17 commands"
     );
     // help-llm itself should not be in the commands list
     assert!(
@@ -898,6 +899,38 @@ fn search_max_tokens_boundary_values() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("Index not found"));
+}
+
+// --- before-change CLI option tests ---
+
+#[test]
+fn before_change_help_shows_usage() {
+    common::cmd()
+        .args(["before-change", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("before-change"))
+        .stdout(predicate::str::contains("--format"))
+        .stdout(predicate::str::contains("--limit"))
+        .stdout(predicate::str::contains("--max-commits"));
+}
+
+#[test]
+fn before_change_max_commits_zero_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--max-commits", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn before_change_max_commits_over_limit_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--max-commits", "10001"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
 }
 
 // --- issue CLI option tests ---

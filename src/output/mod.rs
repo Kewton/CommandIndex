@@ -303,6 +303,39 @@ pub fn format_impact_results(
     }
 }
 
+/// before-change サブコマンドの結果
+#[derive(Debug, Clone, Serialize)]
+pub struct BeforeChangeResult {
+    pub file_path: String,
+    pub findings: Vec<BeforeChangeFinding>,
+    pub total_issues: usize,
+    pub has_embeddings: bool,
+}
+
+/// before-change の個別ドキュメント結果
+#[derive(Debug, Clone, Serialize)]
+pub struct BeforeChangeFinding {
+    pub issue_number: String,
+    pub relation: String,
+    pub doc_path: String,
+    pub doc_title: Option<String>,
+    pub similarity: Option<f32>,
+}
+
+/// before-change 結果を指定フォーマットで出力する
+pub fn format_before_change_results(
+    result: &BeforeChangeResult,
+    format: OutputFormat,
+    writer: &mut dyn Write,
+) -> Result<(), OutputError> {
+    match format {
+        OutputFormat::Human => human::format_before_change_human(result, writer),
+        OutputFormat::Json => json::format_before_change_json(result, writer),
+        OutputFormat::Path => path::format_before_change_path(result, writer),
+        OutputFormat::Llm => llm::format_before_change_llm(result, writer),
+    }
+}
+
 /// suggest サブコマンドの個別ステップ
 #[derive(Debug, Clone, Serialize)]
 pub struct SuggestStep {

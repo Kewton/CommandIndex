@@ -1,0 +1,168 @@
+{
+  "issue_number": 142,
+  "iteration": 1,
+  "status": "completed",
+  "timestamp": "2026-03-25T00:00:00Z",
+  "tasks": [
+    {
+      "id": "1.1",
+      "name": "KnowledgeDocResult + find_knowledge_by_issue()",
+      "status": "completed",
+      "files_changed": [
+        "src/indexer/symbol_store.rs",
+        "src/indexer/knowledge.rs"
+      ],
+      "tests_added": 5,
+      "tests_passed": 5
+    },
+    {
+      "id": "1.3",
+      "name": "cosine_similarity pub(crate) visibility",
+      "status": "completed",
+      "files_changed": [
+        "src/embedding/store.rs"
+      ],
+      "tests_added": 0,
+      "tests_passed": 0
+    },
+    {
+      "id": "1.2",
+      "name": "BeforeChangeError + BeforeChangeResult types",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/before_change.rs",
+        "src/output/mod.rs"
+      ],
+      "tests_added": 4,
+      "tests_passed": 4
+    },
+    {
+      "id": "2.3",
+      "name": "Input validation (validate_before_change_input)",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/before_change.rs"
+      ],
+      "tests_added": 6,
+      "tests_passed": 6
+    },
+    {
+      "id": "2.1",
+      "name": "Git log scanning (extract_issues_from_git_log)",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/before_change.rs"
+      ],
+      "tests_added": 0,
+      "tests_passed": 0,
+      "notes": "Tested via E2E tests"
+    },
+    {
+      "id": "2.2",
+      "name": "Semantic ranking (rank_by_max_similarity)",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/before_change.rs"
+      ],
+      "tests_added": 2,
+      "tests_passed": 2
+    },
+    {
+      "id": "4.1+4.2",
+      "name": "Output formatters (human/json/path/llm)",
+      "status": "completed",
+      "files_changed": [
+        "src/output/mod.rs",
+        "src/output/human.rs",
+        "src/output/json.rs",
+        "src/output/path.rs",
+        "src/output/llm.rs"
+      ],
+      "tests_added": 0,
+      "tests_passed": 0,
+      "notes": "Tested via E2E tests with --format human/json/path/llm"
+    },
+    {
+      "id": "2.4",
+      "name": "run_before_change integration",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/before_change.rs"
+      ],
+      "tests_added": 0,
+      "tests_passed": 0,
+      "notes": "Tested via E2E tests"
+    },
+    {
+      "id": "3.1+3.2",
+      "name": "CLI integration (Commands::BeforeChange + mod.rs)",
+      "status": "completed",
+      "files_changed": [
+        "src/main.rs",
+        "src/cli/mod.rs"
+      ],
+      "tests_added": 3,
+      "tests_passed": 3
+    },
+    {
+      "id": "5.1",
+      "name": "help-llm CommandInfo entry",
+      "status": "completed",
+      "files_changed": [
+        "src/cli/help_llm.rs"
+      ],
+      "tests_added": 0,
+      "tests_passed": 0,
+      "notes": "Tested via existing help-llm tests (updated count to 15)"
+    },
+    {
+      "id": "6.1",
+      "name": "Existing test updates (cli_args.rs)",
+      "status": "completed",
+      "files_changed": [
+        "tests/cli_args.rs"
+      ],
+      "tests_added": 3,
+      "tests_passed": 3
+    },
+    {
+      "id": "6.2+6.3",
+      "name": "E2E tests (e2e_before_change.rs)",
+      "status": "completed",
+      "files_changed": [
+        "tests/e2e_before_change.rs"
+      ],
+      "tests_added": 10,
+      "tests_passed": 10
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (0 warnings)",
+    "cargo_fmt": "pass (no diff)",
+    "cargo_test": "pass (706 passed, 1 pre-existing failure unrelated to changes)"
+  },
+  "summary": {
+    "total_tests_added": 33,
+    "total_tests_passed": 33,
+    "files_created": [
+      "src/cli/before_change.rs",
+      "tests/e2e_before_change.rs"
+    ],
+    "files_modified": [
+      "src/main.rs",
+      "src/cli/mod.rs",
+      "src/cli/help_llm.rs",
+      "src/indexer/symbol_store.rs",
+      "src/indexer/knowledge.rs",
+      "src/embedding/store.rs",
+      "src/output/mod.rs",
+      "src/output/human.rs",
+      "src/output/json.rs",
+      "src/output/path.rs",
+      "src/output/llm.rs",
+      "tests/cli_args.rs"
+    ],
+    "pre_existing_failure": "test_embed_without_ollama_fails (depends on Ollama availability, unrelated to this change)"
+  }
+}

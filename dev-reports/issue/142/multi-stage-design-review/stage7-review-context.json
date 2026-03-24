@@ -1,0 +1,21 @@
+{
+  "stage": 7,
+  "type": "consistency_impact_2nd",
+  "reviewer": "Codex (gpt-5.4 via commandmatedev)",
+  "must_fix": [
+    {"issue": "config_index_path取得の設定読込エラーが未定義", "suggestion": "BeforeChangeErrorにConfig(String)追加、SearchContextパターンに寄せる"},
+    {"issue": "NotGitRepositoryの判定方法が不足", "suggestion": "git log失敗時にstderr+exit statusでnot a git repositoryをマップする手順を明記"},
+    {"issue": "DB文字列からKnowledgeRelationへの復元ルールが未定義", "suggestion": "KnowledgeRelation::from_str()追加、未知値はスキップする方針を明記"}
+  ],
+  "should_fix": [
+    {"issue": "&mut impl Writeが既存の&mut dyn Writeと不整合", "suggestion": "&mut dyn Writeに統一"},
+    {"issue": "output層の単体テスト追加が影響範囲に未記載", "suggestion": "tests/output追加を明記"},
+    {"issue": "影響範囲の表現が強すぎる", "suggestion": "CLIPublic面・output層・symbol_store公開APIへの影響を明記"},
+    {"issue": "出力側の制御文字サニタイズが未記載", "suggestion": "既存strip_control_chars()利用を明記"}
+  ],
+  "nice_to_have": [
+    {"issue": "find_knowledge_by_issueの空入力時挙動", "suggestion": "0件なら空配列返却を明記"},
+    {"issue": "正規表現のケースセンシティビティ", "suggestion": "case insensitiveとするか明記"}
+  ],
+  "summary": "設定読込エラー、NotGitRepository判定、KnowledgeRelation復元ルールの3点が設計上の空白。output層テスト・出力サニタイズも追記すべき。"
+}

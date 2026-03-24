@@ -1,3 +1,4 @@
+pub mod before_change;
 pub mod changed_since;
 pub mod clean;
 pub mod config;

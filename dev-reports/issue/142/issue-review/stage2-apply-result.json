@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "type": "apply_review",
+  "applied_items": [
+    "ソースファイル→Issue紐づけの前提条件とgit log走査の実装方針を追加",
+    "受け入れ基準セクションを追加（13項目）",
+    "擬似コードを実際のAPI名（SymbolStore, EmbeddingStore, find_by_path等）に修正",
+    "エラーハンドリングセクションを追加",
+    "--format pathを出力フォーマットに追加",
+    "--limitのデフォルト値を明記"
+  ],
+  "issue_updated": true
+}

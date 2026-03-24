@@ -244,6 +244,28 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Show design constraints and review findings for a file before making changes
+    #[command(name = "before-change", after_help = commandindex::cli::before_change::BEFORE_CHANGE_AFTER_HELP)]
+    BeforeChange {
+        /// Target file path
+        file: String,
+
+        /// Output format (human, json, path, llm)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+
+        /// Custom index directory path (overrides default .commandindex/)
+        #[arg(long)]
+        index_path: Option<PathBuf>,
+
+        /// Maximum number of findings to show
+        #[arg(long, default_value = "10")]
+        limit: usize,
+
+        /// Maximum git log commits to scan (upper limit: 10000)
+        #[arg(long, default_value = "200", value_parser = clap::value_parser!(u64).range(1..=10000))]
+        max_commits: u64,
+    },
     /// Show structured JSON help for LLM integration
     #[command(name = "help-llm")]
     HelpLlm,
@@ -928,6 +950,27 @@ fn main() {
                 &for_task,
                 format,
                 cli.index_path.as_deref(),
+            ) {
+                Ok(()) => 0,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    1
+                }
+            }
+        }
+        Commands::BeforeChange {
+            file,
+            format,
+            index_path,
+            limit,
+            max_commits,
+        } => {
+            match commandindex::cli::before_change::run_before_change(
+                &file,
+                format,
+                index_path.as_deref().or(cli.index_path.as_deref()),
+                limit,
+                max_commits as usize,
             ) {
                 Ok(()) => 0,
                 Err(e) => {

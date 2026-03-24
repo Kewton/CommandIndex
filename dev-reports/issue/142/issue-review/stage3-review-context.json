@@ -1,0 +1,59 @@
+{
+  "stage": 3,
+  "type": "impact_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "issue": "git log走査によるIssue番号抽出は既存のknowledgeモジュールと設計思想が異なる",
+      "reason": "ナレッジグラフ構築の別経路を作ることになり、2つの異なるIssue-ファイル紐づけロジックが共存する",
+      "suggestion": "before-change専用のgit log走査ロジックはsrc/cli/before_change.rsに新規関数として追加し、SymbolStoreの既存メソッドは変更しない"
+    },
+    {
+      "issue": "2ホップ走査に対応するクエリがSymbolStoreに不足",
+      "reason": "Issue番号を起点にknowledge_nodesを走査する新しいクエリメソッドが必要",
+      "suggestion": "SymbolStoreにfind_knowledge_by_issue(issue_number)メソッドを追加"
+    },
+    {
+      "issue": "help-llmの出力にbefore-changeコマンド情報の追加が必要",
+      "reason": "help_llm.rsのcommandsリストにエントリを追加しないとLLM連携ツールでコマンドが発見できない",
+      "suggestion": "help_llm.rsにbefore-changeコマンドのエントリを追加"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "git log走査のパフォーマンス懸念",
+      "reason": "大量コミットのリポジトリではgit log走査が遅くなる",
+      "suggestion": "--max-count制限オプション追加。キャッシュ戦略も検討"
+    },
+    {
+      "issue": "--index-pathオプションのグローバルとの重複",
+      "reason": "グローバル--index-pathとの優先順位を明確にする必要",
+      "suggestion": "impactコマンドと同じ設計パターンを踏襲"
+    },
+    {
+      "issue": "embedding未生成時のフォールバック動作",
+      "reason": "embedding非依存でも動作すべき",
+      "suggestion": "EmbeddingStoreの利用はオプショナル、未生成時はナレッジグラフのみで動作"
+    },
+    {
+      "issue": "before-change固有の出力構造体が必要",
+      "reason": "ImpactResultとは異なる出力構造",
+      "suggestion": "BeforeChangeResult構造体と各フォーマッタの関数追加"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "cosine_similarityの重複実装（3箇所目の可能性）",
+      "suggestion": "共通ユーティリティに切り出し（別Issue推奨）"
+    },
+    {
+      "issue": "テストで実際のgitリポジトリが必要",
+      "suggestion": "e2e_changed_since.rsと同様のパターンを踏襲"
+    },
+    {
+      "issue": "新規crateの追加は不要",
+      "suggestion": "既存依存関係のみで実装可能"
+    }
+  ],
+  "summary": "既存サブコマンドに直接的影響なし。主な懸念: git log走査の設計分離、SymbolStoreへの新メソッド追加、help-llm反映。データモデル変更不要、新規crate不要。"
+}

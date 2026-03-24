@@ -1,0 +1,1 @@
+{"stage":8,"type":"apply_review","applied_items":["BeforeChangeErrorにConfig(String)追加","NotGitRepository判定方法を明記(stderr検査)","KnowledgeRelation::from_str()追加と未知値スキップ方針を明記","空入力時の空Vec返却を明記","出力APIを&mut dyn Writeに統一","出力サニタイズ(strip_control_chars)を明記","影響範囲表現を精緻化(CLI公開面・output層・symbol_store公開API)","output層単体テスト追加を影響範囲に追記"]}

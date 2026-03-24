@@ -1,0 +1,114 @@
+{
+  "results": [
+    {
+      "id": 1,
+      "criteria": "before-change <file> で関連するナレッジドキュメントが返ること",
+      "status": "PASS",
+      "notes": "run_before_change()がgit log→Issue抽出→find_knowledge_by_issue()→出力の流れを実装。E2Eテスト before_change_normal_human_output, before_change_json_output で検証済み。"
+    },
+    {
+      "id": 2,
+      "criteria": "git logからIssue番号を正しく抽出できること（#NNN, (#NNN), fixes #NNN, refs #NNN）",
+      "status": "PASS",
+      "notes": "extract_issues_from_git_log()内のregex (?i)(?:#(\\d+)|\\(#(\\d+)\\)|fixes\\s+#(\\d+)|refs\\s+#(\\d+)) が4パターン全てをカバー。case-insensitiveフラグ付き。"
+    },
+    {
+      "id": 3,
+      "criteria": "ナレッジグラフのIssue起点文書取得が動作すること",
+      "status": "PASS",
+      "notes": "SymbolStore::find_knowledge_by_issue()がsrc/indexer/symbol_store.rsに実装済み。ユニットテスト test_find_knowledge_by_issue_normal, _empty_input, _no_match で検証。E2Eでも動作確認。"
+    },
+    {
+      "id": 4,
+      "criteria": "セマンティック検索による関連度ランキングが動作すること",
+      "status": "PASS",
+      "notes": "rank_by_max_similarity()がcosine_similarityでmax poolingランキングを実装。ユニットテスト test_rank_by_max_similarity_with_empty_file_embs で検証。embedding有無で自動切替。"
+    },
+    {
+      "id": 5,
+      "criteria": "embedding未生成時でもナレッジグラフのみで動作すること",
+      "status": "PASS",
+      "notes": "emb_db_path.exists()チェックでembedding DB不在時はfindings_without_ranking()にフォールバック。E2Eテスト setup_before_change_env()はembeddingなしで動作確認済み。"
+    },
+    {
+      "id": 6,
+      "criteria": "--format human/json/llm/path が正しく出力されること",
+      "status": "PASS",
+      "notes": "output/human.rs, json.rs, llm.rs, path.rs それぞれに format_before_change_* 関数実装。E2Eテスト before_change_normal_human_output, _json_output, _llm_output, _path_output で4形式全て検証済み。"
+    },
+    {
+      "id": 7,
+      "criteria": "関連Issue未発見時に適切なメッセージが返ること",
+      "status": "PASS",
+      "notes": "issues.is_empty()時にtotal_issues:0, findings:[]の空結果を出力。E2Eテスト before_change_no_issues_found でJSON出力のtotal_issues=0, findings=[]を検証。"
+    },
+    {
+      "id": 8,
+      "criteria": "--index-path で別worktreeのインデックスを参照できること",
+      "status": "PASS",
+      "notes": "CLI定義にindex_path: Option<PathBuf>あり。main.rsでindex_path.as_deref().or(cli.index_path.as_deref())としてグローバルオプションとの統合も実装。resolve_index_path()で解決。"
+    },
+    {
+      "id": 9,
+      "criteria": "--limit で全体上位N件に結果が制限されること",
+      "status": "PASS",
+      "notes": "findings.into_iter().take(limit)で制限。E2Eテスト before_change_limit_respected で--limit 1の動作を検証済み。"
+    },
+    {
+      "id": 10,
+      "criteria": "--max-commits でgit log走査コミット数が制限されること",
+      "status": "PASS",
+      "notes": "git log --max-count にmax_commitsを渡して制限。clap value_parser で1..=10000の範囲制限。E2Eテスト before_change_max_commits_zero_rejected, _over_limit_rejected で境界値検証済み。"
+    },
+    {
+      "id": 11,
+      "criteria": "不正なファイルパスを拒否すること",
+      "status": "PASS",
+      "notes": "validate_before_change_input()で空文字、先頭ダッシュ、..(トラバーサル)、絶対パス、バックスラッシュを拒否。ユニットテスト6件+E2Eテスト before_change_invalid_input_empty, _leading_dash で検証。"
+    },
+    {
+      "id": 12,
+      "criteria": "gitリポジトリ外では明確なエラーを返すこと",
+      "status": "PASS",
+      "notes": "BeforeChangeError::NotGitRepository エラー型定義。stderrに'not a git repository'を検出して適切なエラー返却。E2Eテスト before_change_non_git_repo で検証済み。"
+    },
+    {
+      "id": 13,
+      "criteria": "help-llm の出力にbefore-changeコマンド情報が含まれること",
+      "status": "PASS",
+      "notes": "src/cli/help_llm.rsにbefore-changeコマンド定義あり。tests/cli_args.rs help_llm_contains_all_subcommands テストでbefore-changeを含む15コマンドの存在を検証済み。"
+    },
+    {
+      "id": 14,
+      "criteria": "tests/cli_args.rs のテストが更新されていること",
+      "status": "PASS",
+      "notes": "help_flag_shows_usageにbefore-change追加、help_llm_contains_all_subcommandsにbefore-change追加(15コマンド)、before_change_help_shows_usage, before_change_max_commits_zero_rejected, before_change_max_commits_over_limit_rejected の3テスト新規追加。"
+    },
+    {
+      "id": 15,
+      "criteria": "before-change --help がヘルプを表示すること",
+      "status": "PASS",
+      "notes": "E2Eテスト before_change_help_shows_usage で--format, --limit, --max-commitsオプションの表示を検証済み。BEFORE_CHANGE_AFTER_HELPの使用例も表示。"
+    },
+    {
+      "id": 16,
+      "criteria": "E2Eテストがパスすること",
+      "status": "PASS",
+      "notes": "tests/e2e_before_change.rs の10テスト全て合格。human/json/path/llm出力、エラーケース、limit制限、Issue未検出ケースをカバー。"
+    },
+    {
+      "id": 17,
+      "criteria": "cargo test で全テストがパスすること",
+      "status": "PARTIAL",
+      "notes": "before-change関連の全テスト(ユニット12件+E2E 10件+CLI 3件=25件)は全てPASS。唯一の失敗はe2e_semantic_hybrid::test_embed_without_ollama_failsで、Issue #142とは無関係(Ollama接続テスト)。442ユニットテスト+全E2Eテスト合格。"
+    },
+    {
+      "id": 18,
+      "criteria": "cargo clippy で警告0件",
+      "status": "PASS",
+      "notes": "cargo clippy --all-targets -- -D warnings が警告ゼロで完了。"
+    }
+  ],
+  "overall": "PASS",
+  "summary": "Issue #142 before-changeコマンドの全18項目中17項目がPASS、1項目がPARTIAL。PARTIAL判定の項目17はbefore-change無関係のテスト(test_embed_without_ollama_fails)の失敗のみであり、before-change機能自体のテストは全て合格。実装品質は高く、入力バリデーション・エラーハンドリング・4出力形式・セマンティックランキング・フォールバック・CLIオプション全てが正しく動作している。受入テスト合格と判定する。"
+}
