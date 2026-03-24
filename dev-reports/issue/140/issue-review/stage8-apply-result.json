@@ -1,0 +1,13 @@
+{
+  "stage": 8,
+  "type": "apply",
+  "applied_fixes": [
+    {"id": "M1", "action": "エラー処理方針セクションを追加。既存コマンド（search/diff/impact）のパターンに統一。SymbolStoreErrorパターンを使用"}
+  ],
+  "additional_improvements": [
+    {"id": "S2", "action": "E2Eテストをtests/common前提（cargo_bin + 一時ディレクトリ）に方針明記"},
+    {"id": "S4", "action": "新規crate追加なしの旨をNote追加"}
+  ],
+  "issue_updated": true,
+  "issue_url": "https://github.com/Kewton/CommandIndex/issues/140"
+}

@@ -1,0 +1,9 @@
+{
+  "status": "skipped",
+  "reason": "コードレビューでcritical 0件。全warnings はlow severityのため、リファクタリングフェーズでの修正は不要と判断",
+  "deferred_items": [
+    "SymbolStoreError::InvalidEmbedding の流用 → 将来のリファクタリングIssueで対応検討",
+    "grouped() のハードコードカテゴリ → DocSubtype 追加時に要対応",
+    "LIMIT 100 の切り捨て警告 → 運用上問題が出た時に対応"
+  ]
+}

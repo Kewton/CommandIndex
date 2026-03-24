@@ -1,0 +1,61 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "symbols.db 不在のエラーハンドリングが曖昧",
+      "description": "SymbolStore::open() のエラーだけでは symbols.db 不在を明確にハンドリングできない可能性。",
+      "suggestion": "cli::issue::run() 内で symbols.db の存在チェックを明示的に行い、不在時は明確なエラーメッセージを返す。"
+    },
+    {
+      "id": "M2",
+      "title": "0件時を Ok(()) にする方針と CLI の exit code 契約が曖昧",
+      "description": "Issue にドキュメントが見つからない場合に exit 0 にすると、パイプライン利用時に『成功したが結果なし』と『本当に成功』の区別がつかない。",
+      "suggestion": "IssueCommandError::NotFound を追加し exit 1 にする。YAGNI ではなく CLI 契約の明確化に必要な最小限の型。"
+    },
+    {
+      "id": "M3",
+      "title": "metadata 破損時のスキップ方針は障害を隠蔽する",
+      "description": "serde_json パース失敗時にスキップすると、ナレッジグラフ破損を検知できず、結果欠落を正常出力する。全件破損時は Not Found と区別がつかない。",
+      "suggestion": "metadata 破損はエラーとして扱うか、少なくとも破損件数があれば stderr に警告を出す。silent skip は避ける。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "display_label() を Indexer 層の enum に載せるのは SRP 的に弱い",
+      "description": "DocSubtype::display_label() はUI責務。indexer/knowledge.rs に置くとデータモデルが表示都合に引っ張られる。",
+      "suggestion": "表示ラベルは cli::issue 側の helper に寄せるか output 側に閉じ込める。"
+    },
+    {
+      "id": "S2",
+      "title": "Output 層の責務説明と実際の設計が食い違い",
+      "description": "冒頭で output/mod.rs を変更対象に挙げつつ後段で変更なしとしている。",
+      "suggestion": "Output 層は変更対象から外すか、統一した方針にする。"
+    },
+    {
+      "id": "S3",
+      "title": "IssueDocumentsResult が生 Vec で分類責務が漏れる",
+      "description": "各出力で毎回カテゴリ分けが必要になる。",
+      "suggestion": "grouped() ヘルパーを用意して分類ロジックを一箇所に閉じ込める。"
+    },
+    {
+      "id": "S4",
+      "title": "LIMIT 100 が固定値で API 契約に根拠が薄い",
+      "description": "上限到達時の silent truncation で結果完全性を壊す可能性。",
+      "suggestion": "上限到達時は警告を返すか、定数化して理由を明記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "sort_key() ヘルパーを enum に追加",
+      "suggestion": "DocSubtype/KnowledgeRelation に sort_key() を持たせる。"
+    },
+    {
+      "id": "N2",
+      "title": "IssueCommandError に From 実装を追加",
+      "suggestion": "? で流せるようにする。"
+    }
+  ],
+  "summary": "エラーハンドリング方針に穴がある。0件時の exit code、metadata 破損時の silent skip が主な問題。display_label() の配置と Output 層の説明不一致も修正すべき。"
+}
