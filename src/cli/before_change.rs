@@ -328,15 +328,9 @@ fn findings_without_ranking(docs: &[KnowledgeDocResult]) -> Vec<BeforeChangeFind
 }
 
 /// Relation priority for fallback sort (lower = higher priority).
+/// 内部実装を KnowledgeRelation::priority() に委譲する互換ラッパー。
 fn relation_priority(relation: &str) -> u8 {
-    match relation {
-        "has_design" => 0,
-        "has_workplan" => 1,
-        "has_review" => 2,
-        "has_progress" => 3,
-        "modifies" => 4,
-        _ => 5,
-    }
+    KnowledgeRelation::parse(relation).map_or(5, |r| r.priority())
 }
 
 // ---------------------------------------------------------------------------

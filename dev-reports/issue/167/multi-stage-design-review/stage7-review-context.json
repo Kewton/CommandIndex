@@ -1,0 +1,13 @@
+{
+  "stage": 7,
+  "type": "final_consistency",
+  "must_fix": [
+    {"id": "MF-1", "title": "prepend_knowledge_stepsのstrategy引数型がVec<String>と記載、正しくはVec<SuggestStep>"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "4.6の変更理由のrelation型不一致記述が誤り（両方KnowledgeRelation型）、titleのみが理由"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "sort_byが安定ソートであることをコメント明示"}
+  ]
+}

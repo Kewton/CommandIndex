@@ -1,0 +1,14 @@
+{
+  "stage": 6,
+  "action": "apply_codex_review",
+  "applied_items": ["MF-1", "MF-2", "SF-1", "SF-2", "SF-3", "NH-1"],
+  "changes": [
+    "MAX_KG_DOCS_PER_ISSUEを2から4に変更",
+    "KG由来ステップ数の制御対象と上限計算式を明記",
+    "KG文書取得APIをfind_documents_by_issue()に変更",
+    "E2Eテスト要件を受け入れ基準に追加",
+    "「優先的に含まれる」をrelation_priority順で明確化",
+    "before_change.rs優先度採用理由を補足"
+  ],
+  "issue_updated": true
+}

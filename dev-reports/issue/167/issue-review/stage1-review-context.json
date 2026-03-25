@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "改善案の「省略: modifiesのソースコード個別展開」はsuggestでは不要な記述",
+      "description": "Issue本文の改善案4番目に「省略: modifiesのソースコード個別展開」とあるが、suggest.rsのprepend_knowledge_steps()はfind_knowledge_by_issue()の結果をそのまま使っており、find_knowledge_by_issue()はdocumentノードとfileノードの両方を返す（kn_doc.type IN ('document', 'file')）。つまりmodifies関係のfileノード（ソースコード）もcontext展開される。before_change.rsではdocs.retain(|d| d.relation != KnowledgeRelation::Modifies)で明示的に除外しているが、suggest.rsにはこのフィルタがない。Issue本文はこの問題を正しく指摘しているが、「省略」ではなく「フィルタリングで除外」と明示すべき。",
+      "suggestion": "改善案を以下のように修正: modifiesのfileノードはprepend_knowledge_steps()の前段でretain()により明示的に除外する。before_change.rs L434のパターンを参考にすること。受け入れ基準にも「modifies関係のファイルノードがsuggestの提案に含まれないこと」を明記する。"
+    },
+    {
+      "id": "MF-2",
+      "title": "受け入れ基準が未定義",
+      "description": "Issue本文に受け入れ基準（Acceptance Criteria）が記載されていない。改善案は方向性を示しているが、具体的な合格条件（提案数の上限、フィルタリング対象の網羅的リスト、既存テストへの影響など）が不明確。",
+      "suggestion": "以下の受け入れ基準を追加すべき: (1) ナレッジグラフから展開されるcontextステップ数がIssueあたり最大N件に制限されること、(2) has_progress関係のドキュメントが除外されること、(3) modifies関係のファイルノードが除外されること、(4) has_reviewのうちsummary-report.md以外のstage別レビューが除外されること、(5) JSON成果物（.json拡張子）が除外されること、(6) 既存テストが更新され新しいフィルタリングロジックをカバーすること。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "before_change.rsのgroup_and_limit_by_issueパターンをsuggestでも採用すべきことをIssueに明記する",
+      "description": "before_change.rsにはgroup_and_limit_by_issue()という成熟したパターンがあり、Issue単位のグルーピング、relation_priorityによるドキュメント選択、MAX_DOCS_PER_ISSUE制限を実現している。Issue本文の改善案はフィルタリングの方向性を示しているが、この既存パターンの再利用を明示的に推奨していない。",
+      "suggestion": "改善案に「before_change.rsのgroup_and_limit_by_issue()およびrelation_priority()パターンを参考に、suggest用のフィルタリング関数を実装する」と明記する。"
+    },
+    {
+      "id": "SF-2",
+      "title": "フィルタリングのレイヤー設計を明確にする",
+      "description": "フィルタリングを(A) find_knowledge_by_issue()のSQL側で行うか、(B) prepend_knowledge_steps()の前段で行うか、(C) prepend_knowledge_steps()内部で行うかが不明確。before_change.rsは(B)のパターンを採用している。",
+      "suggestion": "before_change.rsと一貫性を保つため、(B)のパターンを推奨する。find_knowledge_by_issue()のSQL変更は不要（他のコマンドへの影響を避ける）。"
+    },
+    {
+      "id": "SF-3",
+      "title": "KnowledgeDocResultにdoc_subtypeフィールドがない問題",
+      "description": "改善案ではhas_reviewのうちsummary-report.mdのみを残すフィルタリングを提案しているが、KnowledgeDocResult構造体にはdoc_subtypeフィールドがない。そのためsummary-report.mdの判別はfile_pathの文字列マッチに依存することになるが、Issue本文ではこの制約に言及していない。",
+      "suggestion": "file_pathの文字列パターンマッチで「summary-report.md」を含むかどうかで判定する簡易アプローチで十分。Issueに選択の根拠を記載すべき。"
+    },
+    {
+      "id": "SF-4",
+      "title": "提案数の具体的上限値をIssueに記載する",
+      "description": "Issue本文で「5-10件程度の提案」と期待されるが、具体的な上限定数が示されていない。",
+      "suggestion": "MAX_KG_DOCS_PER_ISSUE = 2 を定義。最大ステップ数 = MAX_ISSUE_NUMBERS(3) * (1 + MAX_KG_DOCS_PER_ISSUE(2)) = 9ステップ + 既存戦略ステップ。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "issueコマンドステップとcontextステップの重複可能性",
+      "description": "issueコマンド自体がドキュメント一覧を返すため、contextで個別展開するのは情報の重複がある。",
+      "suggestion": "フィルタリング実装後、issueコマンドステップを残すかどうかを検討する。"
+    },
+    {
+      "id": "NH-2",
+      "title": "JSON成果物の除外ルールをパターンルールと整合させる",
+      "description": "knowledge.rsのparse_dev_report_path()は既にJSONファイルをパターンマッチ対象外としている。ナレッジグラフに登録されるドキュメントノードにJSONファイルは含まれない。ただしfileノード（modifies関係）経由でJSONファイルが含まれる可能性はある。",
+      "suggestion": "Issue本文の改善案から「JSON成果物の省略」を削除するか、「modifiesのfileノード除外によりJSON成果物も自動的に除外される」と補足する。"
+    }
+  ],
+  "summary": "Issue #167の問題指摘は正確。before_change.rsに参考にすべき成熟したパターンが存在する。修正必須事項は(1) modifiesのfileノード除外の明示、(2) 受け入れ基準の定義。改善事項として、既存パターン再利用の明示、フィルタリングレイヤーの設計方針、doc_subtypeがない制約への対処方針、具体的な上限定数の定義がある。"
+}

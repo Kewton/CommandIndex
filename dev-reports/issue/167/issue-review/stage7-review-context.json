@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "doc_subtype == \"summary\" という判定条件が既存スキーマと整合していない",
+      "description": "既存コードベースのDocSubtypeはDesignPolicy / WorkPlan / IssueReview / DesignReview / ProgressReport / StageReviewであり、\"summary\"という値は存在しない。find_documents_by_issue()が返すIssueDocumentEntryでもsummary判定はdoc_subtype単独では表現されず、IssueReviewとDesignReviewがsummary-report.md系、StageReviewがstage別レビューを表している。現状のIssue本文の受け入れ基準と改善案のままだと、実装不能または誤実装になる。",
+      "suggestion": "has_reviewの保持条件はdoc_subtype == IssueReview || doc_subtype == DesignReviewに、除外条件はdoc_subtype == StageReviewと明記してください。受け入れ基準のdoc_subtype == \"summary\"という表現も同様に修正すべきです。"
+    },
+    {
+      "id": "MF-2",
+      "title": "find_documents_by_issue()を使う実装フローが複数Issue対応と整合していない",
+      "description": "suggestは既存実装でクエリから最大MAX_ISSUE_NUMBERS = 3件のIssue番号を抽出する。一方、Issue本文の処理フローはfind_documents_by_issue()を単数APIとして書いており、複数Issueをどう集約するかが記載されていない。find_knowledge_by_issue(&[...])からfind_documents_by_issue(issue)へ切り替えるなら、Issueごとに個別呼び出しして結果へissue_numberを再付与しない限り、現行のprepend_knowledge_steps()相当の処理やIssue単位制限の前提が崩れる。",
+      "suggestion": "処理フローを『抽出した各Issue番号についてfind_documents_by_issue(issue)を呼び、issue_numberを付与したsuggest用DTOに変換してからfilter_and_limit_kg_docs()に渡す』と具体化してください。もしくは複数Issue対応の新APIを用意する方針に改めてください。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "suggestのKG取得経路変更の回帰確認を明記すべき",
+      "description": "find_documents_by_issue()へ切り替える場合、影響は単なるsuggest.rs内フィルタ追加に留まらず、KG取得部分のデータ構造変換、複数Issue集約まで及ぶ。『他コマンドへの影響なし（確認済み）』は少し強すぎる。",
+      "suggestion": "『他コマンドの出力仕様には影響しないが、suggestのKG取得経路は変更されるため、Issue抽出・KG取得・ステップ生成の回帰確認が必要』と修正。"
+    },
+    {
+      "id": "SF-2",
+      "title": "DocSubtypeの解釈がissueコマンドと矛盾しないことの確認",
+      "description": "find_documents_by_issue()はissueコマンドでも使われている既存API。DocSubtypeの解釈をsuggest側で誤ると仕様のズレが生じる。",
+      "suggestion": "DocSubtype::IssueReview / DesignReview / StageReviewの扱いがissueコマンドの分類と矛盾しないことを確認するテストまたは観点を追記。"
+    },
+    {
+      "id": "SF-3",
+      "title": "パフォーマンス影響: SQLiteクエリ回数増加を明記",
+      "description": "find_knowledge_by_issue()は複数Issueを1クエリで取得できたが、find_documents_by_issue()をIssueごとに呼ぶため最大3回のSQLiteクエリになる。",
+      "suggestion": "パフォーマンス影響欄に『SQLiteクエリは最大1回→最大3回に増えるが、対象Issue数はMAX_ISSUE_NUMBERSで上限3、取得文書数も小さいため実用上の影響は軽微』と明記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "依存関係への影響を具体化",
+      "description": "外部依存の追加なし。内部依存としてsuggestがIssueDocumentEntry / DocSubtypeを参照するようになる。",
+      "suggestion": "依存関係の変更を明記。"
+    },
+    {
+      "id": "NH-2",
+      "title": "E2E受け入れ基準の「15-20件程度」は幅が広く不安定",
+      "description": "既存戦略ステップ数はqueryやembeddingの有無で変動するため、E2Eで全体件数をざっくり15-20と置くと将来壊れやすい。",
+      "suggestion": "E2Eでは『KG由来ステップ数が15以下』『1 Issueあたりcontextが4以下』を主判定にする。"
+    }
+  ],
+  "summary": "find_documents_by_issue()を使う方針は前進だが、doc_subtype == \"summary\"という判定は既存DocSubtype定義と一致しておらず誤り。単数APIの複数Issue適用方法が未定義。影響範囲はsuggestのKG取得経路に限定、他コマンドの仕様変更なし。テストはsuggestのユニット/E2E追加が必要。パフォーマンスはクエリ回数が最大3回に増えるが軽微。"
+}

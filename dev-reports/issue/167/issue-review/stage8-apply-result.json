@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "action": "apply_codex_impact_review",
+  "applied_items": ["MF-1", "MF-2", "SF-1", "SF-2", "SF-3", "NH-1", "NH-2"],
+  "changes": [
+    "doc_subtype判定をIssueReview/DesignReview(保持) vs StageReview(除外)に修正",
+    "複数Issue集約フロー具体化（各Issue個別呼び出し→DTO変換→結合→フィルタ）",
+    "suggestのKG取得経路変更の回帰確認必要と明記",
+    "DocSubtype解釈の整合確認テスト観点を追加",
+    "パフォーマンス影響セクション新設（SQLiteクエリ最大3回）",
+    "内部依存変更（IssueDocumentEntry/DocSubtype参照）を明記",
+    "E2E基準をKG由来ステップ数主体に"
+  ],
+  "issue_updated": true
+}
