@@ -1,0 +1,25 @@
+{
+  "issue_number": 169,
+  "title": "issue listサブコマンドの追加",
+  "design_policy": "dev-reports/design/issue-169-issue-list-design-policy.md",
+  "work_plan": "dev-reports/issue/169/work-plan.md",
+  "summary": "issue コマンドをサブコマンド構造に変更し、issue list (全Issue一覧) と issue show <number> (既存機能移行) を実装する",
+  "tasks": [
+    "Task 1.1: IssueListRow 構造体定義 (src/indexer/symbol_store.rs)",
+    "Task 1.2: list_all_issues() メソッド実装",
+    "Task 1.3: list_all_issues() 単体テスト",
+    "Task 2.1: IssueListEntry 構造体と変換ロジック (src/cli/issue.rs)",
+    "Task 2.2: open_symbol_store() ヘルパー関数",
+    "Task 2.3: run() → run_show() リネーム",
+    "Task 2.4: run_list() 関数実装",
+    "Task 2.5: 4フォーマッタ関数 (format_list_human/json/path/llm)",
+    "Task 2.6: main.rs IssueCommands enum + ディスパッチャー",
+    "Task 2.7: フォーマッタ単体テスト",
+    "Task 3.1: suggest.rs 更新 (issue → issue show)",
+    "Task 3.2: help_llm.rs 全箇所更新",
+    "Task 4.1: e2e_issue.rs 既存テスト更新",
+    "Task 4.2: e2e_issue.rs issue list テスト追加",
+    "Task 4.3: cli_args.rs テスト更新・追加",
+    "Task 4.4: help_llm/suggest 回帰テスト"
+  ]
+}

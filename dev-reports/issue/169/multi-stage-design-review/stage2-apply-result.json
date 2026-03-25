@@ -1,0 +1,10 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    "IssueListEntryの配置先を明示: src/indexer/symbol_store.rs",
+    "DRYヘルパーのDBパスを crate::indexer::symbol_db_path() に修正",
+    "run()リネーム方針を統一: リネームせず維持",
+    "影響範囲テーブルからIssueListResult削除",
+    "suggest.rsの変更規模を小→小〜中に更新（テスト3件も更新）"
+  ]
+}

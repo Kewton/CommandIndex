@@ -1,0 +1,11 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    "DRY節の run() → run_show() に統一",
+    "セキュリティ節をこの機能に即した懸念に書き換え（不正DBデータ、制御文字除去）",
+    "cli_args.rs の影響見積もりを小→中に修正、具体的変更内容追記",
+    "テスト戦略にhelp_llm/suggest回帰テスト追加",
+    "非数値identifier混入テストケース追加",
+    "IssueListRow→IssueListEntry変換テスト追加"
+  ]
+}

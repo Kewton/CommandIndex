@@ -1,0 +1,41 @@
+{
+  "stage": 1,
+  "focus": "設計原則 (SOLID/KISS/YAGNI/DRY)",
+  "must_fix": [],
+  "should_fix": [
+    {
+      "title": "label取得の2段階処理がN+1クエリを再導入するリスク",
+      "description": "has_design=trueのIssueごとにfind_documents_by_issue()を追加呼び出しする設計。判断2のN+1回避方針と矛盾。",
+      "suggestion": "SQLクエリに設計書パスも一括取得するか、2本目のクエリを全Issue一括取得に変更。"
+    },
+    {
+      "title": "IssueListResultのラッパー構造体がYAGNI",
+      "description": "IssueListResultはVec<IssueListEntry>をラップするだけ。追加フィールドやメソッドが設計されていない。",
+      "suggestion": "list_all_issues()の戻り値をVec<IssueListEntry>とし、IssueListResultは削除。"
+    },
+    {
+      "title": "run_list()内のDB存在チェック・SymbolStore::open・フォーマット出力の3責務",
+      "description": "run()と同じボイラープレートが重複する。",
+      "suggestion": "open_symbol_store()ヘルパー関数に抽出し、DRYを改善。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "IssueListEntryにlabelを持たせるとデータ取得とプレゼンテーションの混在",
+      "suggestion": "design_file_path: Option<String>を持たせ、label抽出はCLI層で行う。"
+    },
+    {
+      "title": "正規表現パターンのハードコードがDRY違反の種",
+      "suggestion": "scan_dev_reports()の既存パターンと共通定数化を検討。"
+    },
+    {
+      "title": "出力フォーマッタの名前衝突",
+      "suggestion": "format_list_human等の命名またはサブモジュール分割。"
+    },
+    {
+      "title": "0件時のhuman formatでTotal行と空メッセージの両方は冗長",
+      "suggestion": "No issues found.のみ表示し、Total行は省略。"
+    }
+  ],
+  "summary": "must_fixなし。主な改善点: (1) label取得のN+1回避、(2) IssueListResultラッパー削除(YAGNI)、(3) DB存在チェックのヘルパー抽出(DRY)。"
+}

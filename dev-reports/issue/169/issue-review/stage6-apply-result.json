@@ -1,0 +1,13 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    "SQL設計を relation/type 条件込みに修正（条件付き集計で doc_count と各 boolean を算出）",
+    "label fallback を knowledge_nodes.title 依存から空文字固定に変更",
+    "影響範囲に src/cli/suggest.rs を追加",
+    "旧構文の扱いを明記（完全廃止、clapサブコマンドエラー）",
+    "0件時の挙動を具体化（終了コード0、各フォーマットの出力仕様）",
+    "JSON出力に has_review, has_progress を追加",
+    "受け入れ基準に issue --help, suggest 出力更新, 旧構文エラーを追加"
+  ],
+  "issue_updated": true
+}

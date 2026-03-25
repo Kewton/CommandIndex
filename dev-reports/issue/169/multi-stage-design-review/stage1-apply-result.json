@@ -1,0 +1,11 @@
+{
+  "stage": 1,
+  "applied_fixes": [
+    "IssueListResult ラッパー削除 → Vec<IssueListEntry> を直接返す (YAGNI)",
+    "label取得をN+1回避: SQLクエリ内でdesign_file_pathも一括取得 (MAX)",
+    "IssueListEntryのlabelをdesign_file_path: Option<String>に変更 (責務分離)",
+    "open_symbol_store()ヘルパー関数を設計に追加 (DRY)",
+    "フォーマッタ命名規則を追記: format_list_ プレフィックス",
+    "0件時humanフォーマットからTotal行を省略"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "must_fix": [
+    {
+      "title": "help_llm.rs 内の旧構文参照が全箇所更新対象に入っていない",
+      "description": "help_llm.rs にはコマンド説明だけでなく use case と workflow の例でも commandindexdev issue 140 がハードコードされている。一括更新しないとガイダンスと実装が不整合になる。",
+      "suggestion": "受け入れ基準に『旧構文の参照がコードベース内に残っていない』確認を追加する。"
+    },
+    {
+      "title": "suggest / help-llm 系の回帰テストが未捕捉",
+      "description": "suggest は issue {issue_num} --format json を生成し、help_llm.rs も旧構文例を返すが、これらの変更に対応するテストが影響範囲に入っていない。",
+      "suggestion": "suggest の出力検証テストと help-llm の issue コマンド記述検証を追加対象に含める。"
+    },
+    {
+      "title": "一覧クエリの性能特性が明文化されていない",
+      "description": "issue list は毎回 LEFT JOIN + GROUP BY + CAST を実行。modifies を含む大きな knowledge graph では不要な行まで読む可能性。",
+      "suggestion": "EXPLAIN QUERY PLAN ベースの確認、将来の --limit 余地を実装メモに追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "symbols.db 未作成時と0件時の挙動差の整理",
+      "description": "issue show は DB不在でエラー。issue list は0件時成功終了と定義されているが、DB不在と DB有0件を正しく分ける必要がある。",
+      "suggestion": "受け入れ基準に symbols.db 不在時の issue list の扱いを追加。"
+    },
+    {
+      "title": "SymbolStore 単体テストの追加が必要",
+      "description": "list_all_issues() の doc_count と4つの boolean、label を返す新DTOのテストが不足。modifies 混在ケース、設計書なしIssue、0件ケースが必要。",
+      "suggestion": "src/indexer/symbol_store.rs に対する単体テスト追加を影響範囲に含める。"
+    },
+    {
+      "title": "clap のエラーメッセージ文字列に依存したテストは壊れやすい",
+      "description": "サブコマンド化により --help、エラー文言、usage が変わる。",
+      "suggestion": "テストでは完全一致文言ではなく部分一致で検証する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "label 抽出の正規表現を静的に再利用",
+      "description": "一覧全件に対して毎回 regex を組み立てると無駄。",
+      "suggestion": "regex を静的に再利用するか、SQL/DTO構築後の単純文字列処理で済ませる。"
+    }
+  ],
+  "summary": "breaking change が中心。既存機能への主影響は issue <number> 利用者、help-llm のハードコード例、suggest の生成コマンド。テスト影響は e2e_issue と cli_args だけでは足りず、suggest、help-llm、SymbolStore 単体まで見るべき。パフォーマンスは今の規模なら許容。依存関係は新規追加不要。"
+}

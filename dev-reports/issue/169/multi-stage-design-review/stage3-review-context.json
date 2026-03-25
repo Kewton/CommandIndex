@@ -1,0 +1,18 @@
+{
+  "stage": 3,
+  "focus": "影響分析レビュー",
+  "must_fix": [
+    { "title": "suggest.rs のコマンド文字列とテスト3件の更新（前ステージと重複、既に設計書に反映済み）" },
+    { "title": "help_llm.rs の use_cases/workflows/commands 3箇所の旧形式更新の具体箇所リスト化" },
+    { "title": "e2e_issue.rs の全6テストの引数パターン明記" }
+  ],
+  "should_fix": [
+    { "title": "cli_args.rs の issue list テスト追加" },
+    { "title": "IssueListEntry の配置先の既存パターンとの整合性確認" }
+  ],
+  "nice_to_have": [
+    { "title": "suggest の戦略に issue list を将来組み込む検討" },
+    { "title": "help_llm.rs の issue CommandInfo に subcommands フィールド追加" }
+  ],
+  "summary": "影響範囲分析は概ね正確。具体的な変更パターンの詳細追記が必要。"
+}
