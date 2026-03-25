@@ -1,0 +1,8 @@
+{
+  "applied": [
+    "must_fix M2: DRYリファクタリングのmodifies振る舞い変更の注意事項を設計書に追記"
+  ],
+  "skipped": [
+    "should_fix S3: test_groupedのテスト更新は実装時にテスト全体を更新するため、テスト変更方針の追記は不要"
+  ]
+}

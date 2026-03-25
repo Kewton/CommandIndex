@@ -1,0 +1,35 @@
+{
+  "stage": 1,
+  "type": "design_principles",
+  "must_fix": [
+    {
+      "id": 1,
+      "description": "DRY違反: symbol_store.rs find_documents_by_issue()がKnowledgeRelation::parse()を再利用せずハードコードmatchを使用。3箇所で同じマッピングが重複。",
+      "suggestion": "find_documents_by_issue()をKnowledgeRelation::parse()に統一し、None→エラー変換で対応。"
+    },
+    {
+      "id": 2,
+      "description": "sort_order不整合: issue.rs(Review<Workplan)とbefore_change.rs(Workplan<Review)で相対順序が逆。意図的かもしれないが設計書に未記載。",
+      "suggestion": "設計書に両モジュールの順序が異なる理由を明記。コメントも追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": 1,
+      "description": "human.rsのrelation_display_labelにhas_progress=>progressフォールバック追加が必要。設計書の簡略化コードが実際の関数シグネチャと乖離。",
+      "suggestion": "section 4.5を実際のmatchブロックに合わせて更新。"
+    },
+    {
+      "id": 2,
+      "description": "Open/Closed原則: 将来のバリアント追加時に4+ファイル変更が必要。sort_order/relation_priorityのマジックナンバー集中定義の検討。",
+      "suggestion": "技術的負債として記録。本Issue範囲外。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": 1,
+      "description": "sort_order()のHasProgressテストケース追加をテスト方針に明記。"
+    }
+  ],
+  "summary": "設計は基本的に健全。主要課題はDRY違反（symbol_store.rsのrelationパース重複）とsort_order不整合の文書化。"
+}

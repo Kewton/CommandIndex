@@ -1,0 +1,12 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"id": "M2", "description": "DRYリファクタリングでmodifies関係が成功パスに変わる（現状はエラー）。意図的か要確認。SQLクエリでtype='document'フィルタがあるため実質問題ないが設計書に記載すべき。"}
+  ],
+  "should_fix": [
+    {"id": "S3", "description": "tests/e2e_issue.rsのtest_groupedテスト(line 285)もHasReview→HasProgress変更が必要だがテスト変更方針に未記載。"}
+  ],
+  "nice_to_have": [],
+  "summary": "設計はコードベースと整合的。DRYリファクタリングのmodifies振る舞い変更を設計書に記載すべき。"
+}

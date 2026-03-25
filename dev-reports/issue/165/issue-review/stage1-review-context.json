@@ -1,0 +1,49 @@
+{
+  "must_fix": [
+    {
+      "id": 1,
+      "description": "影響ファイルの一覧が不完全。src/indexer/symbol_store.rs（DBパースmatch）、src/cli/issue.rs（exhaustive match）、src/cli/before_change.rs（relation_priority）の追加が必要。",
+      "suggestion": "影響ファイルテーブルにこれら3ファイルを追加し、各変更内容を明記する。"
+    },
+    {
+      "id": 2,
+      "description": "テストファイルの変更が影響ファイルに含まれていない。knowledge.rs:555, symbol_store.rs:2181,2189, issue.rs:301, tests/e2e_issue.rsのテストで進捗レポートにHasReviewが使われている。",
+      "suggestion": "影響ファイルにtests/e2e_issue.rsを追加し、各ソースファイル内テストモジュールの変更も明記する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": 1,
+      "description": "relation_display_labelのフォールバックケース仕様が未定義。doc_subtypeがNoneでhas_progressが渡された場合の表示が未定義。",
+      "suggestion": "has_progress => progressのフォールバック追加を対応内容に明記する。"
+    },
+    {
+      "id": 2,
+      "description": "src/cli/why.rsのテストデータにhas_reviewが使われており、影響分析に含めるべき。",
+      "suggestion": "受け入れ基準にwhyコマンドのテスト全Passを明記するか影響範囲分析にwhy.rsを含める。"
+    },
+    {
+      "id": 3,
+      "description": "before-changeコマンドでの動作確認が受け入れ基準に含まれていない。",
+      "suggestion": "受け入れ基準にbefore-changeコマンドでのソート優先度検証を追加する。"
+    },
+    {
+      "id": 4,
+      "description": "issueコマンドのsort_order()でHasProgressの順序値が未定義。",
+      "suggestion": "対応内容にHasProgressの順序値を明記する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": 1,
+      "description": "背景セクションの26件という数値は開発環境固有のデータ。",
+      "suggestion": "具体的件数を削除または一般的表現に変更する。"
+    },
+    {
+      "id": 2,
+      "description": "symbol_store.rsのDB parse matchとKnowledgeRelation::parse()が重複ロジック。DRY原則の機会。",
+      "suggestion": "スコープ外だが将来的なリファクタリングIssue作成を検討。"
+    }
+  ],
+  "summary": "影響ファイルが大幅に不足。symbol_store.rs, issue.rs, before_change.rs, tests/e2e_issue.rsで追加変更が必要。特にsymbol_store.rsのDBパースとissue.rsのexhaustive matchは変更しないとエラーになる。"
+}

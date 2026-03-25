@@ -333,8 +333,9 @@ fn relation_priority(relation: &str) -> u8 {
         "has_design" => 0,
         "has_workplan" => 1,
         "has_review" => 2,
-        "modifies" => 3,
-        _ => 4,
+        "has_progress" => 3,
+        "modifies" => 4,
+        _ => 5,
     }
 }
 
@@ -635,7 +636,8 @@ mod tests {
     fn test_relation_priority_order() {
         assert!(relation_priority("has_design") < relation_priority("has_workplan"));
         assert!(relation_priority("has_workplan") < relation_priority("has_review"));
-        assert!(relation_priority("has_review") < relation_priority("modifies"));
+        assert!(relation_priority("has_review") < relation_priority("has_progress"));
+        assert!(relation_priority("has_progress") < relation_priority("modifies"));
         assert!(relation_priority("modifies") < relation_priority("unknown"));
     }
 

@@ -1,0 +1,9 @@
+{
+  "applied": [
+    "IMPACT-1とIMPACT-2は設計書に既に記載済み。DRYリファクタリングが必須であることを再確認。"
+  ],
+  "skipped": [
+    "IMPACT-3: Serialize PascalCase問題は本Issue範囲外の既存不整合",
+    "IMPACT-4, IMPACT-5: 設計書に既に記載済み"
+  ]
+}

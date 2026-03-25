@@ -1,0 +1,14 @@
+{
+  "applied": [
+    "must_fix#1: 影響ファイルテーブルにsymbol_store.rs, issue.rs, before_change.rsを追加",
+    "must_fix#2: tests/e2e_issue.rsを影響ファイルに追加",
+    "should_fix#1: relation_display_labelのhas_progress=>progressフォールバックを対応内容に追加",
+    "should_fix#3: before-changeコマンドのソート優先度を受け入れ基準に追加",
+    "should_fix#4: sort_order()のHasProgress順序値(5)を対応内容に明記",
+    "nice_to_have#1: 26件の具体的件数を一般的表現に変更"
+  ],
+  "skipped": [
+    "should_fix#2: why.rsのテストデータはprogress-reportではなく一般的レビューのため、影響なし。既存テスト全Pass基準でカバー",
+    "nice_to_have#2: DRYリファクタリングはスコープ外"
+  ]
+}

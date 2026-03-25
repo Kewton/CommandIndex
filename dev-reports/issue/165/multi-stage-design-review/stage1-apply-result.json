@@ -1,0 +1,9 @@
+{
+  "applied": [
+    "must_fix#1: symbol_store.rsのrelationパースをKnowledgeRelation::parse()に統一（DRY改善）",
+    "must_fix#2: issue.rsとbefore_change.rsのsort_order不整合の理由を明記",
+    "should_fix#1: human.rsのrelation_display_labelコードスニペットを実際の関数に合わせて更新",
+    "should_fix#2: Open/Closed原則の技術的負債を認識（本Issue範囲外として記録）"
+  ],
+  "skipped": []
+}
