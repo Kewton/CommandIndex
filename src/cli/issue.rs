@@ -135,6 +135,12 @@ fn open_symbol_store(commandindex_dir: &Path) -> Result<SymbolStore, IssueComman
     SymbolStore::open(&db_path).map_err(IssueCommandError::SymbolStore)
 }
 
+fn sanitize_label(s: &str) -> String {
+    s.chars()
+        .filter(|c| !c.is_control())
+        .collect()
+}
+
 fn convert_row_to_entry(row: IssueListRow) -> IssueListEntry {
     let label = row
         .design_file_path
@@ -144,7 +150,7 @@ fn convert_row_to_entry(row: IssueListRow) -> IssueListEntry {
     IssueListEntry {
         number: row.number,
         doc_count: row.doc_count,
-        label,
+        label: sanitize_label(&label),
         has_design: row.has_design,
         has_review: row.has_review,
         has_workplan: row.has_workplan,
