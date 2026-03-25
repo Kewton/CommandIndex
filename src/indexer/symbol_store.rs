@@ -1071,7 +1071,7 @@ impl SymbolStore {
 
         // Find issue(s) that this file belongs to
         let mut stmt = self.conn.prepare(
-            "SELECT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title
+            "SELECT DISTINCT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title
              FROM knowledge_nodes kn_doc
              JOIN knowledge_edges ke1 ON ke1.target_id = kn_doc.id
              JOIN knowledge_nodes kn_issue ON ke1.source_id = kn_issue.id AND kn_issue.type = 'issue'
@@ -2416,6 +2416,70 @@ mod tests {
             .unwrap();
         let file_paths: Vec<&str> = related.iter().map(|r| r.file_path.as_str()).collect();
         assert!(file_paths.contains(&"src/main.rs"));
+    }
+
+    // --- find_knowledge_related DISTINCT dedup ---
+
+    #[test]
+    fn test_find_knowledge_related_distinct_dedup() {
+        use crate::indexer::knowledge::{
+            DocSubtype, FileModifiesEntry, KnowledgeEntry, KnowledgeRelation,
+        };
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Create issue #100 with two different relation edges to the same document
+        // (has_design and has_workplan pointing to the same doc)
+        let doc_entries = vec![
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "100".to_string(),
+                file_path: "dev-reports/issue/100/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        store.insert_knowledge_entries(&doc_entries).unwrap();
+
+        // Also add modifies edges to the same issue
+        let file_entries = vec![
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/main.rs".to_string(),
+            },
+            FileModifiesEntry {
+                issue_number: "100".to_string(),
+                file_path: "src/lib.rs".to_string(),
+            },
+        ];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        // Query from one of the documents: should find sibling docs + modifies files
+        // Without DISTINCT, the Cartesian product of ke1 paths x ke2 paths could produce duplicates
+        let results = store
+            .find_knowledge_related("dev-reports/design/issue-100-test-design-policy.md")
+            .unwrap();
+
+        // Verify no duplicates: collect (issue, file_path, relation) tuples
+        let mut seen = std::collections::HashSet::new();
+        for r in &results {
+            let key = (
+                r.issue_number.clone(),
+                r.file_path.clone(),
+                r.relation.clone(),
+            );
+            assert!(seen.insert(key.clone()), "Duplicate entry found: {:?}", key);
+        }
+
+        // Should find: work-plan.md (has_workplan), src/main.rs (modifies), src/lib.rs (modifies)
+        // Should NOT find: the query file itself
+        assert_eq!(results.len(), 3);
     }
 
     // --- find_knowledge_by_issue with file nodes ---

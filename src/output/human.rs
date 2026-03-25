@@ -233,6 +233,9 @@ pub fn format_why_human(
                 doc_path
             )?;
         }
+        if let Some(count) = issue.modifies_count {
+            writeln!(writer, "    [modifies] modifies: {count} files")?;
+        }
     }
     Ok(())
 }
