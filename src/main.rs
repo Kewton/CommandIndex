@@ -265,6 +265,18 @@ enum Commands {
         /// Maximum git log commits to scan (upper limit: 10000)
         #[arg(long, default_value = "200", value_parser = clap::value_parser!(u64).range(1..=10000))]
         max_commits: u64,
+
+        /// Enable snippet output for findings
+        #[arg(long)]
+        with_snippet: bool,
+
+        /// Number of snippet lines (default: 3)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=100))]
+        snippet_lines: Option<u64>,
+
+        /// Number of snippet characters for single-line body (default: 200)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=10000))]
+        snippet_chars: Option<u64>,
     },
     /// Show structured JSON help for LLM integration
     #[command(name = "help-llm")]
@@ -319,6 +331,11 @@ enum ConfigCommands {
     Path,
 }
 
+/// Default snippet lines for knowledge commands (issue, before-change)
+const KNOWLEDGE_SNIPPET_LINES: usize = 3;
+/// Default snippet chars for knowledge commands (issue, before-change)
+const KNOWLEDGE_SNIPPET_CHARS: usize = 200;
+
 #[derive(Subcommand)]
 enum IssueCommands {
     /// List all issues in the knowledge graph
@@ -335,6 +352,15 @@ enum IssueCommands {
         /// Output format (human, json, path, llm)
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
+        /// Enable snippet output for documents
+        #[arg(long)]
+        with_snippet: bool,
+        /// Number of snippet lines (default: 3)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=100))]
+        snippet_lines: Option<u64>,
+        /// Number of snippet characters for single-line body (default: 200)
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..=10000))]
+        snippet_chars: Option<u64>,
     },
 }
 
@@ -979,13 +1005,28 @@ fn main() {
             index_path,
             limit,
             max_commits,
+            with_snippet,
+            snippet_lines,
+            snippet_chars,
         } => {
+            let bc_snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                enabled: with_snippet,
+                config: commandindex::output::SnippetConfig {
+                    lines: snippet_lines
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or(KNOWLEDGE_SNIPPET_LINES),
+                    chars: snippet_chars
+                        .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                        .unwrap_or(KNOWLEDGE_SNIPPET_CHARS),
+                },
+            };
             match commandindex::cli::before_change::run_before_change(
                 &file,
                 format,
                 index_path.as_deref().or(cli.index_path.as_deref()),
                 limit as usize,
                 max_commits as usize,
+                bc_snippet_options,
             ) {
                 Ok(()) => 0,
                 Err(e) => {
@@ -1014,8 +1055,30 @@ fn main() {
                         }
                     }
                 }
-                IssueCommands::Show { number, format } => {
-                    match commandindex::cli::issue::run_show(number, format, &commandindex_dir) {
+                IssueCommands::Show {
+                    number,
+                    format,
+                    with_snippet,
+                    snippet_lines,
+                    snippet_chars,
+                } => {
+                    let issue_snippet_options = commandindex::cli::snippet_helper::SnippetOptions {
+                        enabled: with_snippet,
+                        config: commandindex::output::SnippetConfig {
+                            lines: snippet_lines
+                                .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                                .unwrap_or(KNOWLEDGE_SNIPPET_LINES),
+                            chars: snippet_chars
+                                .map(|v| usize::try_from(v).unwrap_or(usize::MAX))
+                                .unwrap_or(KNOWLEDGE_SNIPPET_CHARS),
+                        },
+                    };
+                    match commandindex::cli::issue::run_show(
+                        number,
+                        format,
+                        &commandindex_dir,
+                        issue_snippet_options,
+                    ) {
                         Ok(()) => 0,
                         Err(e) => {
                             eprintln!("Error: {e}");

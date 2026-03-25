@@ -1,0 +1,21 @@
+{
+  "stage": 3,
+  "focus": "影響分析",
+  "must_fix": [
+    {"id": "M1", "title": "既存enrich関数とのSome(\"\") vs Noneの不整合"},
+    {"id": "M2", "title": "IssueDocumentEntryへのsnippet追加で11箇所のテストリテラル修正が必要"},
+    {"id": "M3", "title": "BeforeChangeFoundingへのsnippet追加で15箇所以上のリテラル修正が必要"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "issue JSONスキーマの条件分岐がbreaking changeリスク"},
+    {"id": "S2", "title": "before-changeのtantivy reader オープンコスト（lazy方式で問題なし）"},
+    {"id": "S3", "title": "issue::run()シグネチャ変更のmain.rs影響"},
+    {"id": "S4", "title": "SnippetConfigのデフォルト値の二重定義リスク"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "help_llm.rsのコマンド説明更新"},
+    {"id": "N2", "title": "output_format.rsにbefore-change/issueフォーマッタテスト追加"},
+    {"id": "N3", "title": "search/impact/why/suggest等への波及なし確認済み"},
+    {"id": "N4", "title": "cli_args.rsテストへの影響は軽微"}
+  ]
+}

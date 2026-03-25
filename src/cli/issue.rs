@@ -196,6 +196,7 @@ pub fn run_show(
     issue_number: u64,
     format: OutputFormat,
     commandindex_dir: &Path,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), IssueCommandError> {
     let store = open_symbol_store(commandindex_dir)?;
     let issue_str = issue_number.to_string();
@@ -208,6 +209,21 @@ pub fn run_show(
     // Sort by relation + subtype order
     documents.sort_by_key(sort_order);
 
+    // Enrich with snippets (optional)
+    if snippet_options.enabled
+        && let Ok(reader) = crate::indexer::reader::IndexReaderWrapper::open(
+            &crate::indexer::index_dir(commandindex_dir),
+        )
+    {
+        crate::cli::snippet_helper::enrich_issue_documents_with_snippets(
+            &mut documents,
+            &reader,
+            &snippet_options,
+            format,
+        );
+    }
+    // reader open failure → snippet: None (fallback)
+
     let result = IssueDocumentsResult {
         issue_number: format!("{issue_number}"),
         documents,
@@ -215,7 +231,7 @@ pub fn run_show(
 
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
-    format_issue_documents(&result, format, &mut writer)?;
+    format_issue_documents(&result, format, &mut writer, &snippet_options)?;
     Ok(())
 }
 
@@ -339,10 +355,11 @@ fn format_issue_documents(
     result: &IssueDocumentsResult,
     format: OutputFormat,
     writer: &mut dyn Write,
+    snippet_options: &crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => format_human(result, writer),
-        OutputFormat::Json => format_json(result, writer),
+        OutputFormat::Json => format_json(result, writer, snippet_options),
         OutputFormat::Llm => format_llm(result, writer),
         OutputFormat::Path => format_path(result, writer),
     }
@@ -358,26 +375,58 @@ fn format_human(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result
         writeln!(writer, "\n  {category}:")?;
         for doc in docs {
             writeln!(writer, "    {}", strip_control_chars(&doc.file_path))?;
+            if let Some(ref snippet) = doc.snippet {
+                for line in snippet.lines() {
+                    writeln!(writer, "    > {}", strip_control_chars(line))?;
+                }
+            }
         }
     }
     Ok(())
 }
 
-fn format_json(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<(), OutputError> {
+fn format_json(
+    result: &IssueDocumentsResult,
+    writer: &mut dyn Write,
+    snippet_options: &crate::cli::snippet_helper::SnippetOptions,
+) -> Result<(), OutputError> {
     // Build grouped JSON structure
     let grouped = result.grouped();
     let mut categories = serde_json::Map::new();
     for (category, docs) in &grouped {
-        let paths: Vec<&str> = docs.iter().map(|d| d.file_path.as_str()).collect();
-        categories.insert(
-            (*category).to_string(),
-            serde_json::Value::Array(
-                paths
-                    .into_iter()
-                    .map(|p| serde_json::Value::String(p.to_string()))
-                    .collect(),
-            ),
-        );
+        if snippet_options.enabled {
+            // --with-snippet: object array with file_path + snippet
+            let items: Vec<serde_json::Value> = docs
+                .iter()
+                .map(|d| {
+                    let mut obj = serde_json::json!({
+                        "file_path": d.file_path,
+                    });
+                    if let Some(ref snippet) = d.snippet
+                        && let Some(map) = obj.as_object_mut()
+                    {
+                        map.insert(
+                            "snippet".to_string(),
+                            serde_json::Value::String(snippet.clone()),
+                        );
+                    }
+                    obj
+                })
+                .collect();
+            categories.insert((*category).to_string(), serde_json::Value::Array(items));
+        } else {
+            // Default: string array (backward compatible)
+            let paths: Vec<&str> = docs.iter().map(|d| d.file_path.as_str()).collect();
+            categories.insert(
+                (*category).to_string(),
+                serde_json::Value::Array(
+                    paths
+                        .into_iter()
+                        .map(|p| serde_json::Value::String(p.to_string()))
+                        .collect(),
+                ),
+            );
+        }
     }
     let output = serde_json::json!({
         "issue_number": result.issue_number,
@@ -398,6 +447,9 @@ fn format_llm(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<(
         writeln!(writer, "\n## {category}")?;
         for doc in docs {
             writeln!(writer, "- {}", strip_control_chars(&doc.file_path))?;
+            if let Some(ref snippet) = doc.snippet {
+                writeln!(writer, "  > {}", strip_control_chars(snippet))?;
+            }
         }
     }
     Ok(())
@@ -434,21 +486,25 @@ mod tests {
             file_path: "a.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            snippet: None,
         };
         let review = IssueDocumentEntry {
             file_path: "b.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::IssueReview,
+            snippet: None,
         };
         let workplan = IssueDocumentEntry {
             file_path: "c.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            snippet: None,
         };
         let stage_review = IssueDocumentEntry {
             file_path: "d.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::StageReview,
+            snippet: None,
         };
         assert!(sort_order(&design) < sort_order(&review));
         assert!(sort_order(&review) < sort_order(&workplan));
@@ -464,21 +520,25 @@ mod tests {
                     file_path: "design.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::IssueReview,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "progress.md".to_string(),
                     relation: KnowledgeRelation::HasProgress,
                     doc_subtype: DocSubtype::ProgressReport,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "stage-review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::StageReview,
+                    snippet: None,
                 },
             ],
         };
@@ -510,11 +570,13 @@ mod tests {
                     file_path: "design.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "work-plan.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
+                    snippet: None,
                 },
             ],
         };
@@ -536,14 +598,18 @@ mod tests {
                 file_path: "design.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                snippet: None,
             }],
         };
+        let no_snippet = crate::cli::snippet_helper::SnippetOptions::default();
         let mut buf = Vec::new();
-        format_json(&result, &mut buf).unwrap();
+        format_json(&result, &mut buf, &no_snippet).unwrap();
         let output = String::from_utf8(buf).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
         assert_eq!(parsed["issue_number"], "140");
+        // Without --with-snippet: string array
         assert!(parsed["documents"]["設計"].is_array());
+        assert!(parsed["documents"]["設計"][0].is_string());
     }
 
     #[test]
@@ -554,6 +620,7 @@ mod tests {
                 file_path: "design.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                snippet: None,
             }],
         };
         let mut buf = Vec::new();
@@ -573,11 +640,13 @@ mod tests {
                     file_path: "a.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "b.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
+                    snippet: None,
                 },
             ],
         };
@@ -771,5 +840,90 @@ mod tests {
         format_list_llm(&entries, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert_eq!(output.trim(), "No issues found.");
+    }
+
+    // --- Snippet tests ---
+
+    #[test]
+    fn test_format_human_with_snippet() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                snippet: Some("test snippet content".to_string()),
+            }],
+        };
+        let mut buf = Vec::new();
+        format_human(&result, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_format_llm_with_snippet() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                snippet: Some("test snippet content".to_string()),
+            }],
+        };
+        let mut buf = Vec::new();
+        format_llm(&result, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("- design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_format_json_with_snippet_enabled() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                snippet: Some("test snippet".to_string()),
+            }],
+        };
+        let with_snippet = crate::cli::snippet_helper::SnippetOptions {
+            enabled: true,
+            config: crate::output::SnippetConfig::default(),
+        };
+        let mut buf = Vec::new();
+        format_json(&result, &mut buf, &with_snippet).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // With --with-snippet: object array
+        let doc = &parsed["documents"]["設計"][0];
+        assert!(doc.is_object());
+        assert_eq!(doc["file_path"], "design.md");
+        assert_eq!(doc["snippet"], "test snippet");
+    }
+
+    #[test]
+    fn test_format_json_with_snippet_disabled_keeps_string_array() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                snippet: Some("test snippet".to_string()),
+            }],
+        };
+        let no_snippet = crate::cli::snippet_helper::SnippetOptions::default();
+        let mut buf = Vec::new();
+        format_json(&result, &mut buf, &no_snippet).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // Without --with-snippet: string array (backward compat)
+        assert!(parsed["documents"]["設計"][0].is_string());
+        assert_eq!(parsed["documents"]["設計"][0], "design.md");
     }
 }

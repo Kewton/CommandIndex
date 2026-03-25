@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": ["MF-1", "MF-2", "SF-1", "SF-2", "SF-3", "SF-4", "NH-1", "NH-2"],
+  "changes": [
+    "modifies除外をretain()によるフィルタリングと明示",
+    "受け入れ基準セクションを新設（7項目）",
+    "before_change.rsのパターン再利用を明記",
+    "フィルタリングレイヤーの処理フロー図を追加",
+    "file_pathパターンマッチによるhas_reviewフィルタを注記",
+    "MAX_KG_DOCS_PER_ISSUE = 2 を定数として明記",
+    "補足セクションにNH-1, NH-2を追記"
+  ],
+  "issue_updated": true
+}

@@ -1,0 +1,39 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Weight changes affect suggest/why/before-change commands",
+      "description": "スコアリング重みはcontext以外のコマンド（suggest, why, before-change）でも共有。KNOWLEDGE_GRAPH_WEIGHTの変更は全4コマンドのランキングに影響する。",
+      "suggestion": "重み変更後、全4コマンドの受け入れ/統合テストを実行して結果順序が妥当であることを検証する。"
+    },
+    {
+      "id": "M2",
+      "title": "relation_to_string() priority reorder affects all consumers",
+      "description": "KnowledgeGraphの優先度を変更すると、suggest/why/before-changeの出力ラベルも変わる。",
+      "suggestion": "relation_to_string()の全呼び出し元を監査し、複数リレーション型を持つエントリのスナップショットテストを追加する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "KGスコアリングパスのテストカバレッジが不足",
+      "description": "score_knowledge_graph()とfind_knowledge_related()のテストが限定的な可能性。変更前にベースラインテストを確立すべき。",
+      "suggestion": "変更前にscore_knowledge_graph()のユニットテストとfind_knowledge_related()の統合テストを追加する。"
+    },
+    {
+      "id": "S2",
+      "title": "Weight increase could cause KG results to dominate rankings",
+      "description": "重みを大幅に引き上げるとKGがMarkdownLink(1.0)やImportDependency(0.9)を常に上回り、結果品質が低下する可能性。",
+      "suggestion": "KnowledgeGraphの重みはMarkdownLink(1.0)以下に抑える。0.9を保守的なステップとして検討する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Richなスニペット抽出のパフォーマンス影響",
+      "description": "単純切り詰めからコンテンツ認識抽出に変更するとエントリ毎の処理コストが増加する可能性。",
+      "suggestion": "ベンチマーク計測を行い、大規模KG時のフォールバック切り詰めを維持する。"
+    }
+  ],
+  "summary": "重みと優先度の変更は共有インフラ（4コマンド）に影響するため、クロスコマンドのリグレッションテストが必須。テストカバレッジの確立を先行させ、重みの調整は保守的に行うべき。"
+}

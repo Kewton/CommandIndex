@@ -1,0 +1,105 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "BeforeChangeFinding 全コンストラクタ更新（5箇所+テスト10箇所以上）",
+      "description": "snippet: Option<String> 追加で全コンストラクタがコンパイルエラーになる。",
+      "suggestion": "全コンストラクタで snippet: None を初期値設定。enrich 関数で後から上書き。"
+    },
+    {
+      "id": "M2",
+      "title": "IssueDocumentEntry 全コンストラクタ・テスト更新",
+      "description": "symbol_store.rs:909 の find_documents_by_issue() 内構造体生成、issue.rs テスト6箇所の更新が必要。",
+      "suggestion": "snippet: None を全箇所に追加。"
+    },
+    {
+      "id": "M3",
+      "title": "issue JSON出力 breaking change のテスト更新",
+      "description": "tests/e2e_issue.rs:94-99 のアサーションとユニットテストの全面更新が必要。",
+      "suggestion": "新スキーマ（オブジェクト配列）に合わせてテスト更新。"
+    },
+    {
+      "id": "M4",
+      "title": "before-change テスト内の構造体リテラル全更新",
+      "description": "before_change.rs テストモジュール内に10箇所以上のリテラルあり。",
+      "suggestion": "全リテラルに snippet: None を追加。"
+    },
+    {
+      "id": "M5",
+      "title": "run_before_change 関数に IndexReaderWrapper 追加",
+      "description": "main.rs:968-974 のコール箇所も更新必要。tantivy未存在時のフォールバック必要。",
+      "suggestion": "オプショナルパラメータとして追加、未存在時はスニペットなしでフォールバック。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "issue コマンドに IndexReaderWrapper 導入",
+      "description": "commandindex_dir は既に受け取っているが tantivy 用 IndexReaderWrapper が未導入。",
+      "suggestion": "snippet_helper.rs に enrich_issue_documents_with_snippets() を追加。"
+    },
+    {
+      "id": "S2",
+      "title": "output フォーマッタ before-change スニペット表示対応（human/llm/json）",
+      "description": "3つのフォーマッタで snippet 表示ロジック追加が必要。",
+      "suggestion": "impact の実装パターンを参考に追加。"
+    },
+    {
+      "id": "S3",
+      "title": "output フォーマッタ issue スニペット表示対応（human/llm/json）",
+      "description": "4つの出力関数全てで snippet 表示対応が必要。format_json は大幅書き換え。",
+      "suggestion": "format_json をオブジェクト配列に変更。format_human/llm はインデント付き表示追加。"
+    },
+    {
+      "id": "S4",
+      "title": "snippet_helper.rs に enrich_before_change_with_snippets() 追加",
+      "description": "既存の enrich パターンに従い追加。",
+      "suggestion": "doc_path をキーに fetch_snippet() を呼ぶ。format=Path の場合はスキップ。"
+    },
+    {
+      "id": "S5",
+      "title": "tests/output_format.rs にスニペット出力テスト追加",
+      "description": "フォーマッタの単体テストにスニペット表示テストがない。",
+      "suggestion": "human/json/llm 各フォーマットのスニペット出力テストを追加。"
+    },
+    {
+      "id": "S6",
+      "title": "e2e テストの更新（e2e_before_change.rs, e2e_issue.rs）",
+      "description": "JSON出力テストで snippet フィールドの存在を検証すべき。",
+      "suggestion": "新スキーマに合わせてアサーション更新。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "tantivy IndexReaderWrapper のオープンコスト: 問題なし",
+      "description": "コマンド実行ごとに1回のオープンで軽微。",
+      "suggestion": "tantivy 未存在時のフォールバック（snippet: None）は必須。"
+    },
+    {
+      "id": "N2",
+      "title": "fetch_snippet() 呼び出し回数: 最大20回程度で軽微",
+      "description": "TermQuery（完全一致）なので O(1) に近い。",
+      "suggestion": "enrich 関数は limit 適用後に呼ぶ設計を維持。"
+    },
+    {
+      "id": "N3",
+      "title": "help-llm 出力のスキーマ更新",
+      "description": "issue/before-change の出力フォーマット説明を更新。",
+      "suggestion": "snippet 関連の情報を help-llm に追加。"
+    },
+    {
+      "id": "N4",
+      "title": "--with-snippet フラグの追加検討",
+      "description": "他コマンド（impact/search）との一貫性のため検討。",
+      "suggestion": "issue/before-change にも --with-snippet を追加、デフォルトオフ。"
+    },
+    {
+      "id": "N5",
+      "title": "why コマンドへの波及: 今回スコープ外",
+      "description": "類似構造だが今回は変更不要。",
+      "suggestion": "将来のスニペット拡張時に同パターンを適用。"
+    }
+  ],
+  "summary": "変更の影響範囲: (1) BeforeChangeFinding/IssueDocumentEntry の型変更（構造体リテラル15箇所以上）、(2) snippet_helper.rs に enrich 関数2つ追加、(3) output フォーマッタ6関数更新、(4) main.rs の2コマンドハンドラ更新。issue JSON の breaking change が最大の影響。issue/before-change 以外への波及なし。パフォーマンス影響は軽微。"
+}

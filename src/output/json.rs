@@ -93,7 +93,7 @@ pub fn format_related_json(
                 crate::output::RelationType::DirectoryProximity => {
                     serde_json::json!("directory_proximity")
                 }
-                crate::output::RelationType::KnowledgeGraph => {
+                crate::output::RelationType::KnowledgeGraph(_) => {
                     serde_json::json!("knowledge_graph")
                 }
             })
@@ -174,6 +174,11 @@ pub fn format_before_change_json(
                 && let Some(o) = obj.as_object_mut()
             {
                 o.insert("similarity".to_string(), serde_json::json!(sim));
+            }
+            if let Some(ref snippet) = f.snippet
+                && let Some(o) = obj.as_object_mut()
+            {
+                o.insert("snippet".to_string(), serde_json::Value::String(snippet.clone()));
             }
             obj
         }).collect::<Vec<_>>(),

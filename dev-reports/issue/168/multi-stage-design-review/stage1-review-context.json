@@ -1,0 +1,19 @@
+{
+  "stage": 1,
+  "focus": "設計原則 (SOLID/KISS/YAGNI/DRY)",
+  "must_fix": [
+    {"id": "M1", "title": "enrich関数の空文字列処理が既存パターンと不整合", "description": "新関数は空→None変換、既存はSome(\"\")のまま"},
+    {"id": "M2", "title": "issue JSON スキーマの条件分岐による型安全性の欠如", "description": "同一フィールドが--with-snippetの有無で異なる型を返す"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "enrich関数のジェネリック化によるDRY改善", "description": "4つのenrich関数がほぼ同一パターン"},
+    {"id": "S2", "title": "SnippetConfigのデフォルト値がコマンド間で暗黙的に異なる"},
+    {"id": "S3", "title": "IssueDocumentEntryへのsnippet追加がドメインモデルとプレゼンテーションの混在", "description": "knowledge.rsのドメインモデルに表示用フィールド"},
+    {"id": "S4", "title": "value_parserの型がu64 vs usizeで不統一"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "format引数のenrich関数への伝搬を再検討"},
+    {"id": "N2", "title": "snippet_optionsのビルダーパターン導入"},
+    {"id": "N3", "title": "影響範囲にimpact既存関数の変更を追加"}
+  ]
+}

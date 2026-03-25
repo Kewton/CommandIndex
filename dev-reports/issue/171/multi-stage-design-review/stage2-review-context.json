@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "type": "整合性",
+  "must_fix": [
+    {"id": "M1", "title": "matches!(r, RelationType::KnowledgeGraph) が struct variant で壊れる", "suggestion": "全箇所を matches!(r, RelationType::KnowledgeGraph { .. }) に更新"},
+    {"id": "M2", "title": "suggest.rs/why.rs のパターンマッチも壊れる", "suggestion": "is_knowledge_graph() ヘルパーメソッドを導入して集約"},
+    {"id": "M3", "title": "add_relation の discriminant チェックが異なるメタデータの KG エントリを黙って破棄する", "suggestion": "重複チェックを改善するか、メタデータをマージするロジックを追加"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "JSON出力フォーマットが breaking change になる", "suggestion": "relation_to_string() で文字列化されるため直接影響なし。ただしserde直接シリアライズ箇所があれば対応要"},
+    {"id": "S2", "title": "KNOWLEDGE_GRAPH_WEIGHT 0.95 がImportDependencyを圧倒する可能性"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "KnowledgeGraph variant のコンストラクタヘルパー追加"}
+  ]
+}

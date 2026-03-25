@@ -1,0 +1,1 @@
+{"stage": 8, "action": "apply_final_review", "applied_items": ["MF-1","SF-1","NH-1"], "changes": ["strategy引数型をVec<SuggestStep>に修正","変更理由からrelation型不一致の誤記述を削除、titleのみを理由に","sort_byが安定ソートであるコメントを追加"], "design_policy_updated": true}

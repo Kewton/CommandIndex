@@ -1,0 +1,51 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Issueの前提が事実と異なる",
+      "description": "Issue本文は「contextコマンドはimport依存のみで関連ファイルを収集する」と述べているが、実際にはrelated.rsにscore_knowledge_graph()メソッド、context.rsにKnowledgeGraph関連の処理、symbol_store.rsにfind_knowledge_related()メソッドが既に実装されている。",
+      "suggestion": "Issue本文の「現状」セクションを修正し、ナレッジグラフ統合が既に実装済みであることを明記する。残存する具体的なギャップにフォーカスしたIssueに書き換える。"
+    },
+    {
+      "id": "M2",
+      "title": "受け入れ基準が未定義",
+      "description": "Issueには期待される出力のJSON例はあるが、テスト可能な受け入れ基準が明示されていない。",
+      "suggestion": "具体的な受け入れ基準を追加する：(1) KGエントリが出力に含まれること、(2) スニペットに設計判断の要約が含まれること、(3) --max-files枠内でスコア順マージされること。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "KNOWLEDGE_GRAPH_WEIGHTが低すぎる可能性の検証",
+      "description": "現在のKNOWLEDGE_GRAPH_WEIGHT: 0.8はIssueの期待するスコア3.0と大きく乖離。--max-filesの枠内でKGエッジが出力されない可能性がある。",
+      "suggestion": "実際にKGエッジを持つファイルに対してcontextコマンドを実行し検証する。含まれない場合は重みの調整またはKG枠の最低確保を検討する。"
+    },
+    {
+      "id": "S2",
+      "title": "スニペット品質の改善が未定義",
+      "description": "現在のスニペットは本文の単純な切り詰めであり、Issueが期待する「判断理由の要約」とは異なる。",
+      "suggestion": "スニペット生成ロジックの改善を具体化する。例：knowledge_edgesのmetadataにsummaryがあればそれを優先利用、見出し直後の1〜2文を抽出等。"
+    },
+    {
+      "id": "S3",
+      "title": "relation_to_string()でのKnowledgeGraph優先度が最低",
+      "description": "同一ファイルがimport_dependencyとknowledge_graphの両方で関連する場合、knowledge_graphのラベルが表示されない。",
+      "suggestion": "複数relationの表示対応、またはKGの優先度引き上げを検討する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "既存実装のテストカバレッジ確認",
+      "description": "KG統合のテストが十分か確認し、不足があれば追加する。",
+      "suggestion": "score_knowledge_graph()、find_knowledge_related()、context.rsのKnowledgeGraph分岐に対するテストの有無を確認する。"
+    },
+    {
+      "id": "N2",
+      "title": "CLIオプションでKG統合の有効/無効切替",
+      "description": "KGデータが存在しない環境向けに--no-knowledge-graphフラグを検討。",
+      "suggestion": "スコープ外として別Issueにしても良い。"
+    }
+  ],
+  "summary": "Issueの前提が事実と異なる。ナレッジグラフのcontext統合は既に実装済みであり、Issueを「既存KG統合の改善」にリフレームすべき。具体的なギャップ（重み調整、スニペット品質向上、複数relation表示）に焦点を当てる必要がある。"
+}
