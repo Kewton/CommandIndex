@@ -9,10 +9,11 @@ Examples:
   commandindexdev why dev-reports/design/issue-100-design-policy.md --format path
   commandindexdev why dev-reports/design/issue-100-design-policy.md --format llm";
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::Path;
 
+use crate::indexer::knowledge::KnowledgeRelatedResult;
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
 use crate::output::{self, OutputError, OutputFormat, WhyDocumentEntry, WhyIssueEntry, WhyResult};
 
@@ -102,46 +103,8 @@ pub fn run_why(
     // 4. ナレッジグラフ検索
     let related = store.find_knowledge_related(file_path)?;
 
-    // 5. Issue別グルーピング → WhyResult 変換
-    let mut issue_map: BTreeMap<String, (Option<String>, Vec<WhyDocumentEntry>)> = BTreeMap::new();
-    // Count modifies entries per issue for summary display
-    let mut modifies_counts: BTreeMap<String, usize> = BTreeMap::new();
-    for r in &related {
-        let entry = issue_map
-            .entry(r.issue_number.clone())
-            .or_insert_with(|| (r.title.clone(), Vec::new()));
-        // Update title if we have one (later entries may also have it)
-        if entry.0.is_none() && r.title.is_some() {
-            entry.0.clone_from(&r.title);
-        }
-        if r.relation == "modifies" {
-            *modifies_counts.entry(r.issue_number.clone()).or_insert(0) += 1;
-        } else {
-            entry.1.push(WhyDocumentEntry {
-                file_path: r.file_path.clone(),
-                relation: r.relation.clone(),
-            });
-        }
-    }
-
-    // Add a summary entry for modifies relations
-    for (issue_number, count) in &modifies_counts {
-        if let Some(entry) = issue_map.get_mut(issue_number) {
-            entry.1.push(WhyDocumentEntry {
-                file_path: format!("modifies: {count} files"),
-                relation: "modifies".to_string(),
-            });
-        }
-    }
-
-    let issues: Vec<WhyIssueEntry> = issue_map
-        .into_iter()
-        .map(|(issue_number, (title, documents))| WhyIssueEntry {
-            issue_number,
-            title,
-            documents,
-        })
-        .collect();
+    // 5. Issue別グルーピング → WhyResult 変換（重複排除付き）
+    let issues = group_knowledge_results(&related);
 
     let result = WhyResult {
         file_path: file_path.clone(),
@@ -153,6 +116,52 @@ pub fn run_why(
     let mut handle = stdout.lock();
     output::format_why_results(&result, format, &mut handle)?;
     Ok(())
+}
+
+/// ナレッジグラフ検索結果をIssue別にグルーピングし、重複を除去する
+fn group_knowledge_results(related: &[KnowledgeRelatedResult]) -> Vec<WhyIssueEntry> {
+    let mut issue_map: BTreeMap<String, (Option<String>, Vec<WhyDocumentEntry>)> = BTreeMap::new();
+    let mut modifies_counts: BTreeMap<String, usize> = BTreeMap::new();
+    // dedup: (issue_number, file_path, relation) の3要素で重複排除
+    let mut seen: HashSet<(String, String, String)> = HashSet::new();
+
+    for r in related {
+        let entry = issue_map
+            .entry(r.issue_number.clone())
+            .or_insert_with(|| (r.title.clone(), Vec::new()));
+        if entry.0.is_none() && r.title.is_some() {
+            entry.0.clone_from(&r.title);
+        }
+        let key = (
+            r.issue_number.clone(),
+            r.file_path.clone(),
+            r.relation.clone(),
+        );
+        if !seen.insert(key) {
+            continue; // 重複スキップ
+        }
+        if r.relation == "modifies" {
+            *modifies_counts.entry(r.issue_number.clone()).or_insert(0) += 1;
+        } else {
+            entry.1.push(WhyDocumentEntry {
+                file_path: r.file_path.clone(),
+                relation: r.relation.clone(),
+            });
+        }
+    }
+
+    issue_map
+        .into_iter()
+        .map(|(issue_number, (title, documents))| {
+            let modifies_count = modifies_counts.get(&issue_number).copied();
+            WhyIssueEntry {
+                issue_number,
+                title,
+                documents,
+                modifies_count,
+            }
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -200,39 +209,17 @@ mod tests {
             },
         ];
 
-        let mut issue_map: std::collections::BTreeMap<
-            String,
-            (Option<String>, Vec<WhyDocumentEntry>),
-        > = std::collections::BTreeMap::new();
-        for r in &related {
-            let entry = issue_map
-                .entry(r.issue_number.clone())
-                .or_insert_with(|| (r.title.clone(), Vec::new()));
-            if entry.0.is_none() && r.title.is_some() {
-                entry.0.clone_from(&r.title);
-            }
-            entry.1.push(WhyDocumentEntry {
-                file_path: r.file_path.clone(),
-                relation: r.relation.clone(),
-            });
-        }
-
-        let issues: Vec<WhyIssueEntry> = issue_map
-            .into_iter()
-            .map(|(issue_number, (title, documents))| WhyIssueEntry {
-                issue_number,
-                title,
-                documents,
-            })
-            .collect();
+        let issues = group_knowledge_results(&related);
 
         assert_eq!(issues.len(), 2);
         assert_eq!(issues[0].issue_number, "100");
         assert_eq!(issues[0].title.as_deref(), Some("Feature X"));
         assert_eq!(issues[0].documents.len(), 2);
+        assert!(issues[0].modifies_count.is_none());
         assert_eq!(issues[1].issue_number, "200");
         assert!(issues[1].title.is_none());
         assert_eq!(issues[1].documents.len(), 1);
+        assert!(issues[1].modifies_count.is_none());
     }
 
     #[test]
@@ -246,6 +233,7 @@ mod tests {
                     file_path: "dev-reports/design/issue-100.md".to_string(),
                     relation: "has_design".to_string(),
                 }],
+                modifies_count: None,
             }],
         };
         let mut buf = Vec::new();
@@ -266,6 +254,7 @@ mod tests {
                     file_path: "dev-reports/issue/42/work-plan.md".to_string(),
                     relation: "has_workplan".to_string(),
                 }],
+                modifies_count: None,
             }],
         };
         let mut buf = Vec::new();
@@ -293,6 +282,7 @@ mod tests {
                         relation: "has_workplan".to_string(),
                     },
                 ],
+                modifies_count: None,
             }],
         };
         let mut buf = Vec::new();
@@ -314,6 +304,7 @@ mod tests {
                     file_path: "dev-reports/design/issue-100.md".to_string(),
                     relation: "has_design".to_string(),
                 }],
+                modifies_count: None,
             }],
         };
         let mut buf = Vec::new();
@@ -321,6 +312,118 @@ mod tests {
         let output = String::from_utf8(buf).unwrap();
         assert!(output.contains("## Why: src/main.rs"));
         assert!(output.contains("Issue #100"));
+    }
+
+    #[test]
+    fn test_group_knowledge_results_dedup() {
+        use crate::indexer::knowledge::KnowledgeRelatedResult;
+
+        // Same (issue, file_path, relation) appears twice → should be deduped
+        let related = vec![
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                file_path: "dev-reports/design/issue-100.md".to_string(),
+                title: Some("Feature X".to_string()),
+            },
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                file_path: "dev-reports/design/issue-100.md".to_string(),
+                title: Some("Feature X".to_string()),
+            },
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "modifies".to_string(),
+                file_path: "src/main.rs".to_string(),
+                title: Some("Feature X".to_string()),
+            },
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "modifies".to_string(),
+                file_path: "src/lib.rs".to_string(),
+                title: Some("Feature X".to_string()),
+            },
+            // Duplicate modifies entry
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "modifies".to_string(),
+                file_path: "src/main.rs".to_string(),
+                title: Some("Feature X".to_string()),
+            },
+        ];
+
+        let issues = group_knowledge_results(&related);
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].issue_number, "100");
+        // Only 1 unique has_design entry (deduped from 2)
+        assert_eq!(issues[0].documents.len(), 1);
+        // 2 unique modifies entries (src/main.rs and src/lib.rs), not 3
+        assert_eq!(issues[0].modifies_count, Some(2));
+    }
+
+    #[test]
+    fn test_group_knowledge_results_different_issues_same_file() {
+        use crate::indexer::knowledge::KnowledgeRelatedResult;
+
+        // Different issues referencing the same file should NOT be deduped
+        let related = vec![
+            KnowledgeRelatedResult {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                file_path: "shared/doc.md".to_string(),
+                title: Some("Feature A".to_string()),
+            },
+            KnowledgeRelatedResult {
+                issue_number: "200".to_string(),
+                relation: "has_design".to_string(),
+                file_path: "shared/doc.md".to_string(),
+                title: Some("Feature B".to_string()),
+            },
+        ];
+
+        let issues = group_knowledge_results(&related);
+        assert_eq!(issues.len(), 2);
+        // Both issues should have their document entry
+        assert_eq!(issues[0].documents.len(), 1);
+        assert_eq!(issues[1].documents.len(), 1);
+    }
+
+    #[test]
+    fn test_format_why_json_with_modifies_count() {
+        let result = WhyResult {
+            file_path: "src/main.rs".to_string(),
+            issues: vec![WhyIssueEntry {
+                issue_number: "42".to_string(),
+                title: Some("Feature".to_string()),
+                documents: vec![WhyDocumentEntry {
+                    file_path: "dev-reports/design/issue-42.md".to_string(),
+                    relation: "has_design".to_string(),
+                }],
+                modifies_count: Some(3),
+            }],
+        };
+        let mut buf = Vec::new();
+        output::format_why_results(&result, OutputFormat::Json, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        assert_eq!(parsed["issues"][0]["modifies_count"], 3);
+
+        // When modifies_count is None, it should NOT appear in JSON
+        let result_none = WhyResult {
+            file_path: "src/main.rs".to_string(),
+            issues: vec![WhyIssueEntry {
+                issue_number: "42".to_string(),
+                title: None,
+                documents: vec![],
+                modifies_count: None,
+            }],
+        };
+        let mut buf2 = Vec::new();
+        output::format_why_results(&result_none, OutputFormat::Json, &mut buf2).unwrap();
+        let output2 = String::from_utf8(buf2).unwrap();
+        let parsed2: serde_json::Value = serde_json::from_str(&output2).unwrap();
+        assert!(parsed2["issues"][0].get("modifies_count").is_none());
     }
 
     #[test]

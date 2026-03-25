@@ -398,6 +398,8 @@ pub struct WhyIssueEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub documents: Vec<WhyDocumentEntry>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modifies_count: Option<usize>,
 }
 
 /// why の Document エントリ

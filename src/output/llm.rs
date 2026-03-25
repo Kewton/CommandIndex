@@ -473,6 +473,9 @@ pub fn format_why_llm(
             let relation = strip_control_chars(&doc.relation);
             writeln!(writer, "- {doc_path} ({relation})")?;
         }
+        if let Some(count) = issue.modifies_count {
+            writeln!(writer, "- [modifies] modifies: {count} files")?;
+        }
         writeln!(writer)?;
     }
     Ok(())
