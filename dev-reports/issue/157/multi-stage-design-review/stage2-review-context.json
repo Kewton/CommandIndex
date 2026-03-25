@@ -1,0 +1,19 @@
+{
+  "stage": 2, "type": "consistency", "reviewer": "Claude Opus",
+  "must_fix": [
+    {"title": "build_strategy内でのmatched_issues設定タイミングが曖昧", "suggestion": "run_suggest側でresult.matched_issues=...とするパターンに統一"},
+    {"title": "SuggestResultフィールド追加で既存テスト5箇所がコンパイルエラー", "suggestion": "変更ファイル一覧に既存テスト修正を明記"},
+    {"title": "dedup()のみでは非連続重複を除去できない", "suggestion": "sort()前置またはHashSet/BTreeSet使用"}
+  ],
+  "should_fix": [
+    {"title": "build_fallback_strategyの修正漏れ", "suggestion": "matched_issues: vec![]の追加を設計書に明記"},
+    {"title": "KnowledgeDocResult等のimportパス未記載", "suggestion": "use文追加を設計書に記載"},
+    {"title": "issueサブコマンドの存在確認", "suggestion": "issue.rsで実装済み確認済み"}
+  ],
+  "nice_to_have": [
+    {"title": "matched_issuesのserde(skip_serializing_if)検討"},
+    {"title": "処理フロー番号と実装コメントの不一致"},
+    {"title": "eprintlnのwarningフォーマット統一"}
+  ],
+  "summary": "APIシグネチャ・型名は正確。dedup不完全、テスト破損対応、build_fallback_strategy修正が主要指摘。"
+}

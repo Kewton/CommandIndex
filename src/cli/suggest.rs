@@ -11,8 +11,12 @@ Examples:
 use std::fmt;
 use std::path::Path;
 
+use std::collections::HashSet;
+
 use crate::cli::search::SearchContext;
+use crate::indexer::knowledge::extract_issue_numbers;
 use crate::indexer::reader::IndexReaderWrapper;
+use crate::indexer::symbol_store::{KnowledgeDocResult, SymbolStore};
 use crate::output::{self, OutputFormat, SuggestResult, SuggestStep};
 use crate::search::hybrid::rrf_merge_files;
 use crate::search::ranking;
@@ -32,6 +36,9 @@ const SEMANTIC_FALLBACK_LIMIT: usize = 20;
 
 /// ファイル単位dedupの上限
 const DEDUP_FILE_LIMIT: usize = 5;
+
+/// ナレッジグラフ参照時の最大Issue番号数
+const MAX_ISSUE_NUMBERS: usize = 3;
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -156,6 +163,7 @@ fn build_strategy(
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
         has_embeddings,
+        matched_issues: Vec::new(),
         strategy: steps,
     }
 }
@@ -178,6 +186,7 @@ fn build_fallback_strategy(has_embeddings: bool) -> SuggestResult {
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
         has_embeddings,
+        matched_issues: Vec::new(),
         strategy: steps,
     }
 }
@@ -201,6 +210,69 @@ fn maybe_add_semantic_step(
         return true;
     }
     false
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge graph integration
+// ---------------------------------------------------------------------------
+
+/// ナレッジグラフからIssue関連文書を取得する。
+/// symbols.db が存在しない場合や、マッチするIssueがない場合は空のVecを返す。
+fn query_knowledge_graph(ctx: &SearchContext, issue_numbers: &[String]) -> Vec<KnowledgeDocResult> {
+    if issue_numbers.is_empty() {
+        return Vec::new();
+    }
+    // symbols.db 存在チェック
+    let db_path = ctx.symbol_db_path();
+    if !db_path.exists() {
+        return Vec::new();
+    }
+    // SymbolStore オープン（エラー時は空を返す）
+    let store = match SymbolStore::open(&db_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[suggest] knowledge graph query skipped: {e}");
+            return Vec::new();
+        }
+    };
+    // クエリ実行（エラー時は空を返す）
+    match store.find_knowledge_by_issue(issue_numbers) {
+        Ok(results) => results,
+        Err(e) => {
+            eprintln!("[suggest] knowledge graph query failed: {e}");
+            Vec::new()
+        }
+    }
+}
+
+/// ナレッジグラフ結果を戦略ステップとして先頭に挿入する。
+fn prepend_knowledge_steps(
+    strategy: &mut Vec<SuggestStep>,
+    kg_docs: &[KnowledgeDocResult],
+    matched_issues: &[String],
+) {
+    let mut kg_steps = Vec::new();
+    // Issue番号ごとの issue コマンドステップ
+    for issue_num in matched_issues {
+        kg_steps.push(SuggestStep {
+            command: format!("{BINARY_NAME} issue {issue_num} --format json"),
+            reason: format!("Get knowledge graph documents for Issue #{issue_num}"),
+        });
+    }
+    // 各文書の context ステップ
+    for doc in kg_docs {
+        let quoted_path = shell_quote(&doc.file_path);
+        kg_steps.push(SuggestStep {
+            command: format!("{BINARY_NAME} context -- {quoted_path} --max-files 5"),
+            reason: format!(
+                "Get context for Issue #{} related document",
+                doc.issue_number
+            ),
+        });
+    }
+    // 先頭に挿入
+    kg_steps.append(strategy);
+    *strategy = kg_steps;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,14 +313,27 @@ pub fn run_suggest(
         }
     };
 
-    // 4. BM25検索 → ファイル単位dedup
+    // 4. Issue番号抽出（重複排除・上限制御）
+    let issue_numbers: Vec<String> = {
+        let nums = extract_issue_numbers(&query);
+        let mut seen = HashSet::new();
+        nums.into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect()
+    };
+
+    // 5. ナレッジグラフ参照（Issue番号がある場合のみ）
+    let kg_docs = query_knowledge_graph(&ctx, &issue_numbers);
+
+    // 6. BM25検索 → ファイル単位dedup
     let bm25_results = reader
         .search(&query, BM25_SEARCH_LIMIT)
         .map_err(SuggestError::Reader)?;
     let bm25_files = ranking::aggregate_by_file(bm25_results, BM25_SEARCH_LIMIT);
     let bm25_files = ranking::apply_file_type_weight(bm25_files, DEDUP_FILE_LIMIT * 3);
 
-    // 5. セマンティック検索を常に試行
+    // 7. セマンティック検索を常に試行
     let semantic_files = match semantic::query_semantic(
         &ctx.embeddings_db_path(),
         &ctx.config,
@@ -266,7 +351,7 @@ pub fn run_suggest(
         }
     };
 
-    // 6. 結果統合
+    // 8. 結果統合
     let entry_files = match semantic_files {
         Some(ref sem) if !bm25_files.is_empty() => {
             rrf_merge_files(&bm25_files, sem, DEDUP_FILE_LIMIT)
@@ -282,7 +367,7 @@ pub fn run_suggest(
         }
     };
 
-    // 7. 戦略生成
+    // 9. 戦略生成
     let has_embeddings = emb_store
         .as_ref()
         .and_then(|s| s.count().ok())
@@ -295,7 +380,11 @@ pub fn run_suggest(
     };
     result.query = query;
 
-    // 8. 出力
+    // 10. ナレッジグラフステップを戦略先頭に挿入
+    prepend_knowledge_steps(&mut result.strategy, &kg_docs, &issue_numbers);
+    result.matched_issues = issue_numbers;
+
+    // 11. 出力
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
     output::format_suggest_results(&result, format, &mut writer)?;
@@ -438,6 +527,7 @@ mod tests {
         let result = SuggestResult {
             query: "test query".to_string(),
             has_embeddings: false,
+            matched_issues: vec![],
             strategy: vec![
                 SuggestStep {
                     command: "cmd1".to_string(),
@@ -462,6 +552,7 @@ mod tests {
         let result = SuggestResult {
             query: "test query".to_string(),
             has_embeddings: true,
+            matched_issues: vec![],
             strategy: vec![SuggestStep {
                 command: "cmd1".to_string(),
                 reason: "reason1".to_string(),
@@ -482,6 +573,7 @@ mod tests {
         let result = SuggestResult {
             query: "test".to_string(),
             has_embeddings: false,
+            matched_issues: vec![],
             strategy: vec![
                 SuggestStep {
                     command: "cmd1 arg".to_string(),
@@ -500,5 +592,171 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "cmd1 arg");
         assert_eq!(lines[1], "cmd2 arg");
+    }
+
+    // --- prepend_knowledge_steps tests ---
+
+    #[test]
+    fn test_prepend_knowledge_steps_with_docs() {
+        use crate::indexer::knowledge::KnowledgeRelation;
+
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs = vec![KnowledgeDocResult {
+            issue_number: "42".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            file_path: "docs/design.md".to_string(),
+            title: Some("Design Doc".to_string()),
+        }];
+        let matched_issues = vec!["42".to_string()];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // Should have 3 steps: issue cmd, context cmd, existing cmd
+        assert_eq!(strategy.len(), 3);
+        assert!(
+            strategy[0].command.contains("issue 42"),
+            "First step should be issue command: {}",
+            strategy[0].command
+        );
+        assert!(
+            strategy[1].command.contains("context"),
+            "Second step should be context command: {}",
+            strategy[1].command
+        );
+        assert_eq!(strategy[2].command, "existing_cmd");
+    }
+
+    #[test]
+    fn test_prepend_knowledge_steps_empty() {
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs: Vec<KnowledgeDocResult> = vec![];
+        let matched_issues: Vec<String> = vec![];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // Strategy should be unchanged
+        assert_eq!(strategy.len(), 1);
+        assert_eq!(strategy[0].command, "existing_cmd");
+    }
+
+    #[test]
+    fn test_prepend_knowledge_steps_multiple_issues() {
+        use crate::indexer::knowledge::KnowledgeRelation;
+
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs = vec![
+            KnowledgeDocResult {
+                issue_number: "10".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                file_path: "docs/design-10.md".to_string(),
+                title: Some("Design 10".to_string()),
+            },
+            KnowledgeDocResult {
+                issue_number: "20".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                file_path: "docs/plan-20.md".to_string(),
+                title: Some("Plan 20".to_string()),
+            },
+        ];
+        let matched_issues = vec!["10".to_string(), "20".to_string()];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // 2 issue steps + 2 context steps + 1 existing = 5
+        assert_eq!(strategy.len(), 5);
+        assert!(strategy[0].command.contains("issue 10"));
+        assert!(strategy[1].command.contains("issue 20"));
+        assert!(strategy[2].command.contains("context"));
+        assert!(strategy[3].command.contains("context"));
+        assert_eq!(strategy[4].command, "existing_cmd");
+    }
+
+    // --- Issue number extraction tests ---
+
+    #[test]
+    fn test_issue_number_dedup() {
+        use crate::indexer::knowledge::extract_issue_numbers;
+
+        // Input with duplicate issue numbers
+        let query = "Issue #42 and #42 again and #100";
+        let nums = extract_issue_numbers(query);
+        let mut seen = HashSet::new();
+        let unique: Vec<String> = nums
+            .into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect();
+
+        assert_eq!(unique.len(), 2);
+        assert_eq!(unique[0], "42");
+        assert_eq!(unique[1], "100");
+    }
+
+    #[test]
+    fn test_issue_number_max_limit() {
+        use crate::indexer::knowledge::extract_issue_numbers;
+
+        // Input with more than MAX_ISSUE_NUMBERS issue numbers
+        let query = "Issues #1 #2 #3 #4 #5";
+        let nums = extract_issue_numbers(query);
+        let mut seen = HashSet::new();
+        let unique: Vec<String> = nums
+            .into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect();
+
+        assert_eq!(
+            unique.len(),
+            MAX_ISSUE_NUMBERS,
+            "Should be limited to {MAX_ISSUE_NUMBERS}"
+        );
+    }
+
+    // --- matched_issues JSON serialization tests ---
+
+    #[test]
+    fn test_matched_issues_json_skip_when_empty() {
+        let result = SuggestResult {
+            query: "test".to_string(),
+            has_embeddings: false,
+            matched_issues: vec![],
+            strategy: vec![],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(
+            parsed.get("matched_issues").is_none(),
+            "matched_issues should be omitted when empty, got: {json}"
+        );
+    }
+
+    #[test]
+    fn test_matched_issues_json_present_when_nonempty() {
+        let result = SuggestResult {
+            query: "test".to_string(),
+            has_embeddings: false,
+            matched_issues: vec!["42".to_string(), "100".to_string()],
+            strategy: vec![],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let issues = parsed
+            .get("matched_issues")
+            .expect("matched_issues should be present");
+        assert!(issues.is_array());
+        let arr = issues.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0], "42");
+        assert_eq!(arr[1], "100");
     }
 }
