@@ -1,0 +1,1 @@
+{ "stage": 3, "applied_fixes": ["help_llm.rs の具体的変更箇所3点を影響範囲に明記", "e2e_issue.rs の変更パターンを具体化"] }

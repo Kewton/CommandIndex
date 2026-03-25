@@ -1,0 +1,1 @@
+{ "stage": 4, "applied_fixes": ["CAST式の防御的バリデーション追加", "エラーメッセージ漏洩対策追加", "正規表現 unwrap → expect 変更", "design_file_path が表示専用である旨を明記"] }

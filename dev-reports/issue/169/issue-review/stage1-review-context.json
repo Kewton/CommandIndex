@@ -1,0 +1,44 @@
+{
+  "must_fix": [
+    {
+      "title": "CLIコマンド設計: `issue list` はサブコマンド化が必要だが Issue は既存の positional arg 構造",
+      "description": "現在の `Issue` コマンドは `number: u64` を required な positional arg として定義しており、`issue list` を追加するには clap の Subcommand パターンへ変更が必要。Issue 本文では両方の案が混在しており、breaking change の有無が不明確。",
+      "suggestion": "方針を1つに確定すること。推奨案: Config コマンドと同様に IssueCommands enum を導入し `issue list` と `issue show <number>` の2サブコマンドに分割する。"
+    },
+    {
+      "title": "データ取得方法の具体的SQLが未定義",
+      "description": "Issue 一覧取得のためのクエリが未定義。knowledge_nodes テーブルから type='issue' の DISTINCT を取得するとあるが、各 Issue のドキュメント件数、設計書の有無、ラベル取得の具体的な SQL 設計がない。modifies リレーションのドキュメントを含めるか否かが不明。",
+      "suggestion": "受け入れ基準として以下を明記: (1) doc_count のカウント対象リレーション、(2) SymbolStore に list_all_issues() メソッドを追加し SQL クエリを設計方針に含める。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "期待される出力の label フィールドの取得元が不正確",
+      "description": "label がどこから抽出されるか曖昧。設計書がない Issue には label が取得できない。",
+      "suggestion": "label の取得ロジックを明確化: (1) 設計書ファイル名から抽出、(2) 設計書がない場合は knowledge_nodes.title を使用、(3) いずれもない場合は空文字列。"
+    },
+    {
+      "title": "ソート順が未定義",
+      "description": "Issue 一覧の表示順序が指定されていない。",
+      "suggestion": "デフォルトソートを Issue 番号の昇順と明記する。"
+    },
+    {
+      "title": "受け入れ基準（Acceptance Criteria）が明示されていない",
+      "description": "テスト可能な受け入れ基準のリストがない。",
+      "suggestion": "以下を追加: (1) issue list で全 Issue が番号昇順で表示、(2) --format json で有効な JSON 配列出力、(3) Total 行表示、(4) Issue 0件時のメッセージ、(5) --format path/llm の挙動定義。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "Path / Llm フォーマットの出力仕様が未定義",
+      "description": "human と json の出力例はあるが、path と llm フォーマットの出力が定義されていない。",
+      "suggestion": "path は Issue 番号を1行1つで出力、llm は Markdown テーブル形式で出力。"
+    },
+    {
+      "title": "ページネーションの考慮",
+      "description": "Issue 数が多い場合の対応。",
+      "suggestion": "初回は全件表示で問題ない。内部実装では SQL に LIMIT 設定可能な設計にしておくことを推奨。"
+    }
+  ],
+  "summary": "主な懸念は2点: (1) CLIインターフェースの設計方針が確定していない（サブコマンド化 vs 引数なしフォールバック）。(2) データ取得のSQL設計が具体化されていない。受け入れ基準の明示化とソート順の定義を推奨。全体として実現可能な機能追加。"
+}

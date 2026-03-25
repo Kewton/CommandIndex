@@ -1,0 +1,14 @@
+{
+  "stage": 8,
+  "applied_fixes": [
+    "help_llm.rs の全参照箇所更新を受け入れ基準に追加（旧構文残存チェック）",
+    "suggest / help-llm 系テスト追加を影響範囲に反映",
+    "パフォーマンス注記を追加（EXPLAIN QUERY PLAN、将来の --limit 余地）",
+    "symbols.db 未作成時の挙動を明記（エラー終了）",
+    "SymbolStore 単体テスト追加を受け入れ基準に追加（modifies混在ケース含む）",
+    "clap エラーメッセージテストは部分一致で検証する旨を追加",
+    "before_change/why の影響記述を『機能本体は影響なし、ガイダンス整合確認は必要』に修正",
+    "label の正規表現を静的に再利用する旨を追加"
+  ],
+  "issue_updated": true
+}

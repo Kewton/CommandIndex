@@ -1,0 +1,41 @@
+{
+  "stage": 2,
+  "focus": "整合性レビュー",
+  "must_fix": [
+    {
+      "title": "suggest.rs のテスト更新が設計書に未記載",
+      "description": "suggest.rs のテスト3件も issue show に更新が必要。",
+      "suggestion": "影響範囲にsuggest.rsのテスト更新を明記。"
+    },
+    {
+      "title": "DRYヘルパーでsymbols.dbパスがハードコード",
+      "description": "既存は crate::indexer::symbol_db_path() を使用。",
+      "suggestion": "ヘルパーを symbol_db_path() 使用に修正。"
+    },
+    {
+      "title": "run() vs run_show() のリネーム方針が設計書内で矛盾",
+      "description": "Section 3でリネームと記載、Section 10でrun()のまま。",
+      "suggestion": "統一する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "IssueListEntryの配置先モジュールが不明確",
+      "suggestion": "indexer/symbol_store.rs または indexer/knowledge.rs に配置を明示。"
+    },
+    {
+      "title": "CAST(identifier AS INTEGER)の非数値テストケース追加",
+      "suggestion": "テスト戦略に追記。"
+    },
+    {
+      "title": "影響範囲テーブルにIssueListResult残存",
+      "suggestion": "YAGNI方針と整合するよう削除。"
+    }
+  ],
+  "nice_to_have": [
+    { "title": "regex クレートは既存依存であることを明記" },
+    { "title": "help_llm.rs の具体的変更箇所リスト追記" },
+    { "title": "フォーマッタ命名の将来的統一TODO" }
+  ],
+  "summary": "must_fix 3件: suggest.rsテスト漏れ、DBパスハードコード、run/run_showリネーム矛盾。should_fix 3件: IssueListEntry配置先、CAST安全性テスト、IssueListResult残存。"
+}

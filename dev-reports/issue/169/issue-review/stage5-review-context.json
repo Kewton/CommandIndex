@@ -1,0 +1,49 @@
+{
+  "must_fix": [
+    {
+      "title": "doc_count 集計SQLが既存ナレッジグラフと不整合で、modifies を誤カウントする",
+      "description": "Issue本文のSQL例は knowledge_edges を relation 条件なしで JOIN して COUNT(ke.id) しているが、modifies も保存されるため doc_count が水増しされる。Issue本文では modifies は対象外と書かれているが、SQL例がその要件を満たしていない。",
+      "suggestion": "SQL設計を relation/type 条件込みで明記。kn_doc.type = 'document' かつ ke.relation IN ('has_design','has_review','has_workplan','has_progress') を条件に入れる。"
+    },
+    {
+      "title": "knowledge_nodes.title を label fallback に使う前提が現状実装では成立していない",
+      "description": "通常のインデクシング経路では scan_dev_reports() -> insert_knowledge_entries() が issue ノードを type='issue', identifier=<number> だけで作成しており、title は格納されない。",
+      "suggestion": "fallback を knowledge_nodes.title 依存にせず、現時点では空文字固定と明記する。"
+    },
+    {
+      "title": "影響範囲の記述が不正確で、src/cli/suggest.rs は breaking change の影響を受ける",
+      "description": "src/cli/suggest.rs は commandindexdev issue {issue_num} --format json を直接生成している。issue <number> を issue show <number> に変更するなら、この生成コマンドは壊れる。",
+      "suggestion": "影響範囲に src/cli/suggest.rs を追加し、生成コマンドを issue show <number> --format json に更新する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "Breaking Change の旧構文の扱いが未定義",
+      "description": "issue <number> から issue show <number> への breaking change は明記されたが、旧構文を完全廃止するのか、互換 alias を残すのか未定義。",
+      "suggestion": "旧構文の扱いを明記。完全廃止なら issue 140 が clap の subcommand error になることを受け入れ基準に追加。"
+    },
+    {
+      "title": "issue list の0件時挙動が曖昧",
+      "description": "stdout/stderr のどちらに出すか、終了コードを 0 にするか 1 にするかが不明。",
+      "suggestion": "0件時: 成功終了、human では No issues found と Total: 0 issues、json では []、path では空出力。"
+    },
+    {
+      "title": "JSON出力の項目設計が非対称",
+      "description": "doc_count は has_design/has_review/has_workplan/has_progress を数える一方、JSON例は has_design と has_workplan しか持たない。",
+      "suggestion": "has_review と has_progress も含めるか、relation ごとの件数にするか統一する。"
+    },
+    {
+      "title": "受け入れ基準に help / suggest 出力の更新確認が不足",
+      "description": "CLI help (issue --help) が subcommand 構造を反映することや、suggest が新構文を出すことが受け入れ基準に入っていない。",
+      "suggestion": "受け入れ基準に issue --help が list/show を表示すること、suggest の出力例が新構文に更新されることを追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "一覧SQLの将来拡張余地",
+      "description": "LIMIT/OFFSET やフィルタ条件を追加しやすい形にしておくと再設計コストを抑えられる。",
+      "suggestion": "list_all_issues() をページネーションやフィルタ追加に拡張しやすい設計にする旨を補足。"
+    }
+  ],
+  "summary": "前回の主要指摘は概ね反映されているが、1) modifies を持つ knowledge graph に対して提示SQLが不正確、2) knowledge_nodes.title fallback は現状の index 経路ではほぼ機能しない、3) suggest を影響なしとしているのは誤り、の3点が残っている。"
+}

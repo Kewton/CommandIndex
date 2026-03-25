@@ -1,0 +1,19 @@
+{
+  "stage": 5,
+  "focus": "設計原則（2回目、Codex）",
+  "must_fix": [
+    { "title": "IssueListEntry が design_file_path を公開API漏洩", "suggestion": "label: String を返すか、内部row型からCLI向けDTOへ変換する層を設ける" },
+    { "title": "run() をリネームせず残す方針はAPI対称性が悪い", "suggestion": "run() → run_show() に改名し run_list() と対称にする" },
+    { "title": "不正identifier を黙ってスキップする方針はエラーハンドリングとして弱い", "suggestion": "警告付きでスキップするか明示エラーとする" }
+  ],
+  "should_fix": [
+    { "title": "boolean集計条件が doc_count と揃っていない（kn_doc.type = 'document' 条件なし）" },
+    { "title": "open_symbol_store() のエラー方針が既存CLIと不整合" },
+    { "title": "0件時のhuman出力が Issue仕様とズレ" },
+    { "title": "CorruptedMetadata の扱いが一覧設計に未反映" }
+  ],
+  "nice_to_have": [
+    { "title": "CLI専用表示モデルを挟んで責務分離" }
+  ],
+  "summary": "design_file_path公開漏洩、run()命名不対称、不正identifierスキップの3点がmust_fix。"
+}

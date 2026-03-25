@@ -61,6 +61,18 @@ pub struct EmbeddingSimilarityResult {
     pub similarity: f32,
 }
 
+/// Issue一覧クエリの行DTO
+#[derive(Debug, Clone, PartialEq)]
+pub struct IssueListRow {
+    pub number: u64,
+    pub doc_count: u32,
+    pub design_file_path: Option<String>,
+    pub has_design: bool,
+    pub has_review: bool,
+    pub has_workplan: bool,
+    pub has_progress: bool,
+}
+
 /// ナレッジグラフ Issue → ドキュメント検索の結果構造体
 #[derive(Debug, Clone, PartialEq)]
 pub struct KnowledgeDocResult {
@@ -912,6 +924,75 @@ impl SymbolStore {
                 doc_subtype,
                 snippet: None,
             });
+        }
+
+        Ok(results)
+    }
+
+    /// List all issues in the knowledge graph with aggregated document counts and flags.
+    pub fn list_all_issues(&self) -> Result<Vec<IssueListRow>, SymbolStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT
+              kn_issue.identifier AS issue_number,
+              COUNT(CASE WHEN ke.relation IN ('has_design','has_review','has_workplan','has_progress')
+                         AND kn_doc.type = 'document' THEN 1 END) AS doc_count,
+              COUNT(CASE WHEN ke.relation = 'has_design' AND kn_doc.type = 'document' THEN 1 END) > 0 AS has_design,
+              COUNT(CASE WHEN ke.relation = 'has_review' AND kn_doc.type = 'document' THEN 1 END) > 0 AS has_review,
+              COUNT(CASE WHEN ke.relation = 'has_workplan' AND kn_doc.type = 'document' THEN 1 END) > 0 AS has_workplan,
+              COUNT(CASE WHEN ke.relation = 'has_progress' AND kn_doc.type = 'document' THEN 1 END) > 0 AS has_progress,
+              MAX(CASE WHEN ke.relation = 'has_design' AND kn_doc.type = 'document' THEN kn_doc.file_path END) AS design_file_path
+            FROM knowledge_nodes kn_issue
+            LEFT JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
+            LEFT JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type = 'document'
+            WHERE kn_issue.type = 'issue'
+            GROUP BY kn_issue.identifier
+            ORDER BY CAST(kn_issue.identifier AS INTEGER)",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, u32>(1)?,
+                row.get::<_, bool>(2)?,
+                row.get::<_, bool>(3)?,
+                row.get::<_, bool>(4)?,
+                row.get::<_, bool>(5)?,
+                row.get::<_, Option<String>>(6)?,
+            ))
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let (
+                identifier,
+                doc_count,
+                has_design,
+                has_review,
+                has_workplan,
+                has_progress,
+                design_file_path,
+            ) = row?;
+
+            match identifier.parse::<u64>() {
+                Ok(number) => {
+                    results.push(IssueListRow {
+                        number,
+                        doc_count,
+                        design_file_path,
+                        has_design,
+                        has_review,
+                        has_workplan,
+                        has_progress,
+                    });
+                }
+                Err(_) => {
+                    let sanitized: String = identifier
+                        .chars()
+                        .map(|c| if c.is_control() { '\u{FFFD}' } else { c })
+                        .collect();
+                    eprintln!("Warning: non-numeric issue identifier '{sanitized}', skipping");
+                }
+            }
         }
 
         Ok(results)
@@ -2508,5 +2589,159 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].file_path, "src/main.rs");
         assert_eq!(results[0].relation, KnowledgeRelation::Modifies);
+    }
+
+    // --- list_all_issues tests ---
+
+    #[test]
+    fn test_list_all_issues_basic() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "47".to_string(),
+                file_path: "dev-reports/design/issue-47-terminal-search-design-policy.md"
+                    .to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "47".to_string(),
+                file_path: "dev-reports/issue/47/work-plan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            KnowledgeEntry {
+                issue_number: "99".to_string(),
+                file_path: "dev-reports/design/issue-99-markdown-editor-design-policy.md"
+                    .to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        let issues = store.list_all_issues().unwrap();
+        assert_eq!(issues.len(), 2);
+
+        // Should be ordered by number
+        assert_eq!(issues[0].number, 47);
+        assert_eq!(issues[0].doc_count, 2);
+        assert!(issues[0].has_design);
+        assert!(!issues[0].has_review);
+        assert!(issues[0].has_workplan);
+        assert!(!issues[0].has_progress);
+        assert!(
+            issues[0]
+                .design_file_path
+                .as_deref()
+                .unwrap()
+                .contains("issue-47")
+        );
+
+        assert_eq!(issues[1].number, 99);
+        assert_eq!(issues[1].doc_count, 1);
+        assert!(issues[1].has_design);
+        assert!(!issues[1].has_workplan);
+    }
+
+    #[test]
+    fn test_list_all_issues_empty() {
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let issues = store.list_all_issues().unwrap();
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn test_list_all_issues_modifies_excluded() {
+        use crate::indexer::knowledge::{
+            DocSubtype, FileModifiesEntry, KnowledgeEntry, KnowledgeRelation,
+        };
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![KnowledgeEntry {
+            issue_number: "100".to_string(),
+            file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
+        }];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        // Add file modifies entry
+        let file_entries = vec![FileModifiesEntry {
+            issue_number: "100".to_string(),
+            file_path: "src/main.rs".to_string(),
+        }];
+        store.insert_file_modifies_entries(&file_entries).unwrap();
+
+        let issues = store.list_all_issues().unwrap();
+        assert_eq!(issues.len(), 1);
+        // doc_count should be 1 (only design, not modifies)
+        assert_eq!(issues[0].doc_count, 1);
+    }
+
+    #[test]
+    fn test_list_all_issues_no_design() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        let entries = vec![KnowledgeEntry {
+            issue_number: "50".to_string(),
+            file_path: "dev-reports/issue/50/work-plan.md".to_string(),
+            relation: KnowledgeRelation::HasWorkplan,
+            doc_subtype: DocSubtype::WorkPlan,
+        }];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        let issues = store.list_all_issues().unwrap();
+        assert_eq!(issues.len(), 1);
+        assert!(!issues[0].has_design);
+        assert!(issues[0].design_file_path.is_none());
+    }
+
+    #[test]
+    fn test_list_all_issues_sorted_by_number() {
+        use crate::indexer::knowledge::{DocSubtype, KnowledgeEntry, KnowledgeRelation};
+
+        let store = SymbolStore::open_in_memory().unwrap();
+        store.create_tables().unwrap();
+
+        // Insert in reverse order
+        let entries = vec![
+            KnowledgeEntry {
+                issue_number: "200".to_string(),
+                file_path: "dev-reports/design/issue-200-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "10".to_string(),
+                file_path: "dev-reports/design/issue-10-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            KnowledgeEntry {
+                issue_number: "50".to_string(),
+                file_path: "dev-reports/design/issue-50-design-policy.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        store.insert_knowledge_entries(&entries).unwrap();
+
+        let issues = store.list_all_issues().unwrap();
+        assert_eq!(issues.len(), 3);
+        assert_eq!(issues[0].number, 10);
+        assert_eq!(issues[1].number, 50);
+        assert_eq!(issues[2].number, 200);
     }
 }
