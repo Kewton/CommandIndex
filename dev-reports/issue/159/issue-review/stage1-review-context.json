@@ -1,0 +1,49 @@
+{
+  "must_fix": [
+    {
+      "issue": "受け入れ基準が明示されていない",
+      "reason": "「全8 Issueの少なくとも設計ポリシーまたは代表文書が表示される」という表現は曖昧で、具体的な数値条件や検証方法が不明確。実装者によって解釈が分かれる可能性が高い。",
+      "suggestion": "以下の具体的な受け入れ基準を追記: (1) --limitのセマンティクスをドキュメント数からIssue数に変更する場合の後方互換性の扱い(breaking change)を明記 (2) 各Issueから最低何件のドキュメントを表示するか(例: 設計ポリシー1件+workplan1件=最大2件/Issue) (3) limit到達時の切り捨てルール"
+    },
+    {
+      "issue": "改善案が4つ並列で優先順位が不明",
+      "reason": "案1(Issue単位limit)と案3(デフォルト引き上げ)は根本的にアプローチが異なり実装工数も大きく異なる。案4(優先度付きソート)は単独では問題を解決しない。",
+      "suggestion": "推奨する改善案を1つ選定し理由を記載。推奨は案1+案4の組み合わせ。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "whyコマンドとの設計差異の分析が不十分",
+      "reason": "2つのコマンドの設計思想の違いが分析されていない。before-changeにIssue単位グルーピングを導入する場合、output/human.rs, output/json.rs, output/llm.rs, output/path.rsへの影響範囲の考慮が必要。",
+      "suggestion": "before_change.rsにwhyのgroup_knowledge_results()類似ロジック導入の必要性と影響範囲を明記。"
+    },
+    {
+      "issue": "セマンティックランキングとの相互作用が未考慮",
+      "reason": "Issue単位limitを採用する場合、セマンティックランキングの結果をIssue単位にどう集約するか(最大similarity?平均?)が未定義。",
+      "suggestion": "ランキング戦略を明記: (a) Issue内最大similarityでIssue間ソート (b) Issue内はrelation_priority順 (c) 各Issueからtop-Nドキュメント選出"
+    },
+    {
+      "issue": "E2Eテストにlimitセマンティクス変更の検証ケースがない",
+      "reason": "複数Issueに跨がるケースでlimit適用の挙動を検証するテストが存在しない。",
+      "suggestion": "テストケース追記: (1) 3Issue各3ドキュメントでlimit=2→2 Issueの代表ドキュメントが返る (2) limit=10で全Issue返る (3) 既存テストの期待値更新"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "BeforeChangeResult.total_issuesフィールドの活用",
+      "reason": "limit適用後に「表示されたIssue数/全Issue数」を示すフィールドがあるとユーザーが切り捨て発生を判断できる。",
+      "suggestion": "displayed_issuesフィールド追加と「Showing 2/8 issues」メッセージ表示を検討。"
+    },
+    {
+      "issue": "CLIヘルプの--limit説明が曖昧",
+      "reason": "セマンティクス変更後、ヘルプ文言も更新が必要。",
+      "suggestion": "--limitのヘルプを「Maximum number of issues to show」等に更新。"
+    },
+    {
+      "issue": "findings_without_ranking()のソート順",
+      "reason": "embeddingなし時のフォールバックソートはissue_number昇順で古いIssue優先。案4と逆。",
+      "suggestion": "フォールバックソートをissue_number降順に変更検討。"
+    }
+  ],
+  "summary": "Issue #159の問題分析は正確。主な改善点: (1)受け入れ基準の明確化(limitセマンティクス変更がbreaking change) (2)改善案の推奨選定 (3)セマンティックランキングとIssue単位limitの相互作用設計 (4)BeforeChangeResult構造体変更に伴うoutputモジュールへの影響範囲の明記"
+}

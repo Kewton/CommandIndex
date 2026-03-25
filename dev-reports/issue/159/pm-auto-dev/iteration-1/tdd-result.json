@@ -1,0 +1,67 @@
+{
+  "issue_number": 159,
+  "iteration": 1,
+  "status": "success",
+  "summary": "before-change --limit をドキュメント単位からIssue単位に変更",
+  "changes": {
+    "src/cli/before_change.rs": [
+      "relation_priority(): has_workplan=1, has_review=2 に入れ替え",
+      "group_and_limit_by_issue() 新設: Issue単位グルーピング + limit適用 + MAX_DOCS_PER_ISSUE=2",
+      "findings_without_ranking(): issue_number数値降順ソートに変更",
+      "rank_by_max_similarity(): Issue内max similarityでIssue間ソートに変更",
+      "run_before_change(): group_and_limit_by_issue使用、total_issues/displayed_issues算出",
+      "BEFORE_CHANGE_AFTER_HELP: limitがIssue単位である旨を明記"
+    ],
+    "src/output/mod.rs": [
+      "BeforeChangeResult に displayed_issues: usize フィールド追加"
+    ],
+    "src/output/human.rs": [
+      "showing {displayed} of {total} issues (limited by --limit) 表示追加"
+    ],
+    "src/output/json.rs": [
+      "displayed_issues フィールド追加"
+    ],
+    "src/output/llm.rs": [
+      "{displayed}/{total} issues shown 表示に変更"
+    ],
+    "src/main.rs": [
+      "--limit ヘルプ文言を 'Maximum number of issues to show' に更新",
+      "value_parser = clap::value_parser!(u64).range(1..=1000) 追加"
+    ],
+    "src/cli/help_llm.rs": [
+      "key_options の --limit 説明を更新"
+    ]
+  },
+  "tests": {
+    "unit_tests": {
+      "new": [
+        "test_relation_priority_order",
+        "test_findings_without_ranking_descending",
+        "test_group_and_limit_by_issue_basic",
+        "test_group_and_limit_by_issue_max_docs",
+        "test_group_and_limit_by_issue_preserves_order"
+      ],
+      "modified": [
+        "test_findings_without_ranking_sort_order: has_workplan > has_review の順に更新"
+      ],
+      "total_passed": 17
+    },
+    "e2e_tests": {
+      "new": [
+        "before_change_displayed_issues_field",
+        "before_change_limit_zero_rejected",
+        "before_change_limit_exceeds_issues"
+      ],
+      "modified": [
+        "before_change_limit_respected: Issue数ベースのアサーションに変更"
+      ],
+      "total_passed": 13
+    }
+  },
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass (0 warnings)",
+    "cargo_fmt": "pass (no diff)",
+    "cargo_test": "pass (all before_change tests pass; 1 pre-existing failure in e2e_semantic_hybrid unrelated to this change)"
+  }
+}

@@ -157,6 +157,7 @@ pub fn format_before_change_json(
     let json_value = serde_json::json!({
         "file_path": result.file_path,
         "total_issues": result.total_issues,
+        "displayed_issues": result.displayed_issues,
         "has_embeddings": result.has_embeddings,
         "findings": result.findings.iter().map(|f| {
             let mut obj = serde_json::json!({

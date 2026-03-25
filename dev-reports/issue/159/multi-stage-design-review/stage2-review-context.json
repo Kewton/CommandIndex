@@ -1,0 +1,13 @@
+{
+  "must_fix": [
+    {"issue": "BeforeChangeResultにdisplayed_issuesフィールド未追加（実装時対応）"},
+    {"issue": "limit適用がドキュメント単位のまま（実装時対応）"},
+    {"issue": "relation_priority順序が設計と不一致（実装時対応）"},
+    {"issue": "rank_by_max_similarityがIssue単位ソート未対応（実装時対応）"},
+    {"issue": "findings_without_rankingのソート順が設計と不一致（実装時対応）"},
+    {"issue": "main.rsの--limitヘルプ文言未更新（実装時対応）"},
+    {"issue": "help_llm.rsの--limit説明未更新（実装時対応）"}
+  ],
+  "note": "全must_fixは設計→実装の差分であり、実装フェーズで対応する項目。設計方針書自体の修正は不要。",
+  "summary": "設計方針書と現行コードの差分は全て実装時に対応する項目。設計書に記載がなく追加で変更が必要な箇所は検出されなかった。"
+}

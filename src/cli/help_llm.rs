@@ -548,7 +548,7 @@ fn build_commands() -> Vec<CommandInfo> {
             prerequisites: Some("commandindexdev index".to_string()),
             modes: None,
             conflicts: None,
-            key_options: Some(vec!["--format", "--index-path", "--limit", "--max-commits"]),
+            key_options: Some(vec!["--format", "--index-path", "--limit <N>  Maximum number of issues to show (default: 10)", "--max-commits"]),
             output_formats: Some(vec!["human", "json", "llm", "path"]),
             output: Some("List of related design documents, review findings, and work plans"),
             input: Some("Single file path as argument"),

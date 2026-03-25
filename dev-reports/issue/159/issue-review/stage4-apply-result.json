@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "action": "Issue #159 本文更新（影響範囲レビュー反映）",
+  "changes_applied": [
+    "影響範囲セクションをテーブル形式に整理（変更対象ファイル9件を一覧化）",
+    "help_llm.rs, BEFORE_CHANGE_AFTER_HELP のヘルプ更新を受け入れ基準に追加",
+    "relation_priority順序の受け入れ基準を追加（has_design=0 > has_workplan=1 > has_review=2 > modifies=3）",
+    "変更不要ファイルを明示（related.rs, symbol_store.rs, why.rs）",
+    "JSON出力の後方互換性方針を明記（フラットfindings維持 + displayed_issues追加）",
+    "パフォーマンス影響の記載追加（軽微: O(n), n=数十件以下）"
+  ],
+  "must_fix_addressed": 5,
+  "should_fix_addressed": 4,
+  "url": "https://github.com/Kewton/CommandIndex/issues/159"
+}

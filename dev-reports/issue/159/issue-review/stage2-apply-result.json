@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "action": "Issue #159 本文更新",
+  "changes_applied": [
+    "改善案を4つの並列案から推奨案（案1+案4）に統合",
+    "具体的な受け入れ基準6項目を追加",
+    "影響範囲セクションを追加（変更対象ファイル、セマンティックランキング相互作用、後方互換性）",
+    "不採用案と理由を明記"
+  ],
+  "must_fix_addressed": 2,
+  "should_fix_addressed": 3,
+  "url": "https://github.com/Kewton/CommandIndex/issues/159"
+}

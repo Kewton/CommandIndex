@@ -1,0 +1,48 @@
+{
+  "must_fix": [
+    {
+      "issue": "total_issues のセマンティクスが曖昧",
+      "reason": "total_issues がgit log由来の全Issue数なのかドキュメント存在Issue数なのか不明確。displayed_issuesとの差分が意味のある情報にならない可能性。",
+      "suggestion": "total_issuesを「ドキュメントが1件以上存在するユニークIssue数」に再定義するか、算出元を明記する。"
+    },
+    {
+      "issue": "BTreeMap + issue_order Vecの二重管理（KISS違反）",
+      "reason": "BTreeMapはキーの辞書順ソートだが出現順保持の意図と矛盾。BTreeMapを使う意味がない。",
+      "suggestion": "HashMapに変更するかIndexMapで挿入順保持に統一。group_and_limit_by_issue()のソート済み前提条件をdoc commentに明記。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "max_docs_per_issue=2のハードコード方針が不明確",
+      "reason": "関数引数にしつつハードコードはKISS違反。",
+      "suggestion": "const MAX_DOCS_PER_ISSUE: usize = 2 定数として定義し関数引数から除去。"
+    },
+    {
+      "issue": "rank_by_max_similarity()のソート安定性",
+      "reason": "同一Issue内のfindingsが隣接する保証がない。",
+      "suggestion": "(issue_max_sim降順, issue_number, relation_priority)の3段階ソートにする。"
+    },
+    {
+      "issue": "既存テストtest_findings_without_ranking_sort_orderの修正が未記載",
+      "reason": "relation_priority変更+ソート方向変更で既存テストの期待値が変わる。",
+      "suggestion": "テスト戦略に既存テスト修正を明記。"
+    },
+    {
+      "issue": "JSON出力のfindings最大件数がlimit*max_docs_per_issueに変わる",
+      "reason": "同じ--limit 10でfindings数が変わるのは実質的breaking change。",
+      "suggestion": "設計書に注記追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "issue_numberの文字列比較による降順ソートの脆弱性",
+      "reason": "文字列比較では '9' > '100' となり数値降順にならない。",
+      "suggestion": "issue_number.parse::<u64>().unwrap_or(0)で数値比較。"
+    },
+    {
+      "issue": "help_llm.rsの変更後文言が未記載",
+      "suggestion": "具体的な文言を設計書に明記。"
+    }
+  ],
+  "summary": "設計方針は妥当。主要懸念: (1) total_issuesのセマンティクス曖昧さ (2) BTreeMap+Vecの二重管理。issue_numberの数値ソート問題は本変更で顕在化しやすくなるため対応推奨。"
+}
