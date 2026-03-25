@@ -394,6 +394,9 @@ pub fn format_before_change_llm(
             writer,
             "- {doc_path}{sim_str} (#{issue}, {relation}){title_str}"
         )?;
+        if let Some(ref snippet) = finding.snippet {
+            writeln!(writer, "  > {}", strip_control_chars(snippet))?;
+        }
     }
     Ok(())
 }

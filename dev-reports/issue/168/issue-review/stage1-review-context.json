@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "issue コマンドには tantivy IndexReader へのアクセスパスがない",
+      "description": "issue.rs の run() 関数は SymbolStore (SQLite) のみを使用しており、tantivy の IndexReaderWrapper を受け取っていない。snippet_helper::fetch_snippet() は IndexReaderWrapper を必要とする。issue コマンドに tantivy インデックスへのパスを渡す引数追加が必要であり、main.rs のサブコマンド呼び出し側にも変更が必要。",
+      "suggestion": "受け入れ基準に「issue コマンドが commandindex_dir から tantivy インデックスを開き、snippet_helper::fetch_snippet() を呼び出してスニペットを付与する」ことを明記する。run() の引数変更と main.rs 側の呼び出し変更を実装方針に含める。"
+    },
+    {
+      "id": "M2",
+      "title": "BeforeChangeFinding 型に snippet フィールドが不在",
+      "description": "現在の BeforeChangeFinding (output/mod.rs:318-325) には snippet フィールドが存在しない。before-change コマンドでスニペットを表示するには型定義の変更が必要。BeforeChangeFinding のコンストラクタ全箇所（5箇所）とテスト全箇所（7箇所）に影響する。",
+      "suggestion": "影響範囲として BeforeChangeFinding コンストラクタ全箇所（before_change.rs 内 5箇所）とテスト全箇所（7箇所）の変更を実装方針に明記する。snippet フィールドは Option<String> として追加し、デフォルト None で既存コードへの影響を最小化する。"
+    },
+    {
+      "id": "M3",
+      "title": "IssueDocumentEntry 型にも snippet フィールドが不在",
+      "description": "IssueDocumentEntry (knowledge.rs:178-183) には file_path, relation, doc_subtype のみ。issue コマンドでスニペット付き表示をするには snippet: Option<String> を追加する必要がある。テスト8箇所とフォーマッタ4関数に影響する。",
+      "suggestion": "IssueDocumentEntry に snippet: Option<String> フィールドを追加するか、IssueDocumentsResult レベルでスニペットを付与するパターン（enrich関数）を採用する。"
+    },
+    {
+      "id": "M4",
+      "title": "受け入れ基準が未定義",
+      "description": "テスト可能な受け入れ基準が定義されていない。文字数制限、空スニペット時の挙動、--format path 時の挙動等の境界条件が不明確。",
+      "suggestion": "受け入れ基準を追加：(1) issue --format human/llm でスニペット表示、(2) issue --format json で snippet フィールド、(3) before-change --format json で snippet フィールド、(4) --format path ではスニペット非出力、(5) 取得不可時は空/null、(6) 最大150-200文字。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "セクション優先抽出ロジックの実現可能性と既存基盤との不整合",
+      "description": "fetch_snippet() は先頭N文字を返すだけで、特定セクション選択機能がない。セクション優先抽出には新関数か大幅なインターフェース変更が必要。",
+      "suggestion": "Phase 1 では fetch_snippet() の既存ロジックを利用し、セクション優先抽出は Phase 2 以降に分離する。"
+    },
+    {
+      "id": "S2",
+      "title": "before-change での tantivy IndexReader 追加が必要",
+      "description": "before_change.rs は SymbolStore と EmbeddingStore のみ使用。スニペット取得には IndexReaderWrapper が追加で必要。",
+      "suggestion": "run_before_change() の引数に IndexReaderWrapper を追加するか、commandindex_dir から遅延初期化する。findings数は少ないためパフォーマンス問題なし。"
+    },
+    {
+      "id": "S3",
+      "title": "issue コマンドの JSON 出力形式が breaking change",
+      "description": "format_json() は現在パスの配列を返す。スニペット追加で {path, snippet} オブジェクトに変更する必要があり、後方互換性が壊れる。",
+      "suggestion": "JSON出力形式の変更を明確に定義し、breaking change であることをIssueに明記する。"
+    },
+    {
+      "id": "S4",
+      "title": "snippet_helper パターンの一貫性",
+      "description": "既存コードでは enrich_*_with_snippets() パターンが確立されている。",
+      "suggestion": "snippet_helper.rs に enrich_issue_documents_with_snippets() と enrich_before_change_with_snippets() を追加。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "スニペット文字数設定のハードコード回避",
+      "description": "Issueでは150-200文字だが、既存のSnippetConfigデフォルトはlines=2, chars=120。",
+      "suggestion": "issue/before-change用のデフォルトSnippetConfigを別途定義するか、CLIオプションを追加。"
+    },
+    {
+      "id": "N2",
+      "title": "tantivy未インデックスファイルのフォールバック",
+      "description": "dev-reports/ がインデックスされていない場合、スニペットが空になる。",
+      "suggestion": "取得できない場合は空文字列を返すことを受け入れ基準に含める。"
+    },
+    {
+      "id": "N3",
+      "title": "統合テストの網羅性",
+      "description": "スニペット付き出力の統合テストが必要。",
+      "suggestion": "テスト用tantivy インデックスを構築し、各フォーマットのスニペット出力を検証する統合テストを追加。"
+    }
+  ],
+  "summary": "Issue #168 はプロダクトコアに合致する重要な機能追加だが、(M1-M3) issue/before-change両コマンドで tantivy IndexReaderWrapper への新依存が必要なこと、(M4) テスト可能な受け入れ基準が未定義であることが主要課題。型変更の影響範囲（BeforeChangeFinding 5箇所、IssueDocumentEntry 8箇所）の明記、セクション優先抽出の段階的実装、JSON出力のbreaking change明示が必要。"
+}

@@ -193,6 +193,7 @@ pub struct IssueDocumentEntry {
     pub file_path: String,
     pub relation: KnowledgeRelation,
     pub doc_subtype: DocSubtype,
+    pub snippet: Option<String>,
 }
 
 /// search --related の戻り値用構造体

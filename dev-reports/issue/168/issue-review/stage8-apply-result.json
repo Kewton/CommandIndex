@@ -1,0 +1,15 @@
+{
+  "stage": 8,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: JSON null 表現ポリシーを統一（--with-snippet 指定時のみ snippet フィールド出力、既存ポリシー準拠）",
+    "M2: issue --format json の条件付きスキーマを明確化（--with-snippet 有無で両パターンテスト）",
+    "S1: tests/cli_args.rs を影響範囲に追加",
+    "S2: E2E テスト2系統（tantivy有り/無し）を明記",
+    "S3: tests/output_format.rs のフォーマッタ単体テストを明記",
+    "S4: issue 最大100件のパフォーマンス影響を明記",
+    "S5: tantivy reader 依存拡大を依存関係影響に明記"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/168"
+}

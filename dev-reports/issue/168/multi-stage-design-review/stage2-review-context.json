@@ -1,0 +1,21 @@
+{
+  "stage": 2,
+  "focus": "整合性",
+  "must_fix": [
+    {"id": "M1", "title": "既存enrichパターンとの空文字列処理の不一致"},
+    {"id": "M2", "title": "run_before_change()のシグネチャにindex_pathが欠落", "description": "設計書にindex_pathパラメータが記載されていない"},
+    {"id": "M3", "title": "IssueDocumentEntryの定義場所の不一致", "description": "影響範囲テーブルが'or src/cli/issue.rs'と曖昧"},
+    {"id": "M4", "title": "snippet_lines/snippet_charsの型がu64 vs usizeで不統一"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "issueのフォーマッタがcli/issue.rs内に閉じている点の明記不足"},
+    {"id": "S2", "title": "SnippetConfigのデフォルト値の注入箇所が不明確"},
+    {"id": "S3", "title": "enrich関数内でのtantivy reader オープンの責務分離の詳細不足"},
+    {"id": "S4", "title": "before-change JSONのsnippetフィールド出力方針の詳細不足"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "symbol_store.rsの変更内容の不正確さ"},
+    {"id": "N2", "title": "テストファイルの影響箇所の不足"},
+    {"id": "N3", "title": "enrich関数にformat引数が必要な理由の説明追加"}
+  ]
+}

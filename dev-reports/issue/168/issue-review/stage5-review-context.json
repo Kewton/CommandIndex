@@ -1,0 +1,64 @@
+{
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "snippet 未取得時の契約が Option<String> と空文字列で矛盾している",
+      "description": "Issue本文では snippet: Option<String> を追加する方針だが、受け入れ基準では「取得できない場合は空文字列を返す」とされ、実装方針では tantivy オープン失敗時は snippet: None フォールバック。現行の fetch_snippet() は空文字列を返すAPIだが、型は Option<String> なので Some(\"\") と None が混在し挙動が不統一になる。",
+      "suggestion": "未取得時の契約を1つに統一。Option<String> とし、取得成功時のみ Some(non-empty)、tantivy未存在・未インデックス・空本文・検索失敗はすべて None に寄せる。"
+    },
+    {
+      "id": "M2",
+      "title": "issue --format json の後方互換性方針が受け入れ基準と衝突",
+      "description": "Issue本文では JSON 出力を「パス配列からオブジェクト配列に変更」(breaking change)と明記しているが、受け入れ基準では「--with-snippet 未指定時はスニペットを出力しない（後方互換性維持）」とも書かれている。常時スキーマ変更すると --with-snippet 未指定でも既存利用者が壊れる。",
+      "suggestion": "--with-snippet 未指定時は現行の string[] を維持し、指定時のみオブジェクト配列へ拡張するか、常時 breaking change にするなら「後方互換性維持」は削除し移行方針を明記。"
+    },
+    {
+      "id": "M3",
+      "title": "スニペット長の扱いが既存CLI/configと整合していない",
+      "description": "Issueでは150-200文字だが、現行 SnippetConfig の既定値は lines=2, chars=120。既存コマンドは --snippet-lines / --snippet-chars と設定ファイル値を使える設計。今回は --with-snippet しか追加しておらず、150-200文字をどこで決めるか不明確。",
+      "suggestion": "issue / before-change でも --snippet-lines / --snippet-chars を採用するか、「固定 SnippetConfig を使う」と明記。受け入れ基準の150-200文字も固定か設定可能か明確にする。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "issue の JSON スキーマが具体化されておらずテストしにくい",
+      "description": "Issue本文は「オブジェクト配列に変更」としか書いておらず、カテゴリ構造を維持するのか、各要素に relation/doc_subtype を含めるのかが未定義。",
+      "suggestion": "issue --format json の最終スキーマ例を JSON サンプルで明示する。"
+    },
+    {
+      "id": "S2",
+      "title": "before-change の出力仕様が既存の title/similarity 表示とどう共存するか未定義",
+      "description": "既存の doc_title と similarity の表示を残すのか、snippet との行順をどうするかが未記載。",
+      "suggestion": "doc_path・similarity・doc_title・snippet の表示順を明記する。"
+    },
+    {
+      "id": "S3",
+      "title": "パフォーマンス見積もりが issue コマンドの実際の上限と不一致",
+      "description": "Issue本文では fetch_snippet() 最大20回とあるが、issue の find_documents_by_issue() は SQL上 LIMIT 100 で最大100件。",
+      "suggestion": "before-change と issue のパフォーマンス見積もりを分けて記述する。"
+    },
+    {
+      "id": "S4",
+      "title": "テスト方針に tantivy フィクスチャ構築要件の明記が必要",
+      "description": "既存 e2e_issue.rs は SQLite のみで tantivy 本文を持っていない。snippet 機能の E2E 検証には tantivy フィクスチャが必要。",
+      "suggestion": "受け入れ基準に「snippet付きE2Eでは tantivy index を含むフィクスチャを使う」ことを明記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "help-llm に snippet 付き実例を追加",
+      "description": "LLM向けに snippet 付きの出力例があると使い方の理解が早くなる。",
+      "suggestion": "key_options への追記に加えて、実例を追加。"
+    },
+    {
+      "id": "N2",
+      "title": "IssueDocumentEntry に snippet を持たせるか別DTOで包むか",
+      "description": "IssueDocumentEntry は knowledge graph のメタデータ表現として純粋。表示専用の enrichment 結果を別DTOにする選択肢もある。",
+      "suggestion": "今回のスコープ優先なら型追加でもよいが、一度判断しておくとよい。"
+    }
+  ],
+  "summary": "1回目レビューの主要論点は概ね反映されているが、snippet 未取得時の契約(Option<String> vs 空文字列)、issue --format json の breaking change と後方互換性の関係、スニペット長を既存 SnippetConfig/CLI設定とどう整合させるかは実装前に確定が必要。"
+}

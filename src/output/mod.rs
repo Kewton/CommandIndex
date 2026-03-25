@@ -322,6 +322,7 @@ pub struct BeforeChangeFinding {
     pub doc_path: String,
     pub doc_title: Option<String>,
     pub similarity: Option<f32>,
+    pub snippet: Option<String>,
 }
 
 /// before-change 結果を指定フォーマットで出力する

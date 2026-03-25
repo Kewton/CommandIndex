@@ -910,6 +910,7 @@ impl SymbolStore {
                 file_path,
                 relation,
                 doc_subtype,
+                snippet: None,
             });
         }
 
