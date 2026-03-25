@@ -1,0 +1,18 @@
+{
+  "stage": 1,
+  "type": "design_principles",
+  "must_fix": [
+    {"id": "MF-1", "title": "ProgressReport DocSubtypeのフィルタ条件での扱いが未明記"},
+    {"id": "MF-2", "title": "relation_priorityの重複実装（DRY違反）"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "SuggestKgDocの導入が既存型と責務重複（KISS）"},
+    {"id": "SF-2", "title": "find_documents_by_issue()のループ呼び出しがN+1問題（KISS）"},
+    {"id": "SF-3", "title": "MAX_KG_DOCS_PER_ISSUE=4の根拠が複数文書ケースで不整合"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "eprintlnのログレベル分離"},
+    {"id": "NH-2", "title": "境界値テストの追加"},
+    {"id": "NH-3", "title": "prepend_knowledge_stepsの引数型変更のOCP懸念"}
+  ]
+}

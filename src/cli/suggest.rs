@@ -8,15 +8,14 @@ Examples:
   commandindexdev suggest --for \"fix login bug\" --format json
   commandindexdev suggest --for \"refactor database layer\" --format path";
 
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
 
-use std::collections::HashSet;
-
 use crate::cli::search::SearchContext;
-use crate::indexer::knowledge::extract_issue_numbers;
+use crate::indexer::knowledge::{DocSubtype, KnowledgeRelation, extract_issue_numbers};
 use crate::indexer::reader::IndexReaderWrapper;
-use crate::indexer::symbol_store::{KnowledgeDocResult, SymbolStore};
+use crate::indexer::symbol_store::SymbolStore;
 use crate::output::{self, OutputFormat, SuggestResult, SuggestStep};
 use crate::search::hybrid::rrf_merge_files;
 use crate::search::ranking;
@@ -39,6 +38,17 @@ const DEDUP_FILE_LIMIT: usize = 5;
 
 /// ナレッジグラフ参照時の最大Issue番号数
 const MAX_ISSUE_NUMBERS: usize = 3;
+
+/// ナレッジグラフからのIssue単位最大ドキュメント数
+const MAX_KG_DOCS_PER_ISSUE: usize = 4;
+
+/// suggestコマンド用のKGドキュメントDTO
+struct SuggestKgDoc {
+    issue_number: String,
+    file_path: String,
+    relation: KnowledgeRelation,
+    doc_subtype: DocSubtype,
+}
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -218,37 +228,100 @@ fn maybe_add_semantic_step(
 
 /// ナレッジグラフからIssue関連文書を取得する。
 /// symbols.db が存在しない場合や、マッチするIssueがない場合は空のVecを返す。
-fn query_knowledge_graph(ctx: &SearchContext, issue_numbers: &[String]) -> Vec<KnowledgeDocResult> {
+fn query_knowledge_graph(ctx: &SearchContext, issue_numbers: &[String]) -> Vec<SuggestKgDoc> {
     if issue_numbers.is_empty() {
         return Vec::new();
     }
-    // symbols.db 存在チェック
+
     let db_path = ctx.symbol_db_path();
     if !db_path.exists() {
         return Vec::new();
     }
-    // SymbolStore オープン（エラー時は空を返す）
+
+    // SymbolStore::open() はループ外で1回だけ実行する（DB接続コスト削減）
     let store = match SymbolStore::open(&db_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[suggest] knowledge graph query skipped: {e}");
+            eprintln!("[suggest] knowledge graph open failed: {e}");
             return Vec::new();
         }
     };
-    // クエリ実行（エラー時は空を返す）
-    match store.find_knowledge_by_issue(issue_numbers) {
-        Ok(results) => results,
-        Err(e) => {
-            eprintln!("[suggest] knowledge graph query failed: {e}");
-            Vec::new()
+
+    let mut all_docs = Vec::new();
+    for issue_num in issue_numbers {
+        // 個別Issueのエラー時はそのIssueをスキップし、他のIssueの処理を継続する
+        match store.find_documents_by_issue(issue_num) {
+            Ok(entries) => {
+                for entry in entries {
+                    all_docs.push(SuggestKgDoc {
+                        issue_number: issue_num.clone(),
+                        file_path: entry.file_path,
+                        relation: entry.relation,
+                        doc_subtype: entry.doc_subtype,
+                    });
+                }
+            }
+            Err(e) => {
+                eprintln!("[suggest] knowledge graph query failed for issue {issue_num}: {e}");
+                continue;
+            }
         }
     }
+    all_docs
+}
+
+/// ナレッジグラフドキュメントをフィルタリング・Issue単位制限する。
+///
+/// 1. modifies / has_progress / has_review(StageReview) を除外
+/// 2. relation_priority でソート
+/// 3. Issue単位にグルーピングし MAX_KG_DOCS_PER_ISSUE 件に制限
+///
+/// issue_numbersの順序でIssueをグルーピングすることで、入力順を維持する。
+fn filter_and_limit_kg_docs(
+    docs: Vec<SuggestKgDoc>,
+    issue_numbers: &[String],
+) -> Vec<SuggestKgDoc> {
+    // Step 1: フィルタリング
+    let mut filtered: Vec<SuggestKgDoc> = docs
+        .into_iter()
+        .filter(|d| match d.relation {
+            KnowledgeRelation::Modifies => false,
+            KnowledgeRelation::HasProgress => false,
+            KnowledgeRelation::HasReview => {
+                matches!(
+                    d.doc_subtype,
+                    DocSubtype::IssueReview | DocSubtype::DesignReview
+                )
+            }
+            KnowledgeRelation::HasDesign | KnowledgeRelation::HasWorkplan => true,
+        })
+        .collect();
+
+    // Step 2: KnowledgeRelation::priority() でソート（sort_by は安定ソート）
+    filtered.sort_by(|a, b| a.relation.priority().cmp(&b.relation.priority()));
+
+    // Step 3: Issue単位グルーピング + 上限制御
+    let mut issue_groups: HashMap<String, Vec<SuggestKgDoc>> = HashMap::new();
+    for doc in filtered {
+        issue_groups
+            .entry(doc.issue_number.clone())
+            .or_default()
+            .push(doc);
+    }
+
+    let mut result = Vec::new();
+    for issue_num in issue_numbers {
+        if let Some(docs) = issue_groups.remove(issue_num) {
+            result.extend(docs.into_iter().take(MAX_KG_DOCS_PER_ISSUE));
+        }
+    }
+    result
 }
 
 /// ナレッジグラフ結果を戦略ステップとして先頭に挿入する。
 fn prepend_knowledge_steps(
     strategy: &mut Vec<SuggestStep>,
-    kg_docs: &[KnowledgeDocResult],
+    kg_docs: &[SuggestKgDoc],
     matched_issues: &[String],
 ) {
     let mut kg_steps = Vec::new();
@@ -325,6 +398,9 @@ pub fn run_suggest(
 
     // 5. ナレッジグラフ参照（Issue番号がある場合のみ）
     let kg_docs = query_knowledge_graph(&ctx, &issue_numbers);
+
+    // 5.5. フィルタリング・Issue単位制限
+    let kg_docs = filter_and_limit_kg_docs(kg_docs, &issue_numbers);
 
     // 6. BM25検索 → ファイル単位dedup
     let bm25_results = reader
@@ -598,17 +674,15 @@ mod tests {
 
     #[test]
     fn test_prepend_knowledge_steps_with_docs() {
-        use crate::indexer::knowledge::KnowledgeRelation;
-
         let mut strategy = vec![SuggestStep {
             command: "existing_cmd".to_string(),
             reason: "existing_reason".to_string(),
         }];
-        let kg_docs = vec![KnowledgeDocResult {
+        let kg_docs = vec![SuggestKgDoc {
             issue_number: "42".to_string(),
-            relation: KnowledgeRelation::HasDesign,
             file_path: "docs/design.md".to_string(),
-            title: Some("Design Doc".to_string()),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
         }];
         let matched_issues = vec!["42".to_string()];
 
@@ -635,7 +709,7 @@ mod tests {
             command: "existing_cmd".to_string(),
             reason: "existing_reason".to_string(),
         }];
-        let kg_docs: Vec<KnowledgeDocResult> = vec![];
+        let kg_docs: Vec<SuggestKgDoc> = vec![];
         let matched_issues: Vec<String> = vec![];
 
         prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
@@ -647,24 +721,22 @@ mod tests {
 
     #[test]
     fn test_prepend_knowledge_steps_multiple_issues() {
-        use crate::indexer::knowledge::KnowledgeRelation;
-
         let mut strategy = vec![SuggestStep {
             command: "existing_cmd".to_string(),
             reason: "existing_reason".to_string(),
         }];
         let kg_docs = vec![
-            KnowledgeDocResult {
+            SuggestKgDoc {
                 issue_number: "10".to_string(),
-                relation: KnowledgeRelation::HasDesign,
                 file_path: "docs/design-10.md".to_string(),
-                title: Some("Design 10".to_string()),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
             },
-            KnowledgeDocResult {
+            SuggestKgDoc {
                 issue_number: "20".to_string(),
-                relation: KnowledgeRelation::HasWorkplan,
                 file_path: "docs/plan-20.md".to_string(),
-                title: Some("Plan 20".to_string()),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
             },
         ];
         let matched_issues = vec!["10".to_string(), "20".to_string()];
@@ -758,5 +830,184 @@ mod tests {
         assert_eq!(arr.len(), 2);
         assert_eq!(arr[0], "42");
         assert_eq!(arr[1], "100");
+    }
+
+    // --- filter_and_limit_kg_docs tests ---
+
+    #[test]
+    fn test_filter_removes_modifies() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "src/main.rs".to_string(),
+                relation: KnowledgeRelation::Modifies,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_path, "design.md");
+    }
+
+    #[test]
+    fn test_filter_removes_has_progress() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "progress.md".to_string(),
+                relation: KnowledgeRelation::HasProgress,
+                doc_subtype: DocSubtype::ProgressReport,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_path, "design.md");
+    }
+
+    #[test]
+    fn test_filter_keeps_issue_review_removes_stage_review() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "issue-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::DesignReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "stage-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::StageReview,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 2);
+        let paths: Vec<&str> = result.iter().map(|d| d.file_path.as_str()).collect();
+        assert!(paths.contains(&"issue-review.md"));
+        assert!(paths.contains(&"design-review.md"));
+        assert!(!paths.contains(&"stage-review.md"));
+    }
+
+    #[test]
+    fn test_filter_keeps_design_and_workplan() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_limits_per_issue() {
+        // Create 6 docs for one issue, should be limited to MAX_KG_DOCS_PER_ISSUE (4)
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "issue-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::DesignReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design2.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan2.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), MAX_KG_DOCS_PER_ISSUE);
+    }
+
+    #[test]
+    fn test_filter_empty_after_all_filtered() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "src/main.rs".to_string(),
+                relation: KnowledgeRelation::Modifies,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "progress.md".to_string(),
+                relation: KnowledgeRelation::HasProgress,
+                doc_subtype: DocSubtype::ProgressReport,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_kg_relation_priority_order() {
+        assert!(
+            KnowledgeRelation::HasDesign.priority() < KnowledgeRelation::HasWorkplan.priority()
+        );
+        assert!(
+            KnowledgeRelation::HasWorkplan.priority() < KnowledgeRelation::HasReview.priority()
+        );
+        assert!(
+            KnowledgeRelation::HasReview.priority() < KnowledgeRelation::HasProgress.priority()
+        );
+        assert!(KnowledgeRelation::HasProgress.priority() < KnowledgeRelation::Modifies.priority());
     }
 }

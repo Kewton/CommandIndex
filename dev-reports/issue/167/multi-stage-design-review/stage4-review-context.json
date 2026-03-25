@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "SF-1", "title": "shell_quoteにNULバイトガード追加を推奨"},
+    {"id": "SF-2", "title": "SQLiteからのfile_pathにパスサニティチェック推奨"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "MAX_INPUT_LENGTHがバイト数判定（文字数ではない）"},
+    {"id": "NH-2", "title": "SQL IN句構築がformat!使用（安全だが注意）"},
+    {"id": "NH-3", "title": "shell_quoteの型安全ラッパー検討"}
+  ]
+}
