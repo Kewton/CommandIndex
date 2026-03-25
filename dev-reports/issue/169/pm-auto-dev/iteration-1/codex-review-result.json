@@ -1,0 +1,23 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/indexer/symbol_store.rs",
+      "line": 975,
+      "severity": "medium",
+      "category": "bug",
+      "description": "list_all_issues() skips non-numeric issue identifiers after logging a warning. If the knowledge graph contains a malformed issue node, the command returns an incomplete list instead of surfacing the data corruption as an error, which can hide indexing problems and produce silently wrong output.",
+      "suggestion": "Treat malformed issue identifiers as a hard error (or return them in a dedicated invalid-record result) instead of skipping them. At minimum, add a test that covers malformed identifiers and document the behavior explicitly."
+    },
+    {
+      "file": "src/cli/issue.rs",
+      "line": 318,
+      "severity": "low",
+      "category": "security",
+      "description": "Issue list/show output sanitizes control characters but preserves newlines via strip_control_chars(). A malicious indexed path or derived label containing a newline can inject extra rows/lines into human, path, or llm output, allowing output spoofing and confusing downstream parsers or agents.",
+      "suggestion": "Escape or remove newlines before writing file paths and labels in CLI output, especially for path and llm formats. Alternatively, reject newline-containing paths at indexing time and add a regression test for multi-line path/label payloads."
+    }
+  ],
+  "summary": "No critical vulnerabilities were found in the reviewed files. The main correctness risk is that issue listing can silently drop malformed issue identifiers, producing incomplete results without failing. The main security concern is output injection via newline-containing file paths or labels because current sanitization removes ANSI/control characters but still allows line breaks in CLI output.",
+  "requires_fix": true
+}
