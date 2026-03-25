@@ -951,21 +951,21 @@ fn before_change_max_commits_over_limit_rejected() {
 // --- issue CLI option tests ---
 
 #[test]
-fn issue_help_shows_usage() {
+fn issue_help_shows_subcommands() {
     common::cmd()
         .args(["issue", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Issue"))
-        .stdout(predicate::str::contains("format"));
+        .stdout(predicate::str::contains("list"))
+        .stdout(predicate::str::contains("show"));
 }
 
 #[test]
-fn issue_accepts_number() {
+fn issue_show_accepts_number() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140"])
+        .args(["issue", "show", "140"])
         .assert()
         .failure()
         .stderr(
@@ -975,29 +975,45 @@ fn issue_accepts_number() {
 }
 
 #[test]
-fn issue_rejects_zero() {
+fn issue_show_rejects_zero() {
     common::cmd()
-        .args(["issue", "0"])
+        .args(["issue", "show", "0"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
 }
 
 #[test]
-fn issue_rejects_non_numeric() {
+fn issue_show_rejects_non_numeric() {
     common::cmd()
-        .args(["issue", "abc"])
+        .args(["issue", "show", "abc"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
 }
 
 #[test]
-fn issue_accepts_format_json() {
+fn issue_show_accepts_format_json() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "json"])
+        .args(["issue", "show", "140", "--format", "json"])
         .assert()
         .failure();
+}
+
+#[test]
+fn issue_list_accepts_format_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list", "--format", "json"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn issue_old_syntax_rejects_number() {
+    // Old syntax `issue <number>` should fail since it's now a subcommand structure
+    common::cmd().args(["issue", "140"]).assert().failure();
 }

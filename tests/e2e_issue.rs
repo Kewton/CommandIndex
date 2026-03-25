@@ -66,7 +66,7 @@ fn issue_human_format() {
 
     let output = common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140"])
+        .args(["issue", "show", "140"])
         .assert()
         .success();
 
@@ -86,7 +86,7 @@ fn issue_json_format() {
 
     let output = common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "json"])
+        .args(["issue", "show", "140", "--format", "json"])
         .assert()
         .success();
 
@@ -106,7 +106,7 @@ fn issue_llm_format() {
 
     let output = common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "llm"])
+        .args(["issue", "show", "140", "--format", "llm"])
         .assert()
         .success();
 
@@ -126,7 +126,7 @@ fn issue_path_format() {
 
     let output = common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "path"])
+        .args(["issue", "show", "140", "--format", "path"])
         .assert()
         .success();
 
@@ -145,7 +145,7 @@ fn issue_not_found() {
 
     common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "999"])
+        .args(["issue", "show", "999"])
         .assert()
         .failure()
         .stderr(predicate::str::contains(
@@ -160,7 +160,7 @@ fn issue_progress_report_categorized() {
 
     let output = common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "json"])
+        .args(["issue", "show", "140", "--format", "json"])
         .assert()
         .success();
 
@@ -173,4 +173,93 @@ fn issue_progress_report_categorized() {
         .expect("進捗レポート should be array");
     assert_eq!(progress.len(), 1);
     assert!(progress[0].as_str().unwrap().contains("progress-report.md"));
+}
+
+// --- issue list tests ---
+
+#[test]
+fn issue_list_human_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    setup_issue_test_data(tmp.path());
+
+    let output = common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(stdout.contains("Issue #140"));
+    assert!(stdout.contains("Total: 1 issues"));
+}
+
+#[test]
+fn issue_list_json_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    setup_issue_test_data(tmp.path());
+
+    let output = common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list", "--format", "json"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(&stdout).expect("valid JSON");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["number"], 140);
+    assert!(parsed[0]["has_design"].as_bool().unwrap());
+}
+
+#[test]
+fn issue_list_llm_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    setup_issue_test_data(tmp.path());
+
+    let output = common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list", "--format", "llm"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(stdout.contains("| Issue | Docs | Label |"));
+    assert!(stdout.contains("| #140 |"));
+    assert!(stdout.contains("Total: 1 issues"));
+}
+
+#[test]
+fn issue_list_path_format() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    setup_issue_test_data(tmp.path());
+
+    let output = common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list", "--format", "path"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let lines: Vec<&str> = stdout.trim().lines().collect();
+    assert_eq!(lines, vec!["140"]);
+}
+
+#[test]
+fn issue_list_empty() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    // Create empty DB
+    let ci_dir = tmp.path().join(".commandindex");
+    std::fs::create_dir_all(&ci_dir).unwrap();
+    let db_path = ci_dir.join("symbols.db");
+    let store = commandindex::indexer::symbol_store::SymbolStore::open(&db_path).unwrap();
+    store.create_tables().unwrap();
+
+    let output = common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(stdout.contains("No issues found."));
 }

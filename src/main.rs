@@ -291,14 +291,10 @@ enum Commands {
         #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
         format: commandindex::output::OutputFormat,
     },
-    /// Show documents related to an Issue from knowledge graph
+    /// Issue-related commands
     Issue {
-        /// Issue number
-        #[arg(value_parser = clap::value_parser!(u64).range(1..))]
-        number: u64,
-        /// Output format (human, json, path, llm)
-        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
-        format: commandindex::output::OutputFormat,
+        #[command(subcommand)]
+        command: IssueCommands,
     },
     /// Watch for file changes and auto-update index (daemon mode)
     #[command(after_help = commandindex::cli::watch::WATCH_AFTER_HELP)]
@@ -321,6 +317,25 @@ enum ConfigCommands {
     Show,
     /// Show loaded config file paths
     Path,
+}
+
+#[derive(Subcommand)]
+enum IssueCommands {
+    /// List all issues in the knowledge graph
+    List {
+        /// Output format (human, json, path, llm)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+    },
+    /// Show documents related to an Issue
+    Show {
+        /// Issue number
+        #[arg(value_parser = clap::value_parser!(u64).range(1..))]
+        number: u64,
+        /// Output format (human, json, path, llm)
+        #[arg(long, value_enum, default_value_t = commandindex::output::OutputFormat::Human)]
+        format: commandindex::output::OutputFormat,
+    },
 }
 
 /// Resolve commandindex_dir from CLI --index-path, config, and base_path.
@@ -979,7 +994,7 @@ fn main() {
                 }
             }
         }
-        Commands::Issue { number, format } => {
+        Commands::Issue { command } => {
             let base_path = std::path::Path::new(".");
             let (commandindex_dir, _config) =
                 match resolve_commandindex_dir(cli.index_path.as_deref(), base_path) {
@@ -989,11 +1004,24 @@ fn main() {
                         process::exit(1);
                     }
                 };
-            match commandindex::cli::issue::run(number, format, &commandindex_dir) {
-                Ok(()) => 0,
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    1
+            match command {
+                IssueCommands::List { format } => {
+                    match commandindex::cli::issue::run_list(format, &commandindex_dir) {
+                        Ok(()) => 0,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            1
+                        }
+                    }
+                }
+                IssueCommands::Show { number, format } => {
+                    match commandindex::cli::issue::run_show(number, format, &commandindex_dir) {
+                        Ok(()) => 0,
+                        Err(e) => {
+                            eprintln!("Error: {e}");
+                            1
+                        }
+                    }
                 }
             }
         }

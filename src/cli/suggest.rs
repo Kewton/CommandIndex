@@ -255,7 +255,7 @@ fn prepend_knowledge_steps(
     // Issue番号ごとの issue コマンドステップ
     for issue_num in matched_issues {
         kg_steps.push(SuggestStep {
-            command: format!("{BINARY_NAME} issue {issue_num} --format json"),
+            command: format!("{BINARY_NAME} issue show {issue_num} --format json"),
             reason: format!("Get knowledge graph documents for Issue #{issue_num}"),
         });
     }
@@ -617,8 +617,8 @@ mod tests {
         // Should have 3 steps: issue cmd, context cmd, existing cmd
         assert_eq!(strategy.len(), 3);
         assert!(
-            strategy[0].command.contains("issue 42"),
-            "First step should be issue command: {}",
+            strategy[0].command.contains("issue show 42"),
+            "First step should be issue show command: {}",
             strategy[0].command
         );
         assert!(
@@ -673,8 +673,8 @@ mod tests {
 
         // 2 issue steps + 2 context steps + 1 existing = 5
         assert_eq!(strategy.len(), 5);
-        assert!(strategy[0].command.contains("issue 10"));
-        assert!(strategy[1].command.contains("issue 20"));
+        assert!(strategy[0].command.contains("issue show 10"));
+        assert!(strategy[1].command.contains("issue show 20"));
         assert!(strategy[2].command.contains("context"));
         assert!(strategy[3].command.contains("context"));
         assert_eq!(strategy[4].command, "existing_cmd");

@@ -176,7 +176,7 @@ fn build_use_cases() -> Vec<UseCaseItem> {
         },
         UseCaseItem {
             name: "Issue documents",
-            command: "commandindexdev issue 140",
+            command: "commandindexdev issue show 140",
         },
     ]
 }
@@ -200,7 +200,7 @@ fn build_workflows() -> Vec<Workflow> {
                 "commandindexdev search --related src/target.rs --format json",
                 "commandindexdev impact src/target.rs --format json",
                 "commandindexdev context src/target.rs --max-files 20",
-                "commandindexdev issue 140 --format json",
+                "commandindexdev issue show 140 --format json",
             ],
         },
         Workflow {
@@ -583,24 +583,27 @@ fn build_commands() -> Vec<CommandInfo> {
         },
         CommandInfo {
             name: "issue",
-            description: "Show documents related to an Issue from knowledge graph",
-            when_to_use: "Look up all design docs, reviews, work plans, and progress reports for a specific Issue number",
+            description: "Issue-related commands: list all issues or show documents for a specific issue",
+            when_to_use: "List all issues in the knowledge graph, or look up design docs, reviews, work plans, and progress reports for a specific Issue number",
             prerequisites: Some("Requires existing index with knowledge graph data (run `index` first)".to_string()),
             modes: None,
             conflicts: None,
             key_options: Some(vec![
-                "<NUMBER>  Issue number (required, positive integer)",
+                "show <NUMBER>  Show documents for a specific issue (required, positive integer)",
+                "list  List all issues in the knowledge graph",
                 "--format <FORMAT>  Output format: human, json, path, llm",
             ]),
             output_formats: Some(vec!["human", "json", "path", "llm"]),
-            output: Some("List of related documents grouped by category"),
+            output: Some("List of issues or related documents grouped by category"),
             input: None,
             pipe_support: None,
-            subcommands: None,
+            subcommands: Some(vec!["list", "show"]),
             examples: vec![
-                "commandindexdev issue 140",
-                "commandindexdev issue 140 --format json",
-                "commandindexdev issue 140 --format path",
+                "commandindexdev issue list",
+                "commandindexdev issue list --format json",
+                "commandindexdev issue show 140",
+                "commandindexdev issue show 140 --format json",
+                "commandindexdev issue show 140 --format path",
             ],
         },
         CommandInfo {
