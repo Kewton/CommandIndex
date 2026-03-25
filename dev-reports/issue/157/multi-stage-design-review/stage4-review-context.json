@@ -1,0 +1,15 @@
+{
+  "stage": 4, "type": "security", "reviewer": "Claude Opus",
+  "must_fix": [],
+  "should_fix": [
+    {"title": "find_knowledge_by_issueのIN句プレースホルダ上限未制御", "suggestion": "suggest側のtruncate(3)で実質制御されているが、関数自体にも上限チェック推奨"},
+    {"title": "suggestコマンド出力の安全性前提条件未記載", "suggestion": "出力はコマンド提案であり、実行前バリデーションは呼び出し側の責任である旨を設計書に追記"}
+  ],
+  "nice_to_have": [
+    {"title": "ISSUE_REのReDoS耐性は問題なし"},
+    {"title": "unsafe使用なし（本番コード）"},
+    {"title": "パストラバーサル防御は適切"},
+    {"title": "find_knowledge_by_issueにLIMIT句なし（設計書にLIMIT 100記載あるが実装と乖離）"}
+  ],
+  "summary": "must_fixなし。セキュリティ設計は良好。SQLインジェクション・ReDoS・パストラバーサル全て問題なし。"
+}

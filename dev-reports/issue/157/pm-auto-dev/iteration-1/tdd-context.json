@@ -1,0 +1,16 @@
+{
+  "issue_number": 157,
+  "title": "suggestコマンドがナレッジグラフを参照していない",
+  "design_policy": "dev-reports/design/issue-157-suggest-knowledge-graph-design-policy.md",
+  "work_plan": "dev-reports/issue/157/work-plan.md",
+  "target_files": [
+    "src/cli/suggest.rs",
+    "src/output/mod.rs"
+  ],
+  "reference_files": [
+    "src/indexer/knowledge.rs",
+    "src/indexer/symbol_store.rs",
+    "src/cli/search.rs",
+    "src/cli/issue.rs"
+  ]
+}

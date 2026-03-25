@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "tests_added": [
+    "test_prepend_knowledge_steps_with_docs",
+    "test_prepend_knowledge_steps_empty",
+    "test_prepend_knowledge_steps_multiple_issues",
+    "test_issue_number_dedup",
+    "test_issue_number_max_limit",
+    "test_matched_issues_json_skip_when_empty",
+    "test_matched_issues_json_present_when_nonempty"
+  ],
+  "files_modified": [
+    "src/cli/suggest.rs",
+    "src/output/mod.rs"
+  ],
+  "cargo_test_result": "pass",
+  "cargo_clippy_result": "pass",
+  "notes": "510 tests pass, 0 warnings, no fmt diff"
+}

@@ -348,6 +348,8 @@ pub struct SuggestStep {
 pub struct SuggestResult {
     pub query: String,
     pub has_embeddings: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub matched_issues: Vec<String>,
     pub strategy: Vec<SuggestStep>,
 }
 

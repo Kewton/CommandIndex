@@ -1,0 +1,18 @@
+{
+  "stage": 3, "type": "impact_analysis", "reviewer": "Claude Opus",
+  "must_fix": [
+    {"title": "SuggestResultフィールド追加で既存テスト5箇所コンパイルエラー", "suggestion": "matched_issues: Vec::new()を全構築箇所に追加"},
+    {"title": "build_strategyシグネチャ変更のrun_suggest呼び出し元修正", "suggestion": "run_suggest内の呼び出し修正を作業計画に明記"}
+  ],
+  "should_fix": [
+    {"title": "JSON出力の後方互換性", "suggestion": "serde(skip_serializing_if)の適用を検討"},
+    {"title": "extract_issue_numbersのpub可視性確認", "suggestion": "knowledge.rsのpub fnが正しく公開されていることを確認"},
+    {"title": "SymbolStore等のuse宣言追加", "suggestion": "suggest.rsにimport追加"}
+  ],
+  "nice_to_have": [
+    {"title": "e2eナレッジグラフ統合テスト追加"},
+    {"title": "eprintlnのテスタビリティ"},
+    {"title": "Issue番号上限3件の定数化"}
+  ],
+  "summary": "影響範囲は限定的。SuggestResultフィールド追加による既存テスト破損が主要影響。e2eテストは壊れない。"
+}

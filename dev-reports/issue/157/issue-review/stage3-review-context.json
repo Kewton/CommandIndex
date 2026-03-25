@@ -1,0 +1,42 @@
+{
+  "stage": 3,
+  "type": "impact_scope_review",
+  "reviewer": "Claude Opus",
+  "must_fix": [
+    {
+      "title": "SuggestErrorにSymbolStoreエラーバリアントが未定義",
+      "description": "symbols.dbアクセス時のSymbolStoreErrorをSuggestErrorに変換するFrom実装が必要。",
+      "suggestion": "SuggestErrorにSymbolStore(SymbolStoreError)バリアントを追加し、From<SymbolStoreError>を実装する。"
+    },
+    {
+      "title": "find_documents_by_issueがModifiesリレーションを未サポート",
+      "description": "symbol_store.rsのfind_documents_by_issueではmodifiesが来るとエラーになる可能性がある。",
+      "suggestion": "find_documents_by_issueのリレーションパースにmodifiesを追加するか、find_knowledge_by_issueを使用する。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "ナレッジグラフ連携の新規テスト追加が必要",
+      "description": "既存テストは壊れないが、ナレッジグラフステップの検証がない。",
+      "suggestion": "symbols.dbにデータをセットアップした上でのテスト追加が必要。"
+    },
+    {
+      "title": "run_suggest関数の複雑度増加",
+      "description": "3段階になり関数が長くなる。",
+      "suggestion": "ナレッジグラフ参照ロジックを独立関数に切り出す。"
+    },
+    {
+      "title": "SuggestResultにナレッジグラフ情報フィールド追加の検討",
+      "description": "has_knowledge_graph, matched_issuesフィールドの追加がLLM連携時に有用。",
+      "suggestion": "SuggestResultへのフィールド追加を検討。追加する場合はSerialize対応と既存テスト更新が必要。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "SymbolStore read-onlyモード",
+      "description": "suggestは読み取り専用だがSymbolStoreは読み書き両用で開く。",
+      "suggestion": "将来的にread-onlyオープンモードを追加。現時点ではWALモードで問題ない。"
+    }
+  ],
+  "summary": "変更影響はsuggestコマンド内に閉じており、他サブコマンドへの波及なし。主要対応点: (1)SuggestErrorへのSymbolStoreErrorバリアント追加、(2)Modifiesリレーション未対応への対処、(3)symbols.db非存在時のフォールバック。パフォーマンス影響は軽微。"
+}
