@@ -1,0 +1,39 @@
+{
+  "stage": 4,
+  "type": "security-review",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "テストコード内のunsafe env操作（既存問題、本Issue対象外）",
+      "description": "embedding関連テストでunsafe std::env::set_var使用。並列テスト時の競合状態リスク",
+      "suggestion": "別Issueで追跡"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "format_semantic_human()のハードコードスニペット設定",
+      "description": "SnippetConfig伝播が必要（設計方針書の変更内容と一致）",
+      "suggestion": "設計方針書通りSnippetConfig引数追加"
+    },
+    {
+      "id": "S2",
+      "title": "lines=0/chars=0でbody全文展開のメモリリスク",
+      "description": "巨大ドキュメントで全文がメモリに展開される可能性",
+      "suggestion": "ハードリミット設定またはドキュメント明記（ローカルCLIのためリスク限定的）"
+    },
+    {
+      "id": "S3",
+      "title": "enrich_with_metadata()のfallback実装が設計と不一致",
+      "description": "設計ではsections.first()使用だが実装はString::new()",
+      "suggestion": "設計方針書通り実装"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "truncate_body()の二重イテレーション最適化"},
+    {"id": "N2", "title": "format_semantic_llm()のbodyトランケーション未適用"},
+    {"id": "N3", "title": "strip_control_chars()のCR/CRLF正規化"},
+    {"id": "N4", "title": "インデックス登録時のパス正規化"}
+  ],
+  "summary": "重大なセキュリティ脆弱性なし。全コードはRustの安全なコード。unsafeはテスト内の既存問題のみ（別Issue推奨）。ローカルCLIとしてリスク限定的。"
+}

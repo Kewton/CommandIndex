@@ -729,7 +729,14 @@ fn test_format_semantic_llm() {
         heading_level: 2,
     }];
     let mut buf = Vec::new();
-    format_semantic_results(&results, OutputFormat::Llm, &mut buf).unwrap();
+    format_semantic_results(
+        &results,
+        OutputFormat::Llm,
+        &mut buf,
+        SnippetConfig::default(),
+        &LlmFormatOptions::default(),
+    )
+    .unwrap();
     let output = String::from_utf8(buf).unwrap();
     assert!(output.contains("## src/main.rs"));
     assert!(output.contains("### Entry point"));
@@ -737,6 +744,115 @@ fn test_format_semantic_llm() {
     assert!(output.contains("fn main() {}"));
     // Similarity score should NOT be in the output
     assert!(!output.contains("0.95"));
+}
+
+// --- Semantic Human format with SnippetConfig test ---
+
+#[test]
+fn test_format_semantic_human_with_snippet_config() {
+    let results = vec![SemanticSearchResult {
+        path: "docs/guide.md".to_string(),
+        heading: "Getting Started".to_string(),
+        similarity: 0.88,
+        body: "Line one\nLine two\nLine three\nLine four".to_string(),
+        tags: "guide".to_string(),
+        heading_level: 2,
+    }];
+
+    // Default config (2 lines, 120 chars) should truncate
+    let mut buf = Vec::new();
+    format_semantic_results(
+        &results,
+        OutputFormat::Human,
+        &mut buf,
+        SnippetConfig::default(),
+        &LlmFormatOptions::default(),
+    )
+    .unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("Line one"));
+    assert!(output.contains("Line two"));
+    assert!(output.contains("..."));
+    assert!(!output.contains("Line four"));
+
+    // Custom config with more lines
+    let mut buf2 = Vec::new();
+    format_semantic_results(
+        &results,
+        OutputFormat::Human,
+        &mut buf2,
+        SnippetConfig {
+            lines: 10,
+            chars: 120,
+        },
+        &LlmFormatOptions::default(),
+    )
+    .unwrap();
+    let output2 = String::from_utf8(buf2).unwrap();
+    assert!(output2.contains("Line four"));
+    assert!(!output2.contains("..."));
+}
+
+// --- Semantic LLM format with LlmFormatOptions test ---
+
+#[test]
+fn test_format_semantic_llm_with_max_body_lines() {
+    let results = vec![SemanticSearchResult {
+        path: "docs/guide.md".to_string(),
+        heading: "Setup".to_string(),
+        similarity: 0.90,
+        body: "Step 1\nStep 2\nStep 3\nStep 4\nStep 5".to_string(),
+        tags: "".to_string(),
+        heading_level: 2,
+    }];
+
+    // With max_body_lines = 2
+    let mut buf = Vec::new();
+    format_semantic_results(
+        &results,
+        OutputFormat::Llm,
+        &mut buf,
+        SnippetConfig::default(),
+        &LlmFormatOptions {
+            max_body_lines: Some(2),
+        },
+    )
+    .unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("Step 1"));
+    assert!(output.contains("Step 2"));
+    assert!(output.contains("... (truncated)"));
+    assert!(!output.contains("Step 5"));
+}
+
+// --- Semantic LLM format body output test ---
+
+#[test]
+fn test_format_semantic_llm_body_output() {
+    let results = vec![SemanticSearchResult {
+        path: "docs/readme.md".to_string(),
+        heading: "Overview".to_string(),
+        similarity: 0.92,
+        body: "This is the project overview.".to_string(),
+        tags: "readme".to_string(),
+        heading_level: 1,
+    }];
+
+    let mut buf = Vec::new();
+    format_semantic_results(
+        &results,
+        OutputFormat::Llm,
+        &mut buf,
+        SnippetConfig::default(),
+        &LlmFormatOptions::default(),
+    )
+    .unwrap();
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("## docs/readme.md"));
+    assert!(output.contains("### Overview"));
+    assert!(output.contains("This is the project overview."));
+    // No truncation marker when body fits
+    assert!(!output.contains("... (truncated)"));
 }
 
 // --- LLM Workspace format test ---

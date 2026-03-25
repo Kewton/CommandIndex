@@ -1,0 +1,23 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/search.rs",
+      "line": 790,
+      "severity": "medium",
+      "category": "bug",
+      "description": "When semantic metadata enrichment cannot find a matching section, the fallback now copies body/tags/heading_level from the first section in the file while keeping the original matched heading. This can produce semantically inconsistent results where the heading and snippet come from different sections, causing users or downstream LLM consumers to act on incorrect content.",
+      "suggestion": "Do not mix metadata from unrelated sections. Keep the previous empty fallback, or fall back to the first section only if heading, body, tags, and heading_level are all taken from the same section object."
+    },
+    {
+      "file": "src/main.rs",
+      "line": 572,
+      "severity": "low",
+      "category": "bug",
+      "description": "LLM body truncation for normal and semantic search uses the raw CLI value `snippet_lines` instead of the already-resolved `effective_snippet_lines`. As a result, values from config are ignored unless the user explicitly passes `--snippet-lines`, so LLM output can become unexpectedly unbounded even though the command help says the default comes from config or 2.",
+      "suggestion": "Initialize `LlmFormatOptions.max_body_lines` from `effective_snippet_lines` (or an equivalent resolved value) so CLI, config, and output behavior stay consistent."
+    }
+  ],
+  "summary": "No panic, overflow, unsafe, injection, or path traversal issues were found in the reviewed changes. Two correctness issues remain: one can attach the wrong snippet to a semantic result during metadata fallback, and one makes LLM truncation ignore configured defaults unless a CLI flag is provided.",
+  "requires_fix": true
+}

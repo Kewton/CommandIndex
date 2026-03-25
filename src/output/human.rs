@@ -262,6 +262,7 @@ pub(crate) fn relation_display_label<'a>(
 pub fn format_semantic_human(
     results: &[SemanticSearchResult],
     writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
 ) -> Result<(), OutputError> {
     for (i, result) in results.iter().enumerate() {
         if i > 0 {
@@ -279,8 +280,19 @@ pub fn format_semantic_human(
             heading.bold()
         )?;
 
-        // Body snippet (max 2 lines)
-        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        // Body snippet
+        let body_cleaned = strip_control_chars(&result.body);
+        let effective_lines = if snippet_config.lines == 0 {
+            usize::MAX
+        } else {
+            snippet_config.lines
+        };
+        let effective_chars = if snippet_config.chars == 0 {
+            usize::MAX
+        } else {
+            snippet_config.chars
+        };
+        let snippet = truncate_body(&body_cleaned, effective_lines, effective_chars);
         for line in snippet.lines() {
             writeln!(writer, "  {line}")?;
         }

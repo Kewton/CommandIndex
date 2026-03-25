@@ -1,0 +1,32 @@
+{
+  "issue_number": 179,
+  "title": "セマンティック検索結果にスニペット（本文抜粋）を追加",
+  "design_policy": "dev-reports/design/issue-179-semantic-snippet-design-policy.md",
+  "work_plan": "dev-reports/issue/179/work-plan.md",
+  "changes": [
+    {
+      "file": "src/output/mod.rs",
+      "task": "format_semantic_results()にSnippetConfig, &LlmFormatOptionsパラメータ追加"
+    },
+    {
+      "file": "src/output/human.rs",
+      "task": "format_semantic_human()にSnippetConfig追加、ハードコード(2,120)をconfig参照に変更、lines=0/chars=0ガード"
+    },
+    {
+      "file": "src/output/llm.rs",
+      "task": "format_semantic_llm()にLlmFormatOptions追加、truncate_body_for_llm()適用、was_truncated分岐"
+    },
+    {
+      "file": "src/cli/search.rs",
+      "task": "run_semantic_search()にsnippet_config/llm_optionsパラメータ追加、enrich_with_metadata()のfallback改善"
+    },
+    {
+      "file": "src/main.rs",
+      "task": "セマンティック分岐内でLlmFormatOptions構築、run_semantic_search()にsnippet_config/llm_optionsを渡す"
+    },
+    {
+      "file": "tests/output_format.rs",
+      "task": "既存テストのシグネチャ追従、新テスト追加"
+    }
+  ]
+}

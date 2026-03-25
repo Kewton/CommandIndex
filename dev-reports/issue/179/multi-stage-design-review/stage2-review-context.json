@@ -1,0 +1,53 @@
+{
+  "stage": 2,
+  "type": "consistency-review",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "main.rsのセマンティック検索ブランチでllm_optionsが未定義",
+      "description": "llm_optionsはBM25ブランチ内のローカル変数。セマンティック検索ブランチで構築手順が必要",
+      "suggestion": "セマンティック検索ブランチ内でLlmFormatOptionsを構築する手順を明記"
+    },
+    {
+      "id": "M2",
+      "title": "テストの新パラメータ具体値が未記載",
+      "description": "format_semantic_results()呼び出しに渡す具体値が不明",
+      "suggestion": "SnippetConfig::default(), &LlmFormatOptions::default()等を明記"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "snippet_config.clone()はCopy型に対して冗長",
+      "description": "SnippetConfigはCopy trait実装済み。clippy警告リスク",
+      "suggestion": "clone()を削除"
+    },
+    {
+      "id": "S2",
+      "title": "Json/PathブランチでのUnusedパラメータ扱いが未記載",
+      "description": "snippet_config/llm_optionsがJson/Pathで不使用",
+      "suggestion": "設計方針書に不使用の旨を記載"
+    },
+    {
+      "id": "S3",
+      "title": "format_semantic_llm()のtruncation分岐ロジック省略",
+      "description": "was_truncated時の... (truncated)表示パターンが未記載",
+      "suggestion": "BM25と同等の分岐ロジックを明記"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "snippet_config.lines/chars=0時の挙動未記載",
+      "description": "BM25ではusize::MAXで全文表示にする分岐あり",
+      "suggestion": "同様の分岐を適用する旨を記載"
+    },
+    {
+      "id": "N2",
+      "title": "sections.first()の冗長呼び出し",
+      "description": "3フィールド分sections.first()を繰り返し",
+      "suggestion": "ローカル変数にバインド"
+    }
+  ],
+  "summary": "2点の必須修正: llm_optionsの構築手順欠落、テスト具体値未記載。Copy型のclone()はclippy警告リスク。"
+}

@@ -652,6 +652,7 @@ pub fn run_related_search_from_stdin(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_semantic_search(
     query: &str,
     limit: usize,
@@ -660,6 +661,8 @@ pub fn run_semantic_search(
     filters: &SearchFilters,
     ctx: Option<&SearchContext>,
     max_tokens: Option<usize>,
+    snippet_config: SnippetConfig,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), SearchError> {
     if query.is_empty() {
         return Err(SearchError::InvalidArgument(
@@ -742,7 +745,13 @@ pub fn run_semantic_search(
 
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    output::format_semantic_results(&final_results, format, &mut handle)?;
+    output::format_semantic_results(
+        &final_results,
+        format,
+        &mut handle,
+        snippet_config,
+        llm_options,
+    )?;
     Ok(())
 }
 
@@ -778,14 +787,15 @@ fn enrich_with_metadata(
                     heading_level: section.heading_level,
                 });
             } else {
-                // Fallback: use the first section or create a minimal result
+                // Fallback: use the first section's body/tags/heading_level if available
+                let fallback = sections.first();
                 enriched.push(SemanticSearchResult {
                     path: item.file_path.clone(),
                     heading: item.section_heading.clone(),
                     similarity: item.similarity,
-                    body: String::new(),
-                    tags: String::new(),
-                    heading_level: 0,
+                    body: fallback.map(|s| s.body.clone()).unwrap_or_default(),
+                    tags: fallback.map(|s| s.tags.clone()).unwrap_or_default(),
+                    heading_level: fallback.map(|s| s.heading_level).unwrap_or(0),
                 });
             }
         }
