@@ -1071,7 +1071,7 @@ impl SymbolStore {
 
         // Find issue(s) that this file belongs to
         let mut stmt = self.conn.prepare(
-            "SELECT DISTINCT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title
+            "SELECT DISTINCT kn_issue.identifier, ke2.relation, kn_sibling.file_path, kn_issue.title, ke2.metadata
              FROM knowledge_nodes kn_doc
              JOIN knowledge_edges ke1 ON ke1.target_id = kn_doc.id
              JOIN knowledge_nodes kn_issue ON ke1.source_id = kn_issue.id AND kn_issue.type = 'issue'
@@ -1084,11 +1084,23 @@ impl SymbolStore {
         )?;
 
         let rows = stmt.query_map(params![file_path], |row| {
+            let metadata_str: Option<String> = row.get(4)?;
+            let doc_subtype = metadata_str.and_then(|m| {
+                serde_json::from_str::<serde_json::Value>(&m)
+                    .ok()
+                    .and_then(|v| {
+                        v.get("doc_subtype").and_then(|s| {
+                            s.as_str()
+                                .and_then(crate::indexer::knowledge::DocSubtype::parse)
+                        })
+                    })
+            });
             Ok(crate::indexer::knowledge::KnowledgeRelatedResult {
                 issue_number: row.get(0)?,
                 relation: row.get(1)?,
                 file_path: row.get(2)?,
                 title: row.get(3)?,
+                doc_subtype,
             })
         })?;
 

@@ -146,6 +146,7 @@ fn group_knowledge_results(related: &[KnowledgeRelatedResult]) -> Vec<WhyIssueEn
             entry.1.push(WhyDocumentEntry {
                 file_path: r.file_path.clone(),
                 relation: r.relation.clone(),
+                doc_subtype: r.doc_subtype.clone(),
             });
         }
     }
@@ -194,18 +195,21 @@ mod tests {
                 relation: "has_design".to_string(),
                 file_path: "dev-reports/design/issue-100.md".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "100".to_string(),
                 relation: "has_workplan".to_string(),
                 file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "200".to_string(),
                 relation: "has_review".to_string(),
                 file_path: "dev-reports/issue/200/review.md".to_string(),
                 title: None,
+                doc_subtype: None,
             },
         ];
 
@@ -232,6 +236,7 @@ mod tests {
                 documents: vec![WhyDocumentEntry {
                     file_path: "dev-reports/design/issue-100.md".to_string(),
                     relation: "has_design".to_string(),
+                    doc_subtype: None,
                 }],
                 modifies_count: None,
             }],
@@ -253,6 +258,7 @@ mod tests {
                 documents: vec![WhyDocumentEntry {
                     file_path: "dev-reports/issue/42/work-plan.md".to_string(),
                     relation: "has_workplan".to_string(),
+                    doc_subtype: None,
                 }],
                 modifies_count: None,
             }],
@@ -276,10 +282,12 @@ mod tests {
                     WhyDocumentEntry {
                         file_path: "dev-reports/design/issue-100.md".to_string(),
                         relation: "has_design".to_string(),
+                        doc_subtype: None,
                     },
                     WhyDocumentEntry {
                         file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                         relation: "has_workplan".to_string(),
+                        doc_subtype: None,
                     },
                 ],
                 modifies_count: None,
@@ -303,6 +311,7 @@ mod tests {
                 documents: vec![WhyDocumentEntry {
                     file_path: "dev-reports/design/issue-100.md".to_string(),
                     relation: "has_design".to_string(),
+                    doc_subtype: None,
                 }],
                 modifies_count: None,
             }],
@@ -325,24 +334,28 @@ mod tests {
                 relation: "has_design".to_string(),
                 file_path: "dev-reports/design/issue-100.md".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "100".to_string(),
                 relation: "has_design".to_string(),
                 file_path: "dev-reports/design/issue-100.md".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "100".to_string(),
                 relation: "modifies".to_string(),
                 file_path: "src/main.rs".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "100".to_string(),
                 relation: "modifies".to_string(),
                 file_path: "src/lib.rs".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
             // Duplicate modifies entry
             KnowledgeRelatedResult {
@@ -350,6 +363,7 @@ mod tests {
                 relation: "modifies".to_string(),
                 file_path: "src/main.rs".to_string(),
                 title: Some("Feature X".to_string()),
+                doc_subtype: None,
             },
         ];
 
@@ -373,12 +387,14 @@ mod tests {
                 relation: "has_design".to_string(),
                 file_path: "shared/doc.md".to_string(),
                 title: Some("Feature A".to_string()),
+                doc_subtype: None,
             },
             KnowledgeRelatedResult {
                 issue_number: "200".to_string(),
                 relation: "has_design".to_string(),
                 file_path: "shared/doc.md".to_string(),
                 title: Some("Feature B".to_string()),
+                doc_subtype: None,
             },
         ];
 
@@ -399,6 +415,7 @@ mod tests {
                 documents: vec![WhyDocumentEntry {
                     file_path: "dev-reports/design/issue-42.md".to_string(),
                     relation: "has_design".to_string(),
+                    doc_subtype: None,
                 }],
                 modifies_count: Some(3),
             }],

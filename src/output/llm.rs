@@ -471,8 +471,9 @@ pub fn format_why_llm(
         writeln!(writer, "### {issue_label}")?;
         for doc in &issue.documents {
             let doc_path = strip_control_chars(&doc.file_path);
-            let relation = strip_control_chars(&doc.relation);
-            writeln!(writer, "- {doc_path} ({relation})")?;
+            let relation_label =
+                super::human::relation_display_label(&doc.relation, doc.doc_subtype.as_ref());
+            writeln!(writer, "- {doc_path} ({relation_label})")?;
         }
         if let Some(count) = issue.modifies_count {
             writeln!(writer, "- [modifies] modifies: {count} files")?;

@@ -224,7 +224,7 @@ pub fn format_why_human(
         writeln!(writer, "  {}", issue_label.green())?;
 
         for doc in &issue.documents {
-            let relation_label = relation_display_label(&doc.relation);
+            let relation_label = relation_display_label(&doc.relation, doc.doc_subtype.as_ref());
             let doc_path = strip_control_chars(&doc.file_path);
             writeln!(
                 writer,
@@ -241,7 +241,14 @@ pub fn format_why_human(
 }
 
 /// relation文字列を人間が読みやすいラベルに変換する
-fn relation_display_label(relation: &str) -> &str {
+/// doc_subtype が存在する場合はそちらを優先する
+pub(crate) fn relation_display_label<'a>(
+    relation: &'a str,
+    doc_subtype: Option<&crate::indexer::knowledge::DocSubtype>,
+) -> &'a str {
+    if let Some(subtype) = doc_subtype {
+        return subtype.display_label_en();
+    }
     match relation {
         "has_design" => "design",
         "has_review" => "review",
@@ -410,4 +417,46 @@ pub fn format_diff_human(result: &DiffResult, writer: &mut dyn Write) -> Result<
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::indexer::knowledge::DocSubtype;
+
+    #[test]
+    fn test_relation_display_label_with_doc_subtype() {
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::ProgressReport)),
+            "progress"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::IssueReview)),
+            "review"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::DesignReview)),
+            "review"
+        );
+        assert_eq!(
+            relation_display_label("has_design", Some(&DocSubtype::DesignPolicy)),
+            "design"
+        );
+        assert_eq!(
+            relation_display_label("has_workplan", Some(&DocSubtype::WorkPlan)),
+            "workplan"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::StageReview)),
+            "review"
+        );
+    }
+
+    #[test]
+    fn test_relation_display_label_without_doc_subtype() {
+        assert_eq!(relation_display_label("has_design", None), "design");
+        assert_eq!(relation_display_label("has_review", None), "review");
+        assert_eq!(relation_display_label("has_workplan", None), "workplan");
+        assert_eq!(relation_display_label("modifies", None), "modifies");
+    }
 }

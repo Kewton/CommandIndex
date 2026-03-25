@@ -11,6 +11,7 @@ use std::io::Write;
 use clap::ValueEnum;
 use serde::Serialize;
 
+use crate::indexer::knowledge::DocSubtype;
 use crate::indexer::reader::SearchResult;
 
 /// スニペット表示設定
@@ -410,6 +411,8 @@ pub struct WhyIssueEntry {
 pub struct WhyDocumentEntry {
     pub file_path: String,
     pub relation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc_subtype: Option<DocSubtype>,
 }
 
 /// why 結果を指定フォーマットで出力する
