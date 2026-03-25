@@ -1,0 +1,9 @@
+{
+  "stage": 6,
+  "applied_fixes": [
+    "IssueListRow (データ層) と IssueListEntry (CLI表示モデル) に分離、design_file_path を公開APIから除去",
+    "run() → run_show() にリネーム、run_list() と対称命名",
+    "不正identifier は警告ログ出力しスキップ（サイレントスキップ禁止）に変更",
+    "boolean集計条件に kn_doc.type = 'document' を追加（doc_count と同じ母集団）"
+  ]
+}

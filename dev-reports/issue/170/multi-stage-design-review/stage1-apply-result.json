@@ -1,0 +1,14 @@
+{
+  "stage": 1,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "status": "applied", "description": "正規表現に^アンカー追加"},
+    {"id": "M2", "status": "applied", "description": "line.get(..10)でパニック防止"},
+    {"id": "M3", "status": "deferred", "description": "構造体リファクタリングはスコープ外に追記"},
+    {"id": "S1", "status": "applied", "description": "LazyLockでregexキャッシュ"},
+    {"id": "S2", "status": "applied", "description": "chrono::NaiveDateバリデーション追加"},
+    {"id": "S3", "status": "noted", "description": "プライベート関数として追加、将来分割は別Issue"},
+    {"id": "S4", "status": "applied", "description": "tracing::debug!ログ出力追加"},
+    {"id": "N2", "status": "applied", "description": "CHANGELOGで対応をスコープ外に記載"}
+  ]
+}

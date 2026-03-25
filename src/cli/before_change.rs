@@ -3,26 +3,32 @@ When to use:
   Before modifying a file, to understand related design decisions and review history.
   Shows design constraints, review findings, and work plans linked via knowledge graph.
 
+  --limit controls the maximum number of issues (not documents) to show.
+  Each issue includes up to 2 representative documents (design policy + work plan).
+
 Examples:
   commandindexdev before-change src/auth.rs
   commandindexdev before-change src/auth.rs --format json
   commandindexdev before-change src/auth.rs --format llm --limit 5
   commandindexdev before-change src/auth.rs --max-commits 500";
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
-use std::sync::LazyLock;
 
 use crate::cli::git::GitError;
 use crate::cli::stdin::{StdinError, validate_file_path};
 use crate::embedding::store::{EmbeddingRecord, EmbeddingStore, cosine_similarity};
 use crate::indexer::ResolveIndexPathError;
+use crate::indexer::knowledge::KnowledgeRelation;
 use crate::indexer::symbol_store::{KnowledgeDocResult, SymbolStore, SymbolStoreError};
 use crate::output::{BeforeChangeFinding, BeforeChangeResult, OutputError, OutputFormat};
 
 /// Maximum lines to read from git log output
 const MAX_GIT_OUTPUT_LINES: usize = 5000;
+
+/// Maximum documents to select per issue (design + workplan)
+const MAX_DOCS_PER_ISSUE: usize = 2;
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -134,12 +140,6 @@ fn validate_before_change_input(file: &str) -> Result<(), BeforeChangeError> {
 
 /// Extract issue numbers from git log for a file.
 /// Returns unique issue numbers sorted.
-/// Statically compiled regex for issue number extraction.
-static ISSUE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?i)(?:#(\d+)|\(#(\d+)\)|fixes\s+#(\d+)|refs\s+#(\d+))")
-        .expect("ISSUE_RE is a valid regex literal")
-});
-
 fn extract_issues_from_git_log(
     file_path: &str,
     max_commits: usize,
@@ -183,13 +183,8 @@ fn extract_issues_from_git_log(
         let reader = BufReader::new(stdout);
         for line in reader.lines().take(MAX_GIT_OUTPUT_LINES) {
             let line = line.map_err(|_| BeforeChangeError::Git(GitError::CommandFailed))?;
-            for cap in ISSUE_RE.captures_iter(&line) {
-                // Each capture group corresponds to a different pattern
-                for i in 1..=4 {
-                    if let Some(m) = cap.get(i) {
-                        issues.insert(m.as_str().to_string());
-                    }
-                }
+            for num in crate::indexer::knowledge::extract_issue_numbers(&line) {
+                issues.insert(num);
             }
         }
     }
@@ -237,6 +232,7 @@ fn rank_by_max_similarity(
                     doc_path: doc.file_path.clone(),
                     doc_title: doc.title.clone(),
                     similarity: None,
+                    snippet: None,
                 });
                 continue;
             }
@@ -249,6 +245,7 @@ fn rank_by_max_similarity(
                 doc_path: doc.file_path.clone(),
                 doc_title: doc.title.clone(),
                 similarity: None,
+                snippet: None,
             });
             continue;
         }
@@ -269,30 +266,46 @@ fn rank_by_max_similarity(
             doc_path: doc.file_path.clone(),
             doc_title: doc.title.clone(),
             similarity: Some(max_sim),
+            snippet: None,
         });
     }
 
-    // Sort with_score by similarity descending
-    with_score.sort_by(|a, b| {
-        b.similarity
-            .unwrap_or(0.0)
-            .partial_cmp(&a.similarity.unwrap_or(0.0))
+    // Combine all findings
+    let mut all_findings = with_score;
+    all_findings.extend(without_score);
+
+    // Compute issue-level max similarity
+    let mut issue_max_sim: HashMap<String, f32> = HashMap::new();
+    for finding in &all_findings {
+        let sim = finding.similarity.unwrap_or(f32::NEG_INFINITY);
+        let entry = issue_max_sim
+            .entry(finding.issue_number.clone())
+            .or_insert(f32::NEG_INFINITY);
+        if sim > *entry {
+            *entry = sim;
+        }
+    }
+
+    // Sort by: issue max similarity descending, then issue_number, then relation_priority
+    all_findings.sort_by(|a, b| {
+        let a_issue_sim = issue_max_sim
+            .get(&a.issue_number)
+            .unwrap_or(&f32::NEG_INFINITY);
+        let b_issue_sim = issue_max_sim
+            .get(&b.issue_number)
+            .unwrap_or(&f32::NEG_INFINITY);
+        b_issue_sim
+            .partial_cmp(a_issue_sim)
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.issue_number.cmp(&b.issue_number))
+            .then_with(|| relation_priority(&a.relation).cmp(&relation_priority(&b.relation)))
     });
 
-    // Sort without_score by issue_number, then relation
-    without_score.sort_by(|a, b| {
-        a.issue_number
-            .cmp(&b.issue_number)
-            .then_with(|| a.relation.cmp(&b.relation))
-    });
-
-    with_score.extend(without_score);
-    with_score
+    all_findings
 }
 
 /// Create findings without semantic ranking (fallback).
-/// Sorted by issue_number, then relation priority (has_design > has_review > has_workplan).
+/// Sorted by issue_number descending (newer issues first), then relation priority.
 fn findings_without_ranking(docs: &[KnowledgeDocResult]) -> Vec<BeforeChangeFinding> {
     let mut findings: Vec<BeforeChangeFinding> = docs
         .iter()
@@ -302,12 +315,16 @@ fn findings_without_ranking(docs: &[KnowledgeDocResult]) -> Vec<BeforeChangeFind
             doc_path: doc.file_path.clone(),
             doc_title: doc.title.clone(),
             similarity: None,
+            snippet: None,
         })
         .collect();
 
+    // Sort by issue_number descending (numeric), then relation priority
     findings.sort_by(|a, b| {
-        a.issue_number
-            .cmp(&b.issue_number)
+        let a_num = a.issue_number.parse::<u64>().unwrap_or(0);
+        let b_num = b.issue_number.parse::<u64>().unwrap_or(0);
+        b_num
+            .cmp(&a_num)
             .then_with(|| relation_priority(&a.relation).cmp(&relation_priority(&b.relation)))
     });
 
@@ -315,13 +332,50 @@ fn findings_without_ranking(docs: &[KnowledgeDocResult]) -> Vec<BeforeChangeFind
 }
 
 /// Relation priority for fallback sort (lower = higher priority).
+/// 内部実装を KnowledgeRelation::priority() に委譲する互換ラッパー。
 fn relation_priority(relation: &str) -> u8 {
-    match relation {
-        "has_design" => 0,
-        "has_review" => 1,
-        "has_workplan" => 2,
-        _ => 3,
+    KnowledgeRelation::parse(relation).map_or(5, |r| r.priority())
+}
+
+// ---------------------------------------------------------------------------
+// Issue-level grouping and limit
+// ---------------------------------------------------------------------------
+
+/// Group findings by issue, apply issue-level limit, and select representative
+/// documents per issue. Input findings must be pre-sorted (by similarity or
+/// issue_number). Issue order is determined by first occurrence in the input.
+fn group_and_limit_by_issue(
+    findings: Vec<BeforeChangeFinding>,
+    limit: usize,
+) -> Vec<BeforeChangeFinding> {
+    // 1. Group by issue, preserving first-occurrence order
+    let mut issue_order: Vec<String> = Vec::new();
+    let mut issue_groups: HashMap<String, Vec<BeforeChangeFinding>> = HashMap::new();
+
+    for finding in findings {
+        if !issue_groups.contains_key(&finding.issue_number) {
+            issue_order.push(finding.issue_number.clone());
+        }
+        issue_groups
+            .entry(finding.issue_number.clone())
+            .or_default()
+            .push(finding);
     }
+
+    // 2. Sort each issue's docs by relation_priority
+    for docs in issue_groups.values_mut() {
+        docs.sort_by(|a, b| relation_priority(&a.relation).cmp(&relation_priority(&b.relation)));
+    }
+
+    // 3. Apply issue-level limit and select up to MAX_DOCS_PER_ISSUE per issue
+    let mut result: Vec<BeforeChangeFinding> = Vec::new();
+    for issue_num in issue_order.iter().take(limit) {
+        if let Some(docs) = issue_groups.get(issue_num) {
+            result.extend(docs.iter().take(MAX_DOCS_PER_ISSUE).cloned());
+        }
+    }
+
+    result
 }
 
 // ---------------------------------------------------------------------------
@@ -334,6 +388,7 @@ pub fn run_before_change(
     index_path: Option<&Path>,
     limit: usize,
     max_commits: usize,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), BeforeChangeError> {
     // 1. Input validation
     validate_before_change_input(file)?;
@@ -347,6 +402,7 @@ pub fn run_before_change(
             file_path: file.to_string(),
             findings: Vec::new(),
             total_issues: 0,
+            displayed_issues: 0,
             has_embeddings: false,
         };
         let stdout = std::io::stdout();
@@ -373,13 +429,22 @@ pub fn run_before_change(
     let store = SymbolStore::open(&db_path)?;
 
     // 5. Knowledge graph query
-    let docs = store.find_knowledge_by_issue(&issues)?;
+    let mut docs = store.find_knowledge_by_issue(&issues)?;
+    // Filter out modifies entries (file nodes) - they are not relevant for before-change
+    docs.retain(|d| d.relation != KnowledgeRelation::Modifies);
+
+    // Compute total_issues as unique issue count with at least one document
+    let total_issues = {
+        let unique: HashSet<&str> = docs.iter().map(|d| d.issue_number.as_str()).collect();
+        unique.len()
+    };
 
     if docs.is_empty() {
         let result = BeforeChangeResult {
             file_path: file.to_string(),
             findings: Vec::new(),
-            total_issues: issues.len(),
+            total_issues,
+            displayed_issues: 0,
             has_embeddings: false,
         };
         let stdout = std::io::stdout();
@@ -412,14 +477,39 @@ pub fn run_before_change(
         (findings_without_ranking(&docs), false)
     };
 
-    // 7. Apply limit
-    let limited_findings: Vec<BeforeChangeFinding> = findings.into_iter().take(limit).collect();
+    // 7. Apply limit (Issue-level)
+    let mut limited_findings = group_and_limit_by_issue(findings, limit);
 
-    // 8. Output
+    // 7.5. Enrich with snippets (optional)
+    if snippet_options.enabled
+        && let Ok(reader) = crate::indexer::reader::IndexReaderWrapper::open(
+            &crate::indexer::index_dir(&commandindex_dir),
+        )
+    {
+        crate::cli::snippet_helper::enrich_before_change_with_snippets(
+            &mut limited_findings,
+            &reader,
+            &snippet_options,
+            format,
+        );
+    }
+    // reader open failure → snippet: None (fallback)
+
+    // 8. Compute displayed_issues
+    let displayed_issues = {
+        let unique: HashSet<&str> = limited_findings
+            .iter()
+            .map(|f| f.issue_number.as_str())
+            .collect();
+        unique.len()
+    };
+
+    // 9. Output
     let result = BeforeChangeResult {
         file_path: file.to_string(),
         findings: limited_findings,
-        total_issues: issues.len(),
+        total_issues,
+        displayed_issues,
         has_embeddings,
     };
     let stdout = std::io::stdout();
@@ -483,26 +573,29 @@ mod tests {
                 relation: KnowledgeRelation::HasWorkplan,
                 file_path: "wp.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "100".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "design.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "100".to_string(),
                 relation: KnowledgeRelation::HasReview,
                 file_path: "review.md".to_string(),
                 title: None,
+                date: None,
             },
         ];
 
         let findings = findings_without_ranking(&docs);
         assert_eq!(findings.len(), 3);
         assert_eq!(findings[0].relation, "has_design");
-        assert_eq!(findings[1].relation, "has_review");
-        assert_eq!(findings[2].relation, "has_workplan");
+        assert_eq!(findings[1].relation, "has_workplan");
+        assert_eq!(findings[2].relation, "has_review");
     }
 
     // --- Rank by max similarity tests ---
@@ -516,6 +609,7 @@ mod tests {
             relation: KnowledgeRelation::HasDesign,
             file_path: "design.md".to_string(),
             title: None,
+            date: None,
         }];
 
         let tmp = tempfile::TempDir::new().unwrap();
@@ -552,5 +646,282 @@ mod tests {
     fn test_error_display_not_git_repository() {
         let err = BeforeChangeError::NotGitRepository;
         assert!(format!("{err}").contains("Not a git repository"));
+    }
+
+    // --- relation_priority tests ---
+
+    #[test]
+    fn test_relation_priority_order() {
+        assert!(relation_priority("has_design") < relation_priority("has_workplan"));
+        assert!(relation_priority("has_workplan") < relation_priority("has_review"));
+        assert!(relation_priority("has_review") < relation_priority("has_progress"));
+        assert!(relation_priority("has_progress") < relation_priority("modifies"));
+        assert!(relation_priority("modifies") < relation_priority("unknown"));
+    }
+
+    // --- findings_without_ranking descending tests ---
+
+    #[test]
+    fn test_findings_without_ranking_descending() {
+        use crate::indexer::knowledge::KnowledgeRelation;
+
+        let docs = vec![
+            KnowledgeDocResult {
+                issue_number: "50".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                file_path: "d50.md".to_string(),
+                title: None,
+                date: None,
+            },
+            KnowledgeDocResult {
+                issue_number: "200".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                file_path: "d200.md".to_string(),
+                title: None,
+                date: None,
+            },
+            KnowledgeDocResult {
+                issue_number: "100".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                file_path: "d100.md".to_string(),
+                title: None,
+                date: None,
+            },
+        ];
+
+        let findings = findings_without_ranking(&docs);
+        assert_eq!(findings.len(), 3);
+        // Should be descending: 200, 100, 50
+        assert_eq!(findings[0].issue_number, "200");
+        assert_eq!(findings[1].issue_number, "100");
+        assert_eq!(findings[2].issue_number, "50");
+    }
+
+    // --- group_and_limit_by_issue tests ---
+
+    #[test]
+    fn test_group_and_limit_by_issue_basic() {
+        // 3 issues, limit=2 -> only 2 issues returned
+        let findings = vec![
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_workplan".to_string(),
+                doc_path: "w100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_review".to_string(),
+                doc_path: "r100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "200".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d200.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "300".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d300.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+        ];
+
+        let result = group_and_limit_by_issue(findings, 2);
+        // Should have issue 100 (2 docs) + issue 200 (1 doc) = 3 docs
+        let unique_issues: HashSet<&str> = result.iter().map(|f| f.issue_number.as_str()).collect();
+        assert_eq!(unique_issues.len(), 2);
+        assert!(unique_issues.contains("100"));
+        assert!(unique_issues.contains("200"));
+        // Issue 300 should be excluded
+        assert!(!unique_issues.contains("300"));
+    }
+
+    #[test]
+    fn test_group_and_limit_by_issue_max_docs() {
+        // Issue with 4 docs -> only MAX_DOCS_PER_ISSUE (2) selected
+        let findings = vec![
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_review".to_string(),
+                doc_path: "r100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_workplan".to_string(),
+                doc_path: "w100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "modifies".to_string(),
+                doc_path: "m100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+        ];
+
+        let result = group_and_limit_by_issue(findings, 10);
+        assert_eq!(result.len(), MAX_DOCS_PER_ISSUE);
+        // After sorting by relation_priority: has_design, has_workplan
+        assert_eq!(result[0].relation, "has_design");
+        assert_eq!(result[1].relation, "has_workplan");
+    }
+
+    #[test]
+    fn test_group_and_limit_by_issue_preserves_order() {
+        // Input order: issue 200 first, then issue 100 -> output preserves this
+        let findings = vec![
+            BeforeChangeFinding {
+                issue_number: "200".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d200.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+            BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "d100.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            },
+        ];
+
+        let result = group_and_limit_by_issue(findings, 10);
+        assert_eq!(result.len(), 2);
+        // Order preserved: 200 before 100
+        assert_eq!(result[0].issue_number, "200");
+        assert_eq!(result[1].issue_number, "100");
+    }
+
+    // --- Snippet output tests ---
+
+    #[test]
+    fn test_before_change_human_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: Some("Design Title".to_string()),
+                similarity: Some(0.85),
+                snippet: Some("test snippet content".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: true,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Human, &mut buf)
+            .unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_before_change_llm_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: Some("test snippet content".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: false,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Llm, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_before_change_json_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: Some(0.85),
+                snippet: Some("test snippet".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: true,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Json, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        assert_eq!(parsed["findings"][0]["snippet"], "test snippet");
+    }
+
+    #[test]
+    fn test_before_change_json_without_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: false,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Json, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // snippet field should not be present when None
+        assert!(parsed["findings"][0].get("snippet").is_none());
     }
 }

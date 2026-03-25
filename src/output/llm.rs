@@ -232,14 +232,19 @@ pub fn format_workspace_llm(
 pub fn format_semantic_llm(
     results: &[SemanticSearchResult],
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     if results.is_empty() {
         return Ok(());
     }
 
+    // トランケーション後のbodyでトークン推定
     let total_text: String = results
         .iter()
-        .map(|r| r.body.as_str())
+        .map(|r| {
+            let (truncated, _) = truncate_body_for_llm(&r.body, llm_options.max_body_lines);
+            truncated
+        })
         .collect::<Vec<_>>()
         .join("");
     let tokens = estimate_tokens(&total_text);
@@ -257,7 +262,28 @@ pub fn format_semantic_llm(
             writeln!(writer, "### {heading}")?;
         }
         writeln!(writer)?;
-        write_body(writer, &result.path, &result.body)?;
+
+        let (truncated_body, was_truncated) =
+            truncate_body_for_llm(&result.body, llm_options.max_body_lines);
+        if was_truncated {
+            let cleaned = strip_control_chars(&truncated_body);
+            if !cleaned.is_empty() {
+                if is_code_file(&result.path) {
+                    let lang = detect_language(&result.path);
+                    let backtick_count = fence_backticks(&cleaned);
+                    let fence: String = "`".repeat(backtick_count);
+                    writeln!(writer, "{fence}{lang}")?;
+                    writeln!(writer, "{cleaned}")?;
+                    writeln!(writer, "... (truncated)")?;
+                    writeln!(writer, "{fence}")?;
+                } else {
+                    writeln!(writer, "{cleaned}")?;
+                    writeln!(writer, "... (truncated)")?;
+                }
+            }
+        } else {
+            write_body(writer, &result.path, &result.body)?;
+        }
     }
     Ok(())
 }
@@ -347,7 +373,7 @@ pub fn format_related_llm(
                 }
                 crate::output::RelationType::PathSimilarity => "path".to_string(),
                 crate::output::RelationType::DirectoryProximity => "dir".to_string(),
-                crate::output::RelationType::KnowledgeGraph => "knowledge".to_string(),
+                crate::output::RelationType::KnowledgeGraph(_) => "knowledge".to_string(),
             })
             .collect();
         writeln!(writer, "- {path} ({})", relations.join(", "))?;
@@ -363,7 +389,8 @@ pub fn format_before_change_llm(
     let file = strip_control_chars(&result.file_path);
     writeln!(
         writer,
-        "## Before-change: {file} ({} issue(s), {} finding(s))",
+        "## Before-change: {file} ({}/{} issues shown, {} finding(s))",
+        result.displayed_issues,
         result.total_issues,
         result.findings.len()
     )?;
@@ -393,6 +420,9 @@ pub fn format_before_change_llm(
             writer,
             "- {doc_path}{sim_str} (#{issue}, {relation}){title_str}"
         )?;
+        if let Some(ref snippet) = finding.snippet {
+            writeln!(writer, "  > {}", strip_control_chars(snippet))?;
+        }
     }
     Ok(())
 }
@@ -470,8 +500,12 @@ pub fn format_why_llm(
         writeln!(writer, "### {issue_label}")?;
         for doc in &issue.documents {
             let doc_path = strip_control_chars(&doc.file_path);
-            let relation = strip_control_chars(&doc.relation);
-            writeln!(writer, "- {doc_path} ({relation})")?;
+            let relation_label =
+                super::human::relation_display_label(&doc.relation, doc.doc_subtype.as_ref());
+            writeln!(writer, "- {doc_path} ({relation_label})")?;
+        }
+        if let Some(count) = issue.modifies_count {
+            writeln!(writer, "- [modifies] modifies: {count} files")?;
         }
         writeln!(writer)?;
     }

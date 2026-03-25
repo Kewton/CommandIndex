@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "type": "security",
+  "must_fix": [],
+  "should_fix": [],
+  "nice_to_have": [
+    {"id": "SEC-1", "description": "relation_strのformat!()エラーメッセージ — ローカルDB由来で低リスク"}
+  ],
+  "summary": "セキュリティ懸念なし。enum追加とmatch拡張のみ。新規入力面なし、パス構築なし、SQL変更なし、unsafeなし。"
+}

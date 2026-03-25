@@ -1,0 +1,16 @@
+{
+  "stage": 1,
+  "action": "設計方針書更新（設計原則レビュー反映）",
+  "changes_applied": [
+    "BTreeMapをHashMapに変更、doc commentにソート済み前提条件を明記（KISS）",
+    "max_docs_per_issueを定数MAX_DOCS_PER_ISSUEに変更、関数引数から除去（KISS）",
+    "rank_by_max_similarity()のソートを3段階に変更（issue_max_sim, issue_number, relation_priority）",
+    "findings_without_ranking()のissue_number比較を数値比較に変更",
+    "total_issuesのセマンティクス再定義を判断6として追加",
+    "JSON出力のfindings最大件数変更の注記追加",
+    "テスト戦略に既存テスト修正を追記",
+    "help_llm.rsの具体的な変更後文言を追記"
+  ],
+  "must_fix_addressed": 2,
+  "should_fix_addressed": 4
+}

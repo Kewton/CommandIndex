@@ -11,6 +11,7 @@ use std::io::Write;
 use clap::ValueEnum;
 use serde::Serialize;
 
+use crate::indexer::knowledge::DocSubtype;
 use crate::indexer::reader::SearchResult;
 
 /// スニペット表示設定
@@ -117,6 +118,14 @@ pub struct RelatedSearchResult {
     pub snippet: Option<String>,
 }
 
+/// ナレッジグラフのメタデータ
+#[derive(Debug, Clone, Default)]
+pub struct KnowledgeGraphMeta {
+    pub issue_number: Option<String>,
+    pub relation: Option<String>,
+    pub doc_subtype: Option<String>,
+}
+
 /// 関連タイプ
 #[derive(Debug, Clone)]
 pub enum RelationType {
@@ -125,7 +134,20 @@ pub enum RelationType {
     TagMatch { matched_tags: Vec<String> },
     PathSimilarity,
     DirectoryProximity,
-    KnowledgeGraph,
+    KnowledgeGraph(KnowledgeGraphMeta),
+}
+
+impl RelationType {
+    pub fn is_knowledge_graph(&self) -> bool {
+        matches!(self, RelationType::KnowledgeGraph(_))
+    }
+
+    pub fn kg_meta(&self) -> Option<&KnowledgeGraphMeta> {
+        match self {
+            RelationType::KnowledgeGraph(meta) => Some(meta),
+            _ => None,
+        }
+    }
 }
 
 /// 関連検索結果を指定フォーマットで出力する
@@ -158,12 +180,14 @@ pub fn format_semantic_results(
     results: &[SemanticSearchResult],
     format: OutputFormat,
     writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
-        OutputFormat::Human => human::format_semantic_human(results, writer),
+        OutputFormat::Human => human::format_semantic_human(results, writer, snippet_config),
         OutputFormat::Json => json::format_semantic_json(results, writer),
         OutputFormat::Path => path::format_semantic_path(results, writer),
-        OutputFormat::Llm => llm::format_semantic_llm(results, writer),
+        OutputFormat::Llm => llm::format_semantic_llm(results, writer, llm_options),
     }
 }
 
@@ -309,6 +333,7 @@ pub struct BeforeChangeResult {
     pub file_path: String,
     pub findings: Vec<BeforeChangeFinding>,
     pub total_issues: usize,
+    pub displayed_issues: usize,
     pub has_embeddings: bool,
 }
 
@@ -320,6 +345,7 @@ pub struct BeforeChangeFinding {
     pub doc_path: String,
     pub doc_title: Option<String>,
     pub similarity: Option<f32>,
+    pub snippet: Option<String>,
 }
 
 /// before-change 結果を指定フォーマットで出力する
@@ -348,6 +374,8 @@ pub struct SuggestStep {
 pub struct SuggestResult {
     pub query: String,
     pub has_embeddings: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub matched_issues: Vec<String>,
     pub strategy: Vec<SuggestStep>,
 }
 
@@ -398,6 +426,8 @@ pub struct WhyIssueEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub documents: Vec<WhyDocumentEntry>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modifies_count: Option<usize>,
 }
 
 /// why の Document エントリ
@@ -405,6 +435,10 @@ pub struct WhyIssueEntry {
 pub struct WhyDocumentEntry {
     pub file_path: String,
     pub relation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc_subtype: Option<DocSubtype>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
 }
 
 /// why 結果を指定フォーマットで出力する

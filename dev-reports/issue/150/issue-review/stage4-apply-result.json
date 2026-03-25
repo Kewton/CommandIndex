@@ -1,0 +1,49 @@
+{
+  "stage": 4,
+  "applied_items": [
+    {
+      "id": "M1",
+      "action": "Added explicit list of all exhaustive match arms that need updating (display_label, sort_order) with specific values"
+    },
+    {
+      "id": "M2",
+      "action": "Added DocSubtype::as_str() mapping: StageReview => 'stage_review'"
+    },
+    {
+      "id": "M3",
+      "action": "Added symbol_store.rs deserialization match arm specification"
+    },
+    {
+      "id": "S1",
+      "action": "Added acceptance criterion #5 requiring edge case test cases"
+    },
+    {
+      "id": "S2",
+      "action": "Clarified grouped() needs no change since StageReview maps to 'レビュー' category"
+    },
+    {
+      "id": "S3",
+      "action": "Already in acceptance criteria #6"
+    },
+    {
+      "id": "S4",
+      "action": "Added acceptance criterion #7 for test_doc_subtype_as_str"
+    }
+  ],
+  "skipped_items": [
+    {
+      "id": "N1",
+      "reason": "LazyLock optimization is a separate issue"
+    },
+    {
+      "id": "N3",
+      "reason": "Greedy .* is acceptable given normalized paths; documented rationale in issue"
+    }
+  ],
+  "issue_updated": true,
+  "must_fix_count_stage1": 2,
+  "must_fix_count_stage3": 3,
+  "total_must_fix": 5,
+  "skip_stage5_8": false,
+  "skip_reason": "Must Fix count > 0, proceeding with 2nd iteration"
+}

@@ -1,0 +1,16 @@
+{
+  "stage": 1,
+  "type": "SOLID/KISS/YAGNI/DRY",
+  "must_fix": [
+    {"id": "M1", "title": "RelationType::KnowledgeGraph に Optional フィールド3つ追加は SRP/OCP 違反", "suggestion": "KG メタデータ専用の構造体(KnowledgeGraphMeta)を定義し、RelationType::KnowledgeGraph(KnowledgeGraphMeta) とする"},
+    {"id": "M2", "title": "relation_to_string() の優先順位変更が 4 コマンドに暗黙的に波及", "suggestion": "全コマンドで同一優先順位が正しいならその旨を設計書に明記し、各コマンドのテストで順序を検証する"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "KNOWLEDGE_GRAPH_WEIGHT 0.95 のチューニング根拠が不透明", "suggestion": "テストケースで「KG エントリが適切に上位に来る」ことをアサーションで保証する"},
+    {"id": "S2", "title": "enrich_entry() の doc_subtype 分岐が肥大化する懸念", "suggestion": "セクション抽出ロジックをスニペット生成専用モジュール(snippet.rs)に切り出す"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "From/Into トレイトで型安全なフィールドマッピング"},
+    {"id": "N2", "title": "全フィールド None 時の振る舞いをテストで明示的にカバー"}
+  ]
+}

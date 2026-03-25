@@ -1,0 +1,15 @@
+{
+  "issue_number": 168,
+  "title": "issue/before-changeの出力に判断理由のスニペットを付与する",
+  "design_policy": "dev-reports/design/issue-168-snippet-inline-design-policy.md",
+  "work_plan": "dev-reports/issue/168/work-plan.md",
+  "phases": [
+    "Phase 1: 型定義変更（BeforeChangeFinding, IssueDocumentEntry に snippet 追加）",
+    "Phase 2: snippet_helper 拡張（既存enrich統一 + 新enrich関数2つ）",
+    "Phase 3: CLI引数追加（--with-snippet, --snippet-lines, --snippet-chars）",
+    "Phase 4: コマンド関数シグネチャ変更・enrich呼び出し",
+    "Phase 5: 出力フォーマッタ更新（human/llm/json）",
+    "Phase 6: テスト追加・修正",
+    "Phase 7: help-llm更新・品質チェック"
+  ]
+}

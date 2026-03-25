@@ -1,0 +1,12 @@
+{
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "category": "コマンドインジェクション", "description": "extract_date_from_git_logのfile_pathにvalidate_git_file_path相当のバリデーションがない。", "suggestion": "既存のvalidate_git_file_pathを適用してパス検証を追加。"},
+    {"id": "S2", "category": "パストラバーサル", "description": "extract_date_from_pathが別コンテキストから呼ばれた場合のパストラバーサル可能性。", "suggestion": "関数の可視性をpub(crate)に制限。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "入力バリデーション", "description": "年の上限チェックなし。chrono対応済みのため実害なし。"},
+    {"id": "N3", "category": "unsafe", "description": "変更対象にunsafeなし。確認済み。"}
+  ],
+  "summary": "深刻な脆弱性なし。Command::new使用、chronoバリデーション、SQLパラメータバインドで安全。should_fixとしてfile_pathバリデーション追加を推奨。"
+}

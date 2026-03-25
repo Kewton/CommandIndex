@@ -1,0 +1,108 @@
+{
+  "issue_number": 168,
+  "iteration": 1,
+  "status": "success",
+  "branch": "feature/issue-168-snippet-inline",
+  "summary": "issue/before-change の出力に判断理由のスニペットを付与する機能を実装",
+  "phases_completed": [
+    {
+      "phase": 1,
+      "description": "型定義変更: BeforeChangeFinding.snippet, IssueDocumentEntry.snippet 追加",
+      "files_changed": [
+        "src/output/mod.rs",
+        "src/indexer/knowledge.rs",
+        "src/cli/before_change.rs",
+        "src/cli/issue.rs",
+        "src/indexer/symbol_store.rs"
+      ]
+    },
+    {
+      "phase": 2,
+      "description": "snippet_helper 拡張: 既存enrich関数の空→None変換統一、enrich_before_change_with_snippets/enrich_issue_documents_with_snippets 追加",
+      "files_changed": ["src/cli/snippet_helper.rs"]
+    },
+    {
+      "phase": 3,
+      "description": "CLI引数追加: before-change/issue に --with-snippet, --snippet-lines, --snippet-chars",
+      "files_changed": ["src/main.rs"]
+    },
+    {
+      "phase": 4,
+      "description": "コマンド関数シグネチャ変更: run_before_change/issue::run に snippet_options 追加、enrich呼び出し",
+      "files_changed": [
+        "src/cli/before_change.rs",
+        "src/cli/issue.rs",
+        "src/main.rs"
+      ]
+    },
+    {
+      "phase": 5,
+      "description": "出力フォーマッタ更新: human/llm/json 各形式にスニペット表示追加",
+      "files_changed": [
+        "src/output/human.rs",
+        "src/output/llm.rs",
+        "src/output/json.rs",
+        "src/cli/issue.rs"
+      ]
+    },
+    {
+      "phase": 6,
+      "description": "テスト追加: before-change/issue のスニペットフォーマッタテスト、CLIオプション受理テスト",
+      "files_changed": [
+        "src/cli/before_change.rs",
+        "src/cli/issue.rs",
+        "tests/cli_args.rs"
+      ]
+    },
+    {
+      "phase": 7,
+      "description": "help-llm更新、品質チェック完了",
+      "files_changed": ["src/cli/help_llm.rs"]
+    }
+  ],
+  "quality_checks": {
+    "cargo_build": "OK (0 errors)",
+    "cargo_clippy": "OK (0 warnings with -D warnings)",
+    "cargo_fmt": "OK (no diff)",
+    "cargo_test_lib": "530 passed, 0 failed",
+    "cargo_test_cli_args": "88 passed, 0 failed",
+    "cargo_test_all": "All pass except pre-existing test_embed_without_ollama_fails (requires Ollama)"
+  },
+  "new_tests_added": [
+    "cli::before_change::tests::test_before_change_human_with_snippet",
+    "cli::before_change::tests::test_before_change_llm_with_snippet",
+    "cli::before_change::tests::test_before_change_json_with_snippet",
+    "cli::before_change::tests::test_before_change_json_without_snippet",
+    "cli::issue::tests::test_format_human_with_snippet",
+    "cli::issue::tests::test_format_llm_with_snippet",
+    "cli::issue::tests::test_format_json_with_snippet_enabled",
+    "cli::issue::tests::test_format_json_with_snippet_disabled_keeps_string_array",
+    "before_change_with_snippet_accepted",
+    "before_change_snippet_lines_zero_rejected",
+    "before_change_snippet_chars_zero_rejected",
+    "issue_with_snippet_accepted",
+    "issue_snippet_lines_zero_rejected",
+    "issue_snippet_chars_zero_rejected"
+  ],
+  "files_modified": [
+    "src/output/mod.rs",
+    "src/indexer/knowledge.rs",
+    "src/indexer/symbol_store.rs",
+    "src/cli/snippet_helper.rs",
+    "src/cli/before_change.rs",
+    "src/cli/issue.rs",
+    "src/output/human.rs",
+    "src/output/llm.rs",
+    "src/output/json.rs",
+    "src/main.rs",
+    "src/cli/help_llm.rs",
+    "tests/cli_args.rs"
+  ],
+  "design_decisions": {
+    "snippet_contract": "Option<String> with Some(non-empty) / None only. Some('') is forbidden.",
+    "default_values": "lines=3, chars=200 (via KNOWLEDGE_SNIPPET_LINES/KNOWLEDGE_SNIPPET_CHARS constants)",
+    "backward_compat": "issue JSON: --with-snippet未指定時はstring[]維持、指定時のみobject[]",
+    "fallback": "tantivy reader open失敗時はsnippet: Noneでフォールバック（エラーにしない）",
+    "existing_enrich_refactor": "enrich_impact_with_snippets/enrich_related_with_snippets も空→None変換に統一"
+  }
+}

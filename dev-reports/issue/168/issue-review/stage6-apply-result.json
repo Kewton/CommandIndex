@@ -1,0 +1,15 @@
+{
+  "stage": 6,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: snippet 未取得時の契約を Option<String> に統一（None/Some(non-empty) のみ、Some(\"\") 禁止）",
+    "M2: JSON後方互換性を解決（--with-snippet 未指定時は string[] 維持、指定時のみオブジェクト配列）",
+    "M3: --snippet-lines / --snippet-chars を追加（既存コマンドとの一貫性）、デフォルト lines=3, chars=200",
+    "S1: issue の JSON スキーマをサンプル付きで明示",
+    "S2: before-change の doc_path/similarity/doc_title/snippet の表示順を明記",
+    "S3: パフォーマンス見積もりを before-change(最大20回) と issue(最大100回) で分離",
+    "S4: テスト方針に tantivy フィクスチャ構築要件を明記"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/168"
+}

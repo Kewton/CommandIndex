@@ -1,0 +1,17 @@
+{
+  "stage": 1, "type": "design_principles", "reviewer": "Claude Opus",
+  "must_fix": [],
+  "should_fix": [
+    {"title": "SRP: query_knowledge_graphのeprintln副作用", "suggestion": "eprintlnを呼び出し元に移動するか[suggest]プレフィックス統一"},
+    {"title": "DRY: build_fallback_strategyがKG結果を受け取れない", "suggestion": "KGステップ挿入をrun_suggest側で行う設計にする"},
+    {"title": "KISS: dedup()がsort()なしで不完全", "suggestion": "sort()前置またはHashSetで重複排除"},
+    {"title": "OCP: build_strategyの引数肥大化（5引数）", "suggestion": "StrategyInput構造体の導入を検討（YAGNI観点で判断）"}
+  ],
+  "nice_to_have": [
+    {"title": "SymbolStore不在時のE2Eテスト未定義"},
+    {"title": "matched_issuesのserde(skip_serializing_if)検討"},
+    {"title": "Issue番号上限3件のマジックナンバー定数化"},
+    {"title": "reason文字列の英語統一確認"}
+  ],
+  "summary": "全体的に質が高い設計。must_fixなし。dedup不完全、build_fallback_strategyのKG未対応、引数肥大化が主要な改善点。"
+}

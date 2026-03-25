@@ -1,0 +1,1 @@
+{"applied": [{"id": "M1", "action": "is_knowledge_graph()ヘルパーメソッドを設計に追加。matches!パターン更新方針を明記"}, {"id": "M2", "action": "全KnowledgeGraph参照箇所をis_knowledge_graph()に集約する方針を設計に追加"}, {"id": "M3", "action": "add_relation()のdiscriminantチェックは維持。メタデータは最初のエントリを保持する方針を明記"}]}

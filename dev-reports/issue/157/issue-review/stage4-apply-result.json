@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "type": "apply_review",
+  "applied_from": "stage3",
+  "changes": [
+    "実装上の注意点セクションを追加（エラー型拡張、Modifiesリレーション対応、ロジック分離、SuggestResult拡張）",
+    "影響範囲セクションを追加（変更対象、他サブコマンド、出力形式、パフォーマンス、設定）",
+    "技術的ノートにfind_knowledge_by_issueとSearchContext.symbol_db_path()の情報を追加"
+  ]
+}

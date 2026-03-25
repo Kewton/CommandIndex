@@ -1,0 +1,12 @@
+{
+  "must_fix": [
+    {"issue": "--limit引数にvalue_parserによる範囲制約がない（limit=0や極大値を許容）", "suggestion": "value_parser = clap::value_parser!(usize).range(1..=1000) を追加"}
+  ],
+  "should_fix": [
+    {"issue": "設計方針書のセキュリティ設計セクションに--limitの値域制約の記載がない"}
+  ],
+  "nice_to_have": [
+    {"issue": "既存コードにunsafe使用あり（embedding系テスト内）だが本Issue スコープ外"}
+  ],
+  "summary": "重大な脆弱性なし。--limitにvalue_parser範囲制約を追加すべき。パストラバーサル対策は十分。unsafe使用は本変更スコープ外。"
+}

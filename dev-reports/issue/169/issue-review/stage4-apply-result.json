@@ -1,0 +1,10 @@
+{
+  "stage": 4,
+  "applied_fixes": [
+    "影響範囲セクション追加: 変更ファイル一覧と影響を受けないファイルを明記",
+    "SQLクエリ設計を具体化 (JOIN + GROUP BY + ORDER BY CAST)",
+    "受け入れ基準にテスト関連の3項目追加 (e2e, cli_args, help_llm)",
+    "help_llm.rs 更新の必要性を明記"
+  ],
+  "issue_updated": true
+}

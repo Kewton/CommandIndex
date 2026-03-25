@@ -1,0 +1,19 @@
+{
+  "stage": 7,
+  "focus": "整合性・影響分析（2回目、Codex）",
+  "must_fix": [
+    { "title": "DRY節に旧名 run() が残存", "suggestion": "run_show() に統一" },
+    { "title": "SQLインジェクション対策記述が固定クエリに不適切", "suggestion": "この機能に即した懸念に書き換え" },
+    { "title": "help_llm/suggest のテスト検証が設計上抜け", "suggestion": "テスト戦略に追加" }
+  ],
+  "should_fix": [
+    { "title": "cli_args.rs の影響見積もりが小さすぎる" },
+    { "title": "0件時出力仕様がIssueとズレ" },
+    { "title": "警告ログのサニタイズ対策未記載" },
+    { "title": "before_change/why の影響記述をより明確に" }
+  ],
+  "nice_to_have": [
+    { "title": "非数値identifier混入テストケース追加" }
+  ],
+  "summary": "run()/run_show() 表記ゆれ、テスト波及範囲不足、セキュリティ記述の機能適合性が主な指摘。"
+}

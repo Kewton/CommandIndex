@@ -1,0 +1,17 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "must_fix": [
+    {"id": "MF-1", "title": "既存ユニットテスト3件がSuggestKgDoc型変更でコンパイルエラー"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "SuggestKgDocへの変換でissue_number付与漏れリスク"},
+    {"id": "SF-2", "title": "kg_relation_priorityのHasProgress/Modifiesが到達不能"},
+    {"id": "SF-3", "title": "find_documents_by_issue()のエラーハンドリング方針が未記載"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "relation_priority重複の技術的負債記録"},
+    {"id": "NH-2", "title": "E2Eテストのフィクスチャ追加必要性"},
+    {"id": "NH-3", "title": "SymbolStoreの複数回オープン非効率性"}
+  ]
+}

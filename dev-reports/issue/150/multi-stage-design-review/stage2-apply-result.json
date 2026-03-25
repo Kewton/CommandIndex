@@ -1,0 +1,1 @@
+{"stage": 2, "applied": ["M1: 3ファイル同時変更制約を実装順序セクションに追記", "S1: 正規表現の具体的マッチ/非マッチ例を追記", "S2: テスト計画に具体的ファイルパスを追記", "S3: symbol_store.rs変更をDocSubtype::parse()委譲に変更"], "design_doc_updated": true}

@@ -1,0 +1,44 @@
+{
+  "must_fix": [
+    {
+      "title": "Breaking change の移行戦略が未定義",
+      "description": "`issue <number>` → `issue show <number>` の breaking change。全ユーザー、スクリプト、CI/CD に影響。help_llm.rs にハードコードされたコマンド例もある。",
+      "suggestion": "deprecation warning を出す移行期間を設けるか、最低限 CHANGELOG に明記する。"
+    },
+    {
+      "title": "E2Eテスト (tests/e2e_issue.rs) が全件修正必要",
+      "description": "全6テストが `[\"issue\", \"140\"]` 形式で呼び出し。サブコマンド化後は全て書き換え必要。",
+      "suggestion": "テスト変更時に旧形式のエラーメッセージ検証テストも追加する。"
+    },
+    {
+      "title": "CLIパーステスト (tests/cli_args.rs) が全件修正必要",
+      "description": "5つのissue CLIテストが全て旧形式。issue list 用のパーステストも追加が必要。",
+      "suggestion": "既存テスト更新 + issue list テスト追加。"
+    }
+  ],
+  "should_fix": [
+    {
+      "title": "help_llm.rs のLLMガイダンス更新",
+      "description": "issueコマンドの説明がサブコマンド構造に対応していない。",
+      "suggestion": "issue show と issue list の両方の例・説明を追加。"
+    },
+    {
+      "title": "list_all_issues() のクエリにLIMIT考慮",
+      "description": "大量Issue時のパフォーマンス。knowledge_nodes の idx_kn_type インデックスは活用可能。",
+      "suggestion": "LIMIT パラメータ（デフォルト100）を設け --limit CLIオプションで制御。"
+    },
+    {
+      "title": "main.rs のディスパッチャー変更",
+      "description": "ConfigCommands パターンに合わせた IssueCommands enum でのmatch式への変更。",
+      "suggestion": "ConfigCommands と同パターンで実装。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "title": "suggest/before_change/why コマンドへの影響は軽微",
+      "description": "SymbolStore API を直接利用しており issue サブコマンド構造変更の影響を受けない。",
+      "suggestion": "ヘルプテキスト内の issue コマンド参照がないか確認。"
+    }
+  ],
+  "summary": "breaking change を含むため、テスト修正（e2e 6件, cli_args 5件）と LLMガイダンス更新が必須。SymbolStore への list_all_issues() 追加は技術的リスク低。ConfigCommands パターン踏襲で構造は明確。他CLIコマンドへの影響は軽微。"
+}

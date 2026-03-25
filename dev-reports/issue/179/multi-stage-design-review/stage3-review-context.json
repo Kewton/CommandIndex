@@ -1,0 +1,47 @@
+{
+  "stage": 3,
+  "type": "impact-analysis-review",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "main.rsのセマンティック分岐でllm_optionsがスコープ外",
+      "description": "llm_optionsはBM25分岐内のローカル変数。セマンティック分岐で構築手順が必要",
+      "suggestion": "セマンティック分岐内でLlmFormatOptionsを構築する手順を明記"
+    },
+    {
+      "id": "M2",
+      "title": "snippet_configはCopy型なのでclone()不要",
+      "description": "matchアームは排他的なのでclone不要。そのまま渡せばよい",
+      "suggestion": "clone()を削除"
+    },
+    {
+      "id": "M3",
+      "title": "tests/output_format.rsの具体的な修正コード未記載",
+      "description": "format_semantic_results()の新シグネチャに追従する具体コードが必要",
+      "suggestion": "デフォルト値での追従コードを明記"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "ハイブリッド検索が影響を受けない理由の説明不足",
+      "suggestion": "SearchResult型変換のためformat_semantic_results()の変更に影響されない旨を記載"
+    },
+    {
+      "id": "S2",
+      "title": "SnippetConfig::default()変更時の挙動伝播",
+      "suggestion": "BM25と一貫した挙動である旨を注記"
+    },
+    {
+      "id": "S3",
+      "title": "JSON/PathパスにISP違反の不要引数",
+      "suggestion": "既存format_results()と同パターンで許容"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "run_semantic_search()の9引数膨張", "suggestion": "将来リファクタリングIssueで対応"},
+    {"id": "N2", "title": "sections空ケースのテスト未記載", "suggestion": "テスト方針に追加"},
+    {"id": "N3", "title": "e2eテストへの影響確認", "suggestion": "出力アサーションを事前検証"}
+  ],
+  "summary": "影響範囲は限定的。must_fix 3件はいずれも軽微（スコープ問題、Copy型、テスト具体コード）。リスクは低い。"
+}

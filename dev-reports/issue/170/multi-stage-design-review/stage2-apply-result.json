@@ -1,0 +1,12 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "status": "applied", "description": "parse_dev_report_pathのシグネチャ維持、scan_dev_reports内でdate取得する責務分離フローに修正"},
+    {"id": "M2", "status": "applied", "description": "insert_knowledge_entriesのmetadata構築コード例を追記"},
+    {"id": "M3", "status": "applied", "description": "format_json変更コード例とe2eテスト修正を追記"},
+    {"id": "S1", "status": "applied", "description": "issueコマンドはJSONのみdate出力と明記"},
+    {"id": "S2", "status": "applied", "description": "find_documents_by_issue/find_knowledge_relatedのdate抽出コード追記"},
+    {"id": "S4", "status": "applied", "description": "base_dirはリポジトリルート前提と明記"}
+  ]
+}

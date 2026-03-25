@@ -1,0 +1,38 @@
+{
+  "stage": 1,
+  "type": "design-principle-review",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "run_semantic_search()のパラメータ膨張（SRP/KISS違反）",
+      "description": "9パラメータになる。構造体でグループ化すべき。",
+      "suggestion": "既存run()と同パターンのため別Issue化してTODOコメントで対応も許容"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "format_semantic_results()がフォーマット固有パラメータを全フォーマットに渡す（ISP違反）",
+      "description": "snippet_configはHumanのみ、llm_optionsはLlmのみで使用",
+      "suggestion": "既存format_results()パターンと一致させれば一貫性で許容可能"
+    },
+    {
+      "id": "S2",
+      "title": "enrich_with_metadata()のfallbackでsections空ケースの仕様未記載",
+      "description": "sections.first()が空の場合のハンドリングが設計方針書に明記されていない",
+      "suggestion": "sections空の場合は現行と同じ空bodyを返すと明記"
+    },
+    {
+      "id": "S3",
+      "title": "スニペット生成ロジックの重複（DRY違反）",
+      "description": "format_human, format_workspace_human, format_semantic_humanで同じtruncate_bodyパターン",
+      "suggestion": "SnippetConfig::apply()メソッドを追加して3箇所の重複を解消"
+    }
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "truncate_body_for_llmの再利用可能", "suggestion": "変更不要"},
+    {"id": "N2", "title": "snippetフィールド追加しない判断は妥当（YAGNI）", "suggestion": "現状維持"},
+    {"id": "N3", "title": "JSON出力のbody全文は適切（OCP）", "suggestion": "現状維持"}
+  ],
+  "summary": "設計は妥当。M1はパラメータ膨張だが既存パターン踏襲のため別Issue化も許容。S3のDRY化が最も効果的。"
+}

@@ -1,0 +1,55 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "SuggestKgDoc -> KnowledgeDocResult 変換例が既存API定義と不整合",
+      "description": "設計書4.6の変換例ではKnowledgeDocResult { issue_number, file_path, relation: d.relation.as_str().to_string() }となっているが、既存のKnowledgeDocResultはrelation: KnowledgeRelationとtitle: Option<String>を持つ。変換コードは型が合わず、titleも欠落している。",
+      "suggestion": "4.6をKnowledgeDocResult { issue_number: d.issue_number.clone(), relation: d.relation.clone(), file_path: d.file_path.clone(), title: None }に修正するか、prepend_knowledge_steps()をSuggestKgDoc受け取りに変更して中間DTO変換をなくす。"
+    },
+    {
+      "id": "MF-2",
+      "title": "before_change.rsのrelation_priority()置換方針が未知値フォールバックを欠く",
+      "description": "既存のrelation_priority(&str)はunknown -> 5を返すフォールバックを持つ。parse()はOptionを返すため、そのまま置換すると未知値の扱いが未定義になる。",
+      "suggestion": "fn relation_priority_str(s: &str) -> u8 { KnowledgeRelation::parse(s).map_or(5, |r| r.priority()) } のような薄い互換ラッパーを残す方針に修正。"
+    },
+    {
+      "id": "MF-3",
+      "title": "ctx.symbol_store_db_path()が存在しないAPI名",
+      "description": "設計書4.5ではctx.symbol_store_db_path()を使用しているが、既存SearchContextが持つのはsymbol_db_path()。",
+      "suggestion": "ctx.symbol_db_path()に修正。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "prepend_knowledge_stepsのシグネチャ維持はKISS観点で再検討余地",
+      "description": "中間DTOとしてSuggestKgDocとKnowledgeDocResultを相互変換する方針は回りくどい。prepend_knowledge_stepsが使うのはissue_numberとfile_pathだけ。",
+      "suggestion": "prepend_knowledge_stepsをSuggestKgDoc受け取りに変更するか、issue_numberとfile_pathだけの専用DTOに統一。"
+    },
+    {
+      "id": "SF-2",
+      "title": "Issue順序がfilter後に不安定",
+      "description": "filter_and_limit_kg_docs()は全件をrelation.priority()でソート後にissue_orderを確定。Issue順が元のissue_numbersの順ではなく、最も優先度の高い文書の位置に依存。",
+      "suggestion": "Issue順はrun_suggest()で抽出したissue_numbersの順を維持し、各Issue内だけをpriority()で整列する方針に。"
+    },
+    {
+      "id": "SF-3",
+      "title": "部分失敗時の可観測性とテスト観点が不足",
+      "description": "全Issue失敗時・一部Issue失敗時のユーザー体験、テスト方針が未定義。",
+      "suggestion": "『全Issue失敗時はKGなしで継続』『一部失敗時は成功分のみ採用』を明文化し、テスト方針を追記。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "SuggestKgDocにtitleを持たせない判断を明記",
+      "suggestion": "SuggestKgDocはステップ生成に必要な最小フィールドのみ保持し、titleはsuggestでは不要のため持たない、と一文補足。"
+    },
+    {
+      "id": "NH-2",
+      "title": "priority()の配置理由にドメイン知識の帰属先を補足",
+      "suggestion": "4.4に『priorityはrelationに付随するドメインルールであり、CLI層ではなくドメイン型へ置く』と補足。"
+    }
+  ],
+  "summary": "find_documents_by_issue()採用、KnowledgeRelation::priority()共通化、部分失敗許容方針は概ね妥当。ただし実装不能レベルのAPI不整合が3点: (1) SuggestKgDoc->KnowledgeDocResult変換例の型不一致、(2) relation_priority置換での未知値フォールバック欠落、(3) ctx.symbol_store_db_path()という存在しないAPI名。"
+}

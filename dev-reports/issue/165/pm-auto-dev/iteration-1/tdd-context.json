@@ -1,0 +1,15 @@
+{
+  "issue_number": 165,
+  "title": "ナレッジグラフ: progress-reportのrelationをhas_progressに変更",
+  "design_policy": "dev-reports/design/issue-165-has-progress-design-policy.md",
+  "work_plan": "dev-reports/issue/165/work-plan.md",
+  "tasks": [
+    "KnowledgeRelation enumにHasProgressバリアント追加（as_str, parse, Display）",
+    "build_pattern_rules()のprogress-reportルールをHasProgressに変更",
+    "symbol_store.rs find_documents_by_issue()をKnowledgeRelation::parse()に統一（DRY改善）",
+    "issue.rs sort_order()にHasProgress追加",
+    "before_change.rs relation_priority()にhas_progress追加",
+    "human.rs relation_display_label()にhas_progress=>progress追加",
+    "全テスト更新"
+  ]
+}

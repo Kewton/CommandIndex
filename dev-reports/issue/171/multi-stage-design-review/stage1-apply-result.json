@@ -1,0 +1,1 @@
+{"applied": [{"id": "M1", "action": "KnowledgeGraphMeta専用構造体に切り出し。RelationType::KnowledgeGraph(KnowledgeGraphMeta)に変更"}, {"id": "M2", "action": "4コマンド共通であることを設計書に明記。各コマンドのテストで順序検証を追加"}]}

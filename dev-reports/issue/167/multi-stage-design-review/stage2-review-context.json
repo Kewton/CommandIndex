@@ -1,0 +1,17 @@
+{
+  "stage": 2,
+  "type": "consistency",
+  "must_fix": [
+    {"id": "MF-1", "title": "SuggestKgDocへの変換ロジックが設計書に明示されていない"},
+    {"id": "MF-2", "title": "prepend_knowledge_stepsの型変更に伴う既存テスト修正がテスト戦略に未記載"}
+  ],
+  "should_fix": [
+    {"id": "SF-1", "title": "SymbolStore::open()のライフサイクル管理の明示"},
+    {"id": "SF-2", "title": "kg_relation_priorityでフィルタ除外済みの値に優先度定義"},
+    {"id": "SF-3", "title": "run_suggest()内のフロー変更箇所の明示化"}
+  ],
+  "nice_to_have": [
+    {"id": "NH-1", "title": "HashMapのuse宣言追加の注記"},
+    {"id": "NH-2", "title": "relation_priority値の整合性コメント"}
+  ]
+}

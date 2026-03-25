@@ -1,0 +1,16 @@
+{
+  "stage": 4,
+  "focus": "セキュリティレビュー",
+  "must_fix": [],
+  "should_fix": [
+    { "title": "CAST式に対する防御的バリデーション", "suggestion": "Rust側でu64パース検証を追加。" },
+    { "title": "エラーメッセージからの内部情報漏洩防止", "suggestion": "IssueCommandError の Display でサニタイズ。" },
+    { "title": "正規表現の unwrap を expect に変更", "suggestion": "expect(\"BUG: invalid regex pattern\") に。" }
+  ],
+  "nice_to_have": [
+    { "title": "design_file_path が表示専用であることをドキュメントコメントに明記" },
+    { "title": "リレーション名のマジック文字列を定数化" },
+    { "title": "出力件数上限の将来考慮（YAGNI、現時点不要）" }
+  ],
+  "summary": "must_fix なし。CLIツールとして適切なセキュリティ水準。防御的バリデーション等の改善を推奨。"
+}

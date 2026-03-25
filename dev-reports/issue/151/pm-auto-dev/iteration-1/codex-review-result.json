@@ -1,0 +1,31 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/indexer/symbol_store.rs",
+      "line": 1080,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`find_knowledge_related()` now joins file-level `modifies` edges but still applies a hard `LIMIT 100` without any `ORDER BY`. For issues that touch many files, the first 100 rows can be dominated by `modifies` edges, so `why` may omit related design/review/workplan documents entirely and the displayed modifies count becomes an arbitrary subset.",
+      "suggestion": "Make the query deterministic and avoid truncating sibling documents. At minimum add an `ORDER BY` that prioritizes document relations before `modifies`, or split document retrieval and modifies counting into separate queries so the document list and count are both complete."
+    },
+    {
+      "file": "src/indexer/knowledge.rs",
+      "line": 295,
+      "severity": "medium",
+      "category": "bug",
+      "description": "`extract_file_modifies_from_git_log()` ignores the `git log` exit status and discards stderr. If `git log` fails or is truncated unexpectedly, indexing still succeeds with a silently empty/partial modifies graph, which is an unhandled error path.",
+      "suggestion": "Check `child.wait()` and return an error when the command exits unsuccessfully. Propagate stderr in the error so callers can distinguish 'not a git repository', permission problems, and other git failures."
+    },
+    {
+      "file": "src/indexer/knowledge.rs",
+      "line": 213,
+      "severity": "low",
+      "category": "bug",
+      "description": "The parser relies on literal `COMMIT_START` / `COMMIT_END` sentinel lines embedded in `git log --format`. A commit subject/body containing one of those exact lines will corrupt parser state and can associate the wrong issue numbers with files.",
+      "suggestion": "Use separators that cannot collide with commit message content, such as NUL-delimited records (`-z`) or a deliberately unique binary/text separator plus robust state handling."
+    }
+  ],
+  "summary": "2 medium-severity潜在バグと1 low-severity潜在バグを確認しました。主な問題は、file-modifies追加後の `why` クエリが非決定的な `LIMIT 100` により関連ドキュメントを欠落させうる点と、git log 失敗時に modifies グラフの欠落を黙殺する点です。レビュー対象範囲では、コマンドインジェクション、SQLインジェクション、unsafe使用、明確なパストラバーサルや機密情報露出といった高優先度のセキュリティ脆弱性は見当たりませんでした。",
+  "requires_fix": true
+}

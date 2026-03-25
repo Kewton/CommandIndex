@@ -1,0 +1,20 @@
+{
+  "status": "success",
+  "tests_passed": true,
+  "clippy_clean": true,
+  "changes_summary": "Added HasProgress variant to KnowledgeRelation enum (between HasWorkplan and Modifies). Updated as_str(), parse(), and Display impl. Changed progress-report PatternRule from HasReview to HasProgress. DRY-refactored symbol_store.rs find_documents_by_issue() to use KnowledgeRelation::parse() instead of hardcoded match. Updated sort_order in issue.rs (HasProgress=4, Modifies=5). Updated relation_priority in before_change.rs (has_progress=3, modifies=4, fallback=5). Added 'has_progress' => 'progress' mapping in human.rs relation_display_label. Updated all test data across knowledge.rs, symbol_store.rs, issue.rs, before_change.rs, human.rs, and e2e_issue.rs.",
+  "files_modified": [
+    "src/indexer/knowledge.rs",
+    "src/indexer/symbol_store.rs",
+    "src/cli/issue.rs",
+    "src/cli/before_change.rs",
+    "src/output/human.rs",
+    "tests/e2e_issue.rs"
+  ],
+  "quality_checks": {
+    "cargo_build": "pass",
+    "cargo_clippy": "pass",
+    "cargo_fmt": "pass",
+    "cargo_test": "pass (1 pre-existing failure in test_embed_without_ollama_fails unrelated to changes)"
+  }
+}

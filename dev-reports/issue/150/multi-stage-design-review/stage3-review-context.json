@@ -1,0 +1,19 @@
+{
+  "stage": 3,
+  "focus": "影響分析",
+  "must_fix": [
+    {"id": "M1", "title": "display_label/sort_orderはenum追加と同時に変更必須（コンパイルエラー）"},
+    {"id": "M2", "title": "symbol_store.rsデシリアライズmatchを更新しないとランタイムエラー"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "tests/e2e_issue.rsのE2Eテスト更新が設計書に欠落", "description": "setup_issue_test_data()にStageReviewエントリ追加、count assertionを5→6に更新必要"},
+    {"id": "S2", "title": "Serialize deriveによるJSON出力形式の不一致（既存問題）"},
+    {"id": "S3", "title": "test_scan_dev_reports_with_temp_dirにdev-reports/review/ディレクトリ作成が必要"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "DocSubtype::parse()メソッド追加でDRY改善"},
+    {"id": "N2", "title": "正規表現のissue{N}がハイフンなし形式であることをコメント追加"},
+    {"id": "N3", "title": "test_groupedにStageReviewエントリ追加"}
+  ],
+  "summary": "影響範囲は3ファイル+E2Eテスト。E2Eテスト(tests/e2e_issue.rs)の更新が設計書に欠落。"
+}

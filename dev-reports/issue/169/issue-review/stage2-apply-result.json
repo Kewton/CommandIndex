@@ -1,0 +1,13 @@
+{
+  "stage": 2,
+  "applied_fixes": [
+    "CLI設計方針を確定: サブコマンド化 (issue list / issue show <number>)",
+    "データ取得方法の具体化: knowledge_nodes JOIN knowledge_edges + GROUP BY",
+    "doc_count カウント対象リレーションを明記 (modifies除外)",
+    "label取得ロジックの優先順位を定義",
+    "ソート順を Issue番号昇順に確定",
+    "全フォーマット (human/json/path/llm) の出力仕様を定義",
+    "受け入れ基準を8項目追加"
+  ],
+  "issue_updated": true
+}

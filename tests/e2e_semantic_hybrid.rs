@@ -337,6 +337,13 @@ fn test_embed_without_ollama_fails() {
     let (dir, _commandindex_dir) =
         setup_semantic_test_dir().expect("test_embed_without_ollama_fails: setup");
 
+    // Force embed to fail by pointing to unreachable endpoint
+    fs::write(
+        dir.path().join("commandindex.toml"),
+        "[embedding]\nendpoint = \"http://127.0.0.1:19999\"\n",
+    )
+    .expect("test_embed_without_ollama_fails: write config");
+
     // Running embed without Ollama available exits successfully but reports
     // failures in stderr warnings and "Failed: N" in stdout.
     let output = common::cmd()
@@ -566,6 +573,125 @@ fn test_rerank_fallback_llm_comment() {
     assert!(
         stdout.contains("<!-- rerank skipped:"),
         "test_rerank_fallback_llm_comment: stdout should contain '<!-- rerank skipped:', got: {stdout}"
+    );
+}
+
+// ===========================================================================
+// BM25=0 semantic fallback tests (Issue #178)
+// ===========================================================================
+
+#[test]
+fn test_hybrid_bm25_zero_semantic_fallback() {
+    // When BM25 returns 0 results but semantic has hits,
+    // the fallback should return semantic results with cosine similarity scores.
+    // BM25 is empty — this test verifies the semantic fallback path
+    let semantic = vec![
+        make_search_result("alpha.md", "Alpha Document", 0.95),
+        make_search_result("beta.md", "Beta Document", 0.80),
+    ];
+
+    // Build a similarity map to simulate what try_hybrid_search does
+    let similar_results = vec![
+        commandindex::embedding::store::EmbeddingSimilarityResult {
+            file_path: "alpha.md".to_string(),
+            section_heading: "Alpha Document".to_string(),
+            similarity: 0.95,
+        },
+        commandindex::embedding::store::EmbeddingSimilarityResult {
+            file_path: "beta.md".to_string(),
+            section_heading: "Beta Document".to_string(),
+            similarity: 0.80,
+        },
+    ];
+
+    // Use the new fallback function
+    let results = commandindex::search::hybrid::semantic_fallback(&semantic, &similar_results, 10);
+
+    assert!(
+        !results.is_empty(),
+        "test_hybrid_bm25_zero_semantic_fallback: should return results when BM25 is empty"
+    );
+    assert_eq!(
+        results.len(),
+        2,
+        "test_hybrid_bm25_zero_semantic_fallback: should return 2 results"
+    );
+
+    // Scores should be cosine similarity values (0.0 to 1.0 range)
+    for r in &results {
+        assert!(
+            r.score >= 0.0 && r.score <= 1.0,
+            "test_hybrid_bm25_zero_semantic_fallback: score {} should be in [0.0, 1.0]",
+            r.score
+        );
+    }
+
+    // alpha should rank first (higher similarity)
+    assert_eq!(
+        results[0].path, "alpha.md",
+        "test_hybrid_bm25_zero_semantic_fallback: alpha (0.95) should rank first"
+    );
+    assert_eq!(
+        results[1].path, "beta.md",
+        "test_hybrid_bm25_zero_semantic_fallback: beta (0.80) should rank second"
+    );
+
+    // Verify actual score values match cosine similarity
+    assert!(
+        (results[0].score - 0.95).abs() < 1e-6,
+        "test_hybrid_bm25_zero_semantic_fallback: alpha score {} should be ~0.95",
+        results[0].score
+    );
+    assert!(
+        (results[1].score - 0.80).abs() < 1e-6,
+        "test_hybrid_bm25_zero_semantic_fallback: beta score {} should be ~0.80",
+        results[1].score
+    );
+}
+
+#[test]
+fn test_hybrid_bm25_zero_semantic_zero() {
+    // When both BM25 and semantic return 0 results, the result should be empty.
+    // Both BM25 and semantic are empty
+    let semantic: Vec<SearchResult> = vec![];
+    let similar_results: Vec<commandindex::embedding::store::EmbeddingSimilarityResult> = vec![];
+
+    let results = commandindex::search::hybrid::semantic_fallback(&semantic, &similar_results, 10);
+
+    assert!(
+        results.is_empty(),
+        "test_hybrid_bm25_zero_semantic_zero: should return empty when both are empty"
+    );
+}
+
+#[test]
+fn test_hybrid_bm25_zero_respects_limit() {
+    // When BM25=0, semantic fallback should respect the limit parameter.
+    let semantic: Vec<SearchResult> = (0..5)
+        .map(|i| {
+            make_search_result(
+                &format!("doc{i}.md"),
+                &format!("Doc {i}"),
+                0.9 - i as f32 * 0.1,
+            )
+        })
+        .collect();
+    let similar_results: Vec<commandindex::embedding::store::EmbeddingSimilarityResult> = (0..5)
+        .map(
+            |i| commandindex::embedding::store::EmbeddingSimilarityResult {
+                file_path: format!("doc{i}.md"),
+                section_heading: format!("Doc {i}"),
+                similarity: 0.9 - i as f32 * 0.1,
+            },
+        )
+        .collect();
+
+    let results = commandindex::search::hybrid::semantic_fallback(&semantic, &similar_results, 3);
+
+    assert_eq!(
+        results.len(),
+        3,
+        "test_hybrid_bm25_zero_respects_limit: should truncate to limit=3"
     );
 }
 

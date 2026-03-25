@@ -951,21 +951,21 @@ fn before_change_max_commits_over_limit_rejected() {
 // --- issue CLI option tests ---
 
 #[test]
-fn issue_help_shows_usage() {
+fn issue_help_shows_subcommands() {
     common::cmd()
         .args(["issue", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Issue"))
-        .stdout(predicate::str::contains("format"));
+        .stdout(predicate::str::contains("list"))
+        .stdout(predicate::str::contains("show"));
 }
 
 #[test]
-fn issue_accepts_number() {
+fn issue_show_accepts_number() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140"])
+        .args(["issue", "show", "140"])
         .assert()
         .failure()
         .stderr(
@@ -975,29 +975,120 @@ fn issue_accepts_number() {
 }
 
 #[test]
-fn issue_rejects_zero() {
+fn issue_show_rejects_zero() {
     common::cmd()
-        .args(["issue", "0"])
+        .args(["issue", "show", "0"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
 }
 
 #[test]
-fn issue_rejects_non_numeric() {
+fn issue_show_rejects_non_numeric() {
     common::cmd()
-        .args(["issue", "abc"])
+        .args(["issue", "show", "abc"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
 }
 
 #[test]
-fn issue_accepts_format_json() {
+fn issue_show_accepts_format_json() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     common::cmd()
         .current_dir(tmp.path())
-        .args(["issue", "140", "--format", "json"])
+        .args(["issue", "show", "140", "--format", "json"])
         .assert()
         .failure();
+}
+
+#[test]
+fn issue_list_accepts_format_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args(["issue", "list", "--format", "json"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn issue_old_syntax_rejects_number() {
+    // Old syntax `issue <number>` should fail since it's now a subcommand structure
+    common::cmd().args(["issue", "140"]).assert().failure();
+}
+
+// --- before-change --with-snippet tests ---
+
+#[test]
+fn before_change_with_snippet_accepted() {
+    common::cmd()
+        .args([
+            "before-change",
+            "src/main.rs",
+            "--with-snippet",
+            "--snippet-lines",
+            "3",
+            "--snippet-chars",
+            "200",
+        ])
+        .output()
+        .expect("command should execute"); // clap accepts the arguments (exit code depends on index)
+}
+
+#[test]
+fn before_change_snippet_lines_zero_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--snippet-lines", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn before_change_snippet_chars_zero_rejected() {
+    common::cmd()
+        .args(["before-change", "src/main.rs", "--snippet-chars", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+// --- issue show --with-snippet tests ---
+
+#[test]
+fn issue_show_with_snippet_accepted() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    common::cmd()
+        .current_dir(tmp.path())
+        .args([
+            "issue",
+            "show",
+            "140",
+            "--with-snippet",
+            "--snippet-lines",
+            "3",
+            "--snippet-chars",
+            "200",
+        ])
+        .assert()
+        .failure(); // fails because no DB, but clap accepts
+}
+
+#[test]
+fn issue_show_snippet_lines_zero_rejected() {
+    common::cmd()
+        .args(["issue", "show", "140", "--snippet-lines", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}
+
+#[test]
+fn issue_show_snippet_chars_zero_rejected() {
+    common::cmd()
+        .args(["issue", "show", "140", "--snippet-chars", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
 }

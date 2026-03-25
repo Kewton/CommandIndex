@@ -1,0 +1,13 @@
+{
+  "stage": 4,
+  "type": "apply-review",
+  "applied_items": [
+    {"id": "M1-M4", "action": "改善案に具体的なファイル・関数レベルの変更内容を明記"},
+    {"id": "M5", "action": "heading不一致時のfallback改善（sections.first()使用）を改善案に追加"},
+    {"id": "S1", "action": "format_semantic_json()はbody全文出力のまま（設計判断として明記）"},
+    {"id": "S2", "action": "テスト方針にtests/output_format.rsの新シグネチャ対応を追加"},
+    {"id": "S3", "action": "トークン予算計算の問題は今回スコープ外として保留"},
+    {"id": "影響範囲セクション追加", "action": "変更対象ファイル一覧と影響なし項目を新セクションとして追加"}
+  ],
+  "issue_updated": true
+}

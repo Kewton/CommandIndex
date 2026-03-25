@@ -1,0 +1,14 @@
+{
+  "stage": 2,
+  "type": "apply-review",
+  "applied_items": [
+    {"id": "M1", "action": "受け入れ基準セクションを追加（5項目）"},
+    {"id": "M2", "action": "根本原因分析セクションを追加（heading不一致fallback + SnippetConfig未接続の2原因）"},
+    {"id": "S1", "action": "format別の現状テーブルと改善案の詳細化"},
+    {"id": "S2", "action": "改善案にrun_semantic_search()シグネチャ変更を明記"},
+    {"id": "S3", "action": "#168との関連性を「同根」から「類似の症状」に修正、技術的差異を明記"},
+    {"id": "N1", "action": "再現手順にcommandindex/commandindexdevの注記追加"},
+    {"id": "N3", "action": "テスト方針セクションを追加"}
+  ],
+  "issue_updated": true
+}

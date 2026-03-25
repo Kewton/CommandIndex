@@ -1,0 +1,39 @@
+{
+  "status": "success",
+  "changes": [
+    {
+      "file": "src/output/mod.rs",
+      "description": "Added KnowledgeGraphMeta struct, changed KnowledgeGraph variant to KnowledgeGraph(KnowledgeGraphMeta), added is_knowledge_graph() and kg_meta() methods to RelationType"
+    },
+    {
+      "file": "src/search/related.rs",
+      "description": "Changed KNOWLEDGE_GRAPH_WEIGHT from 0.8 to 0.95, updated score_knowledge_graph() to populate KnowledgeGraphMeta with issue_number, relation, and doc_subtype"
+    },
+    {
+      "file": "src/cli/context.rs",
+      "description": "Updated has_knowledge_graph check to use is_knowledge_graph(), moved KnowledgeGraph priority from 6th to 3rd in relation_to_string(), added extract_kg_section() for doc_subtype-based snippet extraction"
+    },
+    {
+      "file": "src/output/human.rs",
+      "description": "Updated KnowledgeGraph pattern match to KnowledgeGraph(_)"
+    },
+    {
+      "file": "src/output/llm.rs",
+      "description": "Updated KnowledgeGraph pattern match to KnowledgeGraph(_)"
+    },
+    {
+      "file": "src/output/json.rs",
+      "description": "Updated KnowledgeGraph pattern match to KnowledgeGraph(_)"
+    },
+    {
+      "file": "src/cli/impact.rs",
+      "description": "Updated KnowledgeGraph pattern match to KnowledgeGraph(_)"
+    }
+  ],
+  "tests_passed": true,
+  "clippy_clean": true,
+  "fmt_clean": true,
+  "issues": [
+    "Pre-existing test failure: test_embed_without_ollama_fails in e2e_semantic_hybrid.rs (unrelated to this change, depends on Ollama service availability)"
+  ]
+}

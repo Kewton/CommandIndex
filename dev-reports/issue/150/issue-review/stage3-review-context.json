@@ -1,0 +1,69 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "Exhaustive match arms in display_label() and sort_order()",
+      "description": "Both display_label() and sort_order() use exhaustive match on DocSubtype. Adding StageReview will cause compile errors if not updated simultaneously.",
+      "suggestion": "Add StageReview arm to display_label() (returning 'レビュー') and sort_order() (subtype_order 6). Must be in same commit as enum addition."
+    },
+    {
+      "id": "M2",
+      "title": "Exhaustive match in DocSubtype::as_str()",
+      "description": "DocSubtype::as_str() is an exhaustive match. Adding StageReview without a corresponding arm will cause a compile error.",
+      "suggestion": "Add StageReview => 'stage_review' to as_str()."
+    },
+    {
+      "id": "M3",
+      "title": "Metadata deserialization must handle new subtype string",
+      "description": "find_documents_by_issue() in symbol_store.rs uses exhaustive match on doc_subtype strings. Missing 'stage_review' arm returns error.",
+      "suggestion": "Add 'stage_review' => DocSubtype::StageReview arm in symbol_store.rs."
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "Verify regex against actual file paths",
+      "description": "The regex extracts issue number from filename (new convention vs directory-based extraction in existing patterns).",
+      "suggestion": "Add 2-3 test cases with edge cases (multi-digit issue numbers, long descriptions with hyphens)."
+    },
+    {
+      "id": "S2",
+      "title": "IssueDocumentsResult::grouped() category list",
+      "description": "grouped() hardcodes categories. If StageReview maps to 'レビュー', no change needed. If distinct label used, must be added.",
+      "suggestion": "Use 'レビュー' for StageReview display_label to match existing review categories."
+    },
+    {
+      "id": "S3",
+      "title": "test_scan_dev_reports_with_temp_dir assertion count",
+      "description": "Test asserts exactly 3 entries. Adding review files to fixture requires updating to 4.",
+      "suggestion": "Update existing test assertion or create separate test."
+    },
+    {
+      "id": "S4",
+      "title": "test_doc_subtype_as_str needs new variant",
+      "description": "Test explicitly checks all as_str() values. New variant needs assertion.",
+      "suggestion": "Add assert_eq!(DocSubtype::StageReview.as_str(), 'stage_review')."
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "Regex compilation on every call",
+      "description": "build_pattern_rules() recompiles all regex patterns each call. Pre-existing concern.",
+      "suggestion": "Consider LazyLock for pattern compilation. Not blocking for this issue."
+    },
+    {
+      "id": "N2",
+      "title": "KnowledgeRelation variant consideration",
+      "description": "Using HasReview is consistent with existing review types.",
+      "suggestion": "Using HasReview is fine. Document if different relation was considered."
+    },
+    {
+      "id": "N3",
+      "title": "Greedy .* in regex could match unexpected filenames",
+      "description": "Pattern .*\\.md$ is greedy. Unlikely issue with anchored prefix but could be defensive.",
+      "suggestion": "Consider using [^/]*\\.md$ instead of .*\\.md$."
+    }
+  ],
+  "summary": "Low-risk, well-scoped change. Primary impact: new DocSubtype::StageReview variant requiring updates to 3 exhaustive match blocks and 1 deserialization match. All will produce compile errors if missed. No new dependencies. Minor test updates needed."
+}

@@ -8,11 +8,14 @@ Examples:
   commandindexdev suggest --for \"fix login bug\" --format json
   commandindexdev suggest --for \"refactor database layer\" --format path";
 
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
 
 use crate::cli::search::SearchContext;
+use crate::indexer::knowledge::{DocSubtype, KnowledgeRelation, extract_issue_numbers};
 use crate::indexer::reader::IndexReaderWrapper;
+use crate::indexer::symbol_store::SymbolStore;
 use crate::output::{self, OutputFormat, SuggestResult, SuggestStep};
 use crate::search::hybrid::rrf_merge_files;
 use crate::search::ranking;
@@ -32,6 +35,20 @@ const SEMANTIC_FALLBACK_LIMIT: usize = 20;
 
 /// ファイル単位dedupの上限
 const DEDUP_FILE_LIMIT: usize = 5;
+
+/// ナレッジグラフ参照時の最大Issue番号数
+const MAX_ISSUE_NUMBERS: usize = 3;
+
+/// ナレッジグラフからのIssue単位最大ドキュメント数
+const MAX_KG_DOCS_PER_ISSUE: usize = 4;
+
+/// suggestコマンド用のKGドキュメントDTO
+struct SuggestKgDoc {
+    issue_number: String,
+    file_path: String,
+    relation: KnowledgeRelation,
+    doc_subtype: DocSubtype,
+}
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -156,6 +173,7 @@ fn build_strategy(
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
         has_embeddings,
+        matched_issues: Vec::new(),
         strategy: steps,
     }
 }
@@ -178,6 +196,7 @@ fn build_fallback_strategy(has_embeddings: bool) -> SuggestResult {
     SuggestResult {
         query: String::new(), // Will be overwritten by run_suggest
         has_embeddings,
+        matched_issues: Vec::new(),
         strategy: steps,
     }
 }
@@ -201,6 +220,132 @@ fn maybe_add_semantic_step(
         return true;
     }
     false
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge graph integration
+// ---------------------------------------------------------------------------
+
+/// ナレッジグラフからIssue関連文書を取得する。
+/// symbols.db が存在しない場合や、マッチするIssueがない場合は空のVecを返す。
+fn query_knowledge_graph(ctx: &SearchContext, issue_numbers: &[String]) -> Vec<SuggestKgDoc> {
+    if issue_numbers.is_empty() {
+        return Vec::new();
+    }
+
+    let db_path = ctx.symbol_db_path();
+    if !db_path.exists() {
+        return Vec::new();
+    }
+
+    // SymbolStore::open() はループ外で1回だけ実行する（DB接続コスト削減）
+    let store = match SymbolStore::open(&db_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[suggest] knowledge graph open failed: {e}");
+            return Vec::new();
+        }
+    };
+
+    let mut all_docs = Vec::new();
+    for issue_num in issue_numbers {
+        // 個別Issueのエラー時はそのIssueをスキップし、他のIssueの処理を継続する
+        match store.find_documents_by_issue(issue_num) {
+            Ok(entries) => {
+                for entry in entries {
+                    all_docs.push(SuggestKgDoc {
+                        issue_number: issue_num.clone(),
+                        file_path: entry.file_path,
+                        relation: entry.relation,
+                        doc_subtype: entry.doc_subtype,
+                    });
+                }
+            }
+            Err(e) => {
+                eprintln!("[suggest] knowledge graph query failed for issue {issue_num}: {e}");
+                continue;
+            }
+        }
+    }
+    all_docs
+}
+
+/// ナレッジグラフドキュメントをフィルタリング・Issue単位制限する。
+///
+/// 1. modifies / has_progress / has_review(StageReview) を除外
+/// 2. relation_priority でソート
+/// 3. Issue単位にグルーピングし MAX_KG_DOCS_PER_ISSUE 件に制限
+///
+/// issue_numbersの順序でIssueをグルーピングすることで、入力順を維持する。
+fn filter_and_limit_kg_docs(
+    docs: Vec<SuggestKgDoc>,
+    issue_numbers: &[String],
+) -> Vec<SuggestKgDoc> {
+    // Step 1: フィルタリング
+    let mut filtered: Vec<SuggestKgDoc> = docs
+        .into_iter()
+        .filter(|d| match d.relation {
+            KnowledgeRelation::Modifies => false,
+            KnowledgeRelation::HasProgress => false,
+            KnowledgeRelation::HasReview => {
+                matches!(
+                    d.doc_subtype,
+                    DocSubtype::IssueReview | DocSubtype::DesignReview
+                )
+            }
+            KnowledgeRelation::HasDesign | KnowledgeRelation::HasWorkplan => true,
+        })
+        .collect();
+
+    // Step 2: KnowledgeRelation::priority() でソート（sort_by は安定ソート）
+    filtered.sort_by(|a, b| a.relation.priority().cmp(&b.relation.priority()));
+
+    // Step 3: Issue単位グルーピング + 上限制御
+    let mut issue_groups: HashMap<String, Vec<SuggestKgDoc>> = HashMap::new();
+    for doc in filtered {
+        issue_groups
+            .entry(doc.issue_number.clone())
+            .or_default()
+            .push(doc);
+    }
+
+    let mut result = Vec::new();
+    for issue_num in issue_numbers {
+        if let Some(docs) = issue_groups.remove(issue_num) {
+            result.extend(docs.into_iter().take(MAX_KG_DOCS_PER_ISSUE));
+        }
+    }
+    result
+}
+
+/// ナレッジグラフ結果を戦略ステップとして先頭に挿入する。
+fn prepend_knowledge_steps(
+    strategy: &mut Vec<SuggestStep>,
+    kg_docs: &[SuggestKgDoc],
+    matched_issues: &[String],
+) {
+    let mut kg_steps = Vec::new();
+    // Issue番号ごとの issue コマンドステップ
+    for issue_num in matched_issues {
+        kg_steps.push(SuggestStep {
+            command: format!("{BINARY_NAME} issue show {issue_num} --format json"),
+            reason: format!("Get knowledge graph documents for Issue #{issue_num}"),
+        });
+    }
+    // 各文書の context ステップ
+    for doc in kg_docs {
+        let quoted_path = shell_quote(&doc.file_path);
+        kg_steps.push(SuggestStep {
+            command: format!("{BINARY_NAME} context -- {quoted_path} --max-files 5"),
+            reason: format!(
+                "Get context for Issue #{} related document",
+                doc.issue_number
+            ),
+        });
+    }
+    // 先頭に挿入
+    kg_steps.append(strategy);
+    *strategy = kg_steps;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,14 +386,30 @@ pub fn run_suggest(
         }
     };
 
-    // 4. BM25検索 → ファイル単位dedup
+    // 4. Issue番号抽出（重複排除・上限制御）
+    let issue_numbers: Vec<String> = {
+        let nums = extract_issue_numbers(&query);
+        let mut seen = HashSet::new();
+        nums.into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect()
+    };
+
+    // 5. ナレッジグラフ参照（Issue番号がある場合のみ）
+    let kg_docs = query_knowledge_graph(&ctx, &issue_numbers);
+
+    // 5.5. フィルタリング・Issue単位制限
+    let kg_docs = filter_and_limit_kg_docs(kg_docs, &issue_numbers);
+
+    // 6. BM25検索 → ファイル単位dedup
     let bm25_results = reader
         .search(&query, BM25_SEARCH_LIMIT)
         .map_err(SuggestError::Reader)?;
     let bm25_files = ranking::aggregate_by_file(bm25_results, BM25_SEARCH_LIMIT);
     let bm25_files = ranking::apply_file_type_weight(bm25_files, DEDUP_FILE_LIMIT * 3);
 
-    // 5. セマンティック検索を常に試行
+    // 7. セマンティック検索を常に試行
     let semantic_files = match semantic::query_semantic(
         &ctx.embeddings_db_path(),
         &ctx.config,
@@ -266,7 +427,7 @@ pub fn run_suggest(
         }
     };
 
-    // 6. 結果統合
+    // 8. 結果統合
     let entry_files = match semantic_files {
         Some(ref sem) if !bm25_files.is_empty() => {
             rrf_merge_files(&bm25_files, sem, DEDUP_FILE_LIMIT)
@@ -282,7 +443,7 @@ pub fn run_suggest(
         }
     };
 
-    // 7. 戦略生成
+    // 9. 戦略生成
     let has_embeddings = emb_store
         .as_ref()
         .and_then(|s| s.count().ok())
@@ -295,7 +456,11 @@ pub fn run_suggest(
     };
     result.query = query;
 
-    // 8. 出力
+    // 10. ナレッジグラフステップを戦略先頭に挿入
+    prepend_knowledge_steps(&mut result.strategy, &kg_docs, &issue_numbers);
+    result.matched_issues = issue_numbers;
+
+    // 11. 出力
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
     output::format_suggest_results(&result, format, &mut writer)?;
@@ -438,6 +603,7 @@ mod tests {
         let result = SuggestResult {
             query: "test query".to_string(),
             has_embeddings: false,
+            matched_issues: vec![],
             strategy: vec![
                 SuggestStep {
                     command: "cmd1".to_string(),
@@ -462,6 +628,7 @@ mod tests {
         let result = SuggestResult {
             query: "test query".to_string(),
             has_embeddings: true,
+            matched_issues: vec![],
             strategy: vec![SuggestStep {
                 command: "cmd1".to_string(),
                 reason: "reason1".to_string(),
@@ -482,6 +649,7 @@ mod tests {
         let result = SuggestResult {
             query: "test".to_string(),
             has_embeddings: false,
+            matched_issues: vec![],
             strategy: vec![
                 SuggestStep {
                     command: "cmd1 arg".to_string(),
@@ -500,5 +668,346 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "cmd1 arg");
         assert_eq!(lines[1], "cmd2 arg");
+    }
+
+    // --- prepend_knowledge_steps tests ---
+
+    #[test]
+    fn test_prepend_knowledge_steps_with_docs() {
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs = vec![SuggestKgDoc {
+            issue_number: "42".to_string(),
+            file_path: "docs/design.md".to_string(),
+            relation: KnowledgeRelation::HasDesign,
+            doc_subtype: DocSubtype::DesignPolicy,
+        }];
+        let matched_issues = vec!["42".to_string()];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // Should have 3 steps: issue cmd, context cmd, existing cmd
+        assert_eq!(strategy.len(), 3);
+        assert!(
+            strategy[0].command.contains("issue show 42"),
+            "First step should be issue show command: {}",
+            strategy[0].command
+        );
+        assert!(
+            strategy[1].command.contains("context"),
+            "Second step should be context command: {}",
+            strategy[1].command
+        );
+        assert_eq!(strategy[2].command, "existing_cmd");
+    }
+
+    #[test]
+    fn test_prepend_knowledge_steps_empty() {
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs: Vec<SuggestKgDoc> = vec![];
+        let matched_issues: Vec<String> = vec![];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // Strategy should be unchanged
+        assert_eq!(strategy.len(), 1);
+        assert_eq!(strategy[0].command, "existing_cmd");
+    }
+
+    #[test]
+    fn test_prepend_knowledge_steps_multiple_issues() {
+        let mut strategy = vec![SuggestStep {
+            command: "existing_cmd".to_string(),
+            reason: "existing_reason".to_string(),
+        }];
+        let kg_docs = vec![
+            SuggestKgDoc {
+                issue_number: "10".to_string(),
+                file_path: "docs/design-10.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "20".to_string(),
+                file_path: "docs/plan-20.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        let matched_issues = vec!["10".to_string(), "20".to_string()];
+
+        prepend_knowledge_steps(&mut strategy, &kg_docs, &matched_issues);
+
+        // 2 issue steps + 2 context steps + 1 existing = 5
+        assert_eq!(strategy.len(), 5);
+        assert!(strategy[0].command.contains("issue show 10"));
+        assert!(strategy[1].command.contains("issue show 20"));
+        assert!(strategy[2].command.contains("context"));
+        assert!(strategy[3].command.contains("context"));
+        assert_eq!(strategy[4].command, "existing_cmd");
+    }
+
+    // --- Issue number extraction tests ---
+
+    #[test]
+    fn test_issue_number_dedup() {
+        use crate::indexer::knowledge::extract_issue_numbers;
+
+        // Input with duplicate issue numbers
+        let query = "Issue #42 and #42 again and #100";
+        let nums = extract_issue_numbers(query);
+        let mut seen = HashSet::new();
+        let unique: Vec<String> = nums
+            .into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect();
+
+        assert_eq!(unique.len(), 2);
+        assert_eq!(unique[0], "42");
+        assert_eq!(unique[1], "100");
+    }
+
+    #[test]
+    fn test_issue_number_max_limit() {
+        use crate::indexer::knowledge::extract_issue_numbers;
+
+        // Input with more than MAX_ISSUE_NUMBERS issue numbers
+        let query = "Issues #1 #2 #3 #4 #5";
+        let nums = extract_issue_numbers(query);
+        let mut seen = HashSet::new();
+        let unique: Vec<String> = nums
+            .into_iter()
+            .filter(|n| seen.insert(n.clone()))
+            .take(MAX_ISSUE_NUMBERS)
+            .collect();
+
+        assert_eq!(
+            unique.len(),
+            MAX_ISSUE_NUMBERS,
+            "Should be limited to {MAX_ISSUE_NUMBERS}"
+        );
+    }
+
+    // --- matched_issues JSON serialization tests ---
+
+    #[test]
+    fn test_matched_issues_json_skip_when_empty() {
+        let result = SuggestResult {
+            query: "test".to_string(),
+            has_embeddings: false,
+            matched_issues: vec![],
+            strategy: vec![],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(
+            parsed.get("matched_issues").is_none(),
+            "matched_issues should be omitted when empty, got: {json}"
+        );
+    }
+
+    #[test]
+    fn test_matched_issues_json_present_when_nonempty() {
+        let result = SuggestResult {
+            query: "test".to_string(),
+            has_embeddings: false,
+            matched_issues: vec!["42".to_string(), "100".to_string()],
+            strategy: vec![],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let issues = parsed
+            .get("matched_issues")
+            .expect("matched_issues should be present");
+        assert!(issues.is_array());
+        let arr = issues.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0], "42");
+        assert_eq!(arr[1], "100");
+    }
+
+    // --- filter_and_limit_kg_docs tests ---
+
+    #[test]
+    fn test_filter_removes_modifies() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "src/main.rs".to_string(),
+                relation: KnowledgeRelation::Modifies,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_path, "design.md");
+    }
+
+    #[test]
+    fn test_filter_removes_has_progress() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "progress.md".to_string(),
+                relation: KnowledgeRelation::HasProgress,
+                doc_subtype: DocSubtype::ProgressReport,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_path, "design.md");
+    }
+
+    #[test]
+    fn test_filter_keeps_issue_review_removes_stage_review() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "issue-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::DesignReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "stage-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::StageReview,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 2);
+        let paths: Vec<&str> = result.iter().map(|d| d.file_path.as_str()).collect();
+        assert!(paths.contains(&"issue-review.md"));
+        assert!(paths.contains(&"design-review.md"));
+        assert!(!paths.contains(&"stage-review.md"));
+    }
+
+    #[test]
+    fn test_filter_keeps_design_and_workplan() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_limits_per_issue() {
+        // Create 6 docs for one issue, should be limited to MAX_KG_DOCS_PER_ISSUE (4)
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "issue-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::IssueReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design-review.md".to_string(),
+                relation: KnowledgeRelation::HasReview,
+                doc_subtype: DocSubtype::DesignReview,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "design2.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "workplan2.md".to_string(),
+                relation: KnowledgeRelation::HasWorkplan,
+                doc_subtype: DocSubtype::WorkPlan,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert_eq!(result.len(), MAX_KG_DOCS_PER_ISSUE);
+    }
+
+    #[test]
+    fn test_filter_empty_after_all_filtered() {
+        let docs = vec![
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "src/main.rs".to_string(),
+                relation: KnowledgeRelation::Modifies,
+                doc_subtype: DocSubtype::DesignPolicy,
+            },
+            SuggestKgDoc {
+                issue_number: "1".to_string(),
+                file_path: "progress.md".to_string(),
+                relation: KnowledgeRelation::HasProgress,
+                doc_subtype: DocSubtype::ProgressReport,
+            },
+        ];
+        let issues = vec!["1".to_string()];
+        let result = filter_and_limit_kg_docs(docs, &issues);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_kg_relation_priority_order() {
+        assert!(
+            KnowledgeRelation::HasDesign.priority() < KnowledgeRelation::HasWorkplan.priority()
+        );
+        assert!(
+            KnowledgeRelation::HasWorkplan.priority() < KnowledgeRelation::HasReview.priority()
+        );
+        assert!(
+            KnowledgeRelation::HasReview.priority() < KnowledgeRelation::HasProgress.priority()
+        );
+        assert!(KnowledgeRelation::HasProgress.priority() < KnowledgeRelation::Modifies.priority());
     }
 }

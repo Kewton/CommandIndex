@@ -124,7 +124,7 @@ pub fn format_related_human(
                 }
                 crate::output::RelationType::PathSimilarity => "path".to_string(),
                 crate::output::RelationType::DirectoryProximity => "dir".to_string(),
-                crate::output::RelationType::KnowledgeGraph => "knowledge".to_string(),
+                crate::output::RelationType::KnowledgeGraph(_) => "knowledge".to_string(),
             })
             .collect();
         writeln!(
@@ -224,7 +224,7 @@ pub fn format_why_human(
         writeln!(writer, "  {}", issue_label.green())?;
 
         for doc in &issue.documents {
-            let relation_label = relation_display_label(&doc.relation);
+            let relation_label = relation_display_label(&doc.relation, doc.doc_subtype.as_ref());
             let doc_path = strip_control_chars(&doc.file_path);
             writeln!(
                 writer,
@@ -233,16 +233,27 @@ pub fn format_why_human(
                 doc_path
             )?;
         }
+        if let Some(count) = issue.modifies_count {
+            writeln!(writer, "    [modifies] modifies: {count} files")?;
+        }
     }
     Ok(())
 }
 
 /// relation文字列を人間が読みやすいラベルに変換する
-fn relation_display_label(relation: &str) -> &str {
+/// doc_subtype が存在する場合はそちらを優先する
+pub(crate) fn relation_display_label<'a>(
+    relation: &'a str,
+    doc_subtype: Option<&crate::indexer::knowledge::DocSubtype>,
+) -> &'a str {
+    if let Some(subtype) = doc_subtype {
+        return subtype.display_label_en();
+    }
     match relation {
         "has_design" => "design",
         "has_review" => "review",
         "has_workplan" => "workplan",
+        "has_progress" => "progress",
         other => other,
     }
 }
@@ -251,6 +262,7 @@ fn relation_display_label(relation: &str) -> &str {
 pub fn format_semantic_human(
     results: &[SemanticSearchResult],
     writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
 ) -> Result<(), OutputError> {
     for (i, result) in results.iter().enumerate() {
         if i > 0 {
@@ -268,8 +280,19 @@ pub fn format_semantic_human(
             heading.bold()
         )?;
 
-        // Body snippet (max 2 lines)
-        let snippet = truncate_body(&strip_control_chars(&result.body), 2, 120);
+        // Body snippet
+        let body_cleaned = strip_control_chars(&result.body);
+        let effective_lines = if snippet_config.lines == 0 {
+            usize::MAX
+        } else {
+            snippet_config.lines
+        };
+        let effective_chars = if snippet_config.chars == 0 {
+            usize::MAX
+        } else {
+            snippet_config.chars
+        };
+        let snippet = truncate_body(&body_cleaned, effective_lines, effective_chars);
         for line in snippet.lines() {
             writeln!(writer, "  {line}")?;
         }
@@ -335,6 +358,14 @@ pub fn format_before_change_human(
         return Ok(());
     }
 
+    if result.displayed_issues < result.total_issues {
+        writeln!(
+            writer,
+            "  showing {} of {} issues (limited by --limit)",
+            result.displayed_issues, result.total_issues
+        )?;
+    }
+
     writeln!(writer)?;
 
     for (i, finding) in result.findings.iter().enumerate() {
@@ -357,6 +388,11 @@ pub fn format_before_change_human(
         if let Some(ref title) = finding.doc_title {
             let title_cleaned = strip_control_chars(title);
             writeln!(writer, "  {}", title_cleaned.dimmed())?;
+        }
+        if let Some(ref snippet) = finding.snippet {
+            for line in snippet.lines() {
+                writeln!(writer, "  > {}", strip_control_chars(line).dimmed())?;
+            }
         }
     }
     Ok(())
@@ -399,4 +435,47 @@ pub fn format_diff_human(result: &DiffResult, writer: &mut dyn Write) -> Result<
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::indexer::knowledge::DocSubtype;
+
+    #[test]
+    fn test_relation_display_label_with_doc_subtype() {
+        assert_eq!(
+            relation_display_label("has_progress", Some(&DocSubtype::ProgressReport)),
+            "progress"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::IssueReview)),
+            "review"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::DesignReview)),
+            "review"
+        );
+        assert_eq!(
+            relation_display_label("has_design", Some(&DocSubtype::DesignPolicy)),
+            "design"
+        );
+        assert_eq!(
+            relation_display_label("has_workplan", Some(&DocSubtype::WorkPlan)),
+            "workplan"
+        );
+        assert_eq!(
+            relation_display_label("has_review", Some(&DocSubtype::StageReview)),
+            "review"
+        );
+    }
+
+    #[test]
+    fn test_relation_display_label_without_doc_subtype() {
+        assert_eq!(relation_display_label("has_design", None), "design");
+        assert_eq!(relation_display_label("has_review", None), "review");
+        assert_eq!(relation_display_label("has_workplan", None), "workplan");
+        assert_eq!(relation_display_label("has_progress", None), "progress");
+        assert_eq!(relation_display_label("modifies", None), "modifies");
+    }
 }
