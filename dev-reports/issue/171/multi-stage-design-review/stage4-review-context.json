@@ -1,0 +1,13 @@
+{
+  "stage": 4,
+  "type": "セキュリティ",
+  "must_fix": [],
+  "should_fix": [
+    {"id": "S1", "title": "doc_subtypeを許可リストで検証してからセクション抽出に使用", "suggestion": "既知のDocSubtype enumでマッチし、不明値はフォールバック"},
+    {"id": "S2", "title": "セクション抽出後のスニペット長に上限を設ける", "suggestion": "既存のtruncate_body()と同等の上限(500文字)を維持"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "出力のファイルパスをrelative-pathモードで提供検討"},
+    {"id": "N2", "title": "Optional フィールドの NULL ハンドリングをテストでカバー"}
+  ]
+}

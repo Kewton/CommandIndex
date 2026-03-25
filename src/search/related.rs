@@ -4,7 +4,7 @@ use std::fmt;
 
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 use crate::indexer::symbol_store::{SymbolStore, SymbolStoreError};
-use crate::output::{RelatedSearchResult, RelationType};
+use crate::output::{KnowledgeGraphMeta, RelatedSearchResult, RelationType};
 
 // Score weight constants
 pub const MARKDOWN_LINK_WEIGHT: f32 = 1.0;
@@ -13,7 +13,7 @@ pub const TAG_MATCH_WEIGHT: f32 = 0.5;
 pub const PATH_SIMILARITY_WEIGHT: f32 = 0.4;
 pub const DIR_PROXIMITY_WEIGHT: f32 = 0.2;
 pub const DIR_PROXIMITY_1UP_WEIGHT: f32 = 0.1;
-pub const KNOWLEDGE_GRAPH_WEIGHT: f32 = 0.8;
+pub const KNOWLEDGE_GRAPH_WEIGHT: f32 = 0.95;
 
 #[derive(Debug)]
 pub enum RelatedSearchError {
@@ -463,11 +463,16 @@ impl<'a> RelatedSearchEngine<'a> {
             .find_knowledge_related(target)
             .map_err(RelatedSearchError::SymbolStore)?;
         for result in related {
+            let meta = KnowledgeGraphMeta {
+                issue_number: Some(result.issue_number.clone()),
+                relation: Some(result.relation.clone()),
+                doc_subtype: result.doc_subtype.as_ref().map(|d| d.as_str().to_string()),
+            };
             add_relation(
                 scores,
                 &result.file_path,
                 KNOWLEDGE_GRAPH_WEIGHT,
-                RelationType::KnowledgeGraph,
+                RelationType::KnowledgeGraph(meta),
             );
         }
         Ok(())

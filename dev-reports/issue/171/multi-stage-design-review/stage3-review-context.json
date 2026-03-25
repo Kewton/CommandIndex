@@ -1,0 +1,20 @@
+{
+  "stage": 3,
+  "type": "影響分析",
+  "must_fix": [
+    {"id": "M1", "title": "enum variant変更が全パターンマッチ箇所でコンパイルエラーを引き起こす", "suggestion": "全codebaseをgrepして更新"},
+    {"id": "M2", "title": "PartialEq/serde derivationのセマンティクス変更", "suggestion": "is_knowledge_graph()ヘルパーで等価チェックを集約"},
+    {"id": "M3", "title": "テストファイルのコンパイル破壊", "suggestion": "cargo build --all-targetsで全箇所特定"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "重み変更が4コマンド全体のランキングに影響"},
+    {"id": "S2", "title": "relation_to_string()の優先度変更がmixed-relationエントリの表示ラベルを変更"},
+    {"id": "S3", "title": "doc_subtype分岐のexhaustive match必要"},
+    {"id": "S4", "title": "JSON出力フォーマット変更"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "enum変更の設計意図コメント追加"},
+    {"id": "N2", "title": "KnowledgeGraphコンストラクタ追加"},
+    {"id": "N3", "title": "全コマンドのランキングリグレッションテスト追加"}
+  ]
+}

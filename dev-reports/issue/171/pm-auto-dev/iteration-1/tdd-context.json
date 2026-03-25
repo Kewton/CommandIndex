@@ -1,0 +1,55 @@
+{
+  "issue_number": 171,
+  "title": "contextコマンドのナレッジグラフ統合改善",
+  "description": "既存のKG統合を改善: 重み最適化、スニペット品質向上、リレーション優先度変更",
+  "work_plan": "dev-reports/issue/171/work-plan.md",
+  "design_policy": "dev-reports/design/issue-171-context-knowledge-graph-design-policy.md",
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "KnowledgeGraphMeta構造体とRelationType enum変更",
+      "files": ["src/output/mod.rs"],
+      "details": "KnowledgeGraphMeta構造体新設(Default derive)、KnowledgeGraph→KnowledgeGraph(KnowledgeGraphMeta)、is_knowledge_graph()/kg_meta()ヘルパー追加"
+    },
+    {
+      "id": "1.2",
+      "title": "パターンマッチ更新（全8箇所）",
+      "files": ["src/search/related.rs", "src/cli/context.rs", "src/output/human.rs", "src/output/llm.rs", "src/output/json.rs", "src/cli/impact.rs"],
+      "details": "KnowledgeGraph→KnowledgeGraph(_)に更新。context.rsはis_knowledge_graph()を使用"
+    },
+    {
+      "id": "2.1",
+      "title": "KNOWLEDGE_GRAPH_WEIGHT調整",
+      "files": ["src/search/related.rs"],
+      "details": "0.8→0.95"
+    },
+    {
+      "id": "2.2",
+      "title": "score_knowledge_graph()にメタデータ付加",
+      "files": ["src/search/related.rs"],
+      "details": "KnowledgeRelatedResultからKnowledgeGraphMetaに変換して付加"
+    },
+    {
+      "id": "2.3",
+      "title": "relation_to_string()の優先度変更",
+      "files": ["src/cli/context.rs"],
+      "details": "KnowledgeGraphを6番目→3番目に移動"
+    },
+    {
+      "id": "2.4",
+      "title": "enrich_entry()のスニペット改善",
+      "files": ["src/cli/context.rs"],
+      "details": "kg_meta().doc_subtypeでセクション抽出。500文字上限維持。フォールバック:truncate_body()"
+    }
+  ],
+  "affected_files_all_matches": [
+    "src/output/mod.rs:129 - enum定義",
+    "src/search/related.rs:470 - score_knowledge_graph()",
+    "src/cli/context.rs:285 - enrich_entry() matches!",
+    "src/cli/context.rs:389 - relation_to_string() matches!",
+    "src/output/human.rs:127 - human出力",
+    "src/output/llm.rs:350 - LLM出力",
+    "src/output/json.rs:96 - JSON出力",
+    "src/cli/impact.rs:292 - impact出力"
+  ]
+}
