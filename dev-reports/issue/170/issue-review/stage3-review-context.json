@@ -1,0 +1,75 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "既存機能",
+      "description": "WhyDocumentEntryにdateフィールド追加が必要。group_knowledge_results（why.rs:122-166）で日付取得ロジックの呼び出しが必要。",
+      "suggestion": "WhyDocumentEntryに Option<String> のdateフィールドを追加し、group_knowledge_resultsで日付取得ロジックを呼び出す。"
+    },
+    {
+      "id": "M2",
+      "category": "既存機能",
+      "description": "IssueDocumentEntryにdateフィールド追加が必要。find_documents_by_issue（symbol_store.rs:855-917）での生成時にdateを設定するか後処理で付与する必要がある。",
+      "suggestion": "IssueDocumentEntryにOption<String>のdateフィールド追加。find_documents_by_issueではNone設定、呼び出し側で日付取得ロジック適用。"
+    },
+    {
+      "id": "M3",
+      "category": "既存機能",
+      "description": "issue --format jsonの出力はカテゴリ別文字列配列。dateフィールド含めるにはオブジェクト配列への破壊的変更が必要。",
+      "suggestion": "documentsの各カテゴリ値を文字列配列からオブジェクト配列（{file_path, date}）に変更。"
+    },
+    {
+      "id": "M4",
+      "category": "既存機能",
+      "description": "日付取得ロジック（ファイル名からの日付パターン抽出 + git logフォールバック）は新規実装が必要。",
+      "suggestion": "knowledge.rsに日付抽出ユーティリティ関数を追加。(1) ファイル名からregexで日付抽出、(2) 失敗時はgit log -1 --format=%ai で取得。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "テスト",
+      "description": "tests/e2e_issue.rsのissue_json_formatテストがJSONスキーマ変更に伴い修正必要。",
+      "suggestion": "新スキーマに合わせてテスト更新。"
+    },
+    {
+      "id": "S2",
+      "category": "テスト",
+      "description": "src/cli/issue.rsの単体テスト（約8箇所）でIssueDocumentEntry初期化にdate追加必要。",
+      "suggestion": "全箇所にdate: Noneを追加。"
+    },
+    {
+      "id": "S3",
+      "category": "テスト",
+      "description": "src/cli/why.rsの単体テスト（約10箇所）でWhyDocumentEntry初期化にdate追加必要。",
+      "suggestion": "全箇所にdate: Noneを追加。"
+    },
+    {
+      "id": "S4",
+      "category": "テスト",
+      "description": "tests/e2e_issue.rsのsetup_issue_test_dataでKnowledgeEntry修正が必要になる可能性。",
+      "suggestion": "KnowledgeEntryにはdateを追加せず、出力時のみで日付取得する設計で影響回避。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "パフォーマンス",
+      "description": "git logを個別実行するとドキュメント数に比例してプロセス起動。現状では深刻ではない。",
+      "suggestion": "初期実装は個別実行で十分。将来的にバッチ方式を検討。"
+    },
+    {
+      "id": "N2",
+      "category": "依存関係",
+      "description": "chronoが既に依存にある。新規依存追加は不要。",
+      "suggestion": "日付文字列のままString型で扱えば十分。"
+    },
+    {
+      "id": "N3",
+      "category": "既存機能",
+      "description": "KnowledgeRelatedResult構造体にもdateが必要になる可能性。",
+      "suggestion": "後処理での付与が影響範囲を最小化。"
+    }
+  ],
+  "summary": "影響は4箇所の構造体変更に集中。最大リスクはissue JSONスキーマの破壊的変更(M3)。テスト修正約20箇所だが機械的変更。パフォーマンスリスク低、依存追加不要。"
+}

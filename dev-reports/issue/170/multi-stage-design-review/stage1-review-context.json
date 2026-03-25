@@ -1,0 +1,19 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "SOLID", "description": "extract_date_from_filenameの正規表現がファイル名先頭にアンカーされていない。意図しないパターンに誤マッチする可能性。", "suggestion": "正規表現を ^(\\d{4}-\\d{2}-\\d{2}) に変更しファイル名先頭にアンカー。"},
+    {"id": "M2", "category": "エラーハンドリング", "description": "extract_date_from_git_logで line[..10] のスライスが10バイト未満の場合パニックする。", "suggestion": "line.get(..10) を使用しNoneの場合はNoneを返す。"},
+    {"id": "M3", "category": "DRY", "description": "KnowledgeEntry、IssueDocumentEntry、KnowledgeRelatedResultに同一フィールド群が重複。", "suggestion": "今回はdate追加に留め、共通構造体へのリファクタリングは別Issueで検討。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "KISS", "description": "extract_date_from_filename内で毎回Regex::newを呼び出している。", "suggestion": "LazyLockでコンパイル済み正規表現をキャッシュ。"},
+    {"id": "S2", "category": "API", "description": "抽出した日付文字列の月・日範囲チェックがない。", "suggestion": "chrono::NaiveDateでバリデーション追加。"},
+    {"id": "S3", "category": "SOLID", "description": "knowledge.rsに日付取得ロジック追加で肥大化の懸念。", "suggestion": "プライベート関数として追加し、将来的にモジュール分割を検討。"},
+    {"id": "S4", "category": "エラーハンドリング", "description": "git log失敗時にログが残らない。", "suggestion": "tracing::debug!でエラー情報を出力。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "YAGNI", "description": "git logフォールバックの利用頻度が不明。", "suggestion": "フォールバック発動回数のログ出力を検討。"},
+    {"id": "N2", "category": "API", "description": "破壊的変更のバージョニング・マイグレーションガイドが未記載。", "suggestion": "CHANGELOGに記載する計画を追記。"},
+    {"id": "N3", "category": "KISS", "description": "Option<String>型の将来的な型安全性。", "suggestion": "現時点ではString十分。将来NaiveDate型への移行を検討。"}
+  ],
+  "summary": "設計方針は明確で整合性あり。必須修正: 正規表現アンカー(M1)、スライスパニック(M2)、構造体重複(M3)。M3は別Issue可。推奨: regexキャッシュ(S1)、日付バリデーション(S2)、エラーログ(S4)。"
+}

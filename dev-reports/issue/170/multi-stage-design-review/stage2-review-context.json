@@ -1,0 +1,18 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "整合性", "description": "parse_dev_report_pathのシグネチャ変更またはdate取得の責務分離が未記載。extract_date_from_pathはrepo_rootが必要だがparse_dev_report_pathはpath引数のみ。", "suggestion": "scan_dev_reports内でparse_dev_report_path後に別途extract_date_from_pathを呼ぶフローに修正（責務分離推奨）。"},
+    {"id": "M2", "category": "整合性", "description": "insert_knowledge_entries内のmetadata JSON構築ロジック変更が未記載。", "suggestion": "metadata構築でentry.dateも含めるコード例を明示。"},
+    {"id": "M3", "category": "整合性", "description": "format_json関数のオブジェクト配列変換ロジックが未記載。e2eテスト修正も不足。", "suggestion": "format_json変更後の実装とe2eテストアサーション修正を追記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "影響範囲", "description": "issueコマンドのhuman/llmフォーマットでdate表示するかの判断が曖昧。", "suggestion": "issue jsonのみdate出力と明記。"},
+    {"id": "S2", "category": "影響範囲", "description": "find_knowledge_relatedとfind_documents_by_issueのmetadataパースでdate抽出コードが未記載。", "suggestion": "具体的なパースコード例を追記。"},
+    {"id": "S3", "category": "テスト", "description": "e2e_issue.rsの具体的なテスト修正内容が未記載。", "suggestion": "オブジェクト配列前提のアサーションパターンを追記。"},
+    {"id": "S4", "category": "設計", "description": "scan_dev_reportsのbase_dirがrepo_rootとして使用可能かの検討が未記載。", "suggestion": "前提条件として明記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "パフォーマンス", "description": "パフォーマンス見積もりの記載がない。", "suggestion": "ファイル数100件以下で問題なしとの見積もりを追記。"},
+    {"id": "N3", "category": "ドキュメント", "description": "行番号参照が不正確な箇所あり。", "suggestion": "構造体名のみで参照する形式に統一。"}
+  ],
+  "summary": "設計方針書は全体として正確。主な問題: (1)parse_dev_report_pathのdate取得責務分離未記載、(2)insert_knowledge_entries変更未記載、(3)format_json変更コード未記載。"
+}

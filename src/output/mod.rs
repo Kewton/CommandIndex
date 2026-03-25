@@ -435,6 +435,8 @@ pub struct WhyDocumentEntry {
     pub relation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doc_subtype: Option<DocSubtype>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
 }
 
 /// why 結果を指定フォーマットで出力する

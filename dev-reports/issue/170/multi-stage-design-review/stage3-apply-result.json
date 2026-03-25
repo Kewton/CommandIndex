@@ -1,0 +1,11 @@
+{
+  "stage": 3,
+  "applied_items": [
+    {"id": "M1", "status": "applied", "description": "suggest.rsを変更ファイル一覧に追加"},
+    {"id": "M2", "status": "applied", "description": "symbol_store.rsテスト（約10箇所）をテスト修正箇所に追加"},
+    {"id": "M3", "status": "applied", "description": "データ整合性セクション追加（dateなし時のNone処理）"},
+    {"id": "S1", "status": "applied", "description": "before_change.rsでdate無視を明記"},
+    {"id": "S3", "status": "applied", "description": "scan_dev_reports内でdate設定する設計に統一"},
+    {"id": "S4", "status": "applied", "description": "extract_date_from_filenameのユニットテスト追加を明記"}
+  ]
+}

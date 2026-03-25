@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "category": "正確性",
+      "description": "Issueの「現状」例に示されているJSON出力例のファイル名が実在しないファイルを参照している。",
+      "suggestion": "実在するファイル名に修正するか、具体的なファイル名を省略して汎用的な例とする。"
+    },
+    {
+      "id": "M2",
+      "category": "受け入れ基準",
+      "description": "Issueに明確なテスト可能な受け入れ基準が記載されていない。「期待される結果」にJSON例はあるが、どのコマンド・どのオプション・どの条件で検証すべきかが不明確。",
+      "suggestion": "以下の受け入れ基準を追加: (1) why --format json の出力にdateフィールドが含まれること (2) issue N --format json の出力にdateフィールドが含まれること (3) ファイル名に日付が含まれる場合はそこから抽出されること (4) ファイル名に日付がない場合のフォールバック動作が明示されること (5) --timelineオプションで日付昇順に並ぶこと"
+    },
+    {
+      "id": "M3",
+      "category": "正確性",
+      "description": "日付取得方法の優先順位1「ファイル名から抽出」について「多くのレビュー文書で利用可能」と記載しているが、実際にはStage Reviewファイルのみ日付プレフィックスがある。他のドキュメント種別（design-policy, work-plan等）にはファイル名に日付がない。",
+      "suggestion": "ファイル名日付抽出はStageReviewのみに適用可能であることを明記し、その他はgit log等のフォールバック戦略の優先度を上げる。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "category": "実装方針",
+      "description": "優先順位2「パスから抽出」と優先順位3「git log由来」は実質的に同じ方法。区別する意味が不明確。",
+      "suggestion": "優先順位を (1) ファイル名の日付パターン抽出 (2) git log --format=%ai による取得 の2段階に簡素化する。"
+    },
+    {
+      "id": "S2",
+      "category": "整合性",
+      "description": "既存データとの後方互換性・マイグレーション戦略の記載がない。",
+      "suggestion": "metadataのJSONに date フィールドを追加し、既存データでは null として扱う方針を明記。re-indexで再生成される前提ならその旨も記載。"
+    },
+    {
+      "id": "S3",
+      "category": "整合性",
+      "description": "影響を受ける構造体（WhyDocumentEntry, IssueDocumentEntry, KnowledgeEntry, KnowledgeDocResult）と変更箇所が明示されていない。",
+      "suggestion": "影響を受ける構造体を一覧化し、それぞれに対する変更方針を記載する。"
+    },
+    {
+      "id": "S4",
+      "category": "実装方針",
+      "description": "--timeline オプションはJSON出力への日付フィールド追加とは別の機能。1つのIssueに混在するとスコープが肥大化する。",
+      "suggestion": "--timeline オプションは別Issueに分離することを推奨。このIssueのスコープは「JSON出力への日付フィールド追加」に限定する。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "category": "実装方針",
+      "description": "大量ファイルに対してgit logを個別実行するとパフォーマンスに影響する可能性。",
+      "suggestion": "git log --name-only --format='%ai' で一括取得する方法やキャッシュ戦略を検討。"
+    },
+    {
+      "id": "N2",
+      "category": "整合性",
+      "description": "日付フォーマットの仕様と、日付が取得できない場合の動作が明示されていない。",
+      "suggestion": "ISO 8601（YYYY-MM-DD）を明記し、取得できない場合はnullまたはフィールド省略の方針を規定。"
+    }
+  ],
+  "summary": "Issue #170は方向性として妥当だが、(1) ファイル名から日付を取得できるのはStageReviewファイルのみで記載と実態に乖離、(2) 受け入れ基準が不明確、(3) --timelineオプション混在でスコープ不明確、(4) 影響構造体とDB metadata変更方針が未記載。must_fix 3件、should_fix 4件、nice_to_have 2件。"
+}

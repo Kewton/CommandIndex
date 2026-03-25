@@ -185,6 +185,7 @@ pub struct KnowledgeEntry {
     pub file_path: String,
     pub relation: KnowledgeRelation,
     pub doc_subtype: DocSubtype,
+    pub date: Option<String>,
 }
 
 /// Issue関連ドキュメントの検索結果（metadataパース済みDTO）
@@ -193,6 +194,7 @@ pub struct IssueDocumentEntry {
     pub file_path: String,
     pub relation: KnowledgeRelation,
     pub doc_subtype: DocSubtype,
+    pub date: Option<String>,
     pub snippet: Option<String>,
 }
 
@@ -204,6 +206,7 @@ pub struct KnowledgeRelatedResult {
     pub issue_number: String,
     pub title: Option<String>,
     pub doc_subtype: Option<DocSubtype>,
+    pub date: Option<String>,
 }
 
 /// git log から抽出した (issue, file) ペア
@@ -447,10 +450,68 @@ pub fn parse_dev_report_path(path: &str) -> Option<KnowledgeEntry> {
                 file_path: normalized.to_string(),
                 relation: rule.relation.clone(),
                 doc_subtype: rule.doc_subtype.clone(),
+                date: None,
             });
         }
     }
     None
+}
+
+// ---------------------------------------------------------------------------
+// Date extraction utilities
+// ---------------------------------------------------------------------------
+
+/// ファイル名先頭の YYYY-MM-DD パターン（コンパイル済みキャッシュ）
+static DATE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^(\d{4}-\d{2}-\d{2})").expect("DATE_RE is a valid regex literal")
+});
+
+/// ファイル名から先頭の YYYY-MM-DD パターンを抽出（^アンカー付き）
+fn extract_date_from_filename(file_path: &str) -> Option<String> {
+    let filename = Path::new(file_path).file_name()?.to_str()?;
+    let date_str = DATE_RE.captures(filename).map(|c| c[1].to_string())?;
+    // chrono::NaiveDate でバリデーション（不正な月・日を拒否）
+    chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").ok()?;
+    Some(date_str)
+}
+
+/// git log から最終コミット日を取得
+fn extract_date_from_git_log(file_path: &str, repo_root: &Path) -> Option<String> {
+    if !validate_git_file_path(file_path) {
+        tracing::debug!("Invalid file path for git log: {}", file_path);
+        return None;
+    }
+    let output = std::process::Command::new("git")
+        .args(["log", "--format=%ai", "-1", "--", file_path])
+        .current_dir(repo_root)
+        .output()
+        .map_err(|e| {
+            tracing::debug!("git log failed for {}: {}", file_path, e);
+            e
+        })
+        .ok()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.trim();
+    if line.is_empty() {
+        tracing::debug!("git log returned empty for {}", file_path);
+        return None;
+    }
+    // "%ai" format: "2026-03-20 10:30:00 +0900" → "2026-03-20"
+    let date_str = line.get(..10)?;
+    // chrono::NaiveDate でバリデーション
+    chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok()?;
+    Some(date_str.to_string())
+}
+
+/// ファイルパスから日付を取得する
+/// 1. ファイル名の先頭 YYYY-MM-DD パターンを正規表現で抽出
+/// 2. マッチしなければ git log --format=%ai -1 -- <path> にフォールバック
+/// 3. いずれも失敗した場合は None
+pub(crate) fn extract_date_from_path(file_path: &str, repo_root: &Path) -> Option<String> {
+    if let Some(date) = extract_date_from_filename(file_path) {
+        return Some(date);
+    }
+    extract_date_from_git_log(file_path, repo_root)
 }
 
 /// dev-reports/ ディレクトリを走査し、ナレッジエントリを抽出
@@ -472,7 +533,8 @@ pub fn scan_dev_reports(base_dir: &Path) -> Vec<KnowledgeEntry> {
         }
         if let Ok(relative) = entry.path().strip_prefix(base_dir) {
             let rel_str = relative.to_string_lossy().replace('\\', "/");
-            if let Some(knowledge_entry) = parse_dev_report_path(&rel_str) {
+            if let Some(mut knowledge_entry) = parse_dev_report_path(&rel_str) {
+                knowledge_entry.date = extract_date_from_path(&rel_str, base_dir);
                 entries.push(knowledge_entry);
             }
         }
@@ -916,5 +978,41 @@ mod tests {
         assert_eq!(DocSubtype::DesignReview.as_str(), "design_review");
         assert_eq!(DocSubtype::ProgressReport.as_str(), "progress_report");
         assert_eq!(DocSubtype::StageReview.as_str(), "stage_review");
+    }
+
+    // --- extract_date_from_filename tests ---
+
+    #[test]
+    fn test_extract_date_from_filename_normal() {
+        assert_eq!(
+            extract_date_from_filename("dev-reports/review/2026-03-20-issue140-review.md"),
+            Some("2026-03-20".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_no_date() {
+        assert_eq!(
+            extract_date_from_filename("dev-reports/design/issue-140-design-policy.md"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_invalid_date() {
+        // Month 13, day 45 — chrono should reject
+        assert_eq!(
+            extract_date_from_filename("dev-reports/review/2026-13-45-invalid.md"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_not_at_start() {
+        // Date not at start of filename — should not match
+        assert_eq!(
+            extract_date_from_filename("dev-reports/review/report-for-2026-03-20.md"),
+            None
+        );
     }
 }

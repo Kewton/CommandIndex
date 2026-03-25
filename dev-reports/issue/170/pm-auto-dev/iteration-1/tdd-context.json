@@ -1,0 +1,15 @@
+{
+  "issue_number": 170,
+  "title": "why/issueのJSON出力に日付情報を付与する",
+  "design_policy": "dev-reports/design/issue-170-json-date-design-policy.md",
+  "work_plan": "dev-reports/issue/170/work-plan.md",
+  "scope": "JSON出力へのdateフィールド追加（why/issueコマンド）",
+  "phases": [
+    "Phase 1: 構造体にdateフィールド追加（KnowledgeEntry, IssueDocumentEntry, KnowledgeRelatedResult, WhyDocumentEntry, KnowledgeDocResult）",
+    "Phase 2: 日付取得ユーティリティ（extract_date_from_filename, extract_date_from_git_log, extract_date_from_path）",
+    "Phase 3: インデックス時の日付格納（scan_dev_reports, insert_knowledge_entries）",
+    "Phase 4: クエリ時の日付取得（find_documents_by_issue, find_knowledge_related）",
+    "Phase 5: 出力フォーマット変更（group_knowledge_results, format_json破壊的変更）",
+    "Phase 6: テスト修正・追加（約40箇所）"
+  ]
+}

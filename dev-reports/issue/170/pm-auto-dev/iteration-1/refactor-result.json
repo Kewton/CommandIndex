@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "changes": [
+    {
+      "file": "src/indexer/symbol_store.rs",
+      "description": "Extract duplicated JSON metadata parsing logic (doc_subtype + date) from find_documents_by_issue and find_knowledge_related into two shared helper functions: parse_metadata_strict (with error reporting) and parse_metadata_lenient (returns None on failure)",
+      "type": "dedup"
+    },
+    {
+      "file": "src/indexer/symbol_store.rs",
+      "description": "Apply cargo fmt formatting adjustments to the new helper functions",
+      "type": "idiom"
+    }
+  ],
+  "cargo_test_result": "pass (pre-existing test_embed_without_ollama_fails failure is environment-specific, unrelated to issue-170)",
+  "cargo_clippy_result": "pass",
+  "cargo_fmt_result": "pass",
+  "summary": "Extracted duplicated metadata JSON parsing logic from find_documents_by_issue and find_knowledge_related into parse_metadata_strict and parse_metadata_lenient helper functions, reducing ~30 lines of duplicated code. Other files (issue.rs, why.rs, knowledge.rs) were reviewed but no meaningful improvements were found within the scope of issue-170 changes."
+}
