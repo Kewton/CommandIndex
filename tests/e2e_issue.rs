@@ -43,7 +43,7 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
             issue_number: "140".to_string(),
             file_path: "dev-reports/issue/140/pm-auto-dev/iteration-1/progress-report.md"
                 .to_string(),
-            relation: KnowledgeRelation::HasReview,
+            relation: KnowledgeRelation::HasProgress,
             doc_subtype: DocSubtype::ProgressReport,
         },
         KnowledgeEntry {

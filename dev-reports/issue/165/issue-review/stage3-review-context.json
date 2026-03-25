@@ -1,0 +1,23 @@
+{
+  "must_fix": [
+    {"file": "src/indexer/knowledge.rs", "description": "HasProgressバリアント追加、as_str/parse/Display/PatternRule修正"},
+    {"file": "src/indexer/symbol_store.rs", "description": "find_documents_by_issue()のrelationパースにhas_progress追加（未対応だとエラー）"},
+    {"file": "src/cli/issue.rs", "description": "sort_order() exhaustive matchにHasProgress追加（コンパイルエラー）"},
+    {"file": "src/cli/before_change.rs", "description": "relation_priority()にhas_progress追加（未対応だとソート不正）"},
+    {"file": "src/output/human.rs", "description": "relation_display_labelにhas_progress=>progress追加（未対応だとhas_progressが直接表示）"}
+  ],
+  "should_fix": [
+    {"file": "tests/e2e_issue.rs", "description": "progress-reportテストデータをHasProgressに変更"},
+    {"file": "src/indexer/knowledge.rs", "description": "test_parse_progress_reportのアサーション更新、HasProgressのas_str/parse/Displayテスト追加"},
+    {"file": "src/indexer/symbol_store.rs", "description": "test_find_documents_by_issue_metadata_parsedのHasReview→HasProgress更新"},
+    {"file": "src/cli/issue.rs", "description": "test_sort_orderとtest_groupedにHasProgressテストケース追加"},
+    {"file": "src/output/human.rs", "description": "relation_display_labelテストにhas_progressケース追加"},
+    {"file": "src/cli/before_change.rs", "description": "test_relation_priority_orderにhas_progressの優先度アサーション追加"}
+  ],
+  "nice_to_have": [
+    {"description": "src/cli/why.rsのテストデータは一般reviewなので変更不要"},
+    {"description": "src/cli/suggest.rsもHasReview不使用で影響なし"},
+    {"description": "混在状態（旧DB has_review + 新インデックス has_progress）は再インデックスで解決"}
+  ],
+  "summary": "コンパイルに影響する変更: knowledge.rs(enum/match), issue.rs(exhaustive match), symbol_store.rs(エラーパス)。動作に影響する変更: before_change.rs(ソート), human.rs(表示)。パフォーマンス影響なし。後方互換性はHasReviewが残るため問題なし。"
+}

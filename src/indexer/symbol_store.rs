@@ -877,16 +877,10 @@ impl SymbolStore {
         for row in rows {
             let (file_path, relation_str, metadata_opt) = row?;
 
-            let relation = match relation_str.as_str() {
-                "has_design" => crate::indexer::knowledge::KnowledgeRelation::HasDesign,
-                "has_review" => crate::indexer::knowledge::KnowledgeRelation::HasReview,
-                "has_workplan" => crate::indexer::knowledge::KnowledgeRelation::HasWorkplan,
-                other => {
-                    return Err(SymbolStoreError::InvalidEmbedding {
-                        reason: format!("Unknown relation type: {other}"),
-                    });
-                }
-            };
+            let relation = crate::indexer::knowledge::KnowledgeRelation::parse(&relation_str)
+                .ok_or_else(|| SymbolStoreError::InvalidEmbedding {
+                    reason: format!("Unknown relation type: {relation_str}"),
+                })?;
 
             let metadata_str = metadata_opt.unwrap_or_default();
             let doc_subtype = if metadata_str.is_empty() {
@@ -2178,7 +2172,7 @@ mod tests {
             issue_number: "42".to_string(),
             file_path: "dev-reports/issue/42/pm-auto-dev/iteration-1/progress-report.md"
                 .to_string(),
-            relation: KnowledgeRelation::HasReview,
+            relation: KnowledgeRelation::HasProgress,
             doc_subtype: DocSubtype::ProgressReport,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2186,7 +2180,7 @@ mod tests {
         let docs = store.find_documents_by_issue("42").unwrap();
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].doc_subtype, DocSubtype::ProgressReport);
-        assert_eq!(docs[0].relation, KnowledgeRelation::HasReview);
+        assert_eq!(docs[0].relation, KnowledgeRelation::HasProgress);
     }
 
     // --- insert_file_modifies_entries tests ---

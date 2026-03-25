@@ -1,0 +1,14 @@
+{
+  "stage": 3,
+  "type": "impact_analysis",
+  "must_fix": [
+    {"id": "IMPACT-1", "description": "DRYリファクタリングは必須。未対応だとissueコマンドがhas_progress値でランタイムエラー。"},
+    {"id": "IMPACT-2", "description": "sort_order()のexhaustive matchは追加必須（コンパイルエラー）。"}
+  ],
+  "should_fix": [
+    {"id": "IMPACT-3", "description": "Serialize deriveがPascalCase出力（HasProgress）。既存の不整合だが本Issue範囲外。"},
+    {"id": "IMPACT-4", "description": "DRYリファクタリングでModifies受け入れの振る舞い変更 — 設計書に記載済み。"},
+    {"id": "IMPACT-5", "description": "e2e_issue.rsテストデータ更新必須 — 設計書に記載済み。"}
+  ],
+  "summary": "DRYリファクタリングは必須。セキュリティ懸念なし。後方互換性問題なし。"
+}

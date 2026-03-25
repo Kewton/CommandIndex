@@ -83,6 +83,7 @@ pub enum KnowledgeRelation {
     HasDesign,
     HasReview,
     HasWorkplan,
+    HasProgress,
     Modifies,
 }
 
@@ -92,6 +93,7 @@ impl KnowledgeRelation {
             Self::HasDesign => "has_design",
             Self::HasReview => "has_review",
             Self::HasWorkplan => "has_workplan",
+            Self::HasProgress => "has_progress",
             Self::Modifies => "modifies",
         }
     }
@@ -102,6 +104,7 @@ impl KnowledgeRelation {
             "has_design" => Some(Self::HasDesign),
             "has_review" => Some(Self::HasReview),
             "has_workplan" => Some(Self::HasWorkplan),
+            "has_progress" => Some(Self::HasProgress),
             "modifies" => Some(Self::Modifies),
             _ => None,
         }
@@ -397,7 +400,7 @@ fn build_pattern_rules() -> Vec<PatternRule> {
             )
             .expect("invalid regex"),
             doc_subtype: DocSubtype::ProgressReport,
-            relation: KnowledgeRelation::HasReview,
+            relation: KnowledgeRelation::HasProgress,
         },
         // Note: issue{N} uses no hyphen separator, matching the review tool's output naming convention
         PatternRule {
@@ -552,7 +555,7 @@ mod tests {
         assert!(result.is_some());
         let entry = result.unwrap();
         assert_eq!(entry.issue_number, "55");
-        assert_eq!(entry.relation, KnowledgeRelation::HasReview);
+        assert_eq!(entry.relation, KnowledgeRelation::HasProgress);
         assert_eq!(entry.doc_subtype, DocSubtype::ProgressReport);
     }
 
@@ -695,6 +698,7 @@ mod tests {
         assert_eq!(KnowledgeRelation::HasDesign.as_str(), "has_design");
         assert_eq!(KnowledgeRelation::HasReview.as_str(), "has_review");
         assert_eq!(KnowledgeRelation::HasWorkplan.as_str(), "has_workplan");
+        assert_eq!(KnowledgeRelation::HasProgress.as_str(), "has_progress");
         assert_eq!(KnowledgeRelation::Modifies.as_str(), "modifies");
     }
 
@@ -711,6 +715,10 @@ mod tests {
         assert_eq!(
             KnowledgeRelation::parse("has_workplan"),
             Some(KnowledgeRelation::HasWorkplan)
+        );
+        assert_eq!(
+            KnowledgeRelation::parse("has_progress"),
+            Some(KnowledgeRelation::HasProgress)
         );
         assert_eq!(
             KnowledgeRelation::parse("modifies"),
@@ -735,6 +743,10 @@ mod tests {
         assert_eq!(
             format!("{}", KnowledgeRelation::HasWorkplan),
             "has_workplan"
+        );
+        assert_eq!(
+            format!("{}", KnowledgeRelation::HasProgress),
+            "has_progress"
         );
         assert_eq!(format!("{}", KnowledgeRelation::Modifies), "modifies");
     }

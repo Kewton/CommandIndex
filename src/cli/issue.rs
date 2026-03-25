@@ -99,7 +99,8 @@ fn sort_order(entry: &IssueDocumentEntry) -> (u8, u8) {
         KnowledgeRelation::HasDesign => 1,
         KnowledgeRelation::HasReview => 2,
         KnowledgeRelation::HasWorkplan => 3,
-        KnowledgeRelation::Modifies => 4,
+        KnowledgeRelation::HasProgress => 4,
+        KnowledgeRelation::Modifies => 5,
     };
     let subtype_order = match entry.doc_subtype {
         DocSubtype::DesignPolicy => 1,
@@ -298,7 +299,7 @@ mod tests {
                 },
                 IssueDocumentEntry {
                     file_path: "progress.md".to_string(),
-                    relation: KnowledgeRelation::HasReview,
+                    relation: KnowledgeRelation::HasProgress,
                     doc_subtype: DocSubtype::ProgressReport,
                 },
                 IssueDocumentEntry {

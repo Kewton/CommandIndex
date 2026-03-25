@@ -253,6 +253,7 @@ pub(crate) fn relation_display_label<'a>(
         "has_design" => "design",
         "has_review" => "review",
         "has_workplan" => "workplan",
+        "has_progress" => "progress",
         other => other,
     }
 }
@@ -427,7 +428,7 @@ mod tests {
     #[test]
     fn test_relation_display_label_with_doc_subtype() {
         assert_eq!(
-            relation_display_label("has_review", Some(&DocSubtype::ProgressReport)),
+            relation_display_label("has_progress", Some(&DocSubtype::ProgressReport)),
             "progress"
         );
         assert_eq!(
@@ -457,6 +458,7 @@ mod tests {
         assert_eq!(relation_display_label("has_design", None), "design");
         assert_eq!(relation_display_label("has_review", None), "review");
         assert_eq!(relation_display_label("has_workplan", None), "workplan");
+        assert_eq!(relation_display_label("has_progress", None), "progress");
         assert_eq!(relation_display_label("modifies", None), "modifies");
     }
 }
