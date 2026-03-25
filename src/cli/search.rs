@@ -932,8 +932,17 @@ fn try_hybrid_search(
         })
         .collect();
 
-    // 8. RRFマージ
-    Ok(rrf_merge(&bm25_results, &filtered_semantic, options.limit))
+    // 8. RRFマージ（BM25=0件の場合はセマンティックフォールバック）
+    if bm25_results.is_empty() && !filtered_semantic.is_empty() {
+        eprintln!("[hybrid] BM25 returned 0 results, using semantic-only results.");
+        Ok(crate::search::hybrid::semantic_fallback(
+            &filtered_semantic,
+            &similar_results,
+            options.limit,
+        ))
+    } else {
+        Ok(rrf_merge(&bm25_results, &filtered_semantic, options.limit))
+    }
 }
 
 /// セマンティック検索結果をSearchResult型に変換する（ハイブリッド検索用）

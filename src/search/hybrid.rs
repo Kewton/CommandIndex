@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::embedding::store::EmbeddingSimilarityResult;
 use crate::indexer::reader::SearchResult;
 
 /// RRF定数（業界標準値）
@@ -58,6 +59,44 @@ pub fn rrf_merge(
     limit: usize,
 ) -> Vec<SearchResult> {
     rrf_merge_multiple(&[bm25_results.to_vec(), semantic_results.to_vec()], limit)
+}
+
+/// BM25が0件の場合にセマンティック結果をコサイン類似度スコアで返すフォールバック。
+///
+/// `filtered_semantic` はtantivyのSearchResult型に変換済みのセマンティック結果。
+/// `similar_results` は元のEmbeddingSimilarityResult（コサイン類似度を保持）。
+/// スコアをコサイン類似度に置換し、類似度降順でソートしてlimitで切り詰める。
+pub fn semantic_fallback(
+    filtered_semantic: &[SearchResult],
+    similar_results: &[EmbeddingSimilarityResult],
+    limit: usize,
+) -> Vec<SearchResult> {
+    let similarity_map: HashMap<(String, String), f32> = similar_results
+        .iter()
+        .map(|r| {
+            (
+                (r.file_path.clone(), r.section_heading.clone()),
+                r.similarity,
+            )
+        })
+        .collect();
+    let mut results: Vec<SearchResult> = filtered_semantic
+        .iter()
+        .map(|r| {
+            let mut result = r.clone();
+            if let Some(&sim) = similarity_map.get(&(r.path.clone(), r.heading.clone())) {
+                result.score = sim;
+            }
+            result
+        })
+        .collect();
+    results.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    results.truncate(limit);
+    results
 }
 
 /// ファイルキーのRRFスコアを計算する内部ヘルパー
