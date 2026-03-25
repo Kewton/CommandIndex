@@ -232,6 +232,7 @@ fn rank_by_max_similarity(
                     doc_path: doc.file_path.clone(),
                     doc_title: doc.title.clone(),
                     similarity: None,
+                    snippet: None,
                 });
                 continue;
             }
@@ -244,6 +245,7 @@ fn rank_by_max_similarity(
                 doc_path: doc.file_path.clone(),
                 doc_title: doc.title.clone(),
                 similarity: None,
+                snippet: None,
             });
             continue;
         }
@@ -264,6 +266,7 @@ fn rank_by_max_similarity(
             doc_path: doc.file_path.clone(),
             doc_title: doc.title.clone(),
             similarity: Some(max_sim),
+            snippet: None,
         });
     }
 
@@ -312,6 +315,7 @@ fn findings_without_ranking(docs: &[KnowledgeDocResult]) -> Vec<BeforeChangeFind
             doc_path: doc.file_path.clone(),
             doc_title: doc.title.clone(),
             similarity: None,
+            snippet: None,
         })
         .collect();
 
@@ -390,6 +394,7 @@ pub fn run_before_change(
     index_path: Option<&Path>,
     limit: usize,
     max_commits: usize,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), BeforeChangeError> {
     // 1. Input validation
     validate_before_change_input(file)?;
@@ -479,7 +484,22 @@ pub fn run_before_change(
     };
 
     // 7. Apply limit (Issue-level)
-    let limited_findings = group_and_limit_by_issue(findings, limit);
+    let mut limited_findings = group_and_limit_by_issue(findings, limit);
+
+    // 7.5. Enrich with snippets (optional)
+    if snippet_options.enabled
+        && let Ok(reader) = crate::indexer::reader::IndexReaderWrapper::open(
+            &crate::indexer::index_dir(&commandindex_dir),
+        )
+    {
+        crate::cli::snippet_helper::enrich_before_change_with_snippets(
+            &mut limited_findings,
+            &reader,
+            &snippet_options,
+            format,
+        );
+    }
+    // reader open failure → snippet: None (fallback)
 
     // 8. Compute displayed_issues
     let displayed_issues = {
@@ -688,6 +708,7 @@ mod tests {
                 doc_path: "d100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -695,6 +716,7 @@ mod tests {
                 doc_path: "w100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -702,6 +724,7 @@ mod tests {
                 doc_path: "r100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "200".to_string(),
@@ -709,6 +732,7 @@ mod tests {
                 doc_path: "d200.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "300".to_string(),
@@ -716,6 +740,7 @@ mod tests {
                 doc_path: "d300.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
         ];
 
@@ -739,6 +764,7 @@ mod tests {
                 doc_path: "r100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -746,6 +772,7 @@ mod tests {
                 doc_path: "d100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -753,6 +780,7 @@ mod tests {
                 doc_path: "w100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -760,6 +788,7 @@ mod tests {
                 doc_path: "m100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
         ];
 
@@ -780,6 +809,7 @@ mod tests {
                 doc_path: "d200.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
             BeforeChangeFinding {
                 issue_number: "100".to_string(),
@@ -787,6 +817,7 @@ mod tests {
                 doc_path: "d100.md".to_string(),
                 doc_title: None,
                 similarity: None,
+                snippet: None,
             },
         ];
 
@@ -795,5 +826,101 @@ mod tests {
         // Order preserved: 200 before 100
         assert_eq!(result[0].issue_number, "200");
         assert_eq!(result[1].issue_number, "100");
+    }
+
+    // --- Snippet output tests ---
+
+    #[test]
+    fn test_before_change_human_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: Some("Design Title".to_string()),
+                similarity: Some(0.85),
+                snippet: Some("test snippet content".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: true,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Human, &mut buf)
+            .unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_before_change_llm_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: Some("test snippet content".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: false,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Llm, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_before_change_json_with_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: Some(0.85),
+                snippet: Some("test snippet".to_string()),
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: true,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Json, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        assert_eq!(parsed["findings"][0]["snippet"], "test snippet");
+    }
+
+    #[test]
+    fn test_before_change_json_without_snippet() {
+        let result = BeforeChangeResult {
+            file_path: "src/main.rs".to_string(),
+            findings: vec![BeforeChangeFinding {
+                issue_number: "100".to_string(),
+                relation: "has_design".to_string(),
+                doc_path: "design.md".to_string(),
+                doc_title: None,
+                similarity: None,
+                snippet: None,
+            }],
+            total_issues: 1,
+            displayed_issues: 1,
+            has_embeddings: false,
+        };
+        let mut buf = Vec::new();
+        crate::output::format_before_change_results(&result, OutputFormat::Json, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // snippet field should not be present when None
+        assert!(parsed["findings"][0].get("snippet").is_none());
     }
 }

@@ -1,0 +1,5 @@
+{
+  "stage": 5,
+  "status": "skipped",
+  "reason": "Codex server error (commandmatedev exit code 99). Stage 1-4 の Claude opus レビューで Must Fix 10件を指摘・反映済みのため、2回目レビューはスキップして進行。"
+}

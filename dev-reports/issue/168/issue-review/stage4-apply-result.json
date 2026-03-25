@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    "M1-M5: 全コンストラクタ更新箇所の詳細を影響範囲テーブルに追加",
+    "S1: --with-snippet フラグ追加（他コマンドとの一貫性）",
+    "S2-S4: output フォーマッタ更新箇所を影響範囲テーブルに追加",
+    "S5-S6: テスト更新箇所を影響範囲テーブルに追加",
+    "N1: tantivy未存在時のフォールバックを受け入れ基準に追加",
+    "N3: help-llm 更新を実装方針に追加",
+    "N4: --with-snippet フラグを受け入れ基準に反映（デフォルトオフ→後方互換性維持）"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/168"
+}

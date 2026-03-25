@@ -377,6 +377,11 @@ pub fn format_before_change_human(
             let title_cleaned = strip_control_chars(title);
             writeln!(writer, "  {}", title_cleaned.dimmed())?;
         }
+        if let Some(ref snippet) = finding.snippet {
+            for line in snippet.lines() {
+                writeln!(writer, "  > {}", strip_control_chars(line).dimmed())?;
+            }
+        }
     }
     Ok(())
 }

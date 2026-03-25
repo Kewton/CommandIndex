@@ -1,0 +1,17 @@
+{
+  "stage": 4,
+  "focus": "セキュリティ",
+  "must_fix": [
+    {"id": "M1", "title": "snippet_lines/snippet_charsに上限が未設定", "description": "range(1..)のみで上限なし。極端な値でメモリ制御不能"}
+  ],
+  "should_fix": [
+    {"id": "S1", "title": "既存enrich関数とのSome(\"\")禁止契約の不一致"},
+    {"id": "S2", "title": "search_by_exact_path()の1000件固定上限はsnippet用途には過剰（低リスク）"},
+    {"id": "S3", "title": "fetch_snippet()のエラー握り潰しにログ出力がない"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "title": "strip_control_chars()がタブ文字も除去する"},
+    {"id": "N2", "title": "既存テストのunsafe整理（別Issue）"},
+    {"id": "N3", "title": "パス正規化の将来的な防御層追加"}
+  ]
+}
