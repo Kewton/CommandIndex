@@ -1,0 +1,10 @@
+{
+  "applied": [
+    {"id": "M1", "action": "「影響範囲」セクションを追加。共有インフラ（4コマンド）への影響を明記。"},
+    {"id": "M2", "action": "「リスク軽減策」セクションを追加。保守的な重み調整方針を明記。"},
+    {"id": "S2", "action": "実装案の重み調整を0.95に具体化（MarkdownLink 1.0以下で保守的）。"},
+    {"id": "AC", "action": "受け入れ基準にsuggest/why/before-changeの正常動作検証を追加。"}
+  ],
+  "skipped": [],
+  "issue_updated": true
+}

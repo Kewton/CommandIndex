@@ -1,0 +1,1 @@
+{"applied": [{"id": "M1", "action": "全codebase grep + cargo build --all-targetsで影響箇所特定方針を明記"}, {"id": "M2", "action": "is_knowledge_graph()ヘルパーで等価チェックを集約する方針で対応"}, {"id": "M3", "action": "テストファイルのパターンマッチ更新をテスト戦略に含める"}]}
