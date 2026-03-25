@@ -458,7 +458,7 @@ fn resolve_config(raw: RawConfig, sources: Vec<ConfigSource>) -> AppConfig {
     let embedding = if let Some(emb) = raw.embedding {
         EmbeddingConfig {
             provider: emb.provider.unwrap_or_default(),
-            model: emb.model.unwrap_or_else(|| "nomic-embed-text".to_string()),
+            model: emb.model.unwrap_or_else(crate::embedding::default_model),
             endpoint: emb
                 .endpoint
                 .unwrap_or_else(|| "http://localhost:11434".to_string()),
@@ -687,7 +687,7 @@ mod tests {
         assert_eq!(config.search.snippet_lines, 2);
         assert_eq!(config.search.snippet_chars, 120);
         assert_eq!(config.embedding.provider, ProviderType::Ollama);
-        assert_eq!(config.embedding.model, "nomic-embed-text");
+        assert_eq!(config.embedding.model, "qllama/bge-m3:q8_0");
         assert_eq!(config.embedding.endpoint, "http://localhost:11434");
         assert!(config.embedding.api_key.is_none());
         assert_eq!(config.rerank.model, "llama3");
@@ -1015,7 +1015,7 @@ timeout_secs = 60
             },
             embedding: EmbeddingConfig {
                 provider: ProviderType::Ollama,
-                model: "nomic-embed-text".to_string(),
+                model: "qllama/bge-m3:q8_0".to_string(),
                 endpoint: "http://localhost:11434".to_string(),
                 api_key: Some("secret".to_string()),
             },

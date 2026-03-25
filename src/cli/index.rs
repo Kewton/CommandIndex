@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 
 use crate::config::{ConfigError, load_config};
 use crate::embedding::store::{EmbeddingStore, EmbeddingStoreError};
-use crate::embedding::{EmbeddingError, create_provider};
+use crate::embedding::{EmbeddingError, create_provider, model_not_found_hint};
 use crate::indexer::diff::{DiffError, detect_changes, scan_files};
 use crate::indexer::manifest::{
     self, FileEntry, FileType, Manifest, ManifestError, to_relative_path_string,
@@ -929,17 +929,14 @@ fn generate_embeddings_for_manifest(
     let store = EmbeddingStore::open(&db_path)?;
     store.create_tables()?;
 
-    // Delete stale embeddings from previous model
     let model_name = provider.model_name();
-    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
-    if stale_deleted > 0 {
-        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
-    }
 
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir).map_err(|e| {
         IndexError::IndexCorrupted(format!("Failed to open tantivy for embedding: {e}"))
     })?;
+
+    let mut stale_deleted = false;
 
     for entry in &manifest.files {
         if store.has_current_embedding(&entry.path, &entry.hash, model_name)? {
@@ -966,6 +963,15 @@ fn generate_embeddings_for_manifest(
 
         match provider.embed(&texts) {
             Ok(embeddings) => {
+                // Delete stale embeddings once after first successful embed
+                if !stale_deleted {
+                    let count = store.delete_stale_model_embeddings(model_name)?;
+                    if count > 0 {
+                        eprintln!("Info: Deleted {count} stale embeddings from previous model.");
+                    }
+                    stale_deleted = true;
+                }
+
                 let dimension = provider.dimension();
                 let model = provider.model_name();
                 if sections.len() != embeddings.len() {
@@ -994,6 +1000,10 @@ fn generate_embeddings_for_manifest(
                         entry.path
                     );
                 }
+            }
+            Err(EmbeddingError::ModelNotFound(model)) => {
+                eprintln!("{}", model_not_found_hint(&model));
+                return Ok(());
             }
             Err(e) => {
                 eprintln!(

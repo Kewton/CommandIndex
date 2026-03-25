@@ -53,8 +53,8 @@ commandindex diff src/auth/jwt.rs src/auth/middleware.rs --format json
 
 | モデル | 次元数 | 特徴 |
 |---|---|---|
-| `nomic-embed-text` | 768 | デフォルト。英語中心 |
-| `qllama/bge-m3:q8_0` | 1024 | 多言語対応（日本語に強い） |
+| `qllama/bge-m3:q8_0` | 1024 | デフォルト。多言語対応（日本語に強い） |
+| `nomic-embed-text` | 768 | 英語中心 |
 
 ### 前提条件
 
@@ -63,10 +63,10 @@ commandindex diff src/auth/jwt.rs src/auth/middleware.rs --format json
 
 ```bash
 # デフォルトモデル
-ollama pull nomic-embed-text
-
-# 日本語対応モデル
 ollama pull qllama/bge-m3:q8_0
+
+# 英語中心モデル
+ollama pull nomic-embed-text
 ```
 
 ### モデル変更手順
@@ -75,10 +75,18 @@ ollama pull qllama/bge-m3:q8_0
 
 ```toml
 [embedding]
-model = "qllama/bge-m3:q8_0"
+model = "nomic-embed-text"
 ```
 
 > **注意:** モデル変更後の再生成にはファイル数に応じた時間がかかります。
+
+### v0.x.x からの移行
+
+v0.x.x 以前からアップグレードした場合、デフォルトモデルが `nomic-embed-text` から `qllama/bge-m3:q8_0` に変更されています。
+
+1. 新しいデフォルトモデルをインストール: `ollama pull qllama/bge-m3:q8_0`
+2. `commandindex embed` または `commandindex index --with-embedding` を実行すると、旧モデルの embedding は自動的に削除され、新モデルで再生成されます。
+3. 旧モデルを引き続き使用する場合は、`commandindex.toml` に `[embedding]` セクションで `model = "nomic-embed-text"` を指定してください。
 
 ## 開発
 

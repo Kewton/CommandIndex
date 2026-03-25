@@ -79,8 +79,8 @@ pub enum ProviderType {
 // EmbeddingConfig
 // ---------------------------------------------------------------------------
 
-fn default_model() -> String {
-    "nomic-embed-text".to_string()
+pub(crate) fn default_model() -> String {
+    "qllama/bge-m3:q8_0".to_string()
 }
 
 fn default_endpoint() -> String {
@@ -132,6 +132,13 @@ impl EmbeddingConfig {
 // ---------------------------------------------------------------------------
 // Shared utilities for providers
 // ---------------------------------------------------------------------------
+
+/// ModelNotFound時のインストール案内メッセージを返す。
+pub(crate) fn model_not_found_hint(model: &str) -> String {
+    format!(
+        "Model '{model}' not found. Install it with:\n  ollama pull {model}\nThen retry the command."
+    )
+}
 
 /// HTTPレスポンスのステータスコードをEmbeddingErrorに変換する。
 /// OllamaProvider・OpenAiProvider共通のエラーハンドリング。
@@ -246,7 +253,7 @@ mod tests {
     fn test_embedding_config_default() {
         let config = EmbeddingConfig::default();
         assert_eq!(config.provider, ProviderType::Ollama);
-        assert_eq!(config.model, "nomic-embed-text");
+        assert_eq!(config.model, "qllama/bge-m3:q8_0");
         assert_eq!(config.endpoint, "http://localhost:11434");
         assert!(config.api_key.is_none());
     }
@@ -295,7 +302,7 @@ provider = "ollama"
 "#;
         let emb: EmbeddingConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(emb.provider, ProviderType::Ollama);
-        assert_eq!(emb.model, "nomic-embed-text");
+        assert_eq!(emb.model, "qllama/bge-m3:q8_0");
         assert_eq!(emb.endpoint, "http://localhost:11434");
         assert!(emb.api_key.is_none());
     }
@@ -418,5 +425,37 @@ provider = "ollama"
         };
         let provider = create_provider(&config).unwrap();
         assert_eq!(provider.provider_name(), "openai");
+    }
+
+    // --- model_not_found_hint ---
+
+    #[test]
+    fn test_model_not_found_hint_contains_model_name() {
+        let hint = model_not_found_hint("qllama/bge-m3:q8_0");
+        assert!(hint.contains("qllama/bge-m3:q8_0"));
+        assert!(hint.contains("ollama pull"));
+    }
+
+    #[test]
+    fn test_model_not_found_hint_contains_retry_instruction() {
+        let hint = model_not_found_hint("some-model");
+        assert!(hint.contains("some-model"));
+        assert!(hint.contains("retry"));
+    }
+
+    // --- default_model returns bge-m3 ---
+
+    #[test]
+    fn test_default_model_is_bge_m3() {
+        assert_eq!(default_model(), "qllama/bge-m3:q8_0");
+    }
+
+    // --- default config dimension is 1024 (bge-m3) ---
+
+    #[test]
+    fn test_default_config_dimension_is_1024() {
+        let config = EmbeddingConfig::default();
+        let provider = create_provider(&config).unwrap();
+        assert_eq!(provider.dimension(), 1024);
     }
 }

@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::{ConfigError, load_config};
 use crate::embedding::store::{EmbeddingStore, EmbeddingStoreError};
-use crate::embedding::{EmbeddingError, create_provider};
+use crate::embedding::{EmbeddingError, create_provider, model_not_found_hint};
 use crate::indexer::manifest::{Manifest, ManifestError};
 use crate::indexer::reader::{IndexReaderWrapper, ReaderError};
 
@@ -141,17 +141,13 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
     let tantivy_dir = crate::indexer::index_dir(commandindex_dir);
     let reader = IndexReaderWrapper::open(&tantivy_dir)?;
 
-    // 6.5. Delete stale embeddings from previous model
     let model_name = provider.model_name();
-    let stale_deleted = store.delete_stale_model_embeddings(model_name)?;
-    if stale_deleted > 0 {
-        eprintln!("Info: Deleted {stale_deleted} stale embeddings from previous model.");
-    }
 
     let mut total_sections: u64 = 0;
     let mut generated: u64 = 0;
     let mut cached: u64 = 0;
     let mut failed: u64 = 0;
+    let mut stale_deleted = false;
 
     // 7. Process each file entry
     for entry in &manifest.files {
@@ -185,6 +181,15 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
         // Generate embeddings
         match provider.embed(&texts) {
             Ok(embeddings) => {
+                // Delete stale embeddings once after first successful embed
+                if !stale_deleted {
+                    let count = store.delete_stale_model_embeddings(model_name)?;
+                    if count > 0 {
+                        eprintln!("Info: Deleted {count} stale embeddings from previous model.");
+                    }
+                    stale_deleted = true;
+                }
+
                 if sections.len() != embeddings.len() {
                     eprintln!(
                         "Warning: section/embedding count mismatch for {}: {} sections, {} embeddings",
@@ -220,6 +225,16 @@ pub fn run(path: &Path, commandindex_dir: &Path) -> Result<EmbedSummary, EmbedEr
                         }
                     }
                 }
+            }
+            Err(EmbeddingError::ModelNotFound(model)) => {
+                eprintln!("{}", model_not_found_hint(&model));
+                return Ok(EmbedSummary {
+                    total_sections,
+                    generated,
+                    cached,
+                    failed,
+                    duration: start.elapsed(),
+                });
             }
             Err(e) => {
                 eprintln!(
