@@ -1,0 +1,57 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "受け入れ基準が明示されていない",
+      "description": "Issueに「受け入れ基準（Acceptance Criteria）」セクションがない。改善案は列挙されているが、どの条件を満たせばIssueを完了とするかが曖昧。",
+      "suggestion": "以下の受け入れ基準を追加:\n1. search --semantic <query> --format llm でヒットセクションのbody本文が出力され、estimated tokensが0でないこと\n2. search --semantic <query> --format human でSnippetConfigに従った行数・文字数でスニペットが表示されること\n3. search --semantic <query> --format json でbodyフィールドに本文が含まれること\n4. --snippet-lines / --snippet-chars オプションがセマンティック検索でも機能すること\n5. 既存のBM25検索・ハイブリッド検索の動作に影響がないこと"
+    },
+    {
+      "id": "M2",
+      "title": "根本原因の特定が不正確 - bodyは実際にはenrich_with_metadataで取得済み",
+      "description": "enrich_with_metadata()はtantivyからbodyを取得しSemanticSearchResult.bodyに格納している。bodyが空になる原因は(1) tantivy側にbodyが格納されていない、(2) heading不一致でfallbackパスに入りbodyが空文字になる、のいずれかの可能性がある。",
+      "suggestion": "根本原因を2つの可能性に分けて記述する:\n(A) heading不一致によるfallbackパス\n(B) tantivyインデックスにbodyが格納されていないケース"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "改善案のformat別対応方針が不明確",
+      "description": "format_semantic_human()はSnippetConfigを受け取らずハードコード。format_semantic_llm()はbodyを丸ごと出力。この2つで対応方針が異なるがIssueでは区別されていない。",
+      "suggestion": "format別の対応方針を明記する:\n- human: SnippetConfigを引数追加\n- llm: 根本原因修正で解決の可能性、max_body_lines適用も検討\n- json: 根本原因修正で解決"
+    },
+    {
+      "id": "S2",
+      "title": "run_semantic_search()のシグネチャにSnippetConfig/LlmFormatOptionsが不足",
+      "description": "BM25検索のrun()にはsnippet_config/llm_optionsが渡されているが、run_semantic_search()には渡されていない。",
+      "suggestion": "run_semantic_search()にsnippet_config/llm_optionsパラメータを追加し、format関数に伝播する"
+    },
+    {
+      "id": "S3",
+      "title": "#168との関連性の説明が不十分",
+      "description": "セマンティック検索はenrich_with_metadataでbodyが既にあり、#168のsnippet_helperパターンとは解決アプローチが異なる。",
+      "suggestion": "「同根」ではなく「類似の症状」と修正し技術的差異を明記"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "再現手順にcommandindexdevを使用",
+      "description": "開発用バイナリ名。一般的なcommandindexコマンドでの再現手順も併記するとよい。",
+      "suggestion": "注記を追加"
+    },
+    {
+      "id": "N2",
+      "title": "fallbackパス（heading不一致時）のbody空問題への言及",
+      "description": "heading不一致時にbody: String::new()が設定される。実運用で頻発している場合は主因の可能性。",
+      "suggestion": "改善案にfallbackパスの改善も含める"
+    },
+    {
+      "id": "N3",
+      "title": "テスト方針の記載がない",
+      "description": "テスト方針が明記されていない。",
+      "suggestion": "format関数のユニットテスト、heading不一致fallbackテスト等を追記"
+    }
+  ],
+  "summary": "Issue #179の問題提起は正当だが、根本原因の分析が不十分。enrich_with_metadata()はbodyを取得済みであり、「スニペット機構が未接続」よりも「heading不一致によるfallback」や「tantivyインデックスの問題」が真因の可能性がある。受け入れ基準の不在も修正必須。改善案の方向性は妥当だが、format別の対応範囲の明確化が必要。"
+}

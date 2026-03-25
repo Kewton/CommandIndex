@@ -1,0 +1,81 @@
+{
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "run_semantic_search()にSnippetConfig/LlmFormatOptionsが渡されていない",
+      "description": "main.rs L609-617でsnippet_config, llm_optionsが渡されていない",
+      "suggestion": "run_semantic_search()のシグネチャにSnippetConfigとLlmFormatOptionsを追加"
+    },
+    {
+      "id": "M2",
+      "title": "format_semantic_results()がSnippetConfig/LlmFormatOptionsを受け取らない",
+      "description": "output/mod.rsのformat_semantic_results()にSnippetConfig/LlmFormatOptionsの引数がない",
+      "suggestion": "シグネチャにSnippetConfigとLlmFormatOptionsを追加し伝播"
+    },
+    {
+      "id": "M3",
+      "title": "format_semantic_human()でスニペット行数/文字数がハードコード",
+      "description": "human.rs L283: truncate_body(&..., 2, 120)が固定",
+      "suggestion": "SnippetConfigパラメータを追加し動的に切り詰め"
+    },
+    {
+      "id": "M4",
+      "title": "format_semantic_llm()にmax_body_linesトランケーション未適用",
+      "description": "llm.rsでbody全文をwrite_body()で出力、LlmFormatOptionsが未適用",
+      "suggestion": "LlmFormatOptionsを追加しtruncate_body_for_llmを適用"
+    },
+    {
+      "id": "M5",
+      "title": "enrich_with_metadata()のfallbackパスでbodyが空文字列",
+      "description": "heading不一致時にbody: String::new()が設定される",
+      "suggestion": "sections.first()が存在すればそのbodyを使用"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "format_semantic_json()にスニペットトランケーション未適用",
+      "description": "bodyをそのまま出力。snippetフィールドの追加を検討",
+      "suggestion": "bodyは全文のまま、別途snippetフィールド追加を検討"
+    },
+    {
+      "id": "S2",
+      "title": "テストの更新が必要",
+      "description": "tests/output_format.rsのformat_semantic_results()呼び出しが壊れる",
+      "suggestion": "既存テストを新シグネチャに合わせて更新"
+    },
+    {
+      "id": "S3",
+      "title": "トークン予算計算がbody全文ベース",
+      "description": "スニペットトランケーション後のサイズで計算すべき",
+      "suggestion": "トランケーション後のサイズで計算する方式に変更"
+    },
+    {
+      "id": "S4",
+      "title": "SemanticSearchResult型にsnippetフィールドがない",
+      "description": "bodyとsnippetを分離できない",
+      "suggestion": "今回はbodyトランケーション方式で対応"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "スニペット処理ロジック共通化",
+      "description": "format_human()とformat_semantic_human()の重複",
+      "suggestion": "ヘルパー関数に抽出"
+    },
+    {
+      "id": "N2",
+      "title": "format_semantic_llm()でファイルパスによるグルーピング未実装",
+      "description": "同一ファイルの複数セクションをまとめる",
+      "suggestion": "format_llm()と同様のグルーピングロジック適用"
+    },
+    {
+      "id": "N3",
+      "title": "headingマッチ戦略の改善",
+      "description": "完全一致のみでtrim/部分一致なし",
+      "suggestion": "trim比較やcontainsでのfallback追加"
+    }
+  ],
+  "summary": "中規模の修正。影響範囲は run_semantic_search()シグネチャ、format_semantic_results()シグネチャ、enrich_with_metadata()fallbackに限定。CLIレベルの破壊的変更なし。テスト1件の更新必須。パフォーマンス影響なし。"
+}

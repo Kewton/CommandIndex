@@ -180,12 +180,14 @@ pub fn format_semantic_results(
     results: &[SemanticSearchResult],
     format: OutputFormat,
     writer: &mut dyn Write,
+    snippet_config: SnippetConfig,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     match format {
-        OutputFormat::Human => human::format_semantic_human(results, writer),
+        OutputFormat::Human => human::format_semantic_human(results, writer, snippet_config),
         OutputFormat::Json => json::format_semantic_json(results, writer),
         OutputFormat::Path => path::format_semantic_path(results, writer),
-        OutputFormat::Llm => llm::format_semantic_llm(results, writer),
+        OutputFormat::Llm => llm::format_semantic_llm(results, writer, llm_options),
     }
 }
 

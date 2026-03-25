@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "tests": [
+    {
+      "name": "テスト1: コード変更の確認 - format_semantic_results()シグネチャ",
+      "status": "pass",
+      "detail": "src/output/mod.rs L179-191: format_semantic_results()にSnippetConfig, &LlmFormatOptionsが引数として追加されている。Human/Json/Path/Llmの各分岐で適切に渡されている。"
+    },
+    {
+      "name": "テスト1: コード変更の確認 - format_semantic_human()にSnippetConfig追加",
+      "status": "pass",
+      "detail": "src/output/human.rs L262-308: format_semantic_human()がSnippetConfigを受け取り、lines=0/chars=0のガード処理（usize::MAX変換）を経てtruncate_body()に渡している。ハードコードされた行数・文字数は除去されている。"
+    },
+    {
+      "name": "テスト1: コード変更の確認 - format_semantic_llm()にLlmFormatOptions追加",
+      "status": "pass",
+      "detail": "src/output/llm.rs L232-289: format_semantic_llm()がLlmFormatOptionsを受け取り、truncate_body_for_llm()を適用。was_truncated分岐でコードファイル・非コードファイルそれぞれに'... (truncated)'マーカーを付与。トークン推定もトランケーション後のbodyで計算されている。"
+    },
+    {
+      "name": "テスト1: コード変更の確認 - run_semantic_search()シグネチャ拡張",
+      "status": "pass",
+      "detail": "src/cli/search.rs L656-665: run_semantic_search()にsnippet_config: SnippetConfig, llm_options: &LlmFormatOptionsが追加されている。format_semantic_results()呼び出し時に両パラメータを渡している。"
+    },
+    {
+      "name": "テスト1: コード変更の確認 - main.rsセマンティック分岐",
+      "status": "pass",
+      "detail": "src/main.rs L609-621: セマンティック検索分岐でLlmFormatOptions { max_body_lines: snippet_lines }を構築し、snippet_configと共にrun_semantic_search()に渡している。"
+    },
+    {
+      "name": "テスト1: コード変更の確認 - enrich_with_metadata()のfallback改善",
+      "status": "pass",
+      "detail": "src/cli/search.rs L789-800: heading不一致時のfallbackで、最初のセクションのbody/tags/heading_levelを使用するフォールバック処理が実装されている。"
+    },
+    {
+      "name": "テスト2: ユニットテスト確認",
+      "status": "pass",
+      "detail": "cargo test --all: 全823テスト中822パス、1件失敗（test_embed_without_ollama_fails: 環境依存のOllama接続テストで想定通りの除外対象）。2件ignored。"
+    },
+    {
+      "name": "テスト3: 新規テストの存在確認 - test_format_semantic_human_with_snippet_config",
+      "status": "pass",
+      "detail": "tests/output_format.rs L752: SnippetConfig::default()で4行bodyが2行に切り詰められること、lines=10指定で全行表示されることを検証。"
+    },
+    {
+      "name": "テスト3: 新規テストの存在確認 - test_format_semantic_llm_with_max_body_lines",
+      "status": "pass",
+      "detail": "tests/output_format.rs L799: max_body_lines=2で5行bodyがStep 1, Step 2のみ出力され '... (truncated)' が付与されることを検証。"
+    },
+    {
+      "name": "テスト3: 新規テストの存在確認 - test_format_semantic_llm_body_output",
+      "status": "pass",
+      "detail": "tests/output_format.rs L831: LLM形式でbody本文が出力されること、トランケーションマーカーが付かないことを検証。estimated tokensコメントも出力される。"
+    },
+    {
+      "name": "テスト4: Clippy確認",
+      "status": "pass",
+      "detail": "cargo clippy --all-targets -- -D warnings: 警告0件でパス。"
+    },
+    {
+      "name": "テスト4: Fmt確認",
+      "status": "pass",
+      "detail": "cargo fmt --all -- --check: 差分なし。"
+    },
+    {
+      "name": "テスト5: SnippetConfigがCopy型のためclone()未使用",
+      "status": "pass",
+      "detail": "src/output/配下およびsrc/cli/search.rs, src/main.rsでsnippet_config.clone()は使用されていない。SnippetConfigはCopy traitを実装済み。"
+    },
+    {
+      "name": "テスト5: lines=0/chars=0のガード処理",
+      "status": "pass",
+      "detail": "src/output/human.rs L285-294: format_semantic_human()内でlines==0の場合はusize::MAX、chars==0の場合はusize::MAXに変換するガード処理が実装されている。"
+    },
+    {
+      "name": "テスト5: truncate_body_for_llmのwas_truncated分岐",
+      "status": "pass",
+      "detail": "src/output/llm.rs L105-118: truncate_body_for_llm()は(String, bool)タプルを返し、L266-287でwas_truncated==trueの場合にコードファイル/非コードファイル別の'... (truncated)'マーカー付き出力、falseの場合はwrite_body()による通常出力の分岐が実装されている。"
+    },
+    {
+      "name": "テスト5: JSON形式でbodyフィールド含有",
+      "status": "pass",
+      "detail": "src/output/json.rs L53-71: format_semantic_json()でbodyフィールドがJSON出力に含まれている。"
+    }
+  ],
+  "summary": "Issue #179「セマンティック検索結果にスニペット（本文抜粋）を追加」の受入テスト全16項目がパスしました。format_semantic_results()へのSnippetConfig/LlmFormatOptions追加、human/llm/json各フォーマットでのbody出力、--snippet-lines/--snippet-charsオプション対応、lines=0/chars=0ガード処理、truncate_body_for_llmのwas_truncated分岐、SnippetConfigのCopy利用（clone不使用）がすべて設計通り実装されています。唯一の失敗テスト(test_embed_without_ollama_fails)はOllama環境依存であり本Issue変更とは無関係です。Clippy警告0件、フォーマット差分なしで品質基準を満たしています。"
+}

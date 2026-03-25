@@ -606,6 +606,9 @@ fn main() {
                             )
                             .ok()
                         });
+                        let llm_options = commandindex::output::LlmFormatOptions {
+                            max_body_lines: snippet_lines,
+                        };
                         commandindex::cli::search::run_semantic_search(
                             &q,
                             effective_limit,
@@ -614,6 +617,8 @@ fn main() {
                             &filters,
                             ctx_for_semantic.as_ref(),
                             max_tokens,
+                            snippet_config,
+                            &llm_options,
                         )
                     }
                     (None, None, None, None) => Err(commandindex::cli::search::SearchError::InvalidArgument(

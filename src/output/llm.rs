@@ -232,14 +232,19 @@ pub fn format_workspace_llm(
 pub fn format_semantic_llm(
     results: &[SemanticSearchResult],
     writer: &mut dyn Write,
+    llm_options: &LlmFormatOptions,
 ) -> Result<(), OutputError> {
     if results.is_empty() {
         return Ok(());
     }
 
+    // トランケーション後のbodyでトークン推定
     let total_text: String = results
         .iter()
-        .map(|r| r.body.as_str())
+        .map(|r| {
+            let (truncated, _) = truncate_body_for_llm(&r.body, llm_options.max_body_lines);
+            truncated
+        })
         .collect::<Vec<_>>()
         .join("");
     let tokens = estimate_tokens(&total_text);
@@ -257,7 +262,28 @@ pub fn format_semantic_llm(
             writeln!(writer, "### {heading}")?;
         }
         writeln!(writer)?;
-        write_body(writer, &result.path, &result.body)?;
+
+        let (truncated_body, was_truncated) =
+            truncate_body_for_llm(&result.body, llm_options.max_body_lines);
+        if was_truncated {
+            let cleaned = strip_control_chars(&truncated_body);
+            if !cleaned.is_empty() {
+                if is_code_file(&result.path) {
+                    let lang = detect_language(&result.path);
+                    let backtick_count = fence_backticks(&cleaned);
+                    let fence: String = "`".repeat(backtick_count);
+                    writeln!(writer, "{fence}{lang}")?;
+                    writeln!(writer, "{cleaned}")?;
+                    writeln!(writer, "... (truncated)")?;
+                    writeln!(writer, "{fence}")?;
+                } else {
+                    writeln!(writer, "{cleaned}")?;
+                    writeln!(writer, "... (truncated)")?;
+                }
+            }
+        } else {
+            write_body(writer, &result.path, &result.body)?;
+        }
     }
     Ok(())
 }

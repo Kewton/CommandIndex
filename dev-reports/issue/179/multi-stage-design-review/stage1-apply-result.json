@@ -1,0 +1,23 @@
+{
+  "stage": "1-4",
+  "type": "apply-review",
+  "applied_items": [
+    {"source": "Stage1-M1", "action": "判断5追加: パラメータ膨張への対応（既存パターン踏襲、将来リファクタリング）"},
+    {"source": "Stage1-S2", "action": "判断2に「sectionsが空の場合は空bodyを返す」を明記"},
+    {"source": "Stage1-S3", "action": "5.4節にformat_human()と同じlines=0/chars=0ガード追加"},
+    {"source": "Stage2-M1", "action": "5.6節にセマンティック分岐内でLlmFormatOptionsを構築する手順を明記"},
+    {"source": "Stage2-M2", "action": "8節の既存テスト更新に具体的なパラメータ値を追加"},
+    {"source": "Stage2-S1", "action": "5.6節にCopy trait/clone()不要の注記追加"},
+    {"source": "Stage2-S2", "action": "判断6追加: ISPへの対応（Json/Pathでの不使用パラメータ）"},
+    {"source": "Stage2-S3", "action": "5.5節にformat_llm()と同じwas_truncated分岐パターンを明記"},
+    {"source": "Stage2-N1", "action": "5.4節にlines=0/chars=0の全文表示ガードを追加"},
+    {"source": "Stage2-N2", "action": "5.7節でsections.first()をローカル変数にバインド"},
+    {"source": "Stage3-S1", "action": "6節にハイブリッド検索が影響を受けない理由を追記"},
+    {"source": "Stage3-S2", "action": "6節にSnippetConfig::default()変更時の挙動伝播を注記"},
+    {"source": "Stage3-N2", "action": "8節にsections空ケースのテストを追加"},
+    {"source": "Stage4", "action": "7節にlines=0/chars=0のセキュリティ対策を追加"},
+    {"source": "Stage1-N1,N2,N3", "action": "YAGNI/OCP準拠の注記を判断1,3に追加"},
+    {"source": "テスト拡充", "action": "8節にlines=0/chars=0テスト、was_truncatedテストを追加"}
+  ],
+  "design_policy_updated": true
+}
