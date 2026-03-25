@@ -2679,12 +2679,14 @@ mod tests {
                     .to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "47".to_string(),
                 file_path: "dev-reports/issue/47/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "99".to_string(),
@@ -2692,6 +2694,7 @@ mod tests {
                     .to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2743,6 +2746,7 @@ mod tests {
             file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
 
@@ -2771,6 +2775,7 @@ mod tests {
             file_path: "dev-reports/issue/50/work-plan.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            date: None,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
 
@@ -2794,18 +2799,21 @@ mod tests {
                 file_path: "dev-reports/design/issue-200-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "10".to_string(),
                 file_path: "dev-reports/design/issue-10-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "50".to_string(),
                 file_path: "dev-reports/design/issue-50-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();

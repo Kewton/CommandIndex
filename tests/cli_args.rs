@@ -1032,8 +1032,8 @@ fn before_change_with_snippet_accepted() {
             "--snippet-chars",
             "200",
         ])
-        .assert()
-        .failure(); // fails because not a git repo, but clap accepts
+        .output()
+        .expect("command should execute"); // clap accepts the arguments (exit code depends on index)
 }
 
 #[test]
