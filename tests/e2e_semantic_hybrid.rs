@@ -337,6 +337,13 @@ fn test_embed_without_ollama_fails() {
     let (dir, _commandindex_dir) =
         setup_semantic_test_dir().expect("test_embed_without_ollama_fails: setup");
 
+    // Force embed to fail by pointing to unreachable endpoint
+    fs::write(
+        dir.path().join("commandindex.toml"),
+        "[embedding]\nendpoint = \"http://127.0.0.1:19999\"\n",
+    )
+    .expect("test_embed_without_ollama_fails: write config");
+
     // Running embed without Ollama available exits successfully but reports
     // failures in stderr warnings and "Failed: N" in stdout.
     let output = common::cmd()
