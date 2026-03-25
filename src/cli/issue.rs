@@ -136,9 +136,7 @@ fn open_symbol_store(commandindex_dir: &Path) -> Result<SymbolStore, IssueComman
 }
 
 fn sanitize_label(s: &str) -> String {
-    s.chars()
-        .filter(|c| !c.is_control())
-        .collect()
+    s.chars().filter(|c| !c.is_control()).collect()
 }
 
 fn convert_row_to_entry(row: IssueListRow) -> IssueListEntry {
