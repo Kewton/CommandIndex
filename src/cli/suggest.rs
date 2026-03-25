@@ -609,6 +609,7 @@ mod tests {
             relation: KnowledgeRelation::HasDesign,
             file_path: "docs/design.md".to_string(),
             title: Some("Design Doc".to_string()),
+            date: None,
         }];
         let matched_issues = vec!["42".to_string()];
 
@@ -659,12 +660,14 @@ mod tests {
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "docs/design-10.md".to_string(),
                 title: Some("Design 10".to_string()),
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "20".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 file_path: "docs/plan-20.md".to_string(),
                 title: Some("Plan 20".to_string()),
+                date: None,
             },
         ];
         let matched_issues = vec!["10".to_string(), "20".to_string()];

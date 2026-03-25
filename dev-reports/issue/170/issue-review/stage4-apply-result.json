@@ -1,0 +1,14 @@
+{
+  "stage": 4,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "status": "applied", "description": "WhyDocumentEntry変更を影響範囲セクションに明記"},
+    {"id": "M2", "status": "applied", "description": "IssueDocumentEntry変更を影響範囲セクションに明記"},
+    {"id": "M3", "status": "applied", "description": "issue JSON破壊的変更を明記、変更前/変更後の例を追加"},
+    {"id": "M4", "status": "applied", "description": "日付取得ユーティリティ関数の設計を実装方針セクションに追加"},
+    {"id": "S1-S4", "status": "applied", "description": "テスト修正箇所約20箇所の概要を追加"},
+    {"id": "N1", "status": "applied", "description": "パフォーマンス最適化は初期実装では不要と明記"},
+    {"id": "N3", "status": "applied", "description": "KnowledgeRelatedResult拡張を将来候補として記載"}
+  ],
+  "summary": "影響範囲セクション、実装方針セクションを追加。期待される結果をwhy/issueに分離し、オブジェクト配列形式で例示。"
+}

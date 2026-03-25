@@ -1,0 +1,7 @@
+{
+  "stage": 4,
+  "applied_items": [
+    {"id": "S1", "status": "applied", "description": "validate_git_file_path相当のパス検証をセキュリティ設計に追加"},
+    {"id": "S2", "status": "applied", "description": "日付取得関数の可視性をpub(crate)に制限"}
+  ]
+}

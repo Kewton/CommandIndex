@@ -559,18 +559,21 @@ mod tests {
                 relation: KnowledgeRelation::HasWorkplan,
                 file_path: "wp.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "100".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "design.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "100".to_string(),
                 relation: KnowledgeRelation::HasReview,
                 file_path: "review.md".to_string(),
                 title: None,
+                date: None,
             },
         ];
 
@@ -592,6 +595,7 @@ mod tests {
             relation: KnowledgeRelation::HasDesign,
             file_path: "design.md".to_string(),
             title: None,
+            date: None,
         }];
 
         let tmp = tempfile::TempDir::new().unwrap();
@@ -653,18 +657,21 @@ mod tests {
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "d50.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "200".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "d200.md".to_string(),
                 title: None,
+                date: None,
             },
             KnowledgeDocResult {
                 issue_number: "100".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 file_path: "d100.md".to_string(),
                 title: None,
+                date: None,
             },
         ];
 

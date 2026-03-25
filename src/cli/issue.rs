@@ -191,20 +191,23 @@ fn format_human(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result
 }
 
 fn format_json(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<(), OutputError> {
-    // Build grouped JSON structure
+    // Build grouped JSON structure with object arrays
     let grouped = result.grouped();
     let mut categories = serde_json::Map::new();
     for (category, docs) in &grouped {
-        let paths: Vec<&str> = docs.iter().map(|d| d.file_path.as_str()).collect();
-        categories.insert(
-            (*category).to_string(),
-            serde_json::Value::Array(
-                paths
-                    .into_iter()
-                    .map(|p| serde_json::Value::String(p.to_string()))
-                    .collect(),
-            ),
-        );
+        let entries: Vec<serde_json::Value> = docs
+            .iter()
+            .map(|d| {
+                let mut obj = serde_json::json!({
+                    "file_path": d.file_path,
+                });
+                if let Some(ref date) = d.date {
+                    obj["date"] = serde_json::Value::String(date.clone());
+                }
+                obj
+            })
+            .collect();
+        categories.insert((*category).to_string(), serde_json::Value::Array(entries));
     }
     let output = serde_json::json!({
         "issue_number": result.issue_number,
@@ -261,21 +264,25 @@ mod tests {
             file_path: "a.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         };
         let review = IssueDocumentEntry {
             file_path: "b.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::IssueReview,
+            date: None,
         };
         let workplan = IssueDocumentEntry {
             file_path: "c.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            date: None,
         };
         let stage_review = IssueDocumentEntry {
             file_path: "d.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::StageReview,
+            date: None,
         };
         assert!(sort_order(&design) < sort_order(&review));
         assert!(sort_order(&review) < sort_order(&workplan));
@@ -291,21 +298,25 @@ mod tests {
                     file_path: "design.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    date: None,
                 },
                 IssueDocumentEntry {
                     file_path: "review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::IssueReview,
+                    date: None,
                 },
                 IssueDocumentEntry {
                     file_path: "progress.md".to_string(),
                     relation: KnowledgeRelation::HasProgress,
                     doc_subtype: DocSubtype::ProgressReport,
+                    date: None,
                 },
                 IssueDocumentEntry {
                     file_path: "stage-review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::StageReview,
+                    date: None,
                 },
             ],
         };
@@ -337,11 +348,13 @@ mod tests {
                     file_path: "design.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    date: None,
                 },
                 IssueDocumentEntry {
                     file_path: "work-plan.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
+                    date: None,
                 },
             ],
         };
@@ -363,6 +376,7 @@ mod tests {
                 file_path: "design.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             }],
         };
         let mut buf = Vec::new();
@@ -381,6 +395,7 @@ mod tests {
                 file_path: "design.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             }],
         };
         let mut buf = Vec::new();
@@ -400,11 +415,13 @@ mod tests {
                     file_path: "a.md".to_string(),
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
+                    date: None,
                 },
                 IssueDocumentEntry {
                     file_path: "b.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
+                    date: None,
                 },
             ],
         };

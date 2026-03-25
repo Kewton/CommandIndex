@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    {"id": "M1", "status": "applied", "description": "現状例のファイル名を汎用的な例に変更"},
+    {"id": "M2", "status": "applied", "description": "受け入れ基準セクションを新設"},
+    {"id": "M3", "status": "applied", "description": "Stage Reviewのみ日付プレフィックスありと明記"},
+    {"id": "S1", "status": "applied", "description": "日付取得優先順位を2段階に簡素化"},
+    {"id": "S2", "status": "applied", "description": "マイグレーション戦略セクション追加"},
+    {"id": "S3", "status": "applied", "description": "影響構造体一覧を追加"},
+    {"id": "S4", "status": "applied", "description": "--timelineオプションは別Issue検討と注記"},
+    {"id": "N2", "status": "applied", "description": "ISO 8601日付フォーマット明記"}
+  ],
+  "summary": "Must Fix 3件、Should Fix 4件、Nice to Have 1件を全て反映。Issueが更新された。"
+}

@@ -19,18 +19,21 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
             file_path: "dev-reports/design/issue-140-issue-cmd-design-policy.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         },
         KnowledgeEntry {
             issue_number: "140".to_string(),
             file_path: "dev-reports/issue/140/work-plan.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            date: None,
         },
         KnowledgeEntry {
             issue_number: "140".to_string(),
             file_path: "dev-reports/issue/140/issue-review/summary-report.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::IssueReview,
+            date: None,
         },
         KnowledgeEntry {
             issue_number: "140".to_string(),
@@ -38,6 +41,7 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
                 .to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::DesignReview,
+            date: None,
         },
         KnowledgeEntry {
             issue_number: "140".to_string(),
@@ -45,6 +49,7 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
                 .to_string(),
             relation: KnowledgeRelation::HasProgress,
             doc_subtype: DocSubtype::ProgressReport,
+            date: None,
         },
         KnowledgeEntry {
             issue_number: "140".to_string(),
@@ -52,6 +57,7 @@ fn setup_issue_test_data(tmp: &std::path::Path) -> std::path::PathBuf {
                 .to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::StageReview,
+            date: None,
         },
     ];
     store.insert_knowledge_entries(&entries).unwrap();
@@ -172,5 +178,10 @@ fn issue_progress_report_categorized() {
         .as_array()
         .expect("進捗レポート should be array");
     assert_eq!(progress.len(), 1);
-    assert!(progress[0].as_str().unwrap().contains("progress-report.md"));
+    assert!(
+        progress[0]["file_path"]
+            .as_str()
+            .unwrap()
+            .contains("progress-report.md")
+    );
 }

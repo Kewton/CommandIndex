@@ -68,6 +68,7 @@ pub struct KnowledgeDocResult {
     pub relation: crate::indexer::knowledge::KnowledgeRelation,
     pub file_path: String,
     pub title: Option<String>,
+    pub date: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -732,6 +733,72 @@ impl SymbolStore {
 }
 
 // ---------------------------------------------------------------------------
+// Knowledge Graph – metadata helpers
+// ---------------------------------------------------------------------------
+
+/// Parse `doc_subtype` and optional `date` from a JSON metadata string.
+/// Returns `(DocSubtype, Option<String>)` on success, or `None` if the
+/// metadata is absent / unparseable (lenient variant used by `find_knowledge_related`).
+fn parse_metadata_lenient(
+    metadata_str: &Option<String>,
+) -> (
+    Option<crate::indexer::knowledge::DocSubtype>,
+    Option<String>,
+) {
+    let parsed = metadata_str
+        .as_deref()
+        .and_then(|m| serde_json::from_str::<serde_json::Value>(m).ok());
+    match parsed {
+        Some(v) => {
+            let ds = v
+                .get("doc_subtype")
+                .and_then(|s| s.as_str())
+                .and_then(crate::indexer::knowledge::DocSubtype::parse);
+            let d = v
+                .get("date")
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            (ds, d)
+        }
+        None => (None, None),
+    }
+}
+
+/// Parse `doc_subtype` and optional `date` from a JSON metadata string.
+/// Returns a strict `Result` — used where missing/invalid metadata is an error.
+fn parse_metadata_strict(
+    metadata_str: &Option<String>,
+    file_path: &str,
+) -> Result<(crate::indexer::knowledge::DocSubtype, Option<String>), SymbolStoreError> {
+    let raw = metadata_str.as_deref().unwrap_or("");
+    if raw.is_empty() {
+        return Err(SymbolStoreError::InvalidEmbedding {
+            reason: format!("Missing metadata for document: {file_path}"),
+        });
+    }
+    let parsed: serde_json::Value =
+        serde_json::from_str(raw).map_err(|e| SymbolStoreError::InvalidEmbedding {
+            reason: format!("Failed to parse metadata for {file_path}: {e}"),
+        })?;
+    let subtype_str =
+        parsed["doc_subtype"]
+            .as_str()
+            .ok_or_else(|| SymbolStoreError::InvalidEmbedding {
+                reason: format!("Missing doc_subtype in metadata for {file_path}"),
+            })?;
+    let ds = crate::indexer::knowledge::DocSubtype::parse(subtype_str).ok_or_else(|| {
+        SymbolStoreError::InvalidEmbedding {
+            reason: format!("Unknown doc_subtype: {subtype_str}"),
+        }
+    })?;
+    let d = parsed
+        .get("date")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    Ok((ds, d))
+}
+
+// ---------------------------------------------------------------------------
 // Knowledge Graph Methods
 // ---------------------------------------------------------------------------
 
@@ -816,8 +883,11 @@ impl SymbolStore {
             )?;
 
             // Upsert edge
-            let metadata =
-                serde_json::json!({"doc_subtype": entry.doc_subtype.as_str()}).to_string();
+            let mut meta = serde_json::json!({"doc_subtype": entry.doc_subtype.as_str()});
+            if let Some(ref d) = entry.date {
+                meta["date"] = serde_json::Value::String(d.clone());
+            }
+            let metadata = meta.to_string();
             tx.execute(
                 "INSERT INTO knowledge_edges (source_id, target_id, relation, metadata)
                  VALUES (?1, ?2, ?3, ?4)
@@ -882,34 +952,13 @@ impl SymbolStore {
                     reason: format!("Unknown relation type: {relation_str}"),
                 })?;
 
-            let metadata_str = metadata_opt.unwrap_or_default();
-            let doc_subtype = if metadata_str.is_empty() {
-                return Err(SymbolStoreError::InvalidEmbedding {
-                    reason: format!("Missing metadata for document: {file_path}"),
-                });
-            } else {
-                let parsed: serde_json::Value =
-                    serde_json::from_str(&metadata_str).map_err(|e| {
-                        SymbolStoreError::InvalidEmbedding {
-                            reason: format!("Failed to parse metadata for {file_path}: {e}"),
-                        }
-                    })?;
-                let subtype_str = parsed["doc_subtype"].as_str().ok_or_else(|| {
-                    SymbolStoreError::InvalidEmbedding {
-                        reason: format!("Missing doc_subtype in metadata for {file_path}"),
-                    }
-                })?;
-                crate::indexer::knowledge::DocSubtype::parse(subtype_str).ok_or_else(|| {
-                    SymbolStoreError::InvalidEmbedding {
-                        reason: format!("Unknown doc_subtype: {subtype_str}"),
-                    }
-                })?
-            };
+            let (doc_subtype, date) = parse_metadata_strict(&metadata_opt, &file_path)?;
 
             results.push(crate::indexer::knowledge::IssueDocumentEntry {
                 file_path,
                 relation,
                 doc_subtype,
+                date,
             });
         }
 
@@ -939,7 +988,8 @@ impl SymbolStore {
             "SELECT kn_issue.identifier AS issue_number,
                     ke.relation,
                     kn_doc.file_path,
-                    kn_doc.title
+                    kn_doc.title,
+                    ke.metadata
              FROM knowledge_nodes kn_issue
              JOIN knowledge_edges ke ON ke.source_id = kn_issue.id
              JOIN knowledge_nodes kn_doc ON ke.target_id = kn_doc.id AND kn_doc.type IN ('document', 'file')
@@ -958,20 +1008,29 @@ impl SymbolStore {
             let relation_str: String = row.get(1)?;
             let file_path: String = row.get(2)?;
             let title: Option<String> = row.get(3)?;
-            Ok((issue_number, relation_str, file_path, title))
+            let metadata_str: Option<String> = row.get(4)?;
+            Ok((issue_number, relation_str, file_path, title, metadata_str))
         })?;
 
         let mut results = Vec::new();
         for row in rows {
-            let (issue_number, relation_str, file_path, title) = row?;
+            let (issue_number, relation_str, file_path, title, metadata_str) = row?;
             if let Some(relation) =
                 crate::indexer::knowledge::KnowledgeRelation::parse(&relation_str)
             {
+                let date = metadata_str
+                    .and_then(|m| serde_json::from_str::<serde_json::Value>(&m).ok())
+                    .and_then(|v| {
+                        v.get("date")
+                            .and_then(|s| s.as_str())
+                            .map(|s| s.to_string())
+                    });
                 results.push(KnowledgeDocResult {
                     issue_number,
                     relation,
                     file_path,
                     title,
+                    date,
                 });
             } else {
                 let sanitized: String = relation_str
@@ -1079,22 +1138,14 @@ impl SymbolStore {
 
         let rows = stmt.query_map(params![file_path], |row| {
             let metadata_str: Option<String> = row.get(4)?;
-            let doc_subtype = metadata_str.and_then(|m| {
-                serde_json::from_str::<serde_json::Value>(&m)
-                    .ok()
-                    .and_then(|v| {
-                        v.get("doc_subtype").and_then(|s| {
-                            s.as_str()
-                                .and_then(crate::indexer::knowledge::DocSubtype::parse)
-                        })
-                    })
-            });
+            let (doc_subtype, date) = parse_metadata_lenient(&metadata_str);
             Ok(crate::indexer::knowledge::KnowledgeRelatedResult {
                 issue_number: row.get(0)?,
                 relation: row.get(1)?,
                 file_path: row.get(2)?,
                 title: row.get(3)?,
                 doc_subtype,
+                date,
             })
         })?;
 
@@ -1853,12 +1904,14 @@ mod tests {
                 file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "100".to_string(),
                 file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
         ];
 
@@ -1891,6 +1944,7 @@ mod tests {
             file_path: "dev-reports/issue/100/work-plan.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            date: None,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
 
@@ -1915,6 +1969,7 @@ mod tests {
             file_path: "dev-reports/issue/100/work-plan.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
+            date: None,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
 
@@ -1966,18 +2021,21 @@ mod tests {
                 file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "100".to_string(),
                 file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "100".to_string(),
                 file_path: "dev-reports/issue/100/issue-review/summary-report.md".to_string(),
                 relation: KnowledgeRelation::HasReview,
                 doc_subtype: DocSubtype::IssueReview,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2012,12 +2070,14 @@ mod tests {
                 file_path: "dev-reports/design/issue-200-test-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "200".to_string(),
                 file_path: "dev-reports/issue/200/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2056,18 +2116,21 @@ mod tests {
                 file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "100".to_string(),
                 file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "200".to_string(),
                 file_path: "dev-reports/design/issue-200-feature-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2120,18 +2183,21 @@ mod tests {
                 file_path: "dev-reports/design/issue-140-issue-cmd-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "140".to_string(),
                 file_path: "dev-reports/issue/140/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "140".to_string(),
                 file_path: "dev-reports/issue/140/issue-review/summary-report.md".to_string(),
                 relation: KnowledgeRelation::HasReview,
                 doc_subtype: DocSubtype::IssueReview,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&entries).unwrap();
@@ -2174,6 +2240,7 @@ mod tests {
                 .to_string(),
             relation: KnowledgeRelation::HasProgress,
             doc_subtype: DocSubtype::ProgressReport,
+            date: None,
         }];
         store.insert_knowledge_entries(&entries).unwrap();
 
@@ -2321,6 +2388,7 @@ mod tests {
             file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         }];
         store.insert_knowledge_entries(&doc_entries).unwrap();
 
@@ -2374,6 +2442,7 @@ mod tests {
             file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         }];
         store.insert_knowledge_entries(&doc_entries).unwrap();
 
@@ -2406,6 +2475,7 @@ mod tests {
             file_path: "dev-reports/design/issue-100-design-policy.md".to_string(),
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
+            date: None,
         }];
         store.insert_knowledge_entries(&doc_entries).unwrap();
 
@@ -2443,12 +2513,14 @@ mod tests {
                 file_path: "dev-reports/design/issue-100-test-design-policy.md".to_string(),
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
             },
             KnowledgeEntry {
                 issue_number: "100".to_string(),
                 file_path: "dev-reports/issue/100/work-plan.md".to_string(),
                 relation: KnowledgeRelation::HasWorkplan,
                 doc_subtype: DocSubtype::WorkPlan,
+                date: None,
             },
         ];
         store.insert_knowledge_entries(&doc_entries).unwrap();

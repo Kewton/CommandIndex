@@ -1,0 +1,17 @@
+{
+  "must_fix": [
+    {"id": "M1", "category": "影響範囲", "description": "src/cli/suggest.rsがKnowledgeDocResultを直接使用しており変更ファイル一覧に含まれていない。", "suggestion": "KnowledgeDocResultにdate追加する場合、suggest.rsのテスト箇所も修正対象に追加。"},
+    {"id": "M2", "category": "テスト", "description": "symbol_store.rs内テスト（10箇所以上のKnowledgeEntry初期化）がテスト修正箇所に含まれていない。", "suggestion": "テスト修正箇所にsymbol_store.rsテストを追加（約10箇所）。"},
+    {"id": "M3", "category": "データ整合性", "description": "re-index前のdateなしmetadataの取り扱いが明示されていない。", "suggestion": "dateフィールド不在時はNoneとして安全に処理する旨を明記。"}
+  ],
+  "should_fix": [
+    {"id": "S1", "category": "影響範囲", "description": "before_change.rsがKnowledgeDocResult経由で影響を受ける。dateを意図的に無視するコードが必要。", "suggestion": "before_change.rsでのdate無視を明記。"},
+    {"id": "S2", "category": "テスト", "description": "e2e_issue.rsの具体的な修正内容が不足。", "suggestion": "オブジェクト配列アサーションへの変更を具体化。"},
+    {"id": "S3", "category": "影響範囲", "description": "scan_dev_reports内でextract_date_from_pathを直接呼ぶ方が効率的。", "suggestion": "scan_dev_reports内で直接dateを設定する設計に統一。"},
+    {"id": "S4", "category": "テスト", "description": "extract_date_from_pathのユニットテスト設計が未記載。", "suggestion": "正常系・異常系テストケースを追記。"}
+  ],
+  "nice_to_have": [
+    {"id": "N1", "category": "データ整合性", "description": "chronoは既に依存にある。regexも既存。", "suggestion": "確認済み、追加不要。"}
+  ],
+  "summary": "影響範囲に3つの漏れ: suggest.rs、symbol_store.rsテスト、既存metadata互換性。テスト設計も不足。"
+}
