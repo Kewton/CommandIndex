@@ -118,6 +118,14 @@ pub struct RelatedSearchResult {
     pub snippet: Option<String>,
 }
 
+/// ナレッジグラフのメタデータ
+#[derive(Debug, Clone, Default)]
+pub struct KnowledgeGraphMeta {
+    pub issue_number: Option<String>,
+    pub relation: Option<String>,
+    pub doc_subtype: Option<String>,
+}
+
 /// 関連タイプ
 #[derive(Debug, Clone)]
 pub enum RelationType {
@@ -126,7 +134,20 @@ pub enum RelationType {
     TagMatch { matched_tags: Vec<String> },
     PathSimilarity,
     DirectoryProximity,
-    KnowledgeGraph,
+    KnowledgeGraph(KnowledgeGraphMeta),
+}
+
+impl RelationType {
+    pub fn is_knowledge_graph(&self) -> bool {
+        matches!(self, RelationType::KnowledgeGraph(_))
+    }
+
+    pub fn kg_meta(&self) -> Option<&KnowledgeGraphMeta> {
+        match self {
+            RelationType::KnowledgeGraph(meta) => Some(meta),
+            _ => None,
+        }
+    }
 }
 
 /// 関連検索結果を指定フォーマットで出力する
@@ -322,6 +343,7 @@ pub struct BeforeChangeFinding {
     pub doc_path: String,
     pub doc_title: Option<String>,
     pub similarity: Option<f32>,
+    pub snippet: Option<String>,
 }
 
 /// before-change 結果を指定フォーマットで出力する

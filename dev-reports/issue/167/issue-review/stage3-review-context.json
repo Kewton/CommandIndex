@@ -1,0 +1,63 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "KnowledgeDocResultにdoc_subtypeフィールドがなく、has_reviewのサブタイプ判別不可",
+      "description": "KnowledgeDocResult (symbol_store.rs:66-71) にdoc_subtypeフィールドがないため、IssueReview/DesignReview(summary)とStageReview(非summary)を区別できない。find_knowledge_by_issue()もmetadata/doc_subtypeを取得していない。",
+      "suggestion": "file_pathパターンマッチ（summary-report.mdで終わるかどうか）で判定する。doc_subtypeのスキーマ変更は不要。"
+    },
+    {
+      "id": "MF-2",
+      "title": "新しいフィルタリングロジックのユニットテストが必要",
+      "description": "既存のprepend_knowledge_stepsテストはフィルタリング前の挿入ロジックのみテスト。新しいフィルタリングロジック（modifies除外、has_progress除外、has_review非summary除外、Issue単位制限）のテストがない。",
+      "suggestion": "filter_and_limit_kg_docs()のユニットテストを追加: (1) modifies除外、(2) has_progress除外、(3) has_review非summary除外、(4) has_design/has_workplan保持、(5) MAX_KG_DOCS_PER_ISSUE制限、(6) 全件フィルタ後0件のエッジケース。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "has_reviewフィルタリング基準の明確化",
+      "description": "has_reviewにはIssueReview(summary-report.md), DesignReview(summary-report.md), StageReview(stage別ファイル)が含まれる。ALLを除外するのかsummary以外を除外するのかを明確にすべき。",
+      "suggestion": "file_pathがsummary-report.mdで終わるhas_reviewのみ保持、それ以外を除外する方針。"
+    },
+    {
+      "id": "SF-2",
+      "title": "Issue単位グルーピングでrelation_priorityソートを実装すべき",
+      "description": "before_change.rsと同じパターンで、Issue単位グルーピング後にrelation_priorityでソートし上位を選択すべき。",
+      "suggestion": "KnowledgeRelation enumにpriority()メソッドを追加するか、suggest.rs内でrelation_priority関数を定義する。"
+    },
+    {
+      "id": "SF-3",
+      "title": "before_change.rsのgroup_and_limit_by_issueはBeforeChangeFinding型で直接再利用不可",
+      "description": "before_change.rsの関数はBeforeChangeFinding型を扱う。suggest.rsではKnowledgeDocResultを扱うため、専用のフィルタリング関数が必要。",
+      "suggestion": "suggest.rs内にfilter_and_limit_kg_docs()関数を実装する。KnowledgeRelation enumで直接パターンマッチ。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "relation_priorityを共通モジュールに抽出",
+      "description": "before_change.rsとsuggest.rsで同じ優先度ロジックが必要。KnowledgeRelation enumにpriority()メソッドを追加すればDRY。",
+      "suggestion": "KnowledgeRelation::priority() -> u8 メソッド追加。"
+    },
+    {
+      "id": "NH-2",
+      "title": "MAX_KG_DOCS_PER_ISSUEをbefore_changeと共有検討",
+      "description": "before_change.rsのMAX_DOCS_PER_ISSUE=2と同値。将来的に共有定数にする検討。",
+      "suggestion": "現時点ではsuggest.rs内に定義。将来的に共通化。"
+    },
+    {
+      "id": "NH-3",
+      "title": "他コマンドへの影響なし（確認済み）",
+      "description": "変更はsuggest.rsのquery_knowledge_graph()とprepend_knowledge_steps()の間のみ。before_change, issue等の他コマンドへの副作用なし。",
+      "suggestion": "対応不要。"
+    },
+    {
+      "id": "NH-4",
+      "title": "パフォーマンス影響は無視可能",
+      "description": "O(n) retain() + O(n) groupingのみ。BM25/semantic検索やSQLiteクエリに比べて無視可能。",
+      "suggestion": "対応不要。"
+    }
+  ],
+  "summary": "主要リスクはMF-1: KnowledgeDocResultにdoc_subtypeがなく、has_reviewのsummary判別にfile_pathパターンマッチが必要。MF-2: フィルタリングロジックのテスト追加が必要。変更はsuggest.rsに限定され他コマンドへの影響なし。パフォーマンス影響も無視可能。"
+}

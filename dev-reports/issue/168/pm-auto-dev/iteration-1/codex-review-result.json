@@ -1,0 +1,39 @@
+{
+  "critical": [],
+  "warnings": [
+    {
+      "file": "src/cli/issue.rs",
+      "line": 153,
+      "severity": "high",
+      "category": "bug",
+      "description": "Snippet reader is opened with `commandindex_dir` instead of the Tantivy index directory. `IndexReaderWrapper::open()` expects the `{commandindex_dir}/tantivy` path, so this branch will fail in normal setups and silently fall back to `snippet: None`. As a result, `issue --with-snippet` will not return snippets even when the index exists.",
+      "suggestion": "Open the reader with `crate::indexer::index_dir(commandindex_dir)` and add an integration test that verifies snippet retrieval succeeds when Tantivy data is present."
+    },
+    {
+      "file": "src/cli/before_change.rs",
+      "line": 491,
+      "severity": "high",
+      "category": "bug",
+      "description": "The same Tantivy path bug exists in `before-change`: `IndexReaderWrapper::open(&commandindex_dir)` points at the `.commandindex` root, not `.commandindex/tantivy`. This causes snippet enrichment to fail and silently fall back to `None`, so `before-change --with-snippet` will not behave as intended.",
+      "suggestion": "Use `crate::indexer::index_dir(&commandindex_dir)` here as well, and add an E2E test that exercises `before-change --with-snippet` against a fixture with a real Tantivy index."
+    },
+    {
+      "file": "src/output/human.rs",
+      "line": 382,
+      "severity": "low",
+      "category": "security",
+      "description": "Snippet lines are written to the terminal without `strip_control_chars()`. Today `fetch_snippet()` sanitizes Tantivy-derived snippets, but this formatter now trusts every `finding.snippet` source. If a future caller populates `snippet` from unsanitized input, terminal control sequences could be emitted.",
+      "suggestion": "Sanitize each snippet line before writing it, matching the existing handling for file paths, relations, titles, and the LLM formatter."
+    },
+    {
+      "file": "src/cli/issue.rs",
+      "line": 231,
+      "severity": "low",
+      "category": "bug",
+      "description": "Production code uses `obj.as_object_mut().unwrap()` while building snippet-enabled JSON. It is currently safe because `obj` is created from an object literal immediately above, but it is still an avoidable panic point in a changed code path.",
+      "suggestion": "Replace the `unwrap()` with `if let Some(map) = obj.as_object_mut()` or construct the map directly to keep the formatter panic-free."
+    }
+  ],
+  "summary": "2件の高優先度バグがあります。どちらも snippet reader を `.commandindex/tantivy` ではなく `.commandindex` 直下で開いており、`issue --with-snippet` と `before-change --with-snippet` が実質的に常時フォールバックしてしまいます。加えて、human formatter の snippet 出力に制御文字サニタイズがなく、JSON生成コードに不要な `unwrap()` が残っています。unsafe、SQLインジェクション、コマンドインジェクション、パストラバーサルに該当する新規問題はこの差分からは見つかりませんでした。",
+  "requires_fix": true
+}

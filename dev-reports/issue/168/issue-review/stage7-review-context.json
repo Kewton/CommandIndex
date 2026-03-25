@@ -1,0 +1,64 @@
+{
+  "reviewer": "Codex (gpt-5.4)",
+  "must_fix": [
+    {
+      "id": "M1",
+      "title": "issue --format json の条件付きスキーマ（--with-snippet 有無で型が変わる）のテスト",
+      "description": "--with-snippet 未指定時は string[]、指定時はオブジェクト配列。このスキーマ分岐をテストとドキュメントでカバーする必要がある。",
+      "suggestion": "両パターンのE2Eとユニットテストを追加。"
+    },
+    {
+      "id": "M2",
+      "title": "before-change JSON での snippet フィールドの null 表現が既存ポリシーと不整合",
+      "description": "impact/related のJSONは snippet: None のときフィールド自体を出さないテストがある。before-change だけ null を常に入れると不整合。",
+      "suggestion": "before-change のJSONで snippet を '--with-snippet 指定時のみ出す'、None は null で出すか省略かを固定し、既存JSON方針との差を影響範囲に含める。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "S1",
+      "title": "tests/cli_args.rs の影響範囲が不足",
+      "description": "新オプション追加でCLI引数テスト（help表示・境界値・受理/拒否）が必要。",
+      "suggestion": "tests/cli_args.rs を影響範囲に追加。"
+    },
+    {
+      "id": "S2",
+      "title": "E2Eテストは tantivy 未存在フォールバックと成功系の両方が必要",
+      "description": "reader初期化失敗を非fatalにするため、成功系だけでは不十分。",
+      "suggestion": "issue/before-change 各2系統（tantivy有り/無し）のE2Eを追加。"
+    },
+    {
+      "id": "S3",
+      "title": "フォーマッタ単体テストに before-change/issue のスニペット表示テスト追加",
+      "description": "human/llm/json/path 各フォーマットと snippet=None/Some の両ケースが必要。",
+      "suggestion": "tests/output_format.rs に追加。"
+    },
+    {
+      "id": "S4",
+      "title": "issue の最大100件取得をパフォーマンス欄に明記",
+      "description": "issue は find_documents_by_issue() の LIMIT 100 で最大100回の exact-path 検索。",
+      "suggestion": "件数比例の影響として記述。"
+    },
+    {
+      "id": "S5",
+      "title": "tantivy reader 依存拡大を依存関係影響に明記",
+      "description": "issue/before-change の実行時依存に tantivy reader が加わる。障害モード（symbols.db はあるが tantivy が壊れている/ない）を扱う必要。",
+      "suggestion": "依存関係影響欄に明記。失敗時は非fatal フォールバック。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "N1",
+      "title": "help-llm 更新は運用面の影響として明示",
+      "description": "LLM連携時のコマンド発見性に影響。",
+      "suggestion": "運用ドキュメント面の影響として分けて記述。"
+    },
+    {
+      "id": "N2",
+      "title": "デフォルト 3/200 の妥当性を実データで確認",
+      "description": "2/120 から 3/200 への変更で出力量が増える。",
+      "suggestion": "CommandMate相当の実データでサンプリング確認。"
+    }
+  ],
+  "summary": "issue JSON の条件付きスキーマと before-change JSON の null 表現ポリシーの整合が新たな影響点。CLIテスト・フォーマッタテスト・tantivy 成功/失敗 E2E が確実に増加。性能は軽微だが issue 最大100件を前提に評価。"
+}

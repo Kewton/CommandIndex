@@ -280,9 +280,7 @@ fn enrich_entry(
     let has_tag_match = relation_types
         .iter()
         .any(|r| matches!(r, RelationType::TagMatch { .. }));
-    let has_knowledge_graph = relation_types
-        .iter()
-        .any(|r| matches!(r, RelationType::KnowledgeGraph));
+    let has_knowledge_graph = relation_types.iter().any(|r| r.is_knowledge_graph());
 
     let mut heading = None;
     let mut snippet = None;
@@ -297,11 +295,18 @@ fn enrich_entry(
                 heading = Some(first.heading.clone());
             }
             if !first.body.is_empty() {
+                // KGエントリの場合、doc_subtypeに基づいて関連セクションを抽出
+                let body_to_use = if has_knowledge_graph {
+                    extract_kg_section(&first.body, relation_types)
+                        .unwrap_or_else(|| first.body.clone())
+                } else {
+                    first.body.clone()
+                };
                 // 事前に500文字/10行に切り詰める。これは max_tokens 未指定時に
                 // 出力が巨大にならないための安全策。max_tokens 指定時は
                 // build_context_pack 内の truncate_snippet_for_char_budget が
                 // さらに予算内に縮約するため、機能上の問題はない。
-                let truncated = truncate_body(&first.body, 10, 500);
+                let truncated = truncate_body(&body_to_use, 10, 500);
                 let cleaned = strip_control_chars(&truncated);
                 if !cleaned.is_empty() {
                     snippet = Some(cleaned);
@@ -359,7 +364,7 @@ fn enrich_entry(
 
 /// RelationType を文字列に変換する（優先度順）
 fn relation_to_string(relation_types: &[RelationType]) -> String {
-    // 優先度: MarkdownLink > ImportDependency > TagMatch > PathSimilarity > DirectoryProximity
+    // 優先度: MarkdownLink > ImportDependency > KnowledgeGraph > TagMatch > PathSimilarity > DirectoryProximity
     for rt in relation_types {
         if matches!(rt, RelationType::MarkdownLink) {
             return "linked".to_string();
@@ -368,6 +373,11 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
     for rt in relation_types {
         if matches!(rt, RelationType::ImportDependency) {
             return "import_dependency".to_string();
+        }
+    }
+    for rt in relation_types {
+        if rt.is_knowledge_graph() {
+            return "knowledge_graph".to_string();
         }
     }
     for rt in relation_types {
@@ -385,12 +395,37 @@ fn relation_to_string(relation_types: &[RelationType]) -> String {
             return "directory_proximity".to_string();
         }
     }
-    for rt in relation_types {
-        if matches!(rt, RelationType::KnowledgeGraph) {
-            return "knowledge_graph".to_string();
+    "unknown".to_string()
+}
+
+/// KGエントリのdoc_subtypeに基づいて、本文から関連セクションを抽出する
+fn extract_kg_section(body: &str, relation_types: &[RelationType]) -> Option<String> {
+    let meta = relation_types.iter().find_map(|rt| rt.kg_meta())?;
+    let doc_subtype = meta.doc_subtype.as_deref()?;
+
+    let section_patterns: &[&str] = match doc_subtype {
+        "design_policy" => &["## 設計判断", "## 3."],
+        "work_plan" => &["## 作業", "## Task"],
+        _ => return None,
+    };
+
+    // 指定パターンに一致するセクションを探す
+    for pattern in section_patterns {
+        if let Some(start) = body.find(pattern) {
+            let section = &body[start..];
+            // 次の同レベル見出し（## ）までを抽出
+            let end = section[pattern.len()..]
+                .find("\n## ")
+                .map(|pos| pos + pattern.len())
+                .unwrap_or(section.len());
+            let extracted = &section[..end];
+            if !extracted.is_empty() {
+                return Some(extracted.to_string());
+            }
         }
     }
-    "unknown".to_string()
+
+    None
 }
 
 /// ContextEntryのメタデータ部分（snippet以外）の推定トークン数を算出

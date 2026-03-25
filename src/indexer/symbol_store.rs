@@ -959,6 +959,7 @@ impl SymbolStore {
                 relation,
                 doc_subtype,
                 date,
+                snippet: None,
             });
         }
 

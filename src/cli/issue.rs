@@ -121,6 +121,7 @@ pub fn run(
     issue_number: u64,
     format: OutputFormat,
     commandindex_dir: &Path,
+    snippet_options: crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), IssueCommandError> {
     // Check symbols.db exists
     let symbol_db = crate::indexer::symbol_db_path(commandindex_dir);
@@ -147,6 +148,21 @@ pub fn run(
     // Sort by relation + subtype order
     documents.sort_by_key(sort_order);
 
+    // Enrich with snippets (optional)
+    if snippet_options.enabled
+        && let Ok(reader) = crate::indexer::reader::IndexReaderWrapper::open(
+            &crate::indexer::index_dir(commandindex_dir),
+        )
+    {
+        crate::cli::snippet_helper::enrich_issue_documents_with_snippets(
+            &mut documents,
+            &reader,
+            &snippet_options,
+            format,
+        );
+    }
+    // reader open failure → snippet: None (fallback)
+
     let result = IssueDocumentsResult {
         issue_number: format!("{issue_number}"),
         documents,
@@ -154,7 +170,7 @@ pub fn run(
 
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
-    format_issue_documents(&result, format, &mut writer)?;
+    format_issue_documents(&result, format, &mut writer, &snippet_options)?;
     Ok(())
 }
 
@@ -166,10 +182,11 @@ fn format_issue_documents(
     result: &IssueDocumentsResult,
     format: OutputFormat,
     writer: &mut dyn Write,
+    snippet_options: &crate::cli::snippet_helper::SnippetOptions,
 ) -> Result<(), OutputError> {
     match format {
         OutputFormat::Human => format_human(result, writer),
-        OutputFormat::Json => format_json(result, writer),
+        OutputFormat::Json => format_json(result, writer, snippet_options),
         OutputFormat::Llm => format_llm(result, writer),
         OutputFormat::Path => format_path(result, writer),
     }
@@ -185,13 +202,22 @@ fn format_human(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result
         writeln!(writer, "\n  {category}:")?;
         for doc in docs {
             writeln!(writer, "    {}", strip_control_chars(&doc.file_path))?;
+            if let Some(ref snippet) = doc.snippet {
+                for line in snippet.lines() {
+                    writeln!(writer, "    > {}", strip_control_chars(line))?;
+                }
+            }
         }
     }
     Ok(())
 }
 
-fn format_json(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<(), OutputError> {
-    // Build grouped JSON structure with object arrays
+fn format_json(
+    result: &IssueDocumentsResult,
+    writer: &mut dyn Write,
+    snippet_options: &crate::cli::snippet_helper::SnippetOptions,
+) -> Result<(), OutputError> {
+    // Build grouped JSON structure with object arrays (always includes date)
     let grouped = result.grouped();
     let mut categories = serde_json::Map::new();
     for (category, docs) in &grouped {
@@ -203,6 +229,11 @@ fn format_json(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<
                 });
                 if let Some(ref date) = d.date {
                     obj["date"] = serde_json::Value::String(date.clone());
+                }
+                if snippet_options.enabled
+                    && let Some(ref snippet) = d.snippet
+                {
+                    obj["snippet"] = serde_json::Value::String(snippet.clone());
                 }
                 obj
             })
@@ -228,6 +259,9 @@ fn format_llm(result: &IssueDocumentsResult, writer: &mut dyn Write) -> Result<(
         writeln!(writer, "\n## {category}")?;
         for doc in docs {
             writeln!(writer, "- {}", strip_control_chars(&doc.file_path))?;
+            if let Some(ref snippet) = doc.snippet {
+                writeln!(writer, "  > {}", strip_control_chars(snippet))?;
+            }
         }
     }
     Ok(())
@@ -265,24 +299,28 @@ mod tests {
             relation: KnowledgeRelation::HasDesign,
             doc_subtype: DocSubtype::DesignPolicy,
             date: None,
+            snippet: None,
         };
         let review = IssueDocumentEntry {
             file_path: "b.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::IssueReview,
             date: None,
+            snippet: None,
         };
         let workplan = IssueDocumentEntry {
             file_path: "c.md".to_string(),
             relation: KnowledgeRelation::HasWorkplan,
             doc_subtype: DocSubtype::WorkPlan,
             date: None,
+            snippet: None,
         };
         let stage_review = IssueDocumentEntry {
             file_path: "d.md".to_string(),
             relation: KnowledgeRelation::HasReview,
             doc_subtype: DocSubtype::StageReview,
             date: None,
+            snippet: None,
         };
         assert!(sort_order(&design) < sort_order(&review));
         assert!(sort_order(&review) < sort_order(&workplan));
@@ -299,24 +337,28 @@ mod tests {
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
                     date: None,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::IssueReview,
                     date: None,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "progress.md".to_string(),
                     relation: KnowledgeRelation::HasProgress,
                     doc_subtype: DocSubtype::ProgressReport,
                     date: None,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "stage-review.md".to_string(),
                     relation: KnowledgeRelation::HasReview,
                     doc_subtype: DocSubtype::StageReview,
                     date: None,
+                    snippet: None,
                 },
             ],
         };
@@ -349,12 +391,14 @@ mod tests {
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
                     date: None,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "work-plan.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
                     date: None,
+                    snippet: None,
                 },
             ],
         };
@@ -377,14 +421,19 @@ mod tests {
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
                 date: None,
+                snippet: None,
             }],
         };
+        let no_snippet = crate::cli::snippet_helper::SnippetOptions::default();
         let mut buf = Vec::new();
-        format_json(&result, &mut buf).unwrap();
+        format_json(&result, &mut buf, &no_snippet).unwrap();
         let output = String::from_utf8(buf).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
         assert_eq!(parsed["issue_number"], "140");
+        // Always object array with file_path (date omitted when None)
         assert!(parsed["documents"]["設計"].is_array());
+        assert!(parsed["documents"]["設計"][0].is_object());
+        assert_eq!(parsed["documents"]["設計"][0]["file_path"], "design.md");
     }
 
     #[test]
@@ -396,6 +445,7 @@ mod tests {
                 relation: KnowledgeRelation::HasDesign,
                 doc_subtype: DocSubtype::DesignPolicy,
                 date: None,
+                snippet: None,
             }],
         };
         let mut buf = Vec::new();
@@ -416,12 +466,14 @@ mod tests {
                     relation: KnowledgeRelation::HasDesign,
                     doc_subtype: DocSubtype::DesignPolicy,
                     date: None,
+                    snippet: None,
                 },
                 IssueDocumentEntry {
                     file_path: "b.md".to_string(),
                     relation: KnowledgeRelation::HasWorkplan,
                     doc_subtype: DocSubtype::WorkPlan,
                     date: None,
+                    snippet: None,
                 },
             ],
         };
@@ -432,5 +484,96 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "a.md");
         assert_eq!(lines[1], "b.md");
+    }
+
+    // --- Snippet tests ---
+
+    #[test]
+    fn test_format_human_with_snippet() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
+                snippet: Some("test snippet content".to_string()),
+            }],
+        };
+        let mut buf = Vec::new();
+        format_human(&result, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_format_llm_with_snippet() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
+                snippet: Some("test snippet content".to_string()),
+            }],
+        };
+        let mut buf = Vec::new();
+        format_llm(&result, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("- design.md"));
+        assert!(output.contains("> test snippet content"));
+    }
+
+    #[test]
+    fn test_format_json_with_snippet_enabled() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
+                snippet: Some("test snippet".to_string()),
+            }],
+        };
+        let with_snippet = crate::cli::snippet_helper::SnippetOptions {
+            enabled: true,
+            config: crate::output::SnippetConfig::default(),
+        };
+        let mut buf = Vec::new();
+        format_json(&result, &mut buf, &with_snippet).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // With --with-snippet: object array
+        let doc = &parsed["documents"]["設計"][0];
+        assert!(doc.is_object());
+        assert_eq!(doc["file_path"], "design.md");
+        assert_eq!(doc["snippet"], "test snippet");
+    }
+
+    #[test]
+    fn test_format_json_with_snippet_disabled_keeps_object_array() {
+        let result = IssueDocumentsResult {
+            issue_number: "140".to_string(),
+            documents: vec![IssueDocumentEntry {
+                file_path: "design.md".to_string(),
+                relation: KnowledgeRelation::HasDesign,
+                doc_subtype: DocSubtype::DesignPolicy,
+                date: None,
+                snippet: Some("test snippet".to_string()),
+            }],
+        };
+        let no_snippet = crate::cli::snippet_helper::SnippetOptions::default();
+        let mut buf = Vec::new();
+        format_json(&result, &mut buf, &no_snippet).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        // Without --with-snippet: object array with file_path (no snippet), date may be present
+        let doc = &parsed["documents"]["設計"][0];
+        assert!(doc.is_object());
+        assert_eq!(doc["file_path"], "design.md");
+        assert!(doc.get("snippet").is_none());
     }
 }

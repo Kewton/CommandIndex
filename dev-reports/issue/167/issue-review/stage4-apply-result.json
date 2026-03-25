@@ -1,0 +1,15 @@
+{
+  "stage": 4,
+  "action": "apply_impact_review",
+  "applied_items": ["MF-1", "MF-2", "SF-1", "SF-2", "SF-3", "NH-1", "NH-3"],
+  "changes": [
+    "file_path.ends_with(\"summary-report.md\")による判定方針を明記",
+    "テスト要件セクション新設（5つのユニットテスト項目）",
+    "has_reviewフィルタリング基準の明確化",
+    "relation_priorityソート順を明記",
+    "filter_and_limit_kg_docs()関数新設の方針を追加",
+    "relation_priority共通化検討を補足セクションに追加",
+    "他コマンドへの影響なし確認を記載"
+  ],
+  "issue_updated": true
+}

@@ -1,0 +1,45 @@
+{
+  "must_fix": [
+    {
+      "id": "MF-1",
+      "title": "期待結果の代表文書例とMAX_KG_DOCS_PER_ISSUE = 2が両立していない",
+      "description": "Issue本文の期待される結果では1 Issueにつきissue --format jsonに加えてdesign / work-plan / issue-review summary / multi-stage-design-review summaryの4件を残す例になっている。一方、改善案と受け入れ基準ではKG由来ドキュメントを1 Issueあたり最大2件に制限しており、さらに優先度をhas_design > has_workplan > has_reviewとしているため、designとwork-planが存在するIssueではreview summaryは選ばれない。現状の記述だと、期待結果・優先度・上限制御が相互に矛盾している。",
+      "suggestion": "1 Issueあたり何を代表文書として残すのかを明確に再定義してください。例えばMAX_KG_DOCS_PER_ISSUEを4にする、あるいは2のままにして期待結果サンプルをdesign + work-planの2件に修正する、またはrelationごとの最低1件保証ルールに変える、のいずれかに揃えるべきです。"
+    },
+    {
+      "id": "MF-2",
+      "title": "「5-10件程度の提案」という期待値を現在の実装方針だけでは保証できない",
+      "description": "suggestはKGステップを先頭に追加した後も、既存のBM25 / related / impact / semantic / additional contextの各ステップをそのまま出す実装である。Issue本文の方針はKG由来ドキュメント数しか制限していないため、複数Issueが抽出された場合はMAX_ISSUE_NUMBERS = 3によりissueコマンドだけで最大3件、KG documentが最大6件、さらに既存戦略が数件追加され、全体で10件を超えうる。問題文の「80件から5-10件へ」という期待に対し、受け入れ基準が全体件数を拘束していない。",
+      "suggestion": "受け入れ基準に『全提案数』と『KG由来ステップ数』のどちらを制御対象とするかを明記してください。全提案数も抑えたいなら、KG追加後にstrategy全体へ上限をかけるか、複数Issue時のissue/contextの総数上限を別途定義する必要があります。"
+    }
+  ],
+  "should_fix": [
+    {
+      "id": "SF-1",
+      "title": "既存のfind_documents_by_issue()を踏まえた実装方針の比較が不足している",
+      "description": "Issue本文ではKnowledgeDocResultにdoc_subtypeがないためfile_path.ends_with(\"summary-report.md\")で判定するとしているが、既存コードベースにはSymbolStore::find_documents_by_issue()があり、こちらはdocumentノード限定でIssueDocumentEntry { relation, doc_subtype }を返す。つまり『現在のfind_knowledge_by_issue()を前提にsuggest.rs内でフィルタする』案は成立する一方で、『Issueごとにfind_documents_by_issue()を使ってfile nodeを最初から含めない』実装も既存パターンとして選べる。",
+      "suggestion": "Issue本文に、find_documents_by_issue()を使わずfind_knowledge_by_issue() + フィルタを採る理由を明記するか、逆にfind_documents_by_issue()を使う案を第一候補として再検討してください。"
+    },
+    {
+      "id": "SF-2",
+      "title": "テスト要件がユニットテスト中心で、E2E観点が不足している",
+      "description": "今回の不具合はsuggestの出力件数とコマンド列に直接表れるユーザー向け挙動の問題である。Issue本文の受け入れ基準はfilter_and_limit_kg_docs()のユニットテストに寄っているが、prepend_knowledge_steps()と組み合わせた結果としてsuggest出力が本当に縮小され、modifiesやstage別reviewが出てこないことまでは保証していない。",
+      "suggestion": "受け入れ基準にE2Eテストを追加してください。少なくとも『Issue付きクエリでsuggestを実行したとき、issue <N> --format jsonが出ること』『不要なcontextが含まれないこと』『件数が想定上限内であること』を確認するテストがあると妥当です。"
+    },
+    {
+      "id": "SF-3",
+      "title": "受け入れ基準で「優先的に含まれる」の意味が曖昧",
+      "description": "機能要件にhas_design、has_workplanのドキュメントが優先的に含まれることとあるが、これは『存在すれば必ず採用される』のか、『reviewより前に並ぶ』のか、『上限制御に達した場合にreviewより先に残る』のかが読み手により解釈できる。",
+      "suggestion": "受け入れ基準を結果ベースで書き換えてください。例: 『1 Issue内でdesignがあれば最優先で採用される』『work-planがあればreviewより先に採用される』『上限制御により除外されうるrelationは何か』を明文化すると実装判断がぶれません。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "id": "NH-1",
+      "title": "relation_priorityの扱いをissueコマンドの並び順との差分まで含めて補足すると読みやすい",
+      "description": "Issue本文はbefore_change.rsの優先度順を踏襲する方針になっているが、既存のissueコマンドはHasDesign > HasReview > HasWorkplan > HasProgressの並びで表示している。Suggestにおいてはbefore-changeの優先度を採ること自体はありうるが、既存コマンド間で並び順が異なる理由が説明されていない。",
+      "suggestion": "本Issueでは『調査開始地点の提示』を目的にbefore_change側の優先度を採用する、と一言補足しておくと、実装レビュー時の迷いが減ります。"
+    }
+  ],
+  "summary": "前回指摘のmodifies除外明記、受け入れ基準追加、before_change.rsパターン参照、doc_subtype制約の注記は概ね反映されている。一方で、今回のIssue本文にはまだ2つ大きな整合性問題がある。第一に、期待される代表文書の例とMAX_KG_DOCS_PER_ISSUE = 2 / has_design > has_workplan > has_reviewが両立していない。第二に、KG由来文書数だけを制限してもsuggest全体件数は5-10件に収まる保証がない。加えて、既存のfind_documents_by_issue()を使う案との比較がないこと、E2E観点の受け入れ基準が不足していること、優先採用ルールの文言が曖昧なことは再修正した方がよい。"
+}

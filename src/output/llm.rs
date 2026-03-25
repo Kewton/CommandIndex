@@ -347,7 +347,7 @@ pub fn format_related_llm(
                 }
                 crate::output::RelationType::PathSimilarity => "path".to_string(),
                 crate::output::RelationType::DirectoryProximity => "dir".to_string(),
-                crate::output::RelationType::KnowledgeGraph => "knowledge".to_string(),
+                crate::output::RelationType::KnowledgeGraph(_) => "knowledge".to_string(),
             })
             .collect();
         writeln!(writer, "- {path} ({})", relations.join(", "))?;
@@ -394,6 +394,9 @@ pub fn format_before_change_llm(
             writer,
             "- {doc_path}{sim_str} (#{issue}, {relation}){title_str}"
         )?;
+        if let Some(ref snippet) = finding.snippet {
+            writeln!(writer, "  > {}", strip_control_chars(snippet))?;
+        }
     }
     Ok(())
 }

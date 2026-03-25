@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "action": "apply_review",
+  "applied_items": [
+    "M1: issue コマンドの tantivy IndexReader 依存を実装方針に追加",
+    "M2: BeforeChangeFinding 型変更の影響範囲を明記",
+    "M3: IssueDocumentEntry 型変更の影響範囲を明記",
+    "M4: テスト可能な受け入れ基準を11項目追加",
+    "S1: セクション優先抽出をPhase 2（スコープ外）に分離",
+    "S2: before-change での IndexReader 追加方針を明記",
+    "S3: JSON出力のbreaking changeを明記",
+    "S4: snippet_helper パターンの一貫性（enrich関数追加）を明記"
+  ],
+  "issue_updated": true,
+  "url": "https://github.com/Kewton/CommandIndex/issues/168"
+}

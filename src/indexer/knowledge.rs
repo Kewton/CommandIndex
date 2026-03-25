@@ -98,6 +98,19 @@ impl KnowledgeRelation {
         }
     }
 
+    /// Relation priority for sorting (lower = higher priority).
+    /// HasProgress / Modifies はフィルタで除外されることが多いが、
+    /// 型の網羅性（exhaustive match）を保証するために優先度を定義している。
+    pub fn priority(&self) -> u8 {
+        match self {
+            Self::HasDesign => 0,
+            Self::HasWorkplan => 1,
+            Self::HasReview => 2,
+            Self::HasProgress => 3,
+            Self::Modifies => 4,
+        }
+    }
+
     /// Parse a relation string from the database. Returns `None` for unknown values.
     pub fn parse(s: &str) -> Option<Self> {
         match s {
@@ -182,6 +195,7 @@ pub struct IssueDocumentEntry {
     pub relation: KnowledgeRelation,
     pub doc_subtype: DocSubtype,
     pub date: Option<String>,
+    pub snippet: Option<String>,
 }
 
 /// search --related の戻り値用構造体

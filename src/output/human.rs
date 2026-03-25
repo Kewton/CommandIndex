@@ -124,7 +124,7 @@ pub fn format_related_human(
                 }
                 crate::output::RelationType::PathSimilarity => "path".to_string(),
                 crate::output::RelationType::DirectoryProximity => "dir".to_string(),
-                crate::output::RelationType::KnowledgeGraph => "knowledge".to_string(),
+                crate::output::RelationType::KnowledgeGraph(_) => "knowledge".to_string(),
             })
             .collect();
         writeln!(
@@ -376,6 +376,11 @@ pub fn format_before_change_human(
         if let Some(ref title) = finding.doc_title {
             let title_cleaned = strip_control_chars(title);
             writeln!(writer, "  {}", title_cleaned.dimmed())?;
+        }
+        if let Some(ref snippet) = finding.snippet {
+            for line in snippet.lines() {
+                writeln!(writer, "  > {}", strip_control_chars(line).dimmed())?;
+            }
         }
     }
     Ok(())

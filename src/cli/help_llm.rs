@@ -548,7 +548,14 @@ fn build_commands() -> Vec<CommandInfo> {
             prerequisites: Some("commandindexdev index".to_string()),
             modes: None,
             conflicts: None,
-            key_options: Some(vec!["--format", "--index-path", "--limit <N>  Maximum number of issues to show (default: 10)", "--max-commits"]),
+            key_options: Some(vec![
+                "--format", "--index-path",
+                "--limit <N>  Maximum number of issues to show (default: 10)",
+                "--max-commits",
+                "--with-snippet  Include document snippets in output",
+                "--snippet-lines <N>  Number of snippet lines (default: 3, range: 1-100)",
+                "--snippet-chars <N>  Number of snippet characters (default: 200, range: 1-10000)",
+            ]),
             output_formats: Some(vec!["human", "json", "llm", "path"]),
             output: Some("List of related design documents, review findings, and work plans"),
             input: Some("Single file path as argument"),
@@ -558,6 +565,7 @@ fn build_commands() -> Vec<CommandInfo> {
                 "commandindexdev before-change src/auth.rs",
                 "commandindexdev before-change src/auth.rs --format json",
                 "commandindexdev before-change src/auth.rs --format llm --limit 5",
+                "commandindexdev before-change src/auth.rs --with-snippet --snippet-lines 3",
             ],
         },
         CommandInfo {
@@ -591,6 +599,9 @@ fn build_commands() -> Vec<CommandInfo> {
             key_options: Some(vec![
                 "<NUMBER>  Issue number (required, positive integer)",
                 "--format <FORMAT>  Output format: human, json, path, llm",
+                "--with-snippet  Include document snippets in output",
+                "--snippet-lines <N>  Number of snippet lines (default: 3, range: 1-100)",
+                "--snippet-chars <N>  Number of snippet characters (default: 200, range: 1-10000)",
             ]),
             output_formats: Some(vec!["human", "json", "path", "llm"]),
             output: Some("List of related documents grouped by category"),
@@ -601,6 +612,7 @@ fn build_commands() -> Vec<CommandInfo> {
                 "commandindexdev issue 140",
                 "commandindexdev issue 140 --format json",
                 "commandindexdev issue 140 --format path",
+                "commandindexdev issue 140 --with-snippet --format json",
             ],
         },
         CommandInfo {

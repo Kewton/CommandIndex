@@ -52,11 +52,8 @@ pub(crate) fn enrich_impact_with_snippets(
         return;
     }
     for file in results.iter_mut() {
-        file.snippet = Some(fetch_snippet(
-            reader,
-            &file.file_path,
-            snippet_options.config,
-        ));
+        let s = fetch_snippet(reader, &file.file_path, snippet_options.config);
+        file.snippet = if s.is_empty() { None } else { Some(s) };
     }
 }
 
@@ -71,10 +68,47 @@ pub(crate) fn enrich_related_with_snippets(
         return;
     }
     for result in results.iter_mut() {
-        result.snippet = Some(fetch_snippet(
-            reader,
-            &result.file_path,
-            snippet_options.config,
-        ));
+        let s = fetch_snippet(reader, &result.file_path, snippet_options.config);
+        result.snippet = if s.is_empty() { None } else { Some(s) };
+    }
+}
+
+/// BeforeChangeFinding のスニペットを一括付与する。
+pub(crate) fn enrich_before_change_with_snippets(
+    findings: &mut [crate::output::BeforeChangeFinding],
+    reader: &IndexReaderWrapper,
+    snippet_options: &SnippetOptions,
+    format: crate::output::OutputFormat,
+) {
+    if !snippet_options.enabled || matches!(format, crate::output::OutputFormat::Path) {
+        return;
+    }
+    for finding in findings.iter_mut() {
+        let snippet = fetch_snippet(reader, &finding.doc_path, snippet_options.config);
+        finding.snippet = if snippet.is_empty() {
+            None
+        } else {
+            Some(snippet)
+        };
+    }
+}
+
+/// IssueDocumentEntry のスニペットを一括付与する。
+pub(crate) fn enrich_issue_documents_with_snippets(
+    documents: &mut [crate::indexer::knowledge::IssueDocumentEntry],
+    reader: &IndexReaderWrapper,
+    snippet_options: &SnippetOptions,
+    format: crate::output::OutputFormat,
+) {
+    if !snippet_options.enabled || matches!(format, crate::output::OutputFormat::Path) {
+        return;
+    }
+    for doc in documents.iter_mut() {
+        let snippet = fetch_snippet(reader, &doc.file_path, snippet_options.config);
+        doc.snippet = if snippet.is_empty() {
+            None
+        } else {
+            Some(snippet)
+        };
     }
 }
