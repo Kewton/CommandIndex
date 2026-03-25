@@ -1,0 +1,14 @@
+{
+  "must_fix": [
+    {"issue": "E2Eテストbefore_change_limit_respectedのアサーション更新（limit=1で最大2件返る）"},
+    {"issue": "total_issuesセマンティクス変更がJSON出力のbreaking changeとなる点の明記不足"},
+    {"issue": "既存テストtest_findings_without_ranking_sort_orderの期待値更新"}
+  ],
+  "should_fix": [
+    {"issue": "json.rsの手動JSON構築パターンによるdisplayed_issuesフィールド追加漏れリスク"},
+    {"issue": "human.rs/llm.rsのdisplayed_issues表示形式が未定義"},
+    {"issue": "limit=0のエッジケースが未定義"},
+    {"issue": "テスト戦略にドキュメント0件Issueケースが不足"}
+  ],
+  "summary": "変更はbefore-change内部に閉じ他サブコマンドへの影響なし。relation_priorityはプライベート関数で外部参照なし。limit=0やドキュメント0件Issueのエッジケーステスト追加を推奨。"
+}

@@ -1,0 +1,64 @@
+{
+  "must_fix": [
+    {
+      "issue": "before_change.rs L408: limitの適用箇所をIssue単位に変更",
+      "reason": "現在 findings.into_iter().take(limit) でドキュメント単位にlimit適用。Issue単位グルーピング後にlimitを適用するロジックに書き換えが必要。",
+      "suggestion": "whyコマンドのgroup_knowledge_results()を参考にIssue単位グルーピング関数を新設。"
+    },
+    {
+      "issue": "main.rs L261-263: --limitヘルプテキスト更新",
+      "reason": "Maximum number of findings to show はドキュメント単位の説明。Issue単位に変更後は不正確。",
+      "suggestion": "Maximum number of issues to show に変更。"
+    },
+    {
+      "issue": "help_llm.rs L551: LLM向けヘルプのlimit説明更新",
+      "reason": "key_optionsにセマンティクスが未記載。",
+      "suggestion": "--limit <N> Maximum number of issues to show (default: 10) に変更。"
+    },
+    {
+      "issue": "BEFORE_CHANGE_AFTER_HELP: ヘルプ例文の更新",
+      "reason": "--limit 5 の例文がドキュメント単位を暗示。",
+      "suggestion": "limitがIssue単位であることを明記する一文を追加。"
+    },
+    {
+      "issue": "tests/e2e_before_change.rs: before_change_limit_respectedテスト更新",
+      "reason": "findings.len() <= 1 でドキュメント数チェックしているが、Issue単位limit後は1 Issue分の全ドキュメント(最大2件)が返る可能性。",
+      "suggestion": "Issue数が1以下であることの検証に変更。"
+    }
+  ],
+  "should_fix": [
+    {
+      "issue": "BeforeChangeResultにlimit適用後のIssue数情報追加",
+      "reason": "displayed_issuesフィールドが不足。ページネーション情報が必要。",
+      "suggestion": "displayed_issuesフィールド追加またはfindingsからユニークissue_number算出。"
+    },
+    {
+      "issue": "relation_priority順序修正",
+      "reason": "現在はhas_design=0, has_review=1, has_workplan=2。仕様はhas_design > has_workplan > has_review > modifies。",
+      "suggestion": "has_design=0, has_workplan=1, has_review=2, modifies=3 に変更。"
+    },
+    {
+      "issue": "rank_by_max_similarity()のIssue単位集約",
+      "reason": "現在はドキュメント単位のフラットソート。Issue内最大similarityでIssue間ソートが必要。",
+      "suggestion": "二段階ソート: Issue間はmax similarity、Issue内はrelation_priority。"
+    },
+    {
+      "issue": "出力フォーマッタのIssue単位グルーピング表示",
+      "reason": "human/llmフォーマッタがフラットなfindingsを前提。",
+      "suggestion": "フォーマッタ側でissue_numberグルーピング表示、またはBeforeChangeResult構造をネスト化。"
+    }
+  ],
+  "nice_to_have": [
+    {
+      "issue": "JSON出力の後方互換性",
+      "reason": "フラットfindings配列を維持しつつdisplayed_issues追加が最小限の変更。",
+      "suggestion": "フラットなfindingsを維持しつつトップレベルに情報追加。"
+    },
+    {
+      "issue": "パフォーマンス影響は軽微",
+      "reason": "O(n)のHashMap操作で、nは数十件以下。ボトルネックはgit log走査とDB検索。",
+      "suggestion": "特段の対応不要。"
+    }
+  ],
+  "summary": "変更はbefore-changeコマンド内部に閉じており、他サブコマンドへの影響はない。主な変更: (1) before_change.rsのlimit適用ロジック (2) ソートロジック(relation_priority修正+Issue間ソート) (3) main.rs/help_llm.rsヘルプ更新 (4) E2Eテスト修正。search/related.rsやsymbol_store.rsへの変更は不要。パフォーマンス影響は軽微。"
+}

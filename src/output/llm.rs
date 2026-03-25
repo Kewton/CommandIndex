@@ -363,7 +363,8 @@ pub fn format_before_change_llm(
     let file = strip_control_chars(&result.file_path);
     writeln!(
         writer,
-        "## Before-change: {file} ({} issue(s), {} finding(s))",
+        "## Before-change: {file} ({}/{} issues shown, {} finding(s))",
+        result.displayed_issues,
         result.total_issues,
         result.findings.len()
     )?;

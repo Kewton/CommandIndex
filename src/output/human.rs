@@ -338,6 +338,14 @@ pub fn format_before_change_human(
         return Ok(());
     }
 
+    if result.displayed_issues < result.total_issues {
+        writeln!(
+            writer,
+            "  showing {} of {} issues (limited by --limit)",
+            result.displayed_issues, result.total_issues
+        )?;
+    }
+
     writeln!(writer)?;
 
     for (i, finding) in result.findings.iter().enumerate() {

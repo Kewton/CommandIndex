@@ -309,6 +309,7 @@ pub struct BeforeChangeResult {
     pub file_path: String,
     pub findings: Vec<BeforeChangeFinding>,
     pub total_issues: usize,
+    pub displayed_issues: usize,
     pub has_embeddings: bool,
 }
 

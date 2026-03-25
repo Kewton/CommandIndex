@@ -277,9 +277,79 @@ fn before_change_limit_respected() {
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
     let findings = parsed["findings"].as_array().unwrap();
+    // limit=1 means at most 1 issue; each issue can have up to 2 docs
+    let unique_issues: std::collections::HashSet<&str> = findings
+        .iter()
+        .map(|f| f["issue_number"].as_str().unwrap())
+        .collect();
     assert!(
-        findings.len() <= 1,
-        "limit=1 should return at most 1 finding, got {}",
+        unique_issues.len() <= 1,
+        "limit=1 should return at most 1 issue, got {}",
+        unique_issues.len()
+    );
+    assert!(
+        findings.len() <= 2,
+        "limit=1 with max 2 docs per issue should return at most 2 findings, got {}",
         findings.len()
+    );
+}
+
+#[test]
+fn before_change_displayed_issues_field() {
+    let dir = setup_before_change_env();
+    let output = common::cmd()
+        .args(["before-change", "src/auth.rs", "--format", "json"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    // displayed_issues field must exist
+    assert!(
+        parsed["displayed_issues"].is_u64(),
+        "JSON output should contain displayed_issues field"
+    );
+    // displayed_issues <= total_issues
+    let displayed = parsed["displayed_issues"].as_u64().unwrap();
+    let total = parsed["total_issues"].as_u64().unwrap();
+    assert!(
+        displayed <= total,
+        "displayed_issues ({displayed}) should be <= total_issues ({total})"
+    );
+}
+
+#[test]
+fn before_change_limit_zero_rejected() {
+    let dir = setup_before_change_env();
+    common::cmd()
+        .args(["before-change", "src/auth.rs", "--limit", "0"])
+        .current_dir(dir.path())
+        .assert()
+        .failure();
+}
+
+#[test]
+fn before_change_limit_exceeds_issues() {
+    let dir = setup_before_change_env();
+    let output = common::cmd()
+        .args([
+            "before-change",
+            "src/auth.rs",
+            "--format",
+            "json",
+            "--limit",
+            "999",
+        ])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    // When limit exceeds total issues, all issues should be displayed
+    let displayed = parsed["displayed_issues"].as_u64().unwrap();
+    let total = parsed["total_issues"].as_u64().unwrap();
+    assert_eq!(
+        displayed, total,
+        "when limit exceeds issues, displayed_issues should equal total_issues"
     );
 }

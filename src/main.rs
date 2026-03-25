@@ -258,9 +258,9 @@ enum Commands {
         #[arg(long)]
         index_path: Option<PathBuf>,
 
-        /// Maximum number of findings to show
-        #[arg(long, default_value = "10")]
-        limit: usize,
+        /// Maximum number of issues to show
+        #[arg(long, default_value = "10", value_parser = clap::value_parser!(u64).range(1..=1000))]
+        limit: u64,
 
         /// Maximum git log commits to scan (upper limit: 10000)
         #[arg(long, default_value = "200", value_parser = clap::value_parser!(u64).range(1..=10000))]
@@ -969,7 +969,7 @@ fn main() {
                 &file,
                 format,
                 index_path.as_deref().or(cli.index_path.as_deref()),
-                limit,
+                limit as usize,
                 max_commits as usize,
             ) {
                 Ok(()) => 0,

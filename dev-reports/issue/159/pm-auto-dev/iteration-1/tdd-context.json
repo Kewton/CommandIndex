@@ -1,0 +1,16 @@
+{
+  "issue_number": 159,
+  "title": "before-changeのデフォルトlimitがIssue単位ではなくドキュメント単位で切られる",
+  "design_policy": "dev-reports/design/issue-159-before-change-limit-design-policy.md",
+  "work_plan": "dev-reports/issue/159/work-plan.md",
+  "target_files": [
+    "src/cli/before_change.rs",
+    "src/output/mod.rs",
+    "src/output/human.rs",
+    "src/output/json.rs",
+    "src/output/llm.rs",
+    "src/main.rs",
+    "src/cli/help_llm.rs",
+    "tests/e2e_before_change.rs"
+  ]
+}
