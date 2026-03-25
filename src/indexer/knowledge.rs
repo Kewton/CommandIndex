@@ -137,6 +137,17 @@ impl DocSubtype {
         }
     }
 
+    pub fn display_label_en(&self) -> &'static str {
+        match self {
+            Self::DesignPolicy => "design",
+            Self::WorkPlan => "workplan",
+            Self::IssueReview => "review",
+            Self::DesignReview => "review",
+            Self::ProgressReport => "progress",
+            Self::StageReview => "review",
+        }
+    }
+
     /// Parse a doc subtype string from the database. Returns `None` for unknown values.
     pub fn parse(s: &str) -> Option<Self> {
         match s {
@@ -175,6 +186,7 @@ pub struct KnowledgeRelatedResult {
     pub relation: String,
     pub issue_number: String,
     pub title: Option<String>,
+    pub doc_subtype: Option<DocSubtype>,
 }
 
 /// git log から抽出した (issue, file) ペア
@@ -858,6 +870,16 @@ mod tests {
     fn test_validate_git_file_path_rejects_long_path() {
         let long_path = "a".repeat(1025);
         assert!(!validate_git_file_path(&long_path));
+    }
+
+    #[test]
+    fn test_doc_subtype_display_label_en() {
+        assert_eq!(DocSubtype::DesignPolicy.display_label_en(), "design");
+        assert_eq!(DocSubtype::WorkPlan.display_label_en(), "workplan");
+        assert_eq!(DocSubtype::IssueReview.display_label_en(), "review");
+        assert_eq!(DocSubtype::DesignReview.display_label_en(), "review");
+        assert_eq!(DocSubtype::ProgressReport.display_label_en(), "progress");
+        assert_eq!(DocSubtype::StageReview.display_label_en(), "review");
     }
 
     #[test]
